@@ -20,9 +20,11 @@ because their declared dependencies are complete.
 - TASK-004 is marked `DONE` with Replit-managed Clerk authentication, explicit
   parent/student role enforcement, and separate protected web surfaces.
 - TASK-005 is marked `DONE` with a provider-neutral private object contract,
-  local filesystem and S3-compatible storage, checksum/metadata preservation,
-  conditional collision protection, and expiring signed read capabilities.
-  Upload UI and bucket provisioning remain deferred.
+  local filesystem storage, and a production-ready S3-compatible provider with
+  HMAC-authenticated metadata bundles, HTTPS-only endpoint enforcement,
+  conditional collision protection, and server-mediated private access.
+  Production configuration fails explicitly when `STORAGE_PROVIDER=local`.
+  Upload UI remains deferred to a later task.
 
 ## Active decisions
 
@@ -50,8 +52,6 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 - Browser role testing can create a student session but cannot provision a
   `PARENT_ADMIN` metadata claim; parent authorization is covered by API tests and
   the metadata-driven web guard.
-- The local object provider is intentionally the only implemented provider;
-  production S3-compatible wiring still needs a later deployment decision.
 
 ## Next recommended action
 

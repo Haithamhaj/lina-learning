@@ -60,7 +60,7 @@
 **Expected output:** Upload/store/read metadata interface with signed/private access pattern; local/dev backend supported.  
 **Likely areas:** `/services/platform/storage`.  
 **Verification:** Upload/read/delete test fixture works; originals preserve checksum; no public-by-default student asset URLs.  
-**Completion:** Added a provider-neutral storage contract, local filesystem and S3-compatible providers, SHA-256 and metadata preservation, expiring HMAC private capabilities, presigned private GET URLs, traversal protection, conditional collision protection, and 14 storage tests. Upload UI and bucket provisioning remain deferred.
+**Completion:** Added a provider-neutral storage contract, local filesystem provider, SHA-256 and metadata preservation, expiring HMAC private capabilities, traversal protection, and atomic collision protection for originals. Extended with a production-ready S3-compatible provider (boto3) using conditional `IfNoneMatch` collision protection, HMAC-authenticated metadata bundles, HTTPS-only endpoint enforcement, and server-mediated private access. Production configuration now fails explicitly when `STORAGE_PROVIDER=local`. Tests cover both providers, configuration validation, metadata integrity tampering, endpoint security, and conditional deletes. Cloud bucket requirements and integrity model are documented in `docs/OBJECT_STORAGE.md`.
 
 ## TASK-006 — DB-backed jobs and worker foundation
 **Status:** READY

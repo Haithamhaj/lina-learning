@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+import hashlib
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,7 @@ class FakeS3Client:
             "content_type": request["ContentType"],
             "metadata": dict(request["Metadata"]),
             "stored_at": datetime.now(UTC),
+            "etag": f'"{hashlib.md5(content).hexdigest()}"',
         }
 
     def head_object(self, *, Bucket: str, Key: str) -> dict[str, Any]:
@@ -55,6 +57,7 @@ class FakeS3Client:
             "ContentType": stored["content_type"],
             "Metadata": dict(stored["metadata"]),
             "LastModified": stored["stored_at"],
+            "ETag": stored["etag"],
         }
 
     def get_object(self, *, Bucket: str, Key: str) -> dict[str, Any]:
@@ -64,24 +67,19 @@ class FakeS3Client:
         stored = self.objects[Key]
         return {"Body": BytesIO(stored["content"])}
 
-    def delete_object(self, *, Bucket: str, Key: str) -> None:
+    def delete_object(self, *, Bucket: str, Key: str, IfMatch: str) -> None:
         del Bucket
         if Key not in self.objects:
             raise self._missing("DeleteObject")
+        if self.objects[Key]["etag"] != IfMatch:
+            raise ClientError(
+                {
+                    "Error": {"Code": "PreconditionFailed"},
+                    "ResponseMetadata": {"HTTPStatusCode": 412},
+                },
+                "DeleteObject",
+            )
         del self.objects[Key]
-
-    def generate_presigned_url(
-        self,
-        *,
-        ClientMethod: str,
-        Params: dict[str, str],
-        ExpiresIn: int,
-    ) -> str:
-        assert ClientMethod == "get_object"
-        return (
-            f"https://s3.example.test/{Params['Bucket']}/{Params['Key']}"
-            f"?expires={ExpiresIn}"
-        )
 
     @staticmethod
     def _missing(operation: str) -> ClientError:
@@ -128,9 +126,8 @@ def test_s3_round_trip_preserves_checksum_metadata_and_private_access() -> None:
     assert fake.put_calls[0]["IfNoneMatch"] == "*"
 
     access = storage.create_private_access(stored.key, expires_in=60)
-    assert access.url == (
-        "https://s3.example.test/lina-private/books/grade-5-math.pdf?expires=60"
-    )
+    assert access.url is None
+    assert "://" not in access.token
     assert storage.read_private(access.token).content == b"original book bytes"
 
     with pytest.raises(ObjectAlreadyExistsError):
@@ -168,7 +165,11 @@ def test_storage_factory_selects_s3_without_network(
     tmp_path: Path,
 ) -> None:
     fake = FakeS3Client()
-    monkeypatch.setattr(s3_module.boto3, "client", lambda *args, **kwargs: fake)
+    monkeypatch.setattr(
+        s3_module.S3ObjectStorage,
+        "_build_client",
+        staticmethod(lambda **_: fake),
+    )
     settings = Settings(
         _env_file=None,
         storage_provider="s3",

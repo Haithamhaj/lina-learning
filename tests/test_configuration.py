@@ -37,8 +37,24 @@ def test_production_configuration_fails_with_clear_missing_values(
     for name in ("APP_ENV", "SESSION_SECRET", "DATABASE_URL"):
         monkeypatch.delenv(name, raising=False)
 
-    with pytest.raises(ValidationError, match="SESSION_SECRET, DATABASE_URL"):
+    with pytest.raises(ValidationError, match="SESSION_SECRET"):
         Settings(_env_file=None, app_env="production")
+
+
+def test_production_configuration_rejects_local_storage(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for name in ("APP_ENV", "SESSION_SECRET", "DATABASE_URL", "STORAGE_PROVIDER"):
+        monkeypatch.delenv(name, raising=False)
+
+    with pytest.raises(ValidationError, match="STORAGE_PROVIDER"):
+        Settings(
+            _env_file=None,
+            app_env="production",
+            session_secret="s",
+            database_url="postgresql://localhost/db",
+            storage_provider="local",
+        )
 
 
 def test_s3_configuration_requires_private_storage_values(

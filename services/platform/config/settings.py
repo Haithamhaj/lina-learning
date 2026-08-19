@@ -46,8 +46,8 @@ class Settings(BaseSettings):
     # TASK-003 and must not be initialized as part of this task.
     database_url: str | None = None
 
-    # Provider-neutral object storage settings. Local and S3-compatible
-    # providers share the same private object contract.
+    # Provider-neutral object storage settings. Production can use any service
+    # that implements the S3 API, including an optional custom endpoint.
     storage_provider: StorageProvider = "local"
     storage_dir: Path = Path(".local/storage")
     s3_endpoint: str | None = None
@@ -76,6 +76,8 @@ class Settings(BaseSettings):
                 missing.append("SESSION_SECRET")
             if not self.database_url:
                 missing.append("DATABASE_URL")
+            if self.storage_provider == "local":
+                missing.append("STORAGE_PROVIDER (must not be 'local' in production)")
 
         if self.storage_provider == "s3":
             for name, value in (
