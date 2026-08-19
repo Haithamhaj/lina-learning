@@ -12,4 +12,7 @@ behind, causing server-rendering hook failures even when TypeScript passes.
 
 **How to apply:** If the tree shows multiple framework/runtime versions,
 remove generated dependency state, regenerate the workspace lockfile, prune,
-and confirm one compatible React/Next tree before accepting build results.
+and confirm one compatible React/Next tree before accepting build results. With
+Clerk's Next peer in this npm workspace, pin the root peer-resolution versions
+to the web app's versions as needed; otherwise npm can auto-install an
+incompatible newer Next at root even when the web package declares Next 14.
