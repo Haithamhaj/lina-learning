@@ -136,6 +136,54 @@ the client directly via the `client` constructor parameter instead of setting an
 provided. AWS endpoint URLs do not require setting `S3_ENDPOINT` — leave it
 empty and set `S3_REGION` only.
 
+## Staging S3 integration checks
+
+The repository includes an opt-in end-to-end suite in
+`tests/test_storage_s3_integration.py`. It is skipped unless
+`RUN_S3_INTEGRATION_TESTS=1` explicitly acknowledges that the tests will write
+and delete objects in the configured bucket. It is also skipped when any of the
+following server-side values are absent:
+
+```text
+RUN_S3_INTEGRATION_TESTS=1
+S3_BUCKET
+S3_REGION
+S3_ACCESS_KEY_ID
+S3_SECRET_ACCESS_KEY
+SESSION_SECRET
+```
+
+`S3_ENDPOINT` is optional for AWS. For another S3-compatible service, set it to
+the service's HTTPS endpoint. The suite constructs the same real boto3 client
+path used by the application, then verifies:
+
+- a binary stream survives `put`, `head`, `get`, and an application private
+  capability read with the same bytes, checksum, and authenticated metadata;
+- a second upload to the same key is rejected by S3 conditional-write
+  protection and cannot replace the original;
+- an out-of-band metadata rewrite is rejected by the HMAC integrity check; and
+- an object can be deleted and is then reported as missing.
+
+Run it only against a dedicated staging bucket or isolated test prefix. The
+tests use unique keys under `tests/s3-integration/` and clean each key up in a
+fixture, but the credentials still need `s3:GetObject`, `s3:PutObject`, and
+`s3:DeleteObject`. Do not point this suite at a production bucket.
+
+Load the values from Replit Secrets or your CI secret manager without putting
+them in a committed `.env` file. Set the acknowledgement flag only for a
+dedicated staging run, then run:
+
+```bash
+RUN_S3_INTEGRATION_TESTS=1 pytest -m s3_integration tests/test_storage_s3_integration.py
+```
+
+The normal test command remains network-free even when S3 settings are present;
+without the explicit acknowledgement flag, pytest reports this module as
+skipped. A configured `http://` endpoint fails before any client is built, which
+prevents credentials or private bytes from being sent over plaintext. Treat
+that failure as a configuration error and correct the endpoint before
+switching `STORAGE_PROVIDER=s3` in production.
+
 ## Deployment configuration
 
 Set these server-only values in the deployment environment:
