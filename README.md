@@ -56,6 +56,19 @@ student relationship, and grade-period foundation tables, and add the explicit
 user role constraint. Production schema changes are applied through the Replit
 Publish flow, not application startup.
 
+### Object storage
+
+`services/platform/storage` owns a provider-neutral private object contract.
+Development uses a filesystem provider rooted at `STORAGE_DIR` (default:
+`.local/storage/`). Objects retain content type, size, metadata, and SHA-256
+checksum. Keys cannot traverse outside the storage root, and an existing key
+cannot be silently overwritten so original books and student work remain safe.
+
+Private reads use short-lived signed capabilities through the service contract;
+the local provider does not create public URLs or expose the storage directory
+through the web app. S3-compatible settings are validated by configuration, but
+the cloud adapter is intentionally deferred until a deployment task requires it.
+
 ### Verification
 
 ```bash
@@ -65,5 +78,5 @@ python -m pytest
 ```
 
 The foundation intentionally does not include Tutor, retrieval, Learning
-Intelligence, multimodal, artifact, content, or object-storage features. The
-database layer currently contains only the Phase 0 schema foundation.
+Intelligence, multimodal, artifact, content-processing, or upload UI features.
+The database layer currently contains only the Phase 0 schema foundation.

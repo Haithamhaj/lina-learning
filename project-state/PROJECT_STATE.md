@@ -2,8 +2,8 @@
 
 ## Current goal
 
-TASK-004 is complete. The next recommended task is TASK-005:
-Object-storage abstraction. TASK-006, TASK-007, and TASK-008 are also eligible
+TASK-005 is complete. The next recommended task is TASK-006:
+DB-backed jobs and worker foundation. TASK-007 and TASK-008 are also eligible
 because their declared dependencies are complete.
 
 ## Current reality
@@ -19,8 +19,9 @@ because their declared dependencies are complete.
   enablement, and identity/grade-period tables applied to development.
 - TASK-004 is marked `DONE` with Replit-managed Clerk authentication, explicit
   parent/student role enforcement, and separate protected web surfaces.
-- No Tutor, retrieval, Learning Intelligence, multimodal, artifact, content, or
-  object-storage product feature has been added.
+- TASK-005 is marked `DONE` with a provider-neutral private object contract,
+  local filesystem storage, checksum/metadata preservation, and expiring signed
+  read capabilities. S3 cloud provisioning and upload UI remain deferred.
 
 ## Active decisions
 
@@ -43,17 +44,19 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Active risks
 
-- TASK-005, TASK-006, TASK-007, and TASK-008 are now eligible; later tasks remain
-  blocked by their declared dependencies.
+- TASK-006, TASK-007, and TASK-008 are now eligible; later tasks remain blocked
+  by their declared dependencies.
 - Browser role testing can create a student session but cannot provision a
   `PARENT_ADMIN` metadata claim; parent authorization is covered by API tests and
   the metadata-driven web guard.
+- The local object provider is intentionally the only implemented provider;
+  production S3-compatible wiring still needs a later deployment decision.
 
 ## Next recommended action
 
-Begin TASK-005 next, using the object-storage requirements in `TASKS.md`.
-TASK-006, TASK-007, and TASK-008 may be handled independently afterward. Do not
-begin later tasks until their dependencies are complete.
+Begin TASK-006 next, using the jobs/worker requirements in `TASKS.md`.
+TASK-007 and TASK-008 may be handled independently afterward. Do not begin later
+tasks until their dependencies are complete.
 
 ## Critical references
 
