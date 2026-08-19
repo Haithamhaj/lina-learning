@@ -64,10 +64,15 @@ Development uses a filesystem provider rooted at `STORAGE_DIR` (default:
 checksum. Keys cannot traverse outside the storage root, and an existing key
 cannot be silently overwritten so original books and student work remain safe.
 
-Private reads use short-lived signed capabilities through the service contract;
-the local provider does not create public URLs or expose the storage directory
-through the web app. S3-compatible settings are validated by configuration, but
-the cloud adapter is intentionally deferred until a deployment task requires it.
+Private reads use short-lived signed capabilities through the service contract.
+The local provider does not create public URLs or expose the storage directory
+through the web app. The S3-compatible provider uses conditional writes,
+checksum metadata, and presigned GET URLs; production buckets must block public
+access and credentials must remain in Replit-managed environment secrets.
+Before enabling it in production, configure `STORAGE_PROVIDER=s3`, keep the
+bucket private with public-access blocking, enable versioning for source
+recovery, and define a retention/lifecycle policy that does not expire original
+books or student work before the product retention policy allows it.
 
 ### Verification
 

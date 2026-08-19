@@ -5,23 +5,20 @@ from __future__ import annotations
 import base64
 import fcntl
 import hashlib
-import hmac
 import json
 import math
 import os
-import secrets
 import shutil
 import tempfile
 import time
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Callable, Iterator, Mapping
 
+from .capabilities import CapabilitySigner
+from .keys import validate_storage_key
 from .models import (
-    ExpiredPrivateAccessToken,
-    InvalidPrivateAccessToken,
-    InvalidStorageKey,
     ObjectAlreadyExistsError,
     ObjectMetadata,
     ObjectNotFoundError,
@@ -31,29 +28,7 @@ from .models import (
     StoredObject,
 )
 
-_TOKEN_VERSION = "v1"
 _CHUNK_SIZE = 1024 * 1024
-
-
-def validate_storage_key(key: str) -> str:
-    """Return a canonical relative key or reject path traversal."""
-
-    if not isinstance(key, str) or not key:
-        raise InvalidStorageKey("Storage keys must be non-empty strings.")
-    if "\x00" in key or "\\" in key or key.startswith("/"):
-        raise InvalidStorageKey("Storage keys must use safe relative POSIX paths.")
-
-    path = PurePosixPath(key)
-    if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
-        raise InvalidStorageKey(
-            "Storage keys cannot be absolute, normalized, or traverse directories."
-        )
-    if not path.parts or path.parts[0] == ".locks":
-        raise InvalidStorageKey("The .locks namespace is reserved by storage.")
-    canonical = "/".join(path.parts)
-    if canonical != key:
-        raise InvalidStorageKey("Storage keys must be canonical POSIX paths.")
-    return canonical
 
 
 class LocalObjectStorage:
@@ -70,10 +45,8 @@ class LocalObjectStorage:
         self.root.mkdir(parents=True, exist_ok=True)
         self._lock_root = self.root / ".locks"
         self._lock_root.mkdir(parents=True, exist_ok=True)
-        if isinstance(signing_secret, str):
-            signing_secret = signing_secret.encode("utf-8")
-        self._signing_secret = signing_secret or secrets.token_bytes(32)
         self._clock = clock
+        self._capabilities = CapabilitySigner(signing_secret, clock=clock)
 
     def put(
         self,
@@ -202,19 +175,14 @@ class LocalObjectStorage:
             raise ValueError("expires_in must be a finite positive duration.")
 
         expires_at_epoch = self._clock() + seconds
-        payload = self._encode_payload({"key": key, "exp": expires_at_epoch})
-        signature = self._sign(payload)
-        token = f"{_TOKEN_VERSION}.{payload}.{signature}"
         return PrivateAccess(
             key=key,
-            token=token,
+            token=self._capabilities.issue(key, expires_at_epoch),
             expires_at=datetime.fromtimestamp(expires_at_epoch, UTC),
         )
 
     def read_private(self, token: str) -> StoredObject:
-        payload = self._decode_token(token)
-        if self._clock() >= float(payload["exp"]):
-            raise ExpiredPrivateAccessToken("Private access has expired.")
+        payload = self._capabilities.verify(token)
         return self.get(payload["key"])
 
     @staticmethod
@@ -311,45 +279,3 @@ class LocalObjectStorage:
             except OSError:
                 break
             parent = parent.parent
-
-    def _encode_payload(self, payload: dict[str, object]) -> str:
-        encoded = json.dumps(
-            payload,
-            separators=(",", ":"),
-            sort_keys=True,
-        ).encode("utf-8")
-        return self._base64url(encoded)
-
-    def _decode_token(self, token: str) -> dict[str, object]:
-        try:
-            version, encoded_payload, signature = token.split(".", 2)
-            if version != _TOKEN_VERSION:
-                raise ValueError
-            if not hmac.compare_digest(signature, self._sign(encoded_payload)):
-                raise ValueError
-            payload = json.loads(self._from_base64url(encoded_payload))
-            key = payload["key"]
-            expires = payload["exp"]
-            if not isinstance(key, str) or not isinstance(expires, (int, float)):
-                raise ValueError
-            validate_storage_key(key)
-            return {"key": key, "exp": expires}
-        except (AttributeError, KeyError, TypeError, ValueError, json.JSONDecodeError):
-            raise InvalidPrivateAccessToken("Private access token is invalid.") from None
-
-    def _sign(self, payload: str) -> str:
-        digest = hmac.new(
-            self._signing_secret,
-            payload.encode("ascii"),
-            hashlib.sha256,
-        ).digest()
-        return self._base64url(digest)
-
-    @staticmethod
-    def _base64url(value: bytes) -> str:
-        return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
-
-    @staticmethod
-    def _from_base64url(value: str) -> bytes:
-        padding = "=" * (-len(value) % 4)
-        return base64.urlsafe_b64decode(value + padding)

@@ -61,11 +61,12 @@ class StoredObject:
 
 @dataclass(frozen=True, slots=True)
 class PrivateAccess:
-    """An expiring capability, not a public URL."""
+    """An expiring service capability with an optional provider URL."""
 
     key: str
     token: str
     expires_at: datetime
+    url: str | None = None
 
 
 @runtime_checkable

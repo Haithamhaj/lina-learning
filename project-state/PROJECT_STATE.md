@@ -20,8 +20,9 @@ because their declared dependencies are complete.
 - TASK-004 is marked `DONE` with Replit-managed Clerk authentication, explicit
   parent/student role enforcement, and separate protected web surfaces.
 - TASK-005 is marked `DONE` with a provider-neutral private object contract,
-  local filesystem storage, checksum/metadata preservation, and expiring signed
-  read capabilities. S3 cloud provisioning and upload UI remain deferred.
+  local filesystem and S3-compatible storage, checksum/metadata preservation,
+  conditional collision protection, and expiring signed read capabilities.
+  Upload UI and bucket provisioning remain deferred.
 
 ## Active decisions
 

@@ -1,7 +1,8 @@
 """Private object-storage contracts and the local development provider."""
 
 from .factory import create_object_storage
-from .local import LocalObjectStorage, validate_storage_key
+from .keys import validate_storage_key
+from .local import LocalObjectStorage
 from .models import (
     ExpiredPrivateAccessToken,
     InvalidPrivateAccessToken,
@@ -16,6 +17,7 @@ from .models import (
     StorageProviderUnavailable,
     StoredObject,
 )
+from .s3 import S3ObjectStorage
 
 __all__ = [
     "ExpiredPrivateAccessToken",
@@ -30,6 +32,7 @@ __all__ = [
     "StorageError",
     "StorageIntegrityError",
     "StorageProviderUnavailable",
+    "S3ObjectStorage",
     "StoredObject",
     "create_object_storage",
     "validate_storage_key",

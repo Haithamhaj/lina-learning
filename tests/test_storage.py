@@ -13,7 +13,6 @@ from services.platform.storage import (
     LocalObjectStorage,
     ObjectAlreadyExistsError,
     ObjectNotFoundError,
-    StorageProviderUnavailable,
     StorageIntegrityError,
     create_object_storage,
 )
@@ -56,6 +55,7 @@ def test_private_access_is_expiring_and_not_a_public_url(tmp_path: Path) -> None
     access = storage.create_private_access("student-images/work.jpg", expires_in=60)
     assert access.token.startswith("v1.")
     assert "://" not in access.token
+    assert access.url is None
     assert storage.read_private(access.token).content == b"student original"
 
     now[0] = 1060.0
@@ -168,18 +168,3 @@ def test_storage_factory_defaults_to_local(tmp_path: Path) -> None:
 
     assert isinstance(storage, LocalObjectStorage)
     storage.put("fixture.bin", b"fixture")
-
-
-def test_storage_factory_rejects_deferred_s3_provider(tmp_path: Path) -> None:
-    settings = Settings(
-        _env_file=None,
-        storage_provider="s3",
-        storage_dir=tmp_path,
-        s3_bucket="bucket",
-        s3_region="region",
-        s3_access_key_id="access",
-        s3_secret_access_key="secret",
-    )
-
-    with pytest.raises(StorageProviderUnavailable, match="reserved"):
-        create_object_storage(settings)

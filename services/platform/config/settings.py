@@ -46,8 +46,8 @@ class Settings(BaseSettings):
     # TASK-003 and must not be initialized as part of this task.
     database_url: str | None = None
 
-    # Provider-neutral object storage settings. Local storage is implemented;
-    # S3-compatible configuration is validated for a future provider adapter.
+    # Provider-neutral object storage settings. Local and S3-compatible
+    # providers share the same private object contract.
     storage_provider: StorageProvider = "local"
     storage_dir: Path = Path(".local/storage")
     s3_endpoint: str | None = None
