@@ -233,6 +233,53 @@ prevents credentials or private bytes from being sent over plaintext. Treat
 that failure as a configuration error and correct the endpoint before
 switching `STORAGE_PROVIDER=s3` in production.
 
+
+### Staging rotation verification
+
+The same integration module contains a separate opt-in rotation check. It
+creates 1,001 uniquely-prefixed objects so the real provider must use more than
+one `ListObjectsV2` page, runs the dry-run and metadata-copy paths, verifies
+bytes, caller metadata, ETags, and private capability reads before and after
+rotation, and simulates an interruption after the first successful copy. The
+resume run must report one `already_rotated` object and re-sign the remainder.
+The test deletes every object in its unique prefix and asserts that the prefix
+is empty before it passes.
+
+For a dedicated non-production bucket, load these additional values from the
+secret manager:
+
+```text
+RUN_S3_ROTATION_INTEGRATION_TESTS=1
+OLD_SESSION_SECRET=<current staging signing secret>
+NEW_SESSION_SECRET=<replacement staging signing secret>
+```
+
+Run the basic checks and the rotation check separately so a failure is easy to
+attribute:
+
+```bash
+RUN_S3_INTEGRATION_TESTS=1 \
+python -m pytest -m s3_integration tests/test_storage_s3_integration.py
+
+RUN_S3_INTEGRATION_TESTS=1 \
+RUN_S3_ROTATION_INTEGRATION_TESTS=1 \
+python -m pytest -m s3_integration tests/test_storage_s3_integration.py \
+  -k real_s3_secret_rotation_paginates_and_resumes
+```
+
+The rotation identity needs `s3:ListBucket` for the test prefix in addition to
+the test suite's `s3:GetObject`, `s3:PutObject`, and `s3:DeleteObject`. The
+production rotation procedure additionally needs conditional copy support for
+the features actually enabled on the bucket: `s3:GetObjectTagging` and
+`s3:PutObjectTagging` for tags, `s3:PutObjectRetention` and
+`s3:PutObjectLegalHold` for Object Lock, and the source/destination KMS key
+policy permissions (`kms:Decrypt`, `kms:GenerateDataKey`, and `kms:Encrypt`)
+for SSE-KMS. A provider may also require
+`s3:BypassGovernanceRetention` for governance-locked objects. Remove the
+temporary `s3:ListBucket` grant after the run and confirm the unique
+`tests/s3-rotation-integration/<run-id>/` prefix is empty; the test fails if
+cleanup leaves an object behind.
+
 ## Deployment configuration
 
 Set these server-only values in the deployment environment:
