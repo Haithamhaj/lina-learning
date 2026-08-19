@@ -17,16 +17,17 @@
 # Phase 0 — Repository & Runtime Foundation
 
 ## TASK-001 — Repository foundation
-**Status:** READY  
+**Status:** DONE  
 **Dependencies:** None  
 **Purpose:** Establish the repository-native Codex harness and runnable app skeleton without learning features.  
 **Expected output:** Next.js app shell, FastAPI app shell, repository structure, governing docs in place, documented local run/test commands; shadcn/ui established as the baseline functional web component layer unless a concrete incompatibility is documented.  
 **Likely areas:** `/apps/web`, `/apps/api`, `/services`, `/packages`, `/docs`, `/project-state`, root config files.  
 **Reuse check:** Read `docs/TECHNOLOGY_REUSE_CATALOG.md`; do not add optional UI/motion/RAG/artifact dependencies during foundation scaffolding merely because they may be useful later.  
 **Verification:** Web and API start locally; baseline test commands execute; governing docs including the technology reuse catalog resolve from `AGENTS.md`; base UI setup is modifiable and not template-locked; no Tutor/Science/artifact feature code added.  
+**Completion:** Verified with live web/API workflows, Next.js production build, TypeScript check, FastAPI tests, API smoke requests, and browser smoke test. The shadcn/ui baseline is locally owned and documented in `docs/REUSE_DECISIONS.md`.  
 
 ## TASK-002 — Environment and configuration foundation
-**Status:** BLOCKED  
+**Status:** READY  
 **Dependencies:** TASK-001  
 **Purpose:** Create typed environment/config handling for web, API, DB, object storage, and model-provider settings.  
 **Expected output:** Example env file, server-side secret handling, configuration validation, no API keys exposed to frontend.  
