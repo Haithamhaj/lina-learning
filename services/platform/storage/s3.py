@@ -21,6 +21,13 @@ from urllib.parse import urlparse
 from boto3.exceptions import Boto3Error
 from botocore.exceptions import BotoCoreError, ClientError
 
+from services.platform.observability import (
+    STORAGE_FAILURES_TOTAL,
+    StorageCounterSink,
+    storage_counters,
+    storage_key_prefix,
+)
+
 from .keys import validate_storage_key
 from .models import (
     ExpiredPrivateAccessToken,
@@ -135,6 +142,7 @@ class S3ObjectStorage:
         client: Any | None = None,
         clock: Callable[[], float] = time.time,
         multipart_threshold: int = _DEFAULT_MULTIPART_THRESHOLD,
+        metrics: StorageCounterSink | None = None,
     ) -> None:
         if not bucket.strip():
             raise ValueError("S3 bucket must not be empty.")
@@ -154,6 +162,7 @@ class S3ObjectStorage:
         self.endpoint = endpoint
         self._clock = clock
         self.multipart_threshold = multipart_threshold
+        self._metrics = metrics or storage_counters
         if isinstance(signing_secret, str):
             signing_secret = signing_secret.encode("utf-8")
         self._signing_secret = signing_secret or secrets.token_bytes(32)
@@ -440,11 +449,16 @@ class S3ObjectStorage:
                     raise ObjectAlreadyExistsError(
                         f"Refusing to replace existing object: {key}"
                     ) from exc
+                self._record_storage_failure("multipart_transfer", staging_key)
                 self._raise_provider_error("multipart put", key, exc)
             except (BotoCoreError, Boto3Error) as exc:
+                self._record_storage_failure("multipart_transfer", staging_key)
                 raise StorageProviderUnavailable(
                     f"S3 multipart put failed for object: {key}"
                 ) from exc
+            except StorageProviderUnavailable:
+                self._record_storage_failure("multipart_transfer", staging_key)
+                raise
         finally:
             try:
                 self._client.delete_object(
@@ -456,9 +470,10 @@ class S3ObjectStorage:
                 # final cleanup boundary if a provider temporarily rejects the
                 # best-effort staging-object delete. Keep this observable so
                 # operators can investigate unexpected staging growth.
+                self._record_storage_failure("staging_cleanup", staging_key)
                 _logger.warning(
-                    "Unable to remove temporary S3 multipart object %s",
-                    staging_key,
+                    "Unable to remove temporary S3 multipart object (key_prefix=%s)",
+                    storage_key_prefix(staging_key),
                     exc_info=True,
                 )
 
@@ -532,11 +547,24 @@ class S3ObjectStorage:
                         UploadId=upload_id,
                     )
                 except (BotoCoreError, Boto3Error, ClientError):
-                    _logger.warning(
-                        "Unable to abort failed S3 multipart publish for %s",
+                    self._record_storage_failure(
+                        "destination_multipart_cleanup",
                         key,
+                    )
+                    _logger.warning(
+                        "Unable to abort failed S3 multipart publish "
+                        "(key_prefix=%s)",
+                        storage_key_prefix(key),
                         exc_info=True,
                     )
+
+    def _record_storage_failure(self, operation: str, key: str) -> None:
+        self._metrics.increment(
+            STORAGE_FAILURES_TOTAL,
+            provider="s3",
+            operation=operation,
+            key_prefix=storage_key_prefix(key),
+        )
 
     def resign_metadata(
         self,

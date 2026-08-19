@@ -8,6 +8,10 @@ import pytest
 from botocore.exceptions import ClientError
 
 from services.platform.config import Settings
+from services.platform.observability import (
+    STORAGE_FAILURES_TOTAL,
+    StorageCounterRegistry,
+)
 from services.platform.storage import (
     ExpiredPrivateAccessToken,
     ObjectAlreadyExistsError,
@@ -31,6 +35,9 @@ class FakeS3Client:
         self.multipart_uploads: dict[str, dict[str, Any]] = {}
         self.abort_calls: list[dict[str, str]] = []
         self.fail_upload_part_copy = False
+        self.fail_upload_fileobj = False
+        self.fail_delete = False
+        self.fail_abort = False
 
     def put_object(self, **request: Any) -> None:
         self.put_calls.append(request)
@@ -79,6 +86,14 @@ class FakeS3Client:
             "stored_at": datetime.now(UTC),
             "etag": f'"{hashlib.md5(content).hexdigest()}"',
         }
+        if self.fail_upload_fileobj:
+            raise ClientError(
+                {
+                    "Error": {"Code": "InternalError"},
+                    "ResponseMetadata": {"HTTPStatusCode": 500},
+                },
+                "UploadPart",
+            )
 
     def head_object(self, *, Bucket: str, Key: str) -> dict[str, Any]:
         del Bucket
@@ -245,6 +260,14 @@ class FakeS3Client:
     ) -> None:
         del Bucket, Key
         self.abort_calls.append({"UploadId": UploadId})
+        if self.fail_abort:
+            raise ClientError(
+                {
+                    "Error": {"Code": "AccessDenied"},
+                    "ResponseMetadata": {"HTTPStatusCode": 403},
+                },
+                "AbortMultipartUpload",
+            )
         self.multipart_uploads.pop(UploadId, None)
 
     def delete_object(
@@ -255,6 +278,14 @@ class FakeS3Client:
         IfMatch: str | None = None,
     ) -> None:
         del Bucket
+        if self.fail_delete:
+            raise ClientError(
+                {
+                    "Error": {"Code": "AccessDenied"},
+                    "ResponseMetadata": {"HTTPStatusCode": 403},
+                },
+                "DeleteObject",
+            )
         if Key not in self.objects:
             raise self._missing("DeleteObject")
         if IfMatch is not None and self.objects[Key]["etag"] != IfMatch:
@@ -282,6 +313,7 @@ def make_storage(
     fake: FakeS3Client,
     *,
     clock=lambda: 1000.0,
+    metrics: StorageCounterRegistry | None = None,
 ) -> S3ObjectStorage:
     return S3ObjectStorage(
         bucket="lina-private",
@@ -292,6 +324,7 @@ def make_storage(
         client=fake,
         signing_secret="test-secret",
         clock=clock,
+        metrics=metrics,
     )
 
 
@@ -418,6 +451,88 @@ def test_s3_multipart_copy_aborts_destination_upload_on_part_failure(
 
     assert fake.abort_calls == [{"UploadId": "upload-1"}]
     assert fake.multipart_uploads == {}
+
+
+def test_s3_multipart_transfer_failure_emits_safe_counter() -> None:
+    fake = FakeS3Client()
+    fake.fail_upload_fileobj = True
+    metrics = StorageCounterRegistry()
+    storage = make_storage(fake, metrics=metrics)
+
+    with pytest.raises(StorageProviderUnavailable, match="multipart put"):
+        storage.put("student-files/private.pdf", b"x" * (9 * 1024 * 1024))
+
+    assert metrics.snapshot() == {
+        (
+            STORAGE_FAILURES_TOTAL,
+            "s3",
+            "multipart_transfer",
+            ".lina-multipart/",
+        ): 1
+    }
+
+
+def test_s3_staging_cleanup_failure_emits_safe_counter(caplog: pytest.LogCaptureFixture) -> None:
+    fake = FakeS3Client()
+    fake.fail_delete = True
+    metrics = StorageCounterRegistry()
+    storage = make_storage(fake, metrics=metrics)
+
+    storage.put("books/large-book.pdf", b"x" * (9 * 1024 * 1024))
+
+    assert metrics.snapshot() == {
+        (
+            STORAGE_FAILURES_TOTAL,
+            "s3",
+            "staging_cleanup",
+            ".lina-multipart/",
+        ): 1
+    }
+    assert any(
+        "storage_counter " in record.message
+        and '"key_prefix":".lina-multipart/"' in record.message
+        and "large-book.pdf" not in record.message
+        for record in caplog.records
+    )
+
+
+def test_s3_destination_cleanup_failure_emits_safe_counter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = FakeS3Client()
+    fake.fail_upload_part_copy = True
+    fake.fail_abort = True
+    metrics = StorageCounterRegistry()
+    storage = S3ObjectStorage(
+        bucket="lina-private",
+        region="us-east-1",
+        access_key_id="access",
+        secret_access_key="secret",
+        endpoint="https://s3.example.test",
+        client=fake,
+        signing_secret="test-secret",
+        metrics=metrics,
+        multipart_threshold=1024 * 1024,
+    )
+    monkeypatch.setattr(s3_module, "_COPY_OBJECT_MAX_SIZE", 1024 * 1024)
+
+    with pytest.raises(StorageProviderUnavailable, match="multipart put"):
+        storage.put("student-files/large-book.pdf", b"x" * (6 * 1024 * 1024))
+
+    assert metrics.snapshot() == {
+        (
+            STORAGE_FAILURES_TOTAL,
+            "s3",
+            "multipart_transfer",
+            ".lina-multipart/",
+        ): 1,
+        (
+            STORAGE_FAILURES_TOTAL,
+            "s3",
+            "destination_multipart_cleanup",
+            "student-files/",
+        ): 1,
+    }
 
 
 def test_s3_private_access_expires_and_missing_objects_are_clear() -> None:

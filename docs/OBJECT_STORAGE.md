@@ -132,6 +132,46 @@ For a production bucket:
    and KMS permissions listed in its first step when those bucket features are
    in use.
 
+## Operational counters and staging alerts
+
+The S3 provider emits a structured `lina_storage_operation_failures_total`
+counter whenever a managed multipart transfer or cleanup operation fails. The
+default sink keeps an in-process snapshot and writes a JSON log event so the
+deployment's log/metrics pipeline can turn it into a durable alertable metric.
+Each event contains only bounded operational labels:
+
+```json
+{
+  "count": 1,
+  "increment": 1,
+  "key_prefix": ".lina-multipart/",
+  "metric": "lina_storage_operation_failures_total",
+  "operation": "staging_cleanup",
+  "provider": "s3"
+}
+```
+
+Possible `operation` values are `multipart_transfer`,
+`staging_cleanup`, and `destination_multipart_cleanup`. The event never
+includes the full object key, random staging key, bucket credentials, signed
+URLs, or object bytes. A metrics adapter can use the same labels from the
+storage counter sink directly.
+
+Create alerts for:
+
+1. Any repeated
+   `lina_storage_operation_failures_total{provider="s3",operation="staging_cleanup"}`
+   event over a short window. These usually indicate a provider outage or a
+   missing `s3:DeleteObject` permission and can cause temporary-object growth.
+2. Any
+   `operation="destination_multipart_cleanup"` event. The failed destination
+   multipart upload needs `s3:AbortMultipartUpload` on the final object prefix.
+3. Unexpected object count or bytes under `.lina-multipart/`. Use the
+   provider's bucket metrics, Storage Lens, or a scheduled inventory to alert
+   on sustained growth; the application intentionally does not list the
+   staging prefix on every upload. Keep the incomplete-upload abort rule and
+   completed-staging expiry rule as the final recovery boundary.
+
 ## Endpoint transport security
 
 `S3_ENDPOINT` must use HTTPS. The application rejects any endpoint whose URL
