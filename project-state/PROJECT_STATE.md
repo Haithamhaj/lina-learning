@@ -2,9 +2,9 @@
 
 ## Current goal
 
-TASK-003 is complete. The next recommended task is TASK-004:
-Parent/Student auth and authorization baseline. TASK-005, TASK-006, and TASK-007
-are also eligible because their declared dependencies are complete.
+TASK-004 is complete. The next recommended task is TASK-005:
+Object-storage abstraction. TASK-006, TASK-007, and TASK-008 are also eligible
+because their declared dependencies are complete.
 
 ## Current reality
 
@@ -17,8 +17,10 @@ are also eligible because their declared dependencies are complete.
   frontend configuration.
 - TASK-003 is marked `DONE` with an Alembic PostgreSQL foundation, pgvector
   enablement, and identity/grade-period tables applied to development.
-- No Tutor, retrieval, Learning Intelligence, multimodal, artifact, auth,
-  content, or object-storage product feature has been added.
+- TASK-004 is marked `DONE` with Replit-managed Clerk authentication, explicit
+  parent/student role enforcement, and separate protected web surfaces.
+- No Tutor, retrieval, Learning Intelligence, multimodal, artifact, content, or
+  object-storage product feature has been added.
 
 ## Active decisions
 
@@ -29,6 +31,8 @@ are also eligible because their declared dependencies are complete.
   module; only `NEXT_PUBLIC_*` values may reach the browser bundle.
 - Keep Alembic migrations as the development schema source of truth; apply
   production schema changes through Replit Publish rather than startup DDL.
+- Keep Clerk's browser session cookie transport separate from FastAPI's verified
+  JWT/API role boundary; missing role metadata must default to `STUDENT`.
 - Preserve the approved documents as source-of-truth references.
 
 ## Protected areas
@@ -39,14 +43,17 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Active risks
 
-- TASK-004, TASK-005, TASK-006, and TASK-007 are now eligible; TASK-008 and later
-  tasks remain blocked by their declared dependencies.
+- TASK-005, TASK-006, TASK-007, and TASK-008 are now eligible; later tasks remain
+  blocked by their declared dependencies.
+- Browser role testing can create a student session but cannot provision a
+  `PARENT_ADMIN` metadata claim; parent authorization is covered by API tests and
+  the metadata-driven web guard.
 
 ## Next recommended action
 
-Begin TASK-004 next, using the auth and authorization requirements in `TASKS.md`.
-TASK-005, TASK-006, and TASK-007 may be handled independently afterward. Do not
-begin TASK-008 or later tasks until their dependencies are complete.
+Begin TASK-005 next, using the object-storage requirements in `TASKS.md`.
+TASK-006, TASK-007, and TASK-008 may be handled independently afterward. Do not
+begin later tasks until their dependencies are complete.
 
 ## Critical references
 

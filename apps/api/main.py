@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from apps.api.routes.auth import router as auth_router
 from services.platform.config import get_settings
 
 
@@ -11,6 +12,7 @@ app = FastAPI(
     description=f"Phase 0 API shell for Lina Personal Learning System ({settings.app_env}).",
 )
 app.state.settings = settings
+app.include_router(auth_router)
 
 
 @app.get("/health", tags=["platform"])

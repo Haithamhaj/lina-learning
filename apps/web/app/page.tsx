@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { AuthActions } from "@/components/auth-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { publicConfig } from "@/lib/public-config";
 
@@ -40,9 +40,7 @@ export default function HomePage() {
               Runtime: {publicConfig.appEnv}
             </p>
           </div>
-          <Button variant="secondary" size="lg">
-            Foundation ready
-          </Button>
+          <AuthActions />
         </header>
 
         <section aria-labelledby="foundation-heading">

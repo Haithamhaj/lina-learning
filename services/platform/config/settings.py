@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     web_origin: str = "http://localhost:5000"
     allowed_origins: list[str] = Field(default_factory=list)
 
+    # Clerk publishable configuration is safe to use for JWT key discovery.
+    # The secret key remains managed by Clerk and is never read by the browser.
+    clerk_publishable_key: str | None = None
+    clerk_jwks_url: str | None = None
+
     # Server-only secret. SecretStr prevents accidental plaintext repr/logging.
     session_secret: SecretStr | None = None
 

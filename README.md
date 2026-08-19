@@ -28,6 +28,18 @@ npm run dev:api
 
 The API shell listens on `0.0.0.0:8000`.
 
+### Authentication
+
+Authentication is provided by the Replit-managed Clerk tenant. The web app uses
+Clerk's cookie-backed session, branded `/sign-in` and `/sign-up` routes, and
+separate `/student` and `/parent` surfaces. Users default safely to `STUDENT`;
+the explicit `PARENT_ADMIN` role must be present in Clerk metadata/claims.
+
+FastAPI protected routes verify Clerk JWTs against the configured Clerk JWKS and
+enforce the role boundary. The current web shells do not call those endpoints
+yet; when web API calls are added, preserve Clerk's same-origin cookie transport
+instead of copying tokens into custom browser headers.
+
 ### Database
 
 The development database is the Replit-managed PostgreSQL instance. Apply the
@@ -39,10 +51,10 @@ alembic downgrade base
 alembic upgrade head
 ```
 
-The migration enables the PostgreSQL `vector` extension and creates only the
-identity, student relationship, and grade-period foundation tables. Production
-schema changes are applied through the Replit Publish flow, not application
-startup.
+The migrations enable the PostgreSQL `vector` extension, create the identity,
+student relationship, and grade-period foundation tables, and add the explicit
+user role constraint. Production schema changes are applied through the Replit
+Publish flow, not application startup.
 
 ### Verification
 
@@ -53,6 +65,5 @@ python -m pytest
 ```
 
 The foundation intentionally does not include Tutor, retrieval, Learning
-Intelligence, multimodal, artifact, authentication, content, or object-storage
-features. The database layer currently contains only the Phase 0 schema
-foundation.
+Intelligence, multimodal, artifact, content, or object-storage features. The
+database layer currently contains only the Phase 0 schema foundation.

@@ -45,12 +45,13 @@
 **Completion:** Verified with Alembic upgrade/check, PostgreSQL 16 development schema inspection, pgvector enablement, generated downgrade SQL, and 12 passing Python tests.
 
 ## TASK-004 — Parent/Student auth and authorization baseline
-**Status:** READY
+**Status:** DONE
 **Dependencies:** TASK-003  
 **Purpose:** Represent and authorize `PARENT_ADMIN` and `STUDENT` roles with separate protected surfaces.  
 **Expected output:** Baseline login/session mechanism and role checks; separate web shells/routes.  
 **Likely areas:** `/apps/web`, `/apps/api`, `/services/platform/auth`.  
 **Verification:** Student cannot access Parent/Admin endpoints/pages; Parent can access admin shell; auth tests pass.  
+**Completion:** Clerk-managed login/session wiring, role migration, JWT/JWKS verification, role-specific API dependencies, separate `/student` and `/parent` shells, and 15 passing tests. API tests verify both role directions; browser verification confirms the student flow and the parent surface is metadata-driven with a safe student default.
 
 ## TASK-005 — Object-storage abstraction
 **Status:** READY

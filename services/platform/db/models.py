@@ -39,6 +39,10 @@ class User(Base):
             "external_subject",
             name="uq_users_identity",
         ),
+        CheckConstraint(
+            "role IN ('PARENT_ADMIN', 'STUDENT')",
+            name="ck_users_role",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -58,6 +62,12 @@ class User(Base):
     )
     email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     display_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    role: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="STUDENT",
+        server_default="STUDENT",
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

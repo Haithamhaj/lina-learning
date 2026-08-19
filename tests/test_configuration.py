@@ -79,7 +79,8 @@ def test_frontend_source_only_uses_browser_safe_configuration() -> None:
         path.read_text()
         for path in Path("apps/web").rglob("*")
         if path.suffix in {".ts", ".tsx", ".js", ".mjs"}
-        and ".next" not in path.parts
+            and ".next" not in path.parts
+            and "node_modules" not in path.parts
     )
 
     for server_secret_name in (
@@ -87,6 +88,7 @@ def test_frontend_source_only_uses_browser_safe_configuration() -> None:
         "DATABASE_URL",
         "S3_SECRET_ACCESS_KEY",
         "MODEL_API_KEY",
+        "CLERK_SECRET_KEY",
     ):
         assert server_secret_name not in web_sources
 
