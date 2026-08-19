@@ -23,7 +23,83 @@ verification.
 
 **Consequence:** `SESSION_SECRET` must be stable across application restarts.
 Rotating it without re-signing every stored object's metadata will break reads.
-Plan a coordinated rotation if you ever change the secret.
+Use the rotation procedure below before changing it.
+
+## Safe `SESSION_SECRET` rotation
+
+The rotation tool updates S3 user metadata while carrying forward the
+copyable system properties from `HeadObject` (content disposition, caching,
+storage class, object lock, and supported server-side encryption settings). It
+verifies the complete inventory with the old secret, computes each new HMAC
+from the verified metadata, and uses a same-key `CopyObject` with an ETag
+precondition. Object bytes are not downloaded or replaced. SSE-C objects are
+refused because their customer key is not available to the migration. The
+tool accepts an object that already verifies with the new secret so an
+interrupted run can be resumed without discarding the old secret.
+
+Perform the following steps during a maintenance window:
+
+1. **Prepare recovery and permissions.** Keep bucket versioning or another
+   provider backup available. Keep S3 Block Public Access enabled and use
+   Object Ownership **Bucket owner enforced** (or a private object-ACL
+   baseline) so same-key copies cannot create public student objects.
+   Temporarily grant the deployment identity `s3:ListBucket` for the private
+   prefix. The existing `s3:GetObject` and `s3:PutObject` permissions are used
+   for the metadata-only copy; no delete permission is needed by the tool.
+   Because the copy explicitly preserves provider properties, also grant
+   these only when the bucket uses the corresponding feature:
+   `s3:GetObjectTagging` and `s3:PutObjectTagging` for object tags,
+   `s3:PutObjectRetention` and `s3:PutObjectLegalHold` for Object Lock, and
+   the KMS key policy permissions required to decrypt and re-encrypt
+   SSE-KMS objects (at minimum `kms:Decrypt`, `kms:GenerateDataKey`, and
+   `kms:Encrypt` for the source/destination key). A provider may require
+   `s3:BypassGovernanceRetention` for governance-locked objects. Confirm
+   these conditional permissions with the provider and key policy.
+2. **Freeze storage writes.** Stop upload and delete workers, or put the
+   application in maintenance mode, so the inventory cannot change while it is
+   being verified. Keep the current `SESSION_SECRET` active until the complete
+   rotation succeeds.
+3. **Load both secrets through the secret manager.** Make the current value
+   available as `OLD_SESSION_SECRET` and the replacement as
+   `NEW_SESSION_SECRET`. Do not pass secrets as command-line arguments or
+   print them. Keep the old secret available for recovery until verification
+   is complete.
+4. **Verify without writing.** With the S3 configuration for the target bucket
+   loaded, run:
+
+   ```bash
+   python -m services.platform.storage.rotate_s3_hmac --dry-run
+   ```
+
+   The command prints only a JSON count. A failure means at least one object
+   is missing, tampered, or signed with neither secret; do not change
+   `SESSION_SECRET` until the cause is resolved. Dry-run validates the
+   inventory and signatures only; it cannot prove that the metadata copy has
+   the required tag, Object Lock, or KMS write permissions.
+5. **Run the migration.** Run the same command without `--dry-run`:
+
+   ```bash
+   python -m services.platform.storage.rotate_s3_hmac
+   ```
+
+   Confirm that `scanned` equals the expected number of stored application
+   objects and that `resigned` plus `already_rotated` equals `scanned`. A
+   precondition failure means an object changed; restore the maintenance
+   state and rerun with both secrets still available.
+6. **Switch the application secret.** Set `SESSION_SECRET` to the new value,
+   restart every API/worker process, and verify a known private object can be
+   read through the authenticated application path. Also verify a newly
+   issued private capability works.
+7. **Finish and clean up.** Only after the read checks succeed should the old
+   secret be removed from the deployment secret manager and the temporary
+   `s3:ListBucket` permission be revoked. If verification fails, restore the
+   old application secret, keep both values, and resume the tool rather than
+   deleting or replacing objects.
+
+For a non-default secret-variable naming scheme, pass
+`--old-secret-env NAME --new-secret-env NAME`. The command refuses
+`STORAGE_PROVIDER=local`; local development objects do not use S3 metadata
+HMACs.
 
 ## Bucket requirements
 
@@ -40,8 +116,12 @@ For a production bucket:
    originals. Downloads must go through an authenticated API path that checks
    the application's private capability.
 5. Grant the deployment identity only the required bucket actions:
-   `s3:GetObject`, `s3:PutObject`, and `s3:DeleteObject` for the private
-   object prefix. Bucket listing is not required by the provider.
+    `s3:GetObject`, `s3:PutObject`, and `s3:DeleteObject` for the private
+    object prefix. Bucket listing is not required for normal application
+    traffic, but `s3:ListBucket` is required temporarily for the documented
+    `SESSION_SECRET` rotation procedure. The rotation procedure additionally
+    needs the conditional tag, Object Lock, and KMS permissions listed in its
+    first step when those bucket features are in use.
 
 ## Endpoint transport security
 

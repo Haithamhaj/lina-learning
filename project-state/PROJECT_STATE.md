@@ -2,7 +2,8 @@
 
 ## Current goal
 
-TASK-005 is complete. The next recommended task is TASK-006:
+TASK-005 and its safe `SESSION_SECRET` rotation follow-up are complete. The
+next recommended task is TASK-006:
 DB-backed jobs and worker foundation. TASK-007 and TASK-008 are also eligible
 because their declared dependencies are complete.
 
@@ -24,6 +25,9 @@ because their declared dependencies are complete.
   HMAC-authenticated metadata bundles, HTTPS-only endpoint enforcement,
   conditional collision protection, and server-mediated private access.
   Production configuration fails explicitly when `STORAGE_PROVIDER=local`.
+  HMAC rotation is available as a resumable server-side migration that validates
+  the complete inventory before preserving S3 object properties during
+  same-key metadata copies.
   Upload UI remains deferred to a later task.
 
 ## Active decisions
@@ -49,6 +53,9 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 - TASK-006, TASK-007, and TASK-008 are now eligible; later tasks remain blocked
   by their declared dependencies.
+- A real production-like S3 rotation run is still recommended before changing
+  the deployment secret; dry-run cannot validate conditional copy permissions
+  for tags, Object Lock, or SSE-KMS.
 - Browser role testing can create a student session but cannot provision a
   `PARENT_ADMIN` metadata claim; parent authorization is covered by API tests and
   the metadata-driven web guard.

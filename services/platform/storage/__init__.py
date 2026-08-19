@@ -17,13 +17,14 @@ from .models import (
     StorageProviderUnavailable,
     StoredObject,
 )
-from .s3 import S3ObjectStorage
+from .s3 import MetadataRotationReport, S3ObjectStorage
 
 __all__ = [
     "ExpiredPrivateAccessToken",
     "InvalidPrivateAccessToken",
     "InvalidStorageKey",
     "LocalObjectStorage",
+    "MetadataRotationReport",
     "ObjectAlreadyExistsError",
     "ObjectMetadata",
     "ObjectNotFoundError",

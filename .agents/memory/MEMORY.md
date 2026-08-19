@@ -3,3 +3,4 @@
 - [Configuration testing in Replit](configuration-testing.md) — clear injected environment values when testing missing settings.
 - [Managed PostgreSQL schema flow](database-schema-flow.md) — keep dev migrations in-repo and apply production schema through Publish.
 - [Atomic original upload publishing](atomic-object-publishing.md) — use exclusive reservation plus atomic container publish; never check-then-replace originals.
+- [S3 secret rotation](s3-secret-rotation.md) — freeze writes, preserve object properties, and keep the old HMAC secret until post-rotation reads succeed.

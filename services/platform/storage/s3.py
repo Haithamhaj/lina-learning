@@ -11,6 +11,7 @@ import math
 import secrets
 import tempfile
 import time
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Callable, Iterator, Mapping
 from urllib.parse import urlparse
@@ -47,6 +48,31 @@ _INTERNAL_METADATA_KEYS = {
     _OBJECT_METADATA_KEY,
     _INTEGRITY_HMAC_KEY,
 }
+_COPYABLE_HEAD_PROPERTIES = (
+    "CacheControl",
+    "ContentDisposition",
+    "ContentEncoding",
+    "ContentLanguage",
+    "Expires",
+    "WebsiteRedirectLocation",
+    "StorageClass",
+    "ServerSideEncryption",
+    "SSEKMSKeyId",
+    "SSEKMSEncryptionContext",
+    "BucketKeyEnabled",
+    "ObjectLockMode",
+    "ObjectLockRetainUntilDate",
+    "ObjectLockLegalHoldStatus",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class MetadataRotationReport:
+    """Counts from one S3 metadata-signature rotation run."""
+
+    scanned: int
+    resigned: int
+    already_rotated: int
 
 
 def _canonical_bundle(
@@ -253,8 +279,145 @@ class S3ObjectStorage:
             stored_at=stored_at,
         )
 
-    def head(self, key: str) -> ObjectMetadata:
-        key = validate_storage_key(key)
+    def resign_metadata(
+        self,
+        *,
+        old_signing_secret: str | bytes,
+        new_signing_secret: str | bytes,
+        prefix: str | None = None,
+        dry_run: bool = False,
+    ) -> MetadataRotationReport:
+        """Re-sign every object metadata bundle without changing object bytes.
+
+        The complete inventory is verified with the old secret before the first
+        metadata copy is attempted. If a previous run already updated an
+        object, its new signature is accepted so an interrupted run can resume
+        safely. Any object that verifies with neither secret aborts the run.
+        """
+
+        old_secret = self._require_signing_secret(
+            old_signing_secret,
+            label="old_signing_secret",
+        )
+        new_secret = self._require_signing_secret(
+            new_signing_secret,
+            label="new_signing_secret",
+        )
+        if hmac.compare_digest(old_secret, new_secret):
+            raise ValueError("old_signing_secret and new_signing_secret must differ.")
+        if prefix is not None and not isinstance(prefix, str):
+            raise TypeError("prefix must be a string when provided.")
+
+        verified: list[tuple[str, ObjectMetadata, Mapping[str, Any]]] = []
+        already_rotated = 0
+        for key in self._list_object_keys(prefix=prefix):
+            response = self._head_response(key)
+            try:
+                metadata = self._metadata_from_head_response(
+                    key,
+                    response,
+                    signing_secret=old_secret,
+                )
+            except StorageIntegrityError as old_error:
+                # This branch makes a partially completed rotation resumable.
+                # It does not permit tampered objects: the new HMAC must also
+                # authenticate the exact current metadata bundle.
+                try:
+                    self._metadata_from_head_response(
+                        key,
+                        response,
+                        signing_secret=new_secret,
+                    )
+                except StorageIntegrityError:
+                    raise old_error
+                already_rotated += 1
+                continue
+
+            etag = response.get("ETag")
+            if not isinstance(etag, str) or not etag:
+                raise StorageProviderUnavailable(
+                    f"S3 metadata rotation requires an ETag for object: {key}"
+                )
+            self._validate_copy_properties(key, response)
+            verified.append((key, metadata, response))
+
+        if dry_run:
+            return MetadataRotationReport(
+                scanned=len(verified) + already_rotated,
+                resigned=0,
+                already_rotated=already_rotated,
+            )
+
+        for key, metadata, response in verified:
+            bundle = _canonical_bundle(
+                metadata.key,
+                metadata.content_type,
+                metadata.size,
+                metadata.checksum_sha256,
+                metadata.stored_at.isoformat() if metadata.stored_at else "",
+                dict(metadata.metadata),
+            )
+            self._replace_metadata(
+                key,
+                metadata,
+                response=response,
+                bundle_hmac=self._sign_bytes(bundle, signing_secret=new_secret),
+            )
+
+        return MetadataRotationReport(
+            scanned=len(verified) + already_rotated,
+            resigned=len(verified),
+            already_rotated=already_rotated,
+        )
+
+    def _list_object_keys(self, *, prefix: str | None) -> Iterator[str]:
+        continuation_token: str | None = None
+        while True:
+            request: dict[str, Any] = {
+                "Bucket": self.bucket,
+                "MaxKeys": 1000,
+            }
+            if prefix is not None:
+                request["Prefix"] = prefix
+            if continuation_token is not None:
+                request["ContinuationToken"] = continuation_token
+
+            try:
+                response = self._client.list_objects_v2(**request)
+            except ClientError as exc:
+                self._raise_provider_error("list", prefix or "*", exc)
+            except BotoCoreError as exc:
+                raise StorageProviderUnavailable(
+                    "S3 object listing failed during metadata rotation."
+                ) from exc
+
+            contents = response.get("Contents") or []
+            if not isinstance(contents, list):
+                raise StorageProviderUnavailable(
+                    "S3 returned an invalid object listing during metadata rotation."
+                )
+            for entry in contents:
+                if not isinstance(entry, Mapping):
+                    raise StorageProviderUnavailable(
+                        "S3 returned an invalid object entry during metadata rotation."
+                    )
+                object_key = entry.get("Key")
+                if not isinstance(object_key, str):
+                    raise StorageProviderUnavailable(
+                        "S3 returned an object without a valid key during metadata rotation."
+                    )
+                yield validate_storage_key(object_key)
+
+            if not response.get("IsTruncated"):
+                return
+            next_token = response.get("NextContinuationToken")
+            if not isinstance(next_token, str) or not next_token:
+                raise StorageProviderUnavailable(
+                    "S3 returned a truncated listing without a continuation token."
+                )
+            continuation_token = next_token
+
+    def _head_response(self, key: str) -> Mapping[str, Any]:
         try:
             response = self._client.head_object(Bucket=self.bucket, Key=key)
         except ClientError as exc:
@@ -263,6 +426,78 @@ class S3ObjectStorage:
             raise StorageProviderUnavailable(
                 f"S3 head failed for object: {key}"
             ) from exc
+        if not isinstance(response, Mapping):
+            raise StorageProviderUnavailable(
+                f"S3 returned an invalid head response for object: {key}"
+            )
+        return response
+
+    def _replace_metadata(
+        self,
+        key: str,
+        metadata: ObjectMetadata,
+        *,
+        response: Mapping[str, Any],
+        bundle_hmac: str,
+    ) -> None:
+        transport_metadata = dict(metadata.metadata)
+        transport_metadata[_CHECKSUM_METADATA_KEY] = metadata.checksum_sha256
+        transport_metadata[_STORED_AT_METADATA_KEY] = (
+            metadata.stored_at.isoformat() if metadata.stored_at else ""
+        )
+        transport_metadata[_OBJECT_METADATA_KEY] = json.dumps(
+            dict(metadata.metadata),
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        transport_metadata[_INTEGRITY_HMAC_KEY] = bundle_hmac
+        request: dict[str, Any] = {
+            "Bucket": self.bucket,
+            "Key": key,
+            "CopySource": {"Bucket": self.bucket, "Key": key},
+            "CopySourceIfMatch": response["ETag"],
+            "MetadataDirective": "REPLACE",
+            "ContentType": metadata.content_type,
+            "Metadata": transport_metadata,
+            # MetadataDirective=REPLACE otherwise resets object tags.
+            "TaggingDirective": "COPY",
+        }
+        for property_name in _COPYABLE_HEAD_PROPERTIES:
+            value = response.get(property_name)
+            if value is not None:
+                request[property_name] = value
+        try:
+            self._client.copy_object(**request)
+        except ClientError as exc:
+            if self._is_collision(exc):
+                raise StorageProviderUnavailable(
+                    f"S3 object changed while rotating metadata: {key}"
+                ) from exc
+            self._raise_provider_error("metadata rotation", key, exc)
+        except BotoCoreError as exc:
+            raise StorageProviderUnavailable(
+                f"S3 metadata rotation failed for object: {key}"
+            ) from exc
+
+    @staticmethod
+    def _validate_copy_properties(
+        key: str,
+        response: Mapping[str, Any],
+    ) -> None:
+        # SSE-C keys are never returned by HeadObject and must not be copied
+        # without the customer's encryption key. Refuse rather than silently
+        # re-encrypting or making an inaccessible object.
+        if response.get("SSECustomerAlgorithm") or response.get(
+            "SSECustomerKeyMD5"
+        ):
+            raise StorageProviderUnavailable(
+                "S3 metadata rotation cannot copy SSE-C object without its "
+                f"encryption key: {key}"
+            )
+
+    def head(self, key: str) -> ObjectMetadata:
+        key = validate_storage_key(key)
+        response = self._head_response(key)
         return self._metadata_from_head_response(key, response)
 
     def get(self, key: str) -> StoredObject:
@@ -404,6 +639,8 @@ class S3ObjectStorage:
         self,
         key: str,
         response: Mapping[str, Any],
+        *,
+        signing_secret: bytes | None = None,
     ) -> ObjectMetadata:
         raw_metadata = {
             str(name).lower(): str(value)
@@ -454,9 +691,13 @@ class S3ObjectStorage:
 
         # --- stored_at ---
         stored_at_value = raw_metadata.get(_STORED_AT_METADATA_KEY)
-        if stored_at_value:
+        if stored_at_value is not None:
             try:
-                stored_at = datetime.fromisoformat(stored_at_value)
+                stored_at = (
+                    None
+                    if stored_at_value == ""
+                    else datetime.fromisoformat(stored_at_value)
+                )
             except ValueError as exc:
                 raise StorageIntegrityError(
                     f"S3 object has invalid stored timestamp: {key}"
@@ -486,7 +727,10 @@ class S3ObjectStorage:
             key, content_type, size, checksum, stored_at_iso, user_metadata
         )
         stored_hmac = raw_metadata.get(_INTEGRITY_HMAC_KEY)
-        expected_hmac = self._sign_bytes(expected_bundle)
+        expected_hmac = self._sign_bytes(
+            expected_bundle,
+            signing_secret=signing_secret,
+        )
         if stored_hmac is None or not hmac.compare_digest(stored_hmac, expected_hmac):
             raise StorageIntegrityError(
                 f"Metadata integrity check failed for object: {key}"
@@ -585,8 +829,29 @@ class S3ObjectStorage:
     def _sign(self, payload: str) -> str:
         return self._sign_bytes(payload.encode("ascii"))
 
-    def _sign_bytes(self, data: bytes) -> str:
-        digest = hmac.new(self._signing_secret, data, hashlib.sha256).digest()
+    @staticmethod
+    def _require_signing_secret(
+        signing_secret: str | bytes,
+        *,
+        label: str,
+    ) -> bytes:
+        if isinstance(signing_secret, str):
+            signing_secret = signing_secret.encode("utf-8")
+        if not isinstance(signing_secret, bytes) or not signing_secret:
+            raise ValueError(f"{label} must be a non-empty string or bytes value.")
+        return signing_secret
+
+    def _sign_bytes(
+        self,
+        data: bytes,
+        *,
+        signing_secret: bytes | None = None,
+    ) -> str:
+        digest = hmac.new(
+            signing_secret or self._signing_secret,
+            data,
+            hashlib.sha256,
+        ).digest()
         return self._base64url(digest)
 
     @staticmethod
