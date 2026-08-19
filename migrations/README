@@ -1,0 +1,5 @@
+Alembic migration source for the Lina development PostgreSQL database.
+
+Run `alembic upgrade head` to apply the schema and `alembic downgrade base` to
+rebuild it from an empty database. Production schema changes are applied by
+Replit's Publish flow.

@@ -2,9 +2,9 @@
 
 ## Current goal
 
-TASK-002 is complete. The next recommended task is TASK-003: PostgreSQL and
-migration foundation. TASK-005 is also eligible because its only dependency,
-TASK-002, is complete.
+TASK-003 is complete. The next recommended task is TASK-004:
+Parent/Student auth and authorization baseline. TASK-005, TASK-006, and TASK-007
+are also eligible because their declared dependencies are complete.
 
 ## Current reality
 
@@ -15,8 +15,10 @@ TASK-002, is complete.
 - TASK-001 is marked `DONE` after local and browser verification.
 - TASK-002 is marked `DONE` with typed server configuration and browser-safe
   frontend configuration.
-- No Tutor, retrieval, Learning Intelligence, multimodal, artifact, database, or
-  authentication feature has been added.
+- TASK-003 is marked `DONE` with an Alembic PostgreSQL foundation, pgvector
+  enablement, and identity/grade-period tables applied to development.
+- No Tutor, retrieval, Learning Intelligence, multimodal, artifact, auth,
+  content, or object-storage product feature has been added.
 
 ## Active decisions
 
@@ -25,6 +27,8 @@ TASK-002, is complete.
   until the task that needs them.
 - Keep server-only settings and secrets inside the API/service configuration
   module; only `NEXT_PUBLIC_*` values may reach the browser bundle.
+- Keep Alembic migrations as the development schema source of truth; apply
+  production schema changes through Replit Publish rather than startup DDL.
 - Preserve the approved documents as source-of-truth references.
 
 ## Protected areas
@@ -35,14 +39,14 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Active risks
 
-- TASK-003 and TASK-005 are now eligible; later Phase 0 tasks remain blocked by
-  their declared dependencies.
+- TASK-004, TASK-005, TASK-006, and TASK-007 are now eligible; TASK-008 and later
+  tasks remain blocked by their declared dependencies.
 
 ## Next recommended action
 
-Begin TASK-003 next, using the database/migration requirements in `TASKS.md`.
-TASK-005 may be handled independently afterward. Do not begin TASK-004 or later
-tasks until their dependencies are complete.
+Begin TASK-004 next, using the auth and authorization requirements in `TASKS.md`.
+TASK-005, TASK-006, and TASK-007 may be handled independently afterward. Do not
+begin TASK-008 or later tasks until their dependencies are complete.
 
 ## Critical references
 

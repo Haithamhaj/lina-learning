@@ -36,15 +36,16 @@
 **Completion:** Verified with 9 configuration tests, TypeScript check, production build, secret-name scan of the Next output, API smoke checks on port 8000, and browser smoke testing.
 
 ## TASK-003 — PostgreSQL and migration foundation
-**Status:** READY
+**Status:** DONE
 **Dependencies:** TASK-002  
 **Purpose:** Establish PostgreSQL, pgvector capability, migrations, and foundational identity/grade tables.  
 **Expected output:** Migration runner and initial tables for users, students, parent relationships, grade periods.  
 **Likely areas:** `/apps/api`, `/services/platform/db`, `/migrations`.  
 **Verification:** Fresh DB migrates up successfully; migration rollback/rebuild path documented; DB integration test passes.  
+**Completion:** Verified with Alembic upgrade/check, PostgreSQL 16 development schema inspection, pgvector enablement, generated downgrade SQL, and 12 passing Python tests.
 
 ## TASK-004 — Parent/Student auth and authorization baseline
-**Status:** BLOCKED  
+**Status:** READY
 **Dependencies:** TASK-003  
 **Purpose:** Represent and authorize `PARENT_ADMIN` and `STUDENT` roles with separate protected surfaces.  
 **Expected output:** Baseline login/session mechanism and role checks; separate web shells/routes.  
@@ -60,7 +61,7 @@
 **Verification:** Upload/read/delete test fixture works; originals preserve checksum; no public-by-default student asset URLs.  
 
 ## TASK-006 — DB-backed jobs and worker foundation
-**Status:** BLOCKED  
+**Status:** READY
 **Dependencies:** TASK-003  
 **Purpose:** Support document processing, session consolidation, and rebuild work without Redis/Celery.  
 **Expected output:** `jobs` table, worker loop, retry/failure status, idempotency hook.  
@@ -68,7 +69,7 @@
 **Verification:** Test job moves pending → running → completed; failure is recorded; duplicate/idempotent execution behavior covered.  
 
 ## TASK-007 — AI execution ledger and Model Gateway skeleton
-**Status:** BLOCKED  
+**Status:** READY
 **Dependencies:** TASK-003  
 **Purpose:** Centralize model routing and usage/cost observability before Tutor calls exist.  
 **Expected output:** task-based `ModelGateway` contract, route configuration model, `ai_executions` logging, provider adapter interface.  

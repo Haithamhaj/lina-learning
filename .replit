@@ -1,7 +1,8 @@
-modules = ["nodejs-24", "python-base-3.13"]
+modules = ["nodejs-24", "python-base-3.13", "postgresql-16"]
 
 [nix]
 channel = "stable-25_05"
+packages = ["postgresql"]
 
 [workflows]
 runButton = "Project"
