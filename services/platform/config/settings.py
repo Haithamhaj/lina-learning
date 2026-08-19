@@ -55,6 +55,10 @@ class Settings(BaseSettings):
     s3_region: str | None = None
     s3_access_key_id: SecretStr | None = None
     s3_secret_access_key: SecretStr | None = None
+    s3_multipart_threshold_bytes: int = Field(
+        default=8 * 1024 * 1024,
+        gt=0,
+    )
 
     # Model routing settings. Provider calls remain deferred to the Model
     # Gateway task; mock is the safe foundation default.

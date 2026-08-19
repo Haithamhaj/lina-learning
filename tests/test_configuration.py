@@ -17,6 +17,7 @@ def test_development_configuration_has_safe_defaults(
     assert settings.model_provider == "mock"
     assert settings.allowed_origins == ["http://localhost:5000"]
     assert settings.session_secret is None
+    assert settings.s3_multipart_threshold_bytes == 8 * 1024 * 1024
 
 
 def test_allowed_origins_accepts_explicit_list() -> None:

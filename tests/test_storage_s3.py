@@ -26,7 +26,11 @@ class FakeS3Client:
     def __init__(self) -> None:
         self.objects: dict[str, dict[str, Any]] = {}
         self.put_calls: list[dict[str, Any]] = []
+        self.upload_fileobj_calls: list[dict[str, Any]] = []
         self.copy_calls: list[dict[str, Any]] = []
+        self.multipart_uploads: dict[str, dict[str, Any]] = {}
+        self.abort_calls: list[dict[str, str]] = []
+        self.fail_upload_part_copy = False
 
     def put_object(self, **request: Any) -> None:
         self.put_calls.append(request)
@@ -45,6 +49,33 @@ class FakeS3Client:
             "content": content,
             "content_type": request["ContentType"],
             "metadata": dict(request["Metadata"]),
+            "stored_at": datetime.now(UTC),
+            "etag": f'"{hashlib.md5(content).hexdigest()}"',
+        }
+
+    def upload_fileobj(
+        self,
+        fileobj: Any,
+        bucket: str,
+        key: str,
+        *,
+        ExtraArgs: dict[str, Any],
+        Config: Any,
+    ) -> None:
+        self.upload_fileobj_calls.append(
+            {
+                "Fileobj": fileobj,
+                "Bucket": bucket,
+                "Key": key,
+                "ExtraArgs": ExtraArgs,
+                "Config": Config,
+            }
+        )
+        content = fileobj.read()
+        self.objects[key] = {
+            "content": content,
+            "content_type": ExtraArgs["ContentType"],
+            "metadata": dict(ExtraArgs["Metadata"]),
             "stored_at": datetime.now(UTC),
             "etag": f'"{hashlib.md5(content).hexdigest()}"',
         }
@@ -84,10 +115,15 @@ class FakeS3Client:
     def copy_object(self, **request: Any) -> None:
         self.copy_calls.append(request)
         key = request["Key"]
-        if key not in self.objects:
+        source = request["CopySource"]
+        source_key = (
+            source["Key"]
+            if isinstance(source, dict)
+            else source.rsplit("/", 1)[-1]
+        )
+        if source_key not in self.objects:
             raise self._missing("CopyObject")
-        stored = self.objects[key]
-        if stored["etag"] != request["CopySourceIfMatch"]:
+        if request.get("IfNoneMatch") == "*" and key in self.objects:
             raise ClientError(
                 {
                     "Error": {"Code": "PreconditionFailed"},
@@ -95,14 +131,133 @@ class FakeS3Client:
                 },
                 "CopyObject",
             )
-        stored["metadata"] = dict(request["Metadata"])
-        stored["content_type"] = request["ContentType"]
+        source_object = self.objects[source_key]
+        if source_key == key:
+            stored = source_object
+            if stored["etag"] != request["CopySourceIfMatch"]:
+                raise ClientError(
+                    {
+                        "Error": {"Code": "PreconditionFailed"},
+                        "ResponseMetadata": {"HTTPStatusCode": 412},
+                    },
+                    "CopyObject",
+                )
+            stored["metadata"] = dict(request["Metadata"])
+            stored["content_type"] = request["ContentType"]
+            return
+        self.objects[key] = {
+            "content": source_object["content"],
+            "content_type": source_object["content_type"],
+            "metadata": dict(source_object["metadata"]),
+            "stored_at": source_object["stored_at"],
+            "etag": source_object["etag"],
+        }
 
-    def delete_object(self, *, Bucket: str, Key: str, IfMatch: str) -> None:
+    def create_multipart_upload(
+        self,
+        *,
+        Bucket: str,
+        Key: str,
+        ContentType: str,
+        Metadata: dict[str, str],
+    ) -> dict[str, str]:
+        del Bucket
+        upload_id = f"upload-{len(self.multipart_uploads) + 1}"
+        self.multipart_uploads[upload_id] = {
+            "key": Key,
+            "content_type": ContentType,
+            "metadata": dict(Metadata),
+            "parts": {},
+        }
+        return {"UploadId": upload_id}
+
+    def upload_part_copy(
+        self,
+        *,
+        Bucket: str,
+        Key: str,
+        UploadId: str,
+        PartNumber: int,
+        CopySource: dict[str, str],
+        CopySourceRange: str,
+    ) -> dict[str, dict[str, str]]:
+        del Bucket, Key
+        if self.fail_upload_part_copy:
+            raise ClientError(
+                {
+                    "Error": {"Code": "InternalError"},
+                    "ResponseMetadata": {"HTTPStatusCode": 500},
+                },
+                "UploadPartCopy",
+            )
+        upload = self.multipart_uploads[UploadId]
+        source = self.objects[CopySource["Key"]]["content"]
+        start, end = (
+            int(value)
+            for value in CopySourceRange.removeprefix("bytes=").split("-", 1)
+        )
+        content = source[start : end + 1]
+        upload["parts"][PartNumber] = content
+        return {
+            "CopyPartResult": {
+                "ETag": f'"{hashlib.md5(content).hexdigest()}"',
+            }
+        }
+
+    def complete_multipart_upload(
+        self,
+        *,
+        Bucket: str,
+        Key: str,
+        UploadId: str,
+        MultipartUpload: dict[str, list[dict[str, Any]]],
+        IfNoneMatch: str,
+    ) -> None:
+        del Bucket
+        if IfNoneMatch == "*" and Key in self.objects:
+            raise ClientError(
+                {
+                    "Error": {"Code": "PreconditionFailed"},
+                    "ResponseMetadata": {"HTTPStatusCode": 412},
+                },
+                "CompleteMultipartUpload",
+            )
+        upload = self.multipart_uploads[UploadId]
+        content = b"".join(
+            upload["parts"][part["PartNumber"]]
+            for part in MultipartUpload["Parts"]
+        )
+        self.objects[Key] = {
+            "content": content,
+            "content_type": upload["content_type"],
+            "metadata": dict(upload["metadata"]),
+            "stored_at": datetime.now(UTC),
+            "etag": f'"{hashlib.md5(content).hexdigest()}"',
+        }
+        del self.multipart_uploads[UploadId]
+
+    def abort_multipart_upload(
+        self,
+        *,
+        Bucket: str,
+        Key: str,
+        UploadId: str,
+    ) -> None:
+        del Bucket, Key
+        self.abort_calls.append({"UploadId": UploadId})
+        self.multipart_uploads.pop(UploadId, None)
+
+    def delete_object(
+        self,
+        *,
+        Bucket: str,
+        Key: str,
+        IfMatch: str | None = None,
+    ) -> None:
         del Bucket
         if Key not in self.objects:
             raise self._missing("DeleteObject")
-        if self.objects[Key]["etag"] != IfMatch:
+        if IfMatch is not None and self.objects[Key]["etag"] != IfMatch:
             raise ClientError(
                 {
                     "Error": {"Code": "PreconditionFailed"},
@@ -163,6 +318,106 @@ def test_s3_round_trip_preserves_checksum_metadata_and_private_access() -> None:
 
     with pytest.raises(ObjectAlreadyExistsError):
         storage.put(stored.key, b"replacement")
+
+
+def test_s3_large_upload_uses_multipart_transfer_and_preserves_integrity() -> None:
+    fake = FakeS3Client()
+    threshold = 1024 * 1024
+    storage = S3ObjectStorage(
+        bucket="lina-private",
+        region="us-east-1",
+        access_key_id="access",
+        secret_access_key="secret",
+        endpoint="https://s3.example.test",
+        client=fake,
+        signing_secret="test-secret",
+        multipart_threshold=threshold,
+    )
+    payload = b"large in-memory payload\n" * (9 * 1024 * 1024 // 24)
+
+    stored = storage.put(
+        "books/large-book.pdf",
+        payload,
+        content_type="application/pdf",
+        metadata={"source": "multipart-test"},
+    )
+
+    assert len(fake.upload_fileobj_calls) == 1
+    transfer = fake.upload_fileobj_calls[0]
+    assert transfer["Key"].startswith(".lina-multipart/")
+    assert transfer["Config"].multipart_threshold == threshold
+    assert transfer["ExtraArgs"]["Metadata"]["lina-sha256"] == stored.checksum_sha256
+    assert storage.get(stored.key).content == payload
+    assert storage.head(stored.key) == stored
+
+    with pytest.raises(ObjectAlreadyExistsError):
+        storage.put(stored.key, b"replacement" * 1024 * 1024)
+    assert storage.get(stored.key).content == payload
+
+
+def test_s3_default_multipart_threshold_switches_after_eight_megabytes() -> None:
+    fake = FakeS3Client()
+    storage = make_storage(fake)
+    threshold = s3_module._DEFAULT_MULTIPART_THRESHOLD
+    exact_payload = b"e" * threshold
+    above_payload = b"a" * (threshold + 1)
+
+    storage.put("books/exact-boundary.pdf", exact_payload)
+    assert len(fake.put_calls) == 1
+    assert fake.upload_fileobj_calls == []
+
+    storage.put("books/above-boundary.pdf", above_payload)
+    assert len(fake.upload_fileobj_calls) == 1
+    assert storage.get("books/above-boundary.pdf").content == above_payload
+
+
+def test_s3_large_upload_uses_multipart_copy_above_copy_object_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = FakeS3Client()
+    storage = S3ObjectStorage(
+        bucket="lina-private",
+        region="us-east-1",
+        access_key_id="access",
+        secret_access_key="secret",
+        endpoint="https://s3.example.test",
+        client=fake,
+        signing_secret="test-secret",
+        multipart_threshold=1024 * 1024,
+    )
+    monkeypatch.setattr(s3_module, "_COPY_OBJECT_MAX_SIZE", 1024 * 1024)
+    payload = b"multipart copy payload\n" * (6 * 1024 * 1024 // 22)
+
+    stored = storage.put("books/very-large-book.pdf", payload)
+
+    assert fake.copy_calls == []
+    assert fake.multipart_uploads == {}
+    assert storage.get(stored.key).content == payload
+
+
+def test_s3_multipart_copy_aborts_destination_upload_on_part_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = FakeS3Client()
+    fake.fail_upload_part_copy = True
+    storage = S3ObjectStorage(
+        bucket="lina-private",
+        region="us-east-1",
+        access_key_id="access",
+        secret_access_key="secret",
+        endpoint="https://s3.example.test",
+        client=fake,
+        signing_secret="test-secret",
+        multipart_threshold=1024 * 1024,
+    )
+    monkeypatch.setattr(s3_module, "_COPY_OBJECT_MAX_SIZE", 1024 * 1024)
+    payload = b"multipart copy failure\n" * (6 * 1024 * 1024 // 22)
+
+    with pytest.raises(StorageProviderUnavailable, match="multipart put"):
+        storage.put("books/failed-very-large-book.pdf", payload)
+
+    assert fake.abort_calls == [{"UploadId": "upload-1"}]
+    assert fake.multipart_uploads == {}
 
 
 def test_s3_private_access_expires_and_missing_objects_are_clear() -> None:

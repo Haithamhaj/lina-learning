@@ -7,15 +7,18 @@ import binascii
 import hashlib
 import hmac
 import json
+import logging
 import math
 import secrets
 import tempfile
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from io import BytesIO
 from typing import Any, Callable, Iterator, Mapping
 from urllib.parse import urlparse
 
+from boto3.exceptions import Boto3Error
 from botocore.exceptions import BotoCoreError, ClientError
 
 from .keys import validate_storage_key
@@ -35,6 +38,12 @@ from .models import (
 _TOKEN_VERSION = "v1"
 _CHUNK_SIZE = 1024 * 1024
 _SPOOL_MAX_SIZE = 8 * 1024 * 1024
+_DEFAULT_MULTIPART_THRESHOLD = _SPOOL_MAX_SIZE
+_MULTIPART_STAGING_PREFIX = ".lina-multipart/"
+_COPY_OBJECT_MAX_SIZE = 5 * 1024 * 1024 * 1024
+_MULTIPART_MIN_PART_SIZE = 5 * 1024 * 1024
+_MULTIPART_MAX_PARTS = 10_000
+_logger = logging.getLogger(__name__)
 # Lina-namespaced S3 user-metadata keys.
 _CHECKSUM_METADATA_KEY = "lina-sha256"
 _STORED_AT_METADATA_KEY = "lina-stored-at"
@@ -125,6 +134,7 @@ class S3ObjectStorage:
         signing_secret: str | bytes | None = None,
         client: Any | None = None,
         clock: Callable[[], float] = time.time,
+        multipart_threshold: int = _DEFAULT_MULTIPART_THRESHOLD,
     ) -> None:
         if not bucket.strip():
             raise ValueError("S3 bucket must not be empty.")
@@ -132,11 +142,18 @@ class S3ObjectStorage:
             raise ValueError("S3 region must not be empty.")
         if not access_key_id.strip() or not secret_access_key.strip():
             raise ValueError("S3 access credentials must not be empty.")
+        if (
+            isinstance(multipart_threshold, bool)
+            or not isinstance(multipart_threshold, int)
+            or multipart_threshold <= 0
+        ):
+            raise ValueError("multipart_threshold must be a positive integer.")
 
         self.bucket = bucket
         self.region = region
         self.endpoint = endpoint
         self._clock = clock
+        self.multipart_threshold = multipart_threshold
         if isinstance(signing_secret, str):
             signing_secret = signing_secret.encode("utf-8")
         self._signing_secret = signing_secret or secrets.token_bytes(32)
@@ -215,22 +232,13 @@ class S3ObjectStorage:
             raise ValueError("content_type must not be empty.")
         user_metadata = self._validate_metadata(metadata)
 
-        checksum = hashlib.sha256()
-        size = 0
         stored_at = datetime.fromtimestamp(self._clock(), UTC)
         stored_at_iso = stored_at.isoformat()
-        with tempfile.SpooledTemporaryFile(
-            max_size=_SPOOL_MAX_SIZE,
-            mode="w+b",
-        ) as payload:
-            for chunk in self._chunks(data):
-                checksum.update(chunk)
-                size += len(chunk)
-                payload.write(chunk)
-            checksum_hex = checksum.hexdigest()
-
+        payload, size, checksum_hex, close_payload = self._prepare_payload(data)
+        try:
             # Build and sign the canonical metadata bundle so that future reads
-            # can prove the bytes and metadata belong to the same write.
+            # can prove the bytes and metadata belong to the same write. This
+            # deliberately happens before either transfer path starts.
             bundle = _canonical_bundle(
                 key, content_type, size, checksum_hex, stored_at_iso, user_metadata
             )
@@ -249,26 +257,24 @@ class S3ObjectStorage:
             )
             transport_metadata[_INTEGRITY_HMAC_KEY] = bundle_hmac
 
-            payload.seek(0)
-            try:
-                self._client.put_object(
-                    Bucket=self.bucket,
-                    Key=key,
-                    Body=payload,
-                    ContentType=content_type,
-                    Metadata=transport_metadata,
-                    IfNoneMatch="*",
+            if size > self.multipart_threshold:
+                self._put_multipart(
+                    key,
+                    payload,
+                    size=size,
+                    content_type=content_type,
+                    transport_metadata=transport_metadata,
                 )
-            except ClientError as exc:
-                if self._is_collision(exc):
-                    raise ObjectAlreadyExistsError(
-                        f"Refusing to replace existing object: {key}"
-                    ) from exc
-                self._raise_provider_error("put", key, exc)
-            except BotoCoreError as exc:
-                raise StorageProviderUnavailable(
-                    f"S3 put failed for object: {key}"
-                ) from exc
+            else:
+                self._put_single(
+                    key,
+                    payload,
+                    content_type=content_type,
+                    transport_metadata=transport_metadata,
+                )
+        finally:
+            if close_payload:
+                payload.close()
 
         return ObjectMetadata(
             key=key,
@@ -278,6 +284,259 @@ class S3ObjectStorage:
             metadata=user_metadata,
             stored_at=stored_at,
         )
+
+    def _prepare_payload(
+        self,
+        data: StorageInput,
+    ) -> tuple[Any, int, str, bool]:
+        """Return a rewindable payload after hashing its complete contents.
+
+        Bytes-like inputs stay in memory. Seekable streams are hashed in place
+        and restored to their original position, which avoids creating a second
+        local copy. A non-seekable stream still needs a temporary rewindable
+        copy because the integrity metadata must be complete before S3 receives
+        the first byte.
+        """
+
+        if isinstance(data, bytes):
+            return BytesIO(data), len(data), hashlib.sha256(data).hexdigest(), True
+        if isinstance(data, (bytearray, memoryview)):
+            value = bytes(data)
+            return BytesIO(value), len(value), hashlib.sha256(value).hexdigest(), True
+        if not hasattr(data, "read"):
+            raise TypeError("Storage data must be bytes-like or a readable stream.")
+
+        start_position = self._rewind_position(data)
+        if start_position is not None:
+            checksum, size = self._hash_stream(data)
+            try:
+                data.seek(start_position)
+            except (AttributeError, OSError, ValueError) as exc:
+                raise TypeError(
+                    "Readable storage streams must be rewindable after hashing."
+                ) from exc
+            return data, size, checksum, False
+
+        payload = tempfile.SpooledTemporaryFile(
+            max_size=_SPOOL_MAX_SIZE,
+            mode="w+b",
+        )
+        try:
+            checksum, size = self._hash_stream(data, destination=payload)
+            payload.seek(0)
+        except Exception:
+            payload.close()
+            raise
+        return payload, size, checksum, True
+
+    @staticmethod
+    def _rewind_position(data: Any) -> int | None:
+        try:
+            if hasattr(data, "seekable") and not data.seekable():
+                return None
+            position = data.tell()
+            data.seek(position)
+        except (AttributeError, OSError, ValueError):
+            return None
+        return position
+
+    @classmethod
+    def _hash_stream(
+        cls,
+        data: Any,
+        *,
+        destination: Any | None = None,
+    ) -> tuple[str, int]:
+        checksum = hashlib.sha256()
+        size = 0
+        for chunk in cls._chunks(data):
+            checksum.update(chunk)
+            size += len(chunk)
+            if destination is not None:
+                destination.write(chunk)
+        return checksum.hexdigest(), size
+
+    def _put_single(
+        self,
+        key: str,
+        payload: Any,
+        *,
+        content_type: str,
+        transport_metadata: Mapping[str, str],
+    ) -> None:
+        try:
+            self._client.put_object(
+                Bucket=self.bucket,
+                Key=key,
+                Body=payload,
+                ContentType=content_type,
+                Metadata=dict(transport_metadata),
+                IfNoneMatch="*",
+            )
+        except ClientError as exc:
+            if self._is_collision(exc):
+                raise ObjectAlreadyExistsError(
+                    f"Refusing to replace existing object: {key}"
+                ) from exc
+            self._raise_provider_error("put", key, exc)
+        except BotoCoreError as exc:
+            raise StorageProviderUnavailable(
+                f"S3 put failed for object: {key}"
+            ) from exc
+
+    def _put_multipart(
+        self,
+        key: str,
+        payload: Any,
+        *,
+        size: int,
+        content_type: str,
+        transport_metadata: Mapping[str, str],
+    ) -> None:
+        """Transfer a large object through a conditional staging publish.
+
+        boto3's managed ``upload_fileobj`` transfer does not expose
+        ``IfNoneMatch`` as an upload argument. Uploading to a random staging key
+        first lets the managed transfer handle multipart retries and cleanup,
+        then a conditional same-bucket copy publishes the original exactly
+        once. The temporary object is deleted in all normal outcomes.
+        """
+
+        from boto3.s3.transfer import TransferConfig
+
+        staging_key = f"{_MULTIPART_STAGING_PREFIX}{secrets.token_hex(16)}"
+        try:
+            try:
+                self._client.upload_fileobj(
+                    payload,
+                    self.bucket,
+                    staging_key,
+                    ExtraArgs={
+                        "ContentType": content_type,
+                        "Metadata": dict(transport_metadata),
+                    },
+                    Config=TransferConfig(
+                        multipart_threshold=self.multipart_threshold,
+                    ),
+                )
+                if size <= _COPY_OBJECT_MAX_SIZE:
+                    self._client.copy_object(
+                        Bucket=self.bucket,
+                        Key=key,
+                        CopySource={"Bucket": self.bucket, "Key": staging_key},
+                        IfNoneMatch="*",
+                        MetadataDirective="COPY",
+                    )
+                else:
+                    self._publish_multipart_copy(
+                        key,
+                        staging_key,
+                        size=size,
+                        content_type=content_type,
+                        transport_metadata=transport_metadata,
+                    )
+            except ClientError as exc:
+                if self._is_collision(exc):
+                    raise ObjectAlreadyExistsError(
+                        f"Refusing to replace existing object: {key}"
+                    ) from exc
+                self._raise_provider_error("multipart put", key, exc)
+            except (BotoCoreError, Boto3Error) as exc:
+                raise StorageProviderUnavailable(
+                    f"S3 multipart put failed for object: {key}"
+                ) from exc
+        finally:
+            try:
+                self._client.delete_object(
+                    Bucket=self.bucket,
+                    Key=staging_key,
+                )
+            except (BotoCoreError, Boto3Error, ClientError):
+                # The lifecycle rule documented for production buckets is the
+                # final cleanup boundary if a provider temporarily rejects the
+                # best-effort staging-object delete. Keep this observable so
+                # operators can investigate unexpected staging growth.
+                _logger.warning(
+                    "Unable to remove temporary S3 multipart object %s",
+                    staging_key,
+                    exc_info=True,
+                )
+
+    def _publish_multipart_copy(
+        self,
+        key: str,
+        staging_key: str,
+        *,
+        size: int,
+        content_type: str,
+        transport_metadata: Mapping[str, str],
+    ) -> None:
+        """Publish a staged object above CopyObject's 5 GiB source limit."""
+
+        upload_id: str | None = None
+        completed = False
+        try:
+            response = self._client.create_multipart_upload(
+                Bucket=self.bucket,
+                Key=key,
+                ContentType=content_type,
+                Metadata=dict(transport_metadata),
+            )
+            upload_id = response.get("UploadId")
+            if not isinstance(upload_id, str) or not upload_id:
+                raise StorageProviderUnavailable(
+                    f"S3 did not return a multipart upload ID for object: {key}"
+                )
+
+            part_size = max(
+                _MULTIPART_MIN_PART_SIZE,
+                math.ceil(size / _MULTIPART_MAX_PARTS),
+            )
+            part_size = math.ceil(part_size / _CHUNK_SIZE) * _CHUNK_SIZE
+            parts: list[dict[str, Any]] = []
+            for part_number, start in enumerate(
+                range(0, size, part_size),
+                start=1,
+            ):
+                end = min(size - 1, start + part_size - 1)
+                part_response = self._client.upload_part_copy(
+                    Bucket=self.bucket,
+                    Key=key,
+                    UploadId=upload_id,
+                    PartNumber=part_number,
+                    CopySource={"Bucket": self.bucket, "Key": staging_key},
+                    CopySourceRange=f"bytes={start}-{end}",
+                )
+                copy_result = part_response.get("CopyPartResult") or {}
+                etag = copy_result.get("ETag")
+                if not isinstance(etag, str) or not etag:
+                    raise StorageProviderUnavailable(
+                        f"S3 returned an invalid copied part for object: {key}"
+                    )
+                parts.append({"ETag": etag, "PartNumber": part_number})
+
+            self._client.complete_multipart_upload(
+                Bucket=self.bucket,
+                Key=key,
+                UploadId=upload_id,
+                MultipartUpload={"Parts": parts},
+                IfNoneMatch="*",
+            )
+            completed = True
+        finally:
+            if upload_id is not None and not completed:
+                try:
+                    self._client.abort_multipart_upload(
+                        Bucket=self.bucket,
+                        Key=key,
+                        UploadId=upload_id,
+                    )
+                except (BotoCoreError, Boto3Error, ClientError):
+                    _logger.warning(
+                        "Unable to abort failed S3 multipart publish for %s",
+                        key,
+                        exc_info=True,
+                    )
 
     def resign_metadata(
         self,

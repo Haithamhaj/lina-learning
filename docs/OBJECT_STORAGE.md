@@ -110,18 +110,27 @@ For a production bucket:
 2. Use the bucket's default server-side encryption (SSE-S3 or SSE-KMS).
    Bucket versioning is optional for disaster-recovery purposes; the application
    already refuses logical replacement at the key level.
-3. Add a lifecycle rule that aborts incomplete multipart uploads after a short
-   period, such as one day. This bounds the cost of interrupted large uploads.
+3. Add lifecycle rules that (a) abort incomplete multipart uploads after a
+   short period, such as one day, and (b) expire completed objects under
+   `.lina-multipart/` after a short period, such as one day. The second rule
+   bounds temporary-object retention if a provider temporarily rejects the
+   application's best-effort cleanup request.
 4. Do not configure a public website endpoint or public CDN origin for student
    originals. Downloads must go through an authenticated API path that checks
    the application's private capability.
 5. Grant the deployment identity only the required bucket actions:
-    `s3:GetObject`, `s3:PutObject`, and `s3:DeleteObject` for the private
-    object prefix. Bucket listing is not required for normal application
-    traffic, but `s3:ListBucket` is required temporarily for the documented
-    `SESSION_SECRET` rotation procedure. The rotation procedure additionally
-    needs the conditional tag, Object Lock, and KMS permissions listed in its
-    first step when those bucket features are in use.
+   `s3:GetObject`, `s3:PutObject`, and `s3:DeleteObject` for the private
+   object prefix and the `.lina-multipart/` staging prefix. Managed
+   multipart upload also needs `s3:AbortMultipartUpload` on both prefixes
+   because the >5 GiB publication path creates its destination multipart
+   upload under the final object key. Grant `s3:ListMultipartUploadParts` and
+   `s3:ListBucketMultipartUploads` only on the prefixes where the provider's
+   managed-transfer implementation requires them. Bucket listing is not
+   required for normal application traffic, but `s3:ListBucket` is required
+   temporarily for the documented `SESSION_SECRET` rotation procedure. The
+   rotation procedure additionally needs the conditional tag, Object Lock,
+   and KMS permissions listed in its first step when those bucket features are
+   in use.
 
 ## Endpoint transport security
 
@@ -196,6 +205,7 @@ S3_REGION=<bucket region>
 S3_ENDPOINT=<HTTPS-only S3-compatible endpoint; leave empty for AWS>
 S3_ACCESS_KEY_ID=<deployment access key>
 S3_SECRET_ACCESS_KEY=<deployment secret>
+S3_MULTIPART_THRESHOLD_BYTES=8388608
 SESSION_SECRET=<stable application signing secret — must not change without re-signing>
 ```
 
@@ -203,6 +213,13 @@ Put credentials and `SESSION_SECRET` in Replit Secrets or the deployment
 environment's secret manager. Never commit them, place them in `.env.example`,
 or expose them through `NEXT_PUBLIC_*` settings. The production configuration
 also requires `DATABASE_URL`.
+
+Objects larger than `S3_MULTIPART_THRESHOLD_BYTES` use boto3's managed
+multipart transfer API. The default is 8 MiB, matching the previous spool
+boundary. The complete SHA-256 and HMAC
+metadata bundle is computed before the transfer begins; the transfer publishes
+through a conditional staging copy so immutable original-key behavior remains
+the same as for smaller objects.
 
 **Production storage provider is mandatory.** Starting the application with
 `APP_ENV=production` and `STORAGE_PROVIDER=local` is a configuration error that

@@ -42,6 +42,7 @@ def create_object_storage(settings: Settings | None = None) -> ObjectStorage:
                 if settings.session_secret
                 else None
             ),
+            multipart_threshold=settings.s3_multipart_threshold_bytes,
         )
     raise StorageProviderUnavailable(
         f"Unsupported storage provider: {settings.storage_provider}"
