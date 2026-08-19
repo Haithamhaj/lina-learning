@@ -1,0 +1,2119 @@
+# Lina Personal Learning System
+
+## PROJECT_REFERENCE.md
+
+**Status:** Approved project reference — living governing document  
+**Audience:** Product owner, ChatGPT, Codex, AI agents, developers, reviewers  
+**Primary use:** Governing source of truth for product intent, boundaries, architecture, learning behavior, and approved design decisions  
+**Not a replacement for:** `LEARNING_INTELLIGENCE_SPEC.md`, `IMPLEMENTATION_PLAN.md`, implementation prompts, or task files
+
+---
+
+# 1. Project Identity
+
+## 1.1 Name
+
+**Lina Personal Learning System**
+
+## 1.2 Product Definition
+
+Lina Personal Learning System is a personal, evidence-grounded learning environment designed first for Lina, beginning with **Grade 5 Mathematics and Science**.
+
+It is not intended to reproduce school digitally, act as a homework-answering chatbot, or operate as a conventional LMS. The system uses Lina's current school books and school context to understand **what she is expected to learn**, while remaining free to change **how a concept is explained** whenever another representation would help her understand it better.
+
+The system combines:
+
+- a conversational AI tutor,
+- book and curriculum understanding,
+- multimodal student input,
+- interactive learning artifacts,
+- an event/evidence intelligence layer,
+- a compact longitudinal understanding of Lina,
+- and a parent/admin view for oversight, content control, evidence inspection, and system tuning.
+
+The durable asset is not the tutor model itself.
+
+> **The durable product asset is the evolving, evidence-grounded understanding of Lina as a learner.**
+
+Models, books, UI components, providers, and teaching representations may change. The learner history and the system's ability to reconstruct and improve its understanding must remain durable.
+
+---
+
+# 2. Core Product Objective
+
+The system exists to help Lina **understand**, not merely finish tasks.
+
+The primary objectives are:
+
+1. Help Lina understand Grade-level Math and Science concepts using explanations appropriate to her current understanding.
+2. Support school learning without making the book's exact teaching method mandatory.
+3. Build a persistent, evidence-grounded understanding of how Lina is learning over time.
+4. Adapt support based on what Lina is demonstrating now, informed by relevant historical patterns without becoming constrained by them.
+5. Preserve raw learning history so that future improvements to extraction, evidence rules, or models can re-analyze prior learning.
+6. Keep the learner experience low-pressure, visually engaging, and natural for a child around ten years old.
+7. Make the system explainable and inspectable by the parent/admin.
+8. Keep AI usage observable, replaceable, and cost-aware.
+
+The system should become more useful as Lina uses it, but should never require full conversational history to be loaded into every future interaction.
+
+---
+
+# 3. Product Boundaries
+
+## 3.1 In Scope
+
+The initial product scope includes:
+
+- Lina-first web application.
+- Grade 5 as the first active Grade environment.
+- Mathematics.
+- Science.
+- Parent/Admin control panel.
+- School-book ingestion and structured understanding.
+- Current school focus detection and correction.
+- Conversational tutor.
+- Homework assistance.
+- Free exploration outside the curriculum.
+- Optional quiz/review interactions.
+- Text input.
+- Speech-to-text input.
+- Student image input.
+- Handwritten work photographed and uploaded.
+- Student drawings photographed and uploaded.
+- Homework/page/diagram images.
+- Vision-based understanding of student work.
+- Annotation of the student's original image.
+- Clean visual reconstruction when annotation is insufficient.
+- Interactive learning artifacts using HTML/SVG/React-based renderers.
+- Event capture.
+- Evidence generation.
+- Current learning state.
+- Temporal learner patterns.
+- Compact Learner Intelligence Card.
+- Derived mastery/confidence views.
+- Parent evidence inspection.
+- Parent-configurable learning boundaries for age-sensitive/family-sensitive topics.
+- Child-safety baseline guardrails that cannot be weakened from the Parent Dashboard.
+- AI model routing.
+- AI cost/usage logging.
+- Reprocessing and rebuildability.
+- Grade transition through parent/admin activation of the next Grade's books.
+
+## 3.2 Explicitly Out of Scope for the Initial Product
+
+Do not expand the initial implementation into the following without a later explicit decision:
+
+- Native iOS or Android app.
+- Offline mode.
+- Teacher portal.
+- Classroom management.
+- School SIS/LMS integration.
+- Multi-family SaaS workflows.
+- Billing/subscription platform.
+- Organization or tenant administration.
+- Leaderboards.
+- Competitive ranking.
+- Exam Mode as a pressure-oriented feature.
+- Countdown-based performance pressure.
+- Heavy gamification or points economy.
+- Social features.
+- Multi-student classroom analytics.
+- Universal cross-grade knowledge graph.
+- Automatic cross-grade concept mapping as a core dependency.
+- Generic agent framework for all actions.
+- Chain-of-agents execution for every tutor turn.
+- Dedicated vector database unless PostgreSQL/pgvector becomes insufficient.
+- Redis/Celery unless job volume proves a need.
+- Graphiti or a graph database as an MVP dependency.
+- Advanced ML clustering.
+- Psychological diagnosis.
+- Personality diagnosis.
+- Intelligence labeling.
+- Learning-style labels such as "visual learner".
+
+---
+
+# 4. Users and Roles
+
+## 4.1 Lina — Student
+
+Lina is the primary learner and the main user of the learning experience.
+
+Her interface should expose learning actions, not analytics.
+
+Lina should be able to:
+
+- enter Math or Science,
+- ask a question naturally,
+- type,
+- speak,
+- upload a photo,
+- photograph handwritten work,
+- photograph a drawing,
+- upload homework or a textbook page,
+- ask for another example,
+- ask for a hint,
+- say that she does not understand,
+- ask for an easier explanation,
+- ask to be challenged,
+- interact with visual and interactive learning artifacts,
+- continue the same learning session after opening an expanded learning canvas.
+
+Lina should **not** see:
+
+- mastery percentages,
+- weakness labels,
+- evidence counts,
+- raw learner intelligence,
+- parent observations,
+- model settings,
+- AI costs,
+- processing jobs,
+- Grade archive controls.
+
+## 4.2 Parent/Admin
+
+The Parent/Admin controls the learning environment and can inspect how the system is forming its understanding.
+
+The Parent/Admin should be able to:
+
+- upload books,
+- upload school plans,
+- assign books to a Grade,
+- activate the next Grade by uploading/activating its books,
+- inspect content processing status,
+- reprocess a book,
+- correct current school focus when necessary,
+- view Math and Science learning state,
+- inspect important evidence,
+- inspect patterns and recent changes,
+- inspect tutor adaptations,
+- review learning history,
+- review AI usage and estimated cost,
+- configure task-to-model routes,
+- challenge a system conclusion or request re-validation,
+- inspect why the system reached an important conclusion,
+- configure learning boundaries for age-sensitive or family-sensitive topics.
+
+The Parent/Admin does **not** directly overwrite evidence-grounded learner conclusions. Parent input can create a hypothesis or a review request, but the learner state remains evidence-governed.
+
+## 4.3 UX Separation Principle
+
+```text
+Lina UI   -> Learning
+Parent UI -> Understanding + Control
+```
+
+The system may be technically complex internally, but that complexity must not leak into Lina's experience.
+
+---
+
+# 5. Learning Philosophy and Tutor Principles
+
+These are product-level invariants.
+
+## 5.1 Understanding Is the Objective
+
+The tutor should prioritize understanding over task completion.
+
+Withholding an answer is **not** itself an educational objective.
+
+If Lina remains genuinely stuck after a reasonable attempt, the tutor should teach the solution clearly, explain why it works, and then check understanding through a new application.
+
+## 5.2 Book = Curriculum Anchor, Not Teaching Authority
+
+The book is important because it provides:
+
+- current Grade scope,
+- topics,
+- lesson structure,
+- school terminology,
+- expected depth,
+- school examples,
+- exercises Lina is likely to encounter.
+
+The book does not own the teaching method.
+
+The tutor may use:
+
+- alternative explanations,
+- visual examples,
+- concrete examples,
+- analogies,
+- different valid mathematical solution methods,
+- interactive diagrams,
+- micro-detours to prerequisites,
+- examples outside the book,
+- structured visual artifacts.
+
+The tutor must not reduce RAG to "retrieve page and paraphrase it."
+
+## 5.3 School-Led Main Path, Mastery-Driven Micro-Detours
+
+The school/book context defines the main path.
+
+If Lina cannot understand a current topic because a prerequisite is missing, the tutor may briefly move backward, teach or refresh that prerequisite, verify enough understanding, and return to the current Grade lesson.
+
+The system must not create a parallel curriculum that gradually pulls Lina away from what she is currently studying.
+
+## 5.4 No Formal Diagnostic by Default
+
+A new lesson should not automatically begin with a formal diagnostic test.
+
+The tutor should enter the topic naturally. If signals of a missing prerequisite emerge during the interaction, the tutor may investigate and support that prerequisite in context.
+
+## 5.5 Current Behavior Outranks Historical Personalization
+
+Historical intelligence is advisory.
+
+What Lina demonstrates in the current interaction has higher authority than historical patterns.
+
+> **Never personalize away demonstrated independence.**
+
+If Lina previously needed a visual representation but is now solving independently, the tutor should not force the older strategy.
+
+## 5.6 Personalization Should Be Felt, Not Announced
+
+The tutor may choose a strategy because history suggests it is useful, but it should not repeatedly tell Lina things such as:
+
+> "Because you are a visual learner..."
+
+The tutor should simply use the better representation when needed.
+
+## 5.7 No Psychological or Personality Conclusions
+
+The learner system may describe observed learning behavior in context, such as:
+
+- hint dependency,
+- self-correction,
+- transfer,
+- persistence during learning tasks,
+- retention,
+- response to challenge,
+- successful teaching strategies,
+- confidence/accuracy mismatch.
+
+It must not convert those observations into:
+
+- psychological diagnosis,
+- ADHD-type conclusions,
+- personality classifications,
+- intelligence labels,
+- global motivational judgments,
+- fixed learning-style labels.
+
+Claims should remain scoped to the contexts supported by evidence.
+
+## 5.8 Low-Pressure Learning
+
+The product should avoid:
+
+- countdowns,
+- leaderboards,
+- red failure warnings,
+- public scores,
+- exam-oriented pressure,
+- repetitive drill for its own sake.
+
+Light celebrations or badges are acceptable when they recognize meaningful learning behavior rather than create a pressure economy.
+
+## 5.9 Bilingual Interaction
+
+Default behavior:
+
+- English question -> English response.
+- Arabic question -> Arabic response.
+- Mixed language -> natural mixed response.
+
+Educational terminology can preserve useful English terms even in Arabic explanation where appropriate.
+
+Example:
+
+> الكسر المكافئ اسمه **Equivalent Fraction**.
+
+## 5.10 Child Safety and Parent-Controlled Learning Boundaries
+
+The product serves a child around ten years old. Safety and age-appropriateness must therefore be enforced as product policy, not left only to a Tutor prompt.
+
+The system uses two distinct layers:
+
+### A. Non-Overridable Safety Baseline
+
+These protections are mandatory and cannot be weakened by Parent/Admin settings. They cover categories such as:
+
+- explicit sexual content or sexual exploitation,
+- self-harm or dangerous self-injury guidance,
+- practical instruction for weapons, dangerous substances, or hazardous activities,
+- graphic or severely disturbing content inappropriate for a child,
+- drug-related or other clearly dangerous behavior guidance,
+- unsafe disclosure or handling of sensitive personal information,
+- other content that violates system-level child-safety requirements.
+
+This baseline is enforced by the product/runtime policy. Prompt instructions may reinforce it, but the prompt is not the sole enforcement mechanism.
+
+### B. Parent-Controlled Learning Boundaries
+
+Some topics are not inherently system-safety violations but may be age-sensitive, family-sensitive, or intentionally reserved for parent discussion. These are configurable from the Parent Dashboard.
+
+Each configurable topic uses one of three states:
+
+- **ALLOW** — the Tutor may discuss the topic normally within the general child-safety baseline.
+- **AGE_APPROPRIATE_ONLY** — the Tutor may discuss the topic only in a simplified, age-appropriate manner suitable for Lina.
+- **REDIRECT_TO_PARENT** — the Tutor should not elaborate and should briefly and naturally suggest discussing the topic with a parent.
+
+Initial configurable categories may include, for example:
+
+- religion,
+- relationships,
+- human reproduction / sex education,
+- politics / current affairs,
+- death / grief,
+- money / family finances,
+- other parent-defined age-sensitive categories added later.
+
+The exact category catalog is configuration, not a hardcoded architectural limit.
+
+### C. Runtime Order
+
+Conceptually:
+
+```text
+Student input
+    ↓
+Safety & Learning Boundary Policy Engine
+    ├── Non-overridable child-safety baseline
+    ├── Parent learning-boundary policy
+    └── Age-appropriateness directive
+    ↓
+Versioned policy decision
+    ↓
+Tutor behavior / safe redirect
+```
+
+The runtime policy decision is an explicit system contract; prompt instructions may reinforce it but cannot replace it.
+
+Restricted-topic responses should remain calm and non-shaming. The Tutor should not make the restriction itself a dramatic event.
+
+The detailed policy and enforcement rules are governed by `CHILD_SAFETY_POLICY.md`.
+
+---
+
+# 6. Grade and Curriculum Model
+
+## 6.1 Grade Activation
+
+The system does not infer Grade transition automatically.
+
+Grade 5 remains the active environment while Grade 5 books are active.
+
+When the Parent/Admin uploads and activates Grade 6 books, Grade 6 becomes the new active environment.
+
+```text
+Grade 5 books active
+        ↓
+Grade 5 learning environment
+        ↓
+Parent/Admin activates Grade 6 books
+        ↓
+Compact transition card created
+        ↓
+Grade 6 becomes active
+```
+
+## 6.2 What Carries Forward
+
+The next Grade receives only a compact transition card containing important, stable, or unresolved learner intelligence that is still useful.
+
+Examples:
+
+- important stable teaching patterns,
+- meaningful persistent foundational gaps,
+- important unresolved misconceptions,
+- useful strategy patterns,
+- notable retention characteristics,
+- stable learning behavior relevant to future teaching,
+- important extended capabilities.
+
+Detailed previous-Grade lesson mastery, all evidence, and full transcripts do not enter the new Grade runtime by default.
+
+## 6.3 Previous Grade Archive
+
+Previous Grade data remains preserved for audit, re-analysis, and optional historical lookup.
+
+It is not loaded into every new Grade interaction.
+
+If a similar issue appears later, historical records may be consulted to determine whether the system has seen something similar before. Historical similarity does not automatically reactivate an old pattern; fresh evidence remains required.
+
+## 6.4 No Complex Cross-Grade Engine in MVP
+
+Grade 6 naturally depends on prior knowledge. If Lina has forgotten a foundation, the tutor should detect that from the current interaction, re-explain it briefly, and continue the Grade 6 lesson.
+
+The MVP does not require a universal cross-grade prerequisite engine.
+
+---
+
+# 7. Content and Book Understanding
+
+## 7.1 Original Document Preservation
+
+The original uploaded file remains preserved as the immutable source artifact.
+
+Derived processing may be regenerated.
+
+```text
+original.pdf
+   ↓
+Docling processing v1
+   ↓
+Educational semantics v1
+
+later:
+original.pdf
+   ↓
+Docling processing v2
+   ↓
+Educational semantics v2
+```
+
+The Parent/Admin should not need to re-upload the original simply because extraction logic changed.
+
+## 7.2 Document Understanding Foundation: Docling
+
+Docling is the baseline document-processing foundation for books and relevant structured learning documents.
+
+Its role is to provide a structured intermediate document representation preserving, where available:
+
+- document hierarchy,
+- reading order,
+- headings,
+- paragraphs,
+- tables,
+- pictures,
+- formulas,
+- page references,
+- layout/provenance metadata.
+
+Docling is not itself the curriculum model.
+
+## 7.3 Educational Semantic Layer
+
+The project adds an educational semantic layer over the structured document representation.
+
+This layer identifies and normalizes concepts such as:
+
+- Grade,
+- Subject,
+- Unit,
+- Lesson,
+- Topic/Concept,
+- objective,
+- prerequisite hints,
+- explanation blocks,
+- worked examples,
+- exercises,
+- vocabulary,
+- figures,
+- expected school scope.
+
+Concept identity only needs to be stable enough within the active Grade for the MVP. A universal concept graph across all future Grades is intentionally deferred.
+
+## 7.4 Content Pipeline
+
+```text
+Original File
+    ↓
+Store original
+    ↓
+Docling structural parsing
+    ↓
+Versioned DoclingDocument
+    ↓
+Educational semantic extraction
+    ↓
+Curriculum model
+    ↓
+Structural retrieval units
+    ↓
+Search/indexing
+    ↓
+Ready
+```
+
+## 7.5 Figures, Images, and Formulas
+
+Figures and formulas are first-class learning content.
+
+The system should retain links between:
+
+- figure/picture,
+- page,
+- caption,
+- related lesson/concept,
+- extracted description when generated,
+- original document provenance.
+
+Image description or other visual enrichment should be selective rather than automatically applied to every image if there is no educational value.
+
+## 7.6 School Plans
+
+School plans are a separate content type from books.
+
+They can help determine:
+
+- week/date,
+- subject,
+- current unit,
+- current lesson/topic,
+- homework reference.
+
+They support current-school-focus detection but do not replace the book.
+
+## 7.7 Student Uploads Are Not Automatically Curriculum Content
+
+A student-uploaded homework page, drawing, or photographed notebook page is an interaction artifact, not permanent curriculum content by default.
+
+A Parent/Admin upload can explicitly classify a document as reusable school material when appropriate.
+
+---
+
+# 8. Retrieval Architecture
+
+## 8.1 Retrieval Principle
+
+Do not perform semantic search across every uploaded book for every question.
+
+Retrieval should narrow context before similarity search.
+
+Conceptual flow:
+
+```text
+Current Grade
+   ↓
+Subject
+   ↓
+Current school focus / detected topic
+   ↓
+Lesson / concept candidates
+   ↓
+Metadata filtering
+   ↓
+Lexical + vector retrieval
+   ↓
+Relevant content blocks / figures
+```
+
+## 8.2 Structural Chunking
+
+Blind fixed-size token chunking is not the primary strategy.
+
+The preferred baseline is:
+
+1. preserve Docling's hierarchical document structure,
+2. create structural/semantic retrieval units,
+3. apply token-aware splitting only when a unit is too large,
+4. merge small compatible peers only when context remains coherent.
+
+Docling hierarchical/hybrid chunking is the baseline implementation candidate, not an immutable product dependency.
+
+## 8.3 Hybrid Retrieval
+
+Retrieval should combine as appropriate:
+
+- metadata filters,
+- exact/lexical search,
+- vector similarity,
+- current school focus,
+- concept/lesson context.
+
+PostgreSQL + pgvector is sufficient for the initial architecture unless usage proves otherwise.
+
+## 8.4 Current School Focus
+
+The current school focus can be inferred from multiple signals:
+
+- school plan,
+- homework,
+- uploaded pages,
+- Lina's own statement,
+- tutor questions,
+- recent interactions,
+- Parent/Admin correction.
+
+The system may ask Lina naturally what she is currently studying when confidence is low or signals conflict.
+
+The Parent/Admin can correct the current topic.
+
+The system should not silently change the main learning path based on weak inference.
+
+## 8.5 Retrieval Is Grounding, Not Teaching Style
+
+Retrieval supplies authoritative and relevant content.
+
+The tutor remains free to use a different valid explanation, representation, example, or interactive artifact to achieve understanding.
+
+---
+
+# 9. Tutor Runtime
+
+## 9.1 Fixed Tutor Identity
+
+Tutor identity is stable product policy, not an automatically rewritten persona.
+
+The tutor should be:
+
+- warm but not patronizing,
+- clear,
+- age-appropriate,
+- patient without becoming repetitive,
+- comfortable with Arabic, English, and mixed language,
+- honest about uncertainty,
+- focused on understanding,
+- non-shaming,
+- non-pressuring.
+
+## 9.2 Adaptive Teaching Strategy
+
+The system does **not** maintain a large mutable "Adaptive Persona" as the main personalization mechanism.
+
+Instead, the tutor chooses an adaptive teaching strategy using current behavior and relevant learner intelligence.
+
+Conceptual priority:
+
+```text
+1. What Lina is demonstrating right now
+2. Current Learning State
+3. Relevant recent intelligence
+4. Relevant stable patterns
+5. Curriculum context
+6. Generic teaching policy
+```
+
+Historical patterns are priors, not commands.
+
+## 9.3 Normal Runtime Path
+
+```text
+Student input
+    ↓
+Thread / mode / subject resolution
+    ↓
+Current Grade + school focus
+    ↓
+Relevant learner intelligence selection
+    ↓
+Relevant retrieval context
+    ↓
+Teaching decision
+    ↓
+ONE primary Tutor model call
+    ↓
+Student-facing response
++
+Hidden candidate-event metadata
+```
+
+The MVP should avoid chains such as:
+
+```text
+Tutor → Critic → Evaluator → Profile Agent → Persona Agent
+```
+
+for every message.
+
+## 9.4 Intervention Ladder
+
+Support should be flexible rather than a rigid "three hints then answer" policy.
+
+Possible intervention levels include:
+
+1. observe / allow independent attempt,
+2. focusing question,
+3. light hint,
+4. stronger hint,
+5. change representation,
+6. teach/explain solution,
+7. guided application,
+8. independent follow-up.
+
+The tutor may skip levels according to what Lina is showing.
+
+## 9.5 Homework Behavior
+
+```text
+Understand where Lina is
+    ↓
+Give opportunity to think
+    ↓
+Hint / focusing support
+    ↓
+Change representation if useful
+    ↓
+Still genuinely stuck?
+    ↓
+Teach the solution clearly
+    ↓
+Explain why
+    ↓
+New application
+    ↓
+Check understanding
+```
+
+A direct answer is not the first action, but teaching the answer is allowed when continued hinting would no longer help.
+
+## 9.6 Frustration Signals
+
+The tutor may respond to observable interaction signals such as:
+
+- explicit "I don't understand",
+- repeated failed attempts,
+- repeated hint requests,
+- explicit "too hard",
+- abrupt disengagement.
+
+The response may include:
+
+- smaller step size,
+- another representation,
+- a concrete example,
+- shorter response,
+- lower cognitive load.
+
+This is interaction adaptation, not psychological diagnosis.
+
+## 9.7 Challenge Adaptation
+
+If Lina demonstrates strong understanding quickly, the tutor should avoid repetitive same-format practice.
+
+Prefer:
+
+- lower scaffolding,
+- explanation in her own words,
+- error spotting,
+- a new representation,
+- transfer to a slightly different context,
+- deeper understanding before unnecessary Grade acceleration.
+
+---
+
+# 10. Teaching Modes
+
+The system may internally use a small number of teaching modes:
+
+- **LEARN** — current school topic or concept teaching.
+- **HOMEWORK** — support around a concrete assigned problem.
+- **EXPLORE** — curiosity or learning outside the current school path.
+- **QUIZ** — optional learner-requested checking.
+- **REVIEW** — retention or revisit of previously learned material.
+
+These modes need not be explicit buttons or labels visible to Lina unless useful.
+
+Free exploration can create Extended Learning evidence, but it does not automatically replace or redirect the current school path.
+
+---
+
+# 11. Multimodal Learning
+
+## 11.1 Input Principle
+
+The product is **multimodal-first**, not chat-text-first.
+
+Lina may express understanding by:
+
+- typing,
+- speaking,
+- writing on paper and photographing it,
+- drawing on paper and photographing it,
+- uploading homework,
+- uploading a diagram,
+- photographing a textbook or worksheet page.
+
+## 11.2 Voice
+
+Current policy:
+
+```text
+Audio
+  ↓
+Speech-to-text
+  ↓
+Transcript
+  ↓
+Normal tutor pipeline
+```
+
+The transcript is retained.
+
+Raw audio is not retained in the current version after successful transcription.
+
+If future speaking/pronunciation assessment is added, audio retention will require a separate policy.
+
+## 11.3 Student Image Understanding
+
+The system should understand, where practical:
+
+- handwritten math,
+- handwritten explanations,
+- drawings,
+- arrows and labels,
+- diagrams,
+- problem-solving steps,
+- homework questions,
+- photographed notebook work.
+
+The vision layer is not assumed to be perfect.
+
+If a critical part of the image is ambiguous, the tutor should ask Lina a simple clarification rather than convert uncertainty into strong evidence.
+
+## 11.4 Image Response Priority
+
+Default behavior for a student-uploaded drawing or handwritten solution:
+
+```text
+Understand original
+    ↓
+Clarify if needed
+    ↓
+Annotate the original image first
+    ↓
+If annotation is not enough
+    ↓
+Create a cleaner reconstructed explanation
+```
+
+## 11.5 Source vs Derived Artifacts
+
+The student's original work remains the source learning artifact.
+
+AI outputs such as:
+
+- annotated copy,
+- corrected copy,
+- clean redraw,
+- SVG reconstruction,
+- HTML interactive reconstruction
+
+are derived artifacts.
+
+Evidence about Lina's original understanding must point to the original work, not to the AI-corrected reconstruction.
+
+---
+
+# 12. Interactive Learning Artifacts
+
+## 12.1 Product Role
+
+The tutor is not text-only.
+
+When a visual or interactive representation would materially improve understanding, the system should be able to create or select an interactive learning artifact.
+
+For a child around ten years old, visual clarity, color, motion, shape, and interaction are product requirements when they serve learning.
+
+The intended style is:
+
+> **playful + polished + intelligent**
+
+not corporate, cluttered, or excessively childish.
+
+## 12.2 UX Model
+
+Simple visuals may appear inline in the conversation.
+
+More complex interactions should open in an expandable **Learning Canvas** within the same session and page.
+
+```text
+Tutor conversation
+    ↓
+Inline visual/card
+    ↓
+"Try it" / "Open"
+    ↓
+Learning Canvas
+    ↓
+Interact
+    ↓
+Return to same tutor position/session
+```
+
+Opening an artifact must not create a separate learning session or lose conversational context.
+
+## 12.3 Artifact Architecture
+
+The primary architecture is **typed artifact specifications + reusable renderers**.
+
+The AI determines the educational representation required.
+
+The application determines how that representation is rendered.
+
+Example:
+
+```json
+{
+  "type": "fraction_equivalence",
+  "goal": "show_why_equivalent",
+  "values": ["1/2", "2/4"],
+  "interaction": "drag_divisions",
+  "difficulty": "grade_5"
+}
+```
+
+This resolves through an Artifact Registry to a tested renderer.
+
+## 12.4 Initial Artifact Stack
+
+Initial recommended renderer/tool stack:
+
+- Native React + SVG.
+- Motion for animation and gestures.
+- JSXGraph for interactive mathematics/geometry/graphs.
+- React Konva for canvas-based drag/drop and spatial interaction.
+- MathLive for mathematical input and editable math fields.
+
+Optional later, based on real use:
+
+- Rough.js for selective hand-drawn visual styling.
+- Recharts for data charts.
+- p5.js for richer simulations.
+- React Flow for node/edge interaction when a concrete use case appears.
+
+Mermaid and Sandpack are not core child-facing runtime dependencies.
+
+## 12.5 Custom HTML/SVG
+
+Custom AI-generated HTML/SVG may be supported as a fallback when no reusable artifact fits.
+
+It must be sandboxed and must not have unrestricted access to application state, secrets, cookies, external network, or arbitrary APIs.
+
+Artifact failure must never block learning; the tutor should fall back to another explanation.
+
+## 12.6 Artifact Learning Value
+
+An artifact should exist because it helps teach something, not because animation is available.
+
+Each artifact should have a clear:
+
+- learning goal,
+- expected interaction,
+- teaching purpose,
+- success condition,
+- follow-up behavior.
+
+Meaningful artifact interactions can contribute to learning evidence. Raw clickstream analytics are not automatically learner intelligence.
+
+---
+
+# 13. Learning Intelligence — High-Level Contract
+
+Detailed definitions, rubrics, event taxonomy, pattern rules, and weighting logic belong in:
+
+> `LEARNING_INTELLIGENCE_SPEC.md`
+
+This project reference governs only the architectural contract.
+
+## 13.1 Intelligence Flow
+
+```text
+Raw Interaction History
+        ↓
+Candidate Events
+        ↓
+Validated Learning Events
+        ↓
+Evidence
+        ↓
+Current Learning State + Temporal Patterns
+        ↓
+Learner Intelligence Card
+        ↓
+Decision Views
+        ↓
+Tutor personalization / Parent insights
+```
+
+## 13.2 Raw History
+
+Raw interaction history is the source material for future re-analysis.
+
+It includes, as applicable:
+
+- student messages,
+- tutor responses,
+- transcripts,
+- student images,
+- student drawings,
+- uploaded work,
+- interaction assets,
+- timestamps,
+- session/thread references,
+- model/request references.
+
+Raw audio is excluded under the current voice policy.
+
+## 13.3 Candidate Events
+
+The primary tutor call may emit hidden candidate-event metadata as part of the same model execution.
+
+A candidate event means:
+
+> something in this interaction may be educationally meaningful and worth reviewing later.
+
+It is not final evidence and does not directly update the learner profile.
+
+## 13.4 Session Consolidation
+
+Meaningful candidate events are reviewed at the end of the session using relevant excerpts and thread context.
+
+The session consolidation process generates validated events/evidence as appropriate.
+
+It should not require a separate evidence-model call after every individual message.
+
+## 13.5 Meaningful Event Gate
+
+Events enter Learner Intelligence only when they convey information that may change, confirm, challenge, or contextualize what the system knows about learning.
+
+Examples:
+
+- demonstrated understanding,
+- misconception,
+- independent attempt,
+- hint requirement,
+- self-correction,
+- transfer,
+- retention signal,
+- teaching strategy success/failure,
+- meaningful change in independence,
+- important learning-state change.
+
+Greetings, thanks, and ordinary conversation remain in raw history but do not become intelligence events merely because they occurred.
+
+---
+
+# 14. Learner Intelligence Card
+
+## 14.1 Purpose
+
+The Learner Intelligence Card is not a transcript summary and not a complete mastery database.
+
+It is:
+
+> **a compact temporal intelligence state describing what currently matters when interacting with Lina.**
+
+It exists to make personalization useful without loading months or years of raw interaction history into the tutor context.
+
+## 14.2 Card Contents
+
+The card may contain compact representations of:
+
+- current context,
+- active learning states,
+- current difficulties,
+- active misconceptions,
+- open learning loops,
+- recent important changes,
+- active/high-value patterns,
+- successful recent teaching strategies,
+- strategies whose usefulness appears to be weakening,
+- retention-related signals,
+- emerging capabilities.
+
+It should not contain every concept, every event, every conversation, or every historical pattern.
+
+## 14.3 Temporal Pattern Principles
+
+Patterns evolve using explicit system rules based on factors such as:
+
+- frequency,
+- recency,
+- evidence quality,
+- context similarity,
+- context diversity,
+- supporting evidence,
+- counter-evidence.
+
+The AI may interpret or normalize semantic meaning, but the system owns weighting, lifecycle, and promotion rules.
+
+## 14.4 Pattern Scope
+
+Patterns begin at the narrowest scope supported by evidence.
+
+Possible scope progression:
+
+```text
+Concept-specific
+    ↓
+Context-specific
+    ↓
+Subject-specific
+    ↓
+Cross-subject
+    ↓
+Global
+```
+
+A pattern must not become a general learner label simply because it appeared in one lesson.
+
+## 14.5 Pattern Lifecycle
+
+Conceptual lifecycle:
+
+```text
+candidate
+   ↓
+active
+   ↓
+stable
+   ↓
+weakening
+   ↓
+resolved / superseded
+   ↓
+removed from Current Card
+```
+
+Resolved patterns remain historically available but are not loaded into current runtime context by default.
+
+If similar signals reappear later, the system may inspect the historical pattern, but fresh evidence is required before reactivation.
+
+## 14.6 Current State vs Pattern
+
+Current Learning State and Learner Patterns are separate concepts.
+
+A single strong event may change Current Learning State.
+
+A stable pattern requires repeated and appropriate evidence over time and context.
+
+Current state may expire or resolve as new evidence appears.
+
+---
+
+# 15. Mastery and Confidence
+
+Mastery and confidence are **Decision Views**, not the source of learner truth.
+
+The source of truth is the underlying history, events, evidence, and intelligence state.
+
+The system may internally calculate numeric values when useful for thresholds, scheduling, or ranking, but the Parent experience should prefer interpretable states such as:
+
+- Needs support,
+- Developing,
+- Demonstrated,
+- Strong,
+- Needs revisit,
+- Evidence confidence: Low / Medium / High.
+
+Avoid false precision such as presenting `83.47% mastery` as if it were scientifically exact.
+
+The calculation method may change later without losing historical learning data.
+
+---
+
+# 16. Session and Thread Model
+
+## 16.1 Session Lifecycle
+
+Sessions close automatically after a configurable period of inactivity.
+
+A grace window may allow a quick return to continue the same session.
+
+After the session is closed, background consolidation can process candidate events and update intelligence.
+
+## 16.2 Multiple Learning Threads
+
+One session may contain several learning threads.
+
+Lina should be able to move naturally between topics without manually creating a new chat.
+
+Example:
+
+```text
+Session
+├── Math / Adding Fractions
+├── Science / Free Exploration
+└── Math / Homework continuation
+```
+
+Thread separation is internal and supports correct evidence/context assignment.
+
+## 16.3 Open Learning Loops
+
+If a session ends before understanding is sufficiently checked, the system may retain a compact open learning loop.
+
+Example:
+
+```text
+Adding fractions:
+concept explained; independent application not yet observed
+```
+
+Open loops should resolve or expire when no longer relevant.
+
+---
+
+# 17. Parent Experience
+
+The Parent interface should prioritize **insight before activity tracking**.
+
+Recommended areas:
+
+## 17.1 Overview
+
+- Current school focus.
+- What is going well.
+- What currently needs attention.
+- Important recent changes.
+- Meaningful open learning loops.
+
+## 17.2 Math
+
+- Current topics/concepts.
+- Interpretable learning state.
+- Important misconceptions.
+- Relevant evidence on demand.
+
+## 17.3 Science
+
+Same philosophy as Math, adapted to Science evidence.
+
+## 17.4 Lina Profile
+
+Human-readable view of:
+
+- active patterns,
+- stable patterns,
+- emerging patterns,
+- recent changes,
+- successful teaching strategies,
+- resolved patterns/history on demand.
+
+## 17.5 Learning History
+
+- important sessions,
+- session intelligence deltas,
+- evidence trail,
+- tutor adaptation events,
+- original/derived learning artifacts.
+
+## 17.6 Content and Settings
+
+- books,
+- Grade activation,
+- school plans,
+- content processing,
+- reprocessing,
+- AI model routes,
+- AI usage/cost,
+- Learning Boundaries (Allow / Age-appropriate only / Redirect to parent),
+- Recent Redirects / Policy Audit for `REDIRECT_TO_PARENT` events, kept separate from Learner Profile intelligence.
+
+## 17.7 Parent Insight Rule
+
+> **Insights first; raw evidence on demand.**
+
+The Parent interface should not become an activity-surveillance dashboard.
+
+---
+
+# 18. AI and Model Architecture
+
+## 18.1 Core Principle
+
+> **Use AI for cognition; use deterministic system logic for state, weights, lifecycle, and plumbing.**
+
+## 18.2 Model Gateway
+
+Application modules should request AI by task rather than provider name.
+
+Conceptual interface:
+
+```text
+ai.execute(task, payload, constraints)
+```
+
+Initial task classes include:
+
+- `tutor`
+- `session_evidence`
+- `curriculum_semantics`
+- `vision_student_work`
+- `vision_content_enrichment`
+- `speech_to_text`
+- `embedding`
+- `grade_transition`
+- optional future `image_generation`
+- optional future `web_verification`
+
+## 18.3 Provider Independence
+
+The Tutor service must not directly call a provider-specific method such as `call_openai()`.
+
+Model routing is configurable by task.
+
+A route can define:
+
+- primary provider/model,
+- one fallback provider/model,
+- timeout,
+- output limit,
+- task-specific settings,
+- enabled/disabled state.
+
+Long fallback chains are intentionally avoided.
+
+## 18.4 Model Selection Philosophy
+
+Use the fastest/lowest-cost model that meets the quality requirement for a task.
+
+A fast GPT-5.6-class model such as Luna is an initial Tutor candidate to benchmark, not an architectural dependency.
+
+Model quality must be evaluated on Lina-specific teaching scenarios rather than assumed from generic benchmark strength alone.
+
+## 18.5 Cost Classes
+
+Frequent/latency-sensitive:
+
+- Tutor.
+- STT.
+- embeddings.
+
+Batch/occasional:
+
+- session evidence consolidation,
+- semantic curriculum extraction,
+- school-plan extraction.
+
+Rare/expensive:
+
+- full-book reprocessing,
+- historical re-analysis,
+- Grade transition synthesis,
+- optional image generation.
+
+---
+
+# 19. Cost and Observability
+
+## 19.1 AI Execution Ledger
+
+Each AI execution should record enough information to audit usage and quality, including:
+
+- request ID,
+- task,
+- provider,
+- model,
+- input tokens,
+- output tokens,
+- vision usage when applicable,
+- audio/STT usage when applicable,
+- latency,
+- estimated cost,
+- success/failure,
+- fallback usage,
+- relevant processing/prompt/schema version.
+
+## 19.2 Runtime Context Budget
+
+Having data stored does not mean sending all of it to the model.
+
+Tutor context should contain only the relevant slice of:
+
+- current interaction,
+- current learning state,
+- relevant recent patterns,
+- relevant stable patterns,
+- relevant curriculum content,
+- relevant open loops.
+
+Explicit configurable budgets should limit:
+
+- retrieved blocks,
+- tutor output size,
+- image size,
+- historical lookback,
+- session consolidation input,
+- optional web/image-generation usage.
+
+Exact values should be tuned from real usage rather than guessed prematurely.
+
+## 19.3 Cost Dashboard
+
+Parent/Admin needs a compact view such as:
+
+- Tutor,
+- Vision,
+- STT,
+- Content processing,
+- Evidence processing,
+- Other,
+- estimated monthly total.
+
+Detailed technical logs remain available for debugging without turning the Parent interface into an engineering console.
+
+---
+
+# 20. Rebuildability and Versioning
+
+## 20.1 Core Rule
+
+> **Original source remains; derived intelligence can be rebuilt.**
+
+This applies to both content and learner intelligence.
+
+## 20.2 Content Rebuild
+
+```text
+Original Book
+    ↓
+Docling processing
+    ↓
+Educational semantics
+    ↓
+Index
+```
+
+A change in document-processing or semantic-extraction logic can rebuild downstream artifacts from the original book.
+
+## 20.3 Learner Intelligence Rebuild
+
+```text
+Raw Interaction
+    ↓
+Events
+    ↓
+Evidence
+    ↓
+Patterns / Current State
+    ↓
+Intelligence Card
+```
+
+A change in evidence rules, prompt, model, or pattern policy can reprocess raw history and rebuild downstream intelligence.
+
+## 20.4 Version Metadata
+
+Derived processing must be attributable to the logic used to produce it.
+
+Version information may include:
+
+- processing run,
+- model,
+- provider,
+- prompt version,
+- schema version,
+- evidence policy version,
+- pattern policy version,
+- document pipeline version.
+
+This can be centralized through processing-run records rather than duplicating every field everywhere.
+
+## 20.5 Validation Philosophy
+
+The system is not expected to produce perfect evidence from day one.
+
+The development model is:
+
+```text
+Observe
+   ↓
+Audit
+   ↓
+Measure against agreed rubrics
+   ↓
+Correct prompt/rule/policy
+   ↓
+Reprocess
+   ↓
+Measure again
+```
+
+The critical requirement is not "AI must never be wrong."
+
+The critical requirement is:
+
+> **No important AI-derived learner conclusion should be untraceable or impossible to recompute.**
+
+The official measurement and review criteria are governed by `LEARNING_INTELLIGENCE_SPEC.md`.
+
+---
+
+# 21. Implementation Architecture Principles
+
+## 21.1 Architecture Style
+
+**Modular Monolith + Vertical Slice First.**
+
+Do not begin with microservices.
+
+The system should be modular internally while remaining simple to operate and modify.
+
+## 21.2 Core Domains
+
+Logical domains:
+
+```text
+Tutor
+Intelligence
+Content
+Retrieval
+Learning Artifacts
+Model Gateway
+Grade
+Platform
+```
+
+Suggested responsibilities:
+
+### Tutor
+- runtime context,
+- modes,
+- teaching strategy,
+- threads,
+- tutor call,
+- candidate events,
+- open loops.
+
+### Intelligence
+- events,
+- evidence,
+- current state,
+- patterns,
+- temporal lifecycle,
+- intelligence card,
+- derived decision views.
+
+### Content
+- uploaded books,
+- source files,
+- Docling processing,
+- semantic curriculum extraction,
+- school plans,
+- figures,
+- reprocessing.
+
+### Retrieval
+- metadata filtering,
+- lexical search,
+- vector search,
+- ranking,
+- context selection.
+
+### Learning Artifacts
+- artifact specification,
+- registry,
+- renderers,
+- Learning Canvas,
+- interaction events,
+- image annotation/reconstruction integration.
+
+### Model Gateway
+- task routing,
+- providers,
+- fallbacks,
+- usage logging.
+
+### Grade
+- active Grade,
+- book assignment,
+- activation of next Grade,
+- compact transition card,
+- previous-Grade archive linkage.
+
+### Platform
+- auth,
+- roles,
+- files,
+- jobs,
+- settings,
+- AI usage,
+- observability.
+
+## 21.3 Extensibility Rule
+
+Math and Science are the first subject modules.
+
+Adding a future subject should not require rewriting the core Tutor architecture.
+
+Avoid broad core logic such as:
+
+```text
+if subject == "math": ...
+elif subject == "science": ...
+```
+
+spread across unrelated modules.
+
+Subject-specific teaching guidance, evidence dimensions, artifact catalogs, and retrieval behavior should live behind clear subject extension points without requiring a generic plugin framework in the MVP.
+
+## 21.4 API Layer Rule
+
+API routes should be thin.
+
+Avoid embedding AI calls, SQL, pattern updates, and business logic directly inside endpoint handlers.
+
+Prefer:
+
+```text
+API route
+   ↓
+Application/domain service
+   ↓
+Repository / provider / model gateway
+```
+
+Do not over-engineer this into excessive enterprise layering.
+
+## 21.5 Background Work
+
+Initial background processing can use:
+
+```text
+jobs table + worker process
+```
+
+Appropriate jobs include:
+
+- book processing,
+- Docling conversion,
+- semantic extraction,
+- embeddings,
+- session consolidation,
+- intelligence rebuild,
+- Grade transition processing.
+
+Interactive tutor responses must remain synchronous/streaming rather than background jobs.
+
+---
+
+# 22. Technology Decisions
+
+Initial approved technology direction:
+
+## Frontend
+
+- Next.js
+- TypeScript
+- responsive web app
+- React-based component architecture
+- SSE streaming
+
+## Backend
+
+- Python
+- FastAPI
+
+## Database
+
+- PostgreSQL
+- pgvector
+- JSONB where schema flexibility is useful during early iteration
+
+## Object Storage
+
+- S3-compatible object storage
+
+Used for:
+
+- original books,
+- student images,
+- drawings,
+- interaction assets,
+- derived image annotations,
+- generated/reconstructed visual artifacts when persistence is useful.
+
+## Document Understanding
+
+- Docling as baseline document-processing foundation.
+
+Duckling may be used as a developer/admin content workbench or implementation reference, but is not a required runtime product dependency.
+
+## Interactive Artifact Stack
+
+Initial:
+
+- React/SVG
+- Motion
+- JSXGraph
+- React Konva
+- MathLive
+
+Optional later:
+
+- Rough.js
+- Recharts
+- p5.js
+
+## Background Jobs
+
+- database-backed jobs table
+- worker process
+
+## Streaming
+
+- Server-Sent Events (SSE)
+
+## Vector Search
+
+- pgvector in PostgreSQL initially
+
+---
+
+# 23. System Invariants
+
+The following rules should be treated as protected design constraints unless the Product Owner explicitly changes them.
+
+1. **Understanding is more important than answer withholding.**
+2. **The book controls school scope, not teaching method.**
+3. **Current behavior outranks historical personalization.**
+4. **Strategy selection is not strategy-effectiveness Evidence; only observable Lina outcomes can support/challenge a strategy pattern.**
+5. **Never personalize away demonstrated independence.**
+6. **The Tutor does not directly create stable learner conclusions from one impression.**
+7. **Meaningful learner intelligence must remain traceable to source interactions/evidence.**
+8. **Mastery and confidence are derived decision views, not the source of truth.**
+9. **Raw student work is never replaced by AI interpretation.**
+10. **AI annotation/reconstruction is a derived artifact, not evidence of what Lina originally produced.**
+11. **No psychological/personality/intelligence diagnosis from learning interactions.**
+12. **No fixed learning-style labels.**
+13. **Do not send full historical memory to the Tutor by default.**
+14. **The Intelligence Card must remain compact and temporally relevant.**
+15. **Resolved patterns leave current runtime context but remain historically available.**
+16. **Pattern weights/lifecycle are system-governed, not free LLM judgment.**
+17. **AI is used for cognition; deterministic code is preferred for state, counts, lifecycle, and rules.**
+18. **The normal Tutor path uses one primary Tutor model call.**
+19. **Evidence consolidation is session-level rather than one extra LLM call per message.**
+20. **Original books and raw learning history are preserved so derived state can be rebuilt.**
+21. **Every important derived processing path is versionable and auditable.**
+22. **No unnecessary AI call without identifiable product/learning value.**
+23. **Artifact failure must never block learning.**
+24. **Interactive visuals are used because they add learning value, not merely because animation is available.**
+25. **Lina may change topics naturally; internal thread separation must not burden her.**
+26. **Student UX remains simpler than system internals.**
+27. **Parent insight should not become surveillance-style activity tracking.**
+28. **Grade transition is Parent/Admin controlled through new Grade book activation.**
+29. **The next Grade receives a compact transition card, not the entire previous Grade runtime state.**
+30. **Math and Science are first, but the core architecture must remain extensible to future subjects.**
+31. **No microservices, graph infrastructure, or generic agent framework without demonstrated need.**
+32. **All student-facing generation and tools must comply with the non-overridable child-safety baseline; prompt instructions alone are not considered enforcement.**
+33. **Parent-configurable topic boundaries may restrict discussion further but may never weaken the system safety baseline.**
+34. **Parent-controlled topic restrictions use only the approved states: Allow / Age-appropriate only / Redirect to parent.**
+---
+
+# 24. Approved Decisions
+
+| Decision | Status |
+|---|---|
+| Lina-first, product-ready foundation | Approved |
+| Multi-child/SaaS UX in MVP | Out of scope |
+| Grade 5 first | Approved |
+| Math + Science first | Approved |
+| Book = Curriculum Anchor | Approved |
+| Book teaching method is mandatory | Rejected |
+| School-led path + prerequisite micro-detours | Approved |
+| Formal prerequisite diagnostic on every new topic | Rejected |
+| Current school focus discovered from multiple signals | Approved |
+| Tutor may ask Lina what she is studying | Approved |
+| Parent can correct current topic | Approved |
+| Extended learning stored separately from school path | Approved |
+| Universal cross-grade concept graph | Deferred / not required |
+| Grade transition by Parent/Admin activation of next Grade books | Approved |
+| Compact transition card to next Grade | Approved |
+| Full prior Grade state in new runtime | Rejected |
+| Learner profile updates are evidence-governed | Approved |
+| Parent can challenge/revalidate but not directly rewrite profile | Approved |
+| Psychological/personality/intelligence labels | Rejected |
+| Tutor may teach the answer after reasonable support attempts | Approved |
+| Rubric/categorical evidence over pseudo-precise scores | Approved |
+| Numeric internal calculations allowed when useful | Approved |
+| Event/evidence/card architecture is core | Approved |
+| Mastery engine as source of truth | Rejected |
+| Intelligence Card as compact temporal intelligence | Approved |
+| Frequency + recency + counter-evidence affect patterns | Approved |
+| Pattern weights determined by deterministic/configurable rules | Approved |
+| Pattern scope starts narrow and may broaden with evidence | Approved |
+| Patterns are advisory, not mandatory Tutor rules | Approved |
+| Current behavior overrides history | Approved |
+| Raw interaction history retained | Approved |
+| Raw audio retained | Rejected for current version |
+| Transcript retained | Approved |
+| Detailed Session Learning Card for every trivial session | Rejected |
+| Meaningful-session intelligence deltas/history | Approved |
+| Multiple learning threads per session | Approved |
+| Session auto-close after inactivity | Approved |
+| Tutor emits candidate events in same Tutor call | Approved |
+| Session-level evidence consolidation | Approved |
+| Docling as document-understanding baseline | Approved |
+| Duckling as runtime product dependency | Rejected |
+| Duckling as content workbench/reference | Approved |
+| Blind fixed-size chunking | Rejected |
+| Structural/hierarchical + hybrid retrieval | Approved |
+| Adaptive Persona as main personalization mechanism | Rejected |
+| Adaptive Teaching Strategy | Approved |
+| One primary Tutor call in normal turn | Approved |
+| Multimodal student input | Core capability |
+| Student handwriting/drawing can become evidence | Approved |
+| Annotate original image first | Approved |
+| Clean redraw/reconstruction when needed | Approved |
+| Text-only Tutor | Rejected |
+| Interactive HTML/SVG/React learning artifacts | Core capability |
+| Typed artifact specs + reusable renderers | Approved |
+| Arbitrary unsandboxed AI JavaScript | Rejected |
+| Modular Monolith | Approved |
+| Vertical Slice First | Approved |
+| Learning Intelligence Rubric + Pattern Rules as official measurement reference | Approved |
+| Full observability + reprocessing over excessive pre-emptive safeguards | Approved |
+| Non-overridable child-safety baseline | Approved |
+| Parent-configurable Learning Boundaries in Dashboard | Approved |
+| Learning Boundary states: Allow / Age-appropriate only / Redirect to parent | Approved |
+| Explicit Safety & Learning Boundary Policy Engine before Tutor behavior | Approved |
+| REDIRECT_TO_PARENT events visible as Parent policy/audit records, not Learner Intelligence | Approved |
+| Parent settings may weaken system safety baseline | Rejected |
+
+---
+
+# 25. Assumptions
+
+These are working assumptions, not immutable product decisions.
+
+1. A responsive web app is sufficient for Lina's initial use.
+2. Grade 5 Math and Science books will be available in uploadable digital/scanned formats.
+3. Docling will provide useful structural extraction on Lina's real books, but quality must be tested rather than assumed.
+4. A fast, cost-efficient modern model may be sufficient for most Tutor interactions, but this must be benchmarked on actual teaching scenarios.
+5. Parent/Admin is willing to upload/activate new Grade books once per Grade transition.
+6. Lina will naturally use a mix of text, voice, handwriting, drawings, and photos.
+7. A relatively small library of high-value interactive artifacts can cover many early Math/Science needs.
+8. PostgreSQL + pgvector is sufficient for the initial scale.
+9. A DB-backed worker is sufficient for initial batch processing.
+10. The system will be iteratively improved by reviewing actual sessions, evidence, patterns, cost logs, and model behavior.
+
+---
+
+# 26. Risks and Open Questions
+
+These are real unresolved areas that should be validated during implementation rather than over-designed in advance.
+
+## 26.1 Real-Book Extraction Quality
+
+Need to test Docling and the educational-semantic layer against Lina's actual Math and Science books.
+
+Questions:
+
+- Does page structure remain usable?
+- Are formulas and figures extracted well enough?
+- Are Units/Lessons recognized reliably?
+- Are retrieval units meaningful?
+
+## 26.2 Tutor Model Fit
+
+Need benchmark scenarios covering:
+
+- Grade-appropriate explanation,
+- Arabic/English switching,
+- hints,
+- teaching after failure,
+- visual/artifact selection,
+- candidate-event metadata,
+- correct behavior when uncertain.
+
+The selected production Tutor model should be evidence-driven, not selected only by model reputation.
+
+## 26.3 Evidence Rubric Quality
+
+Exact evidence states, definitions, and pattern rules are intentionally moved to `LEARNING_INTELLIGENCE_SPEC.md`.
+
+The main implementation risk is not that the model will never make an incorrect extraction. The important requirement is that extraction remains traceable and reprocessable against agreed rules.
+
+## 26.4 Artifact Library Scope
+
+The correct initial set of reusable Math/Science artifacts should be driven by real book content and real Lina interactions.
+
+Do not create a large generic educational-widget library before those use cases appear.
+
+## 26.5 Vision Reliability on Student Work
+
+Handwriting and child drawings can be ambiguous. The interaction design must make clarification cheap and natural when required.
+
+## 26.6 Runtime Cost
+
+Exact costs are unknown until real usage exists. Cost should be measured by task/model and optimized from evidence rather than estimated through architecture complexity alone.
+
+## 26.7 Learning-Boundary Classification
+
+The initial topic catalog and routing behavior must be tested with realistic child questions. The implementation should distinguish clearly between:
+
+- mandatory system-safety restrictions, and
+- parent-configurable family/age boundaries.
+
+Misclassification should be observable and correctable without changing the core Tutor architecture.
+
+---
+
+# 27. Validation and Decision Gate
+
+The project should not attempt to complete every planned feature before Lina uses it.
+
+The first meaningful decision gate is a real Math vertical slice.
+
+## 27.1 Vertical Slice
+
+```text
+Parent uploads a real Grade 5 Math book
+        ↓
+Docling processes it
+        ↓
+Educational semantics extracted
+        ↓
+Retrieval works on real questions
+        ↓
+Lina asks/answers through the Tutor
+        ↓
+Tutor adapts explanation
+        ↓
+Candidate events are captured
+        ↓
+Session closes
+        ↓
+Evidence is consolidated
+        ↓
+Current state / patterns / card update
+        ↓
+Parent can inspect what happened
+        ↓
+Next session uses relevant intelligence
+```
+
+At least one interactive artifact path should also be proven in the vertical slice when it provides real learning value.
+
+## 27.2 Review Method
+
+During early use, the Product Owner and AI assistant should review:
+
+- raw transcript,
+- source images when relevant,
+- candidate events,
+- evidence,
+- pattern changes,
+- intelligence card changes,
+- Tutor decisions,
+- retrieval references,
+- AI model logs,
+- token/cost logs.
+
+The review compares system behavior against the approved Learning Intelligence Rubric and Pattern Rules.
+
+If evidence extraction or pattern logic is wrong:
+
+1. identify the systematic issue,
+2. change the relevant prompt/rule/policy,
+3. version the change,
+4. reprocess the affected raw history,
+5. compare the new result.
+
+## 27.3 Decision Gate
+
+Do not aggressively expand the product until the core loop proves useful with Lina.
+
+Questions at the gate:
+
+- Does Lina want to use it?
+- Does the Tutor help her understand rather than merely answer?
+- Does retrieval reliably ground school topics?
+- Do interactive representations improve understanding when used?
+- Do generated events/evidence broadly reflect what actually happened?
+- Does the Intelligence Card remain compact and useful?
+- Does personalization improve interactions without constraining Lina?
+- Can the Parent understand why the system reached important conclusions?
+- Is cost/latency acceptable?
+- Can errors be traced and corrected through reprocessing?
+
+If the answer is no in a core area, fix the core loop before adding breadth.
+
+---
+
+# 28. Relationship to Other Project Documents
+
+This document defines **what the project is and the approved governing direction**.
+
+The following documents refine execution without overriding this reference unless an explicit approved decision changes it.
+
+## `CHILD_SAFETY_POLICY.md`
+
+Defines:
+
+- non-overridable child-safety baseline,
+- age-appropriate response principles,
+- Parent Learning Boundary categories,
+- Allow / Age-appropriate only / Redirect-to-parent behavior,
+- enforcement order across Tutor, vision, artifacts, web, and other student-facing tools,
+- safe redirect behavior,
+- audit/versioning expectations for boundary-policy changes.
+
+## `LEARNING_INTELLIGENCE_SPEC.md`
+
+Defines:
+
+- meaningful event taxonomy,
+- evidence dimensions,
+- evidence rubrics,
+- support levels,
+- transfer rules,
+- retention rules,
+- self-correction rules,
+- strategy-effectiveness rules,
+- pattern identity,
+- weighting inputs,
+- recency/frequency logic,
+- counter-evidence semantics,
+- scope rules,
+- lifecycle rules,
+- card compaction rules,
+- session consolidation behavior,
+- audit/reprocessing rules.
+
+## `IMPLEMENTATION_PLAN.md`
+
+Defines:
+
+- concrete architecture,
+- repository layout,
+- database schema direction,
+- phases,
+- vertical slice sequencing,
+- dependencies,
+- technical integration order,
+- implementation constraints,
+- verification gates,
+- what to delay.
+
+## `AGENTS.md`
+
+Defines how Codex/AI agents may operate inside the repository, including protected areas, approval rules, verification requirements, and state-update requirements.
+
+## `PROJECT_STATE.md`
+
+Maintains the short operational snapshot of the implementation state.
+
+## `SYSTEM_MAP.html`
+
+Provides the visual map of the operating architecture, data flows, boundaries, and readiness.
+
+## `TASKS.md`
+
+Contains ordered implementation tasks for Codex/AI agents.
+
+---
+
+# 29. Governing Summary
+
+The project should remain simple in use and modular in construction.
+
+The active Grade and books define the school context. Docling and the educational semantic layer turn those books into retrievable curriculum context. The Tutor teaches using a stable identity and adaptive teaching strategy. Lina may communicate through text, voice, handwriting, drawings, and images. The Tutor may respond through conversation, annotations, clean visual reconstructions, and interactive HTML/SVG learning artifacts.
+
+The system does not treat the Tutor model's impression as learner truth. Raw interactions are preserved, meaningful events are extracted, evidence is consolidated, temporal patterns evolve under explicit rules, and a compact Learner Intelligence Card provides relevant memory without loading years of history into each prompt.
+
+Mastery and confidence are views over this evidence, not permanent source data.
+
+The Parent/Admin controls content and Grade activation, sees important insights and evidence, and can audit how conclusions were formed. AI usage remains task-routed, observable, replaceable, and reprocessable.
+
+The implementation starts with a modular monolith and a real Math vertical slice. The product expands only after Lina's real use demonstrates that the core loop is educationally useful, technically traceable, and operationally affordable.
+
+---
+
+**End of PROJECT_REFERENCE.md**
