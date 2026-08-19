@@ -1,5 +1,7 @@
 from io import BytesIO
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier
 
 import pytest
 
@@ -73,7 +75,15 @@ def test_private_access_rejects_tampering(tmp_path: Path) -> None:
 def test_local_storage_rejects_unsafe_keys(tmp_path: Path) -> None:
     storage = LocalObjectStorage(tmp_path / "private", signing_secret="test-secret")
 
-    for key in ("", ".", "../outside.txt", "nested/../../outside", "/absolute", "bad\\key"):
+    for key in (
+        "",
+        ".",
+        "../outside.txt",
+        "nested/../../outside",
+        "/absolute",
+        "bad\\key",
+        ".locks/reserved",
+    ):
         with pytest.raises(InvalidStorageKey):
             storage.put(key, b"not allowed")
 
@@ -88,7 +98,7 @@ def test_delete_removes_object_and_metadata(tmp_path: Path) -> None:
 
     with pytest.raises(ObjectNotFoundError):
         storage.get("documents/file.txt")
-    assert not list((tmp_path / "private").rglob("*"))
+    assert not storage._object_path("documents/file.txt").exists()
 
 
 def test_put_does_not_replace_an_existing_original(tmp_path: Path) -> None:
@@ -104,10 +114,51 @@ def test_put_does_not_replace_an_existing_original(tmp_path: Path) -> None:
 def test_corrupt_bytes_fail_integrity_check(tmp_path: Path) -> None:
     storage = LocalObjectStorage(tmp_path / "private", signing_secret="test-secret")
     storage.put("documents/file.txt", b"content")
-    (tmp_path / "private" / "documents" / "file.txt").write_bytes(b"changed")
+    (storage._object_path("documents/file.txt") / "data").write_bytes(b"changed")
 
     with pytest.raises(StorageIntegrityError):
         storage.get("documents/file.txt")
+
+
+def test_concurrent_same_key_has_one_winner_and_no_mixed_metadata(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "private"
+    stores = [
+        LocalObjectStorage(root, signing_secret="test-secret"),
+        LocalObjectStorage(root, signing_secret="test-secret"),
+    ]
+    barrier = Barrier(2)
+    candidates = (
+        (b"first original", "first"),
+        (b"second original", "second"),
+    )
+
+    def upload(
+        index: int,
+    ) -> tuple[str, bytes | None]:
+        content, label = candidates[index]
+        barrier.wait()
+        try:
+            stores[index].put(
+                "books/concurrent.pdf",
+                content,
+                content_type="application/pdf",
+                metadata={"writer": label},
+            )
+            return label, content
+        except ObjectAlreadyExistsError:
+            return label, None
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(upload, range(2)))
+
+    winners = [(label, content) for label, content in results if content is not None]
+    assert len(winners) == 1
+    winning_label, winning_content = winners[0]
+    stored = stores[0].get("books/concurrent.pdf")
+    assert stored.content == winning_content
+    assert stored.metadata.metadata == {"writer": winning_label}
 
 
 def test_storage_factory_defaults_to_local(tmp_path: Path) -> None:

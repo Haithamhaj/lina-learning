@@ -3,17 +3,20 @@
 from __future__ import annotations
 
 import base64
+import fcntl
 import hashlib
 import hmac
 import json
 import math
 import os
 import secrets
+import shutil
 import tempfile
 import time
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path, PurePosixPath
-from typing import Callable, Mapping
+from typing import Callable, Iterator, Mapping
 
 from .models import (
     ExpiredPrivateAccessToken,
@@ -45,6 +48,8 @@ def validate_storage_key(key: str) -> str:
         raise InvalidStorageKey(
             "Storage keys cannot be absolute, normalized, or traverse directories."
         )
+    if not path.parts or path.parts[0] == ".locks":
+        raise InvalidStorageKey("The .locks namespace is reserved by storage.")
     canonical = "/".join(path.parts)
     if canonical != key:
         raise InvalidStorageKey("Storage keys must be canonical POSIX paths.")
@@ -52,7 +57,7 @@ def validate_storage_key(key: str) -> str:
 
 
 class LocalObjectStorage:
-    """Private filesystem storage with signed, expiring read capabilities."""
+    """Private filesystem storage with atomic collision-safe publishing."""
 
     def __init__(
         self,
@@ -63,6 +68,8 @@ class LocalObjectStorage:
     ) -> None:
         self.root = Path(root).expanduser()
         self.root.mkdir(parents=True, exist_ok=True)
+        self._lock_root = self.root / ".locks"
+        self._lock_root.mkdir(parents=True, exist_ok=True)
         if isinstance(signing_secret, str):
             signing_secret = signing_secret.encode("utf-8")
         self._signing_secret = signing_secret or secrets.token_bytes(32)
@@ -79,59 +86,65 @@ class LocalObjectStorage:
         key = validate_storage_key(key)
         if not content_type.strip():
             raise ValueError("content_type must not be empty.")
+
         object_path = self._object_path(key)
-        if object_path.exists() or self._metadata_path(object_path).exists():
-            raise ObjectAlreadyExistsError(
-                f"Refusing to replace existing object: {key}"
-            )
         object_path.parent.mkdir(parents=True, exist_ok=True)
-        checksum = hashlib.sha256()
-        size = 0
-        moved_object = False
-        temporary_object: Path | None = None
+        with self._key_lock(key):
+            self._recover_abandoned_transactions(object_path)
+            if object_path.exists():
+                raise ObjectAlreadyExistsError(
+                    f"Refusing to replace existing object: {key}"
+                )
 
-        try:
-            with tempfile.NamedTemporaryFile(
-                dir=object_path.parent,
-                prefix=f".{object_path.name}.",
-                suffix=".tmp",
-                delete=False,
-            ) as handle:
-                temporary_object = Path(handle.name)
-                for chunk in self._chunks(data):
-                    checksum.update(chunk)
-                    size += len(chunk)
-                    handle.write(chunk)
-                handle.flush()
-                os.fsync(handle.fileno())
-
-            os.replace(temporary_object, object_path)
-            moved_object = True
-            temporary_object = None
-            object_metadata = ObjectMetadata(
-                key=key,
-                content_type=content_type,
-                size=size,
-                checksum_sha256=checksum.hexdigest(),
-                metadata=dict(metadata or {}),
-                stored_at=datetime.fromtimestamp(self._clock(), UTC),
+            checksum = hashlib.sha256()
+            size = 0
+            transaction_path: Path | None = Path(
+                tempfile.mkdtemp(
+                    dir=object_path.parent,
+                    prefix=f".{object_path.name}.txn-",
+                )
             )
-            self._write_metadata(object_path, object_metadata)
-            return object_metadata
-        except Exception:
-            if temporary_object is not None:
-                temporary_object.unlink(missing_ok=True)
-            if moved_object:
-                object_path.unlink(missing_ok=True)
-                self._metadata_path(object_path).unlink(missing_ok=True)
-            raise
+            try:
+                data_path = transaction_path / "data"
+                with data_path.open("wb") as handle:
+                    for chunk in self._chunks(data):
+                        checksum.update(chunk)
+                        size += len(chunk)
+                        handle.write(chunk)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+
+                object_metadata = ObjectMetadata(
+                    key=key,
+                    content_type=content_type,
+                    size=size,
+                    checksum_sha256=checksum.hexdigest(),
+                    metadata=dict(metadata or {}),
+                    stored_at=datetime.fromtimestamp(self._clock(), UTC),
+                )
+                self._write_metadata(transaction_path / "metadata.json", object_metadata)
+
+                # The object is a directory containing both bytes and metadata.
+                # Renaming the completed transaction directory publishes both
+                # atomically; readers never observe a half-published object.
+                os.replace(transaction_path, object_path)
+                self._fsync_directory(object_path.parent)
+                transaction_path = None
+                return object_metadata
+            finally:
+                if transaction_path is not None:
+                    shutil.rmtree(transaction_path, ignore_errors=True)
 
     def head(self, key: str) -> ObjectMetadata:
         key = validate_storage_key(key)
         object_path = self._object_path(key)
-        metadata_path = self._metadata_path(object_path)
-        if not object_path.is_file() or not metadata_path.is_file():
+        if not object_path.is_dir():
             raise ObjectNotFoundError(f"Object does not exist: {key}")
+
+        data_path = object_path / "data"
+        metadata_path = object_path / "metadata.json"
+        if not data_path.is_file() or not metadata_path.is_file():
+            raise StorageIntegrityError(f"Incomplete object transaction: {key}")
 
         try:
             payload = json.loads(metadata_path.read_text(encoding="utf-8"))
@@ -150,14 +163,14 @@ class LocalObjectStorage:
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
             raise StorageIntegrityError(f"Invalid metadata for object: {key}") from exc
 
-        if object_metadata.key != key or object_metadata.size != object_path.stat().st_size:
+        if object_metadata.key != key or object_metadata.size != data_path.stat().st_size:
             raise StorageIntegrityError(f"Metadata does not match object: {key}")
         return object_metadata
 
     def get(self, key: str) -> StoredObject:
         key = validate_storage_key(key)
         object_metadata = self.head(key)
-        content = self._object_path(key).read_bytes()
+        content = (self._object_path(key) / "data").read_bytes()
         checksum = hashlib.sha256(content).hexdigest()
         if checksum != object_metadata.checksum_sha256:
             raise StorageIntegrityError(f"Checksum mismatch for object: {key}")
@@ -166,12 +179,11 @@ class LocalObjectStorage:
     def delete(self, key: str) -> None:
         key = validate_storage_key(key)
         object_path = self._object_path(key)
-        metadata_path = self._metadata_path(object_path)
-        if not object_path.exists() and not metadata_path.exists():
-            raise ObjectNotFoundError(f"Object does not exist: {key}")
-        object_path.unlink(missing_ok=True)
-        metadata_path.unlink(missing_ok=True)
-        self._remove_empty_parents(object_path.parent)
+        with self._key_lock(key):
+            if not object_path.is_dir():
+                raise ObjectNotFoundError(f"Object does not exist: {key}")
+            shutil.rmtree(object_path)
+            self._remove_empty_parents(object_path.parent)
 
     def create_private_access(
         self,
@@ -206,7 +218,7 @@ class LocalObjectStorage:
         return self.get(payload["key"])
 
     @staticmethod
-    def _chunks(data: StorageInput):
+    def _chunks(data: StorageInput) -> Iterator[bytes]:
         if isinstance(data, bytes):
             yield data
             return
@@ -224,24 +236,48 @@ class LocalObjectStorage:
             yield chunk
 
     def _object_path(self, key: str) -> Path:
-        path = self.root.joinpath(*key.split("/"))
+        key_parts = key.split("/")
+        object_path = self.root.joinpath(
+            *key_parts[:-1],
+            f"{key_parts[-1]}.object",
+        )
         resolved_root = self.root.resolve()
         try:
-            path.resolve().relative_to(resolved_root)
+            object_path.resolve().relative_to(resolved_root)
         except ValueError as exc:
             raise InvalidStorageKey("Storage key escapes the configured root.") from exc
-        return path
+        return object_path
+
+    def _lock_path(self, key: str) -> Path:
+        digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+        return self._lock_root / f"{digest}.lock"
+
+    @contextmanager
+    def _key_lock(self, key: str):
+        lock_path = self._lock_path(key)
+        with lock_path.open("a+b") as lock_handle:
+            try:
+                fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as exc:
+                raise ObjectAlreadyExistsError(
+                    f"Another storage operation already owns key: {key}"
+                ) from exc
+            try:
+                yield
+            finally:
+                fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+
+    def _recover_abandoned_transactions(self, object_path: Path) -> None:
+        pattern = f".{object_path.name}.txn-*"
+        for transaction_path in object_path.parent.glob(pattern):
+            if transaction_path.is_dir():
+                shutil.rmtree(transaction_path, ignore_errors=True)
 
     @staticmethod
-    def _metadata_path(object_path: Path) -> Path:
-        return object_path.with_name(f"{object_path.name}.metadata.json")
-
     def _write_metadata(
-        self,
-        object_path: Path,
+        metadata_path: Path,
         object_metadata: ObjectMetadata,
     ) -> None:
-        metadata_path = self._metadata_path(object_path)
         payload = {
             "key": object_metadata.key,
             "content_type": object_metadata.content_type,
@@ -254,24 +290,18 @@ class LocalObjectStorage:
                 else None
             ),
         }
-        temporary_metadata: Path | None = None
+        with metadata_path.open("w", encoding="utf-8") as handle:
+            json.dump(payload, handle, separators=(",", ":"), sort_keys=True)
+            handle.flush()
+            os.fsync(handle.fileno())
+
+    @staticmethod
+    def _fsync_directory(directory: Path) -> None:
+        directory_fd = os.open(directory, os.O_RDONLY)
         try:
-            with tempfile.NamedTemporaryFile(
-                dir=metadata_path.parent,
-                prefix=f".{metadata_path.name}.",
-                suffix=".tmp",
-                mode="w",
-                encoding="utf-8",
-                delete=False,
-            ) as handle:
-                temporary_metadata = Path(handle.name)
-                json.dump(payload, handle, separators=(",", ":"), sort_keys=True)
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.replace(temporary_metadata, metadata_path)
+            os.fsync(directory_fd)
         finally:
-            if temporary_metadata is not None:
-                temporary_metadata.unlink(missing_ok=True)
+            os.close(directory_fd)
 
     def _remove_empty_parents(self, parent: Path) -> None:
         resolved_root = self.root.resolve()
