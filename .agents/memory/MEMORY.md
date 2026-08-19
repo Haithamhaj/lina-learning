@@ -1,2 +1,3 @@
 - [GitHub repository bootstrap](github-bootstrap.md) — empty repos need a temporary Contents seed before Git Database baseline publishing.
 - [Workspace dependency isolation](workspace-dependencies.md) — keep Next/React installs inside the web workspace to avoid duplicate runtime trees.
+- [Configuration testing in Replit](configuration-testing.md) — clear injected environment values when testing missing settings.
