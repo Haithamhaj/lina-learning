@@ -1,0 +1,1 @@
+"""Shared platform and domain services for the Lina modular monolith."""

@@ -2,8 +2,9 @@
 
 ## Current goal
 
-TASK-001 is complete. The next eligible task is TASK-002: environment and
-configuration foundation.
+TASK-002 is complete. The next recommended task is TASK-003: PostgreSQL and
+migration foundation. TASK-005 is also eligible because its only dependency,
+TASK-002, is complete.
 
 ## Current reality
 
@@ -12,6 +13,8 @@ configuration foundation.
   primitives as its baseline functional UI layer.
 - The API shell is FastAPI with health and foundation-status endpoints.
 - TASK-001 is marked `DONE` after local and browser verification.
+- TASK-002 is marked `DONE` with typed server configuration and browser-safe
+  frontend configuration.
 - No Tutor, retrieval, Learning Intelligence, multimodal, artifact, database, or
   authentication feature has been added.
 
@@ -20,6 +23,8 @@ configuration foundation.
 - Use a modular monolith.
 - Keep the foundation dependency-light and defer optional technology candidates
   until the task that needs them.
+- Keep server-only settings and secrets inside the API/service configuration
+  module; only `NEXT_PUBLIC_*` values may reach the browser bundle.
 - Preserve the approved documents as source-of-truth references.
 
 ## Protected areas
@@ -30,12 +35,14 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Active risks
 
-- TASK-002 remains the next configuration task; later Phase 0 tasks remain
-  blocked by their declared dependencies.
+- TASK-003 and TASK-005 are now eligible; later Phase 0 tasks remain blocked by
+  their declared dependencies.
 
 ## Next recommended action
 
-Begin TASK-002 only in a separate run. Do not begin later tasks in this run.
+Begin TASK-003 next, using the database/migration requirements in `TASKS.md`.
+TASK-005 may be handled independently afterward. Do not begin TASK-004 or later
+tasks until their dependencies are complete.
 
 ## Critical references
 

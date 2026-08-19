@@ -17,7 +17,7 @@
 # Phase 0 — Repository & Runtime Foundation
 
 ## TASK-001 — Repository foundation
-**Status:** DONE  
+**Status:** DONE
 **Dependencies:** None  
 **Purpose:** Establish the repository-native Codex harness and runnable app skeleton without learning features.  
 **Expected output:** Next.js app shell, FastAPI app shell, repository structure, governing docs in place, documented local run/test commands; shadcn/ui established as the baseline functional web component layer unless a concrete incompatibility is documented.  
@@ -27,15 +27,16 @@
 **Completion:** Verified with live web/API workflows, Next.js production build, TypeScript check, FastAPI tests, API smoke requests, and browser smoke test. The shadcn/ui baseline is locally owned and documented in `docs/REUSE_DECISIONS.md`.  
 
 ## TASK-002 — Environment and configuration foundation
-**Status:** READY  
+**Status:** DONE
 **Dependencies:** TASK-001  
 **Purpose:** Create typed environment/config handling for web, API, DB, object storage, and model-provider settings.  
 **Expected output:** Example env file, server-side secret handling, configuration validation, no API keys exposed to frontend.  
 **Likely areas:** `/apps/api`, `/apps/web`, `/services/platform/config`.  
 **Verification:** Missing required config fails clearly; frontend bundle contains no server secrets; tests cover config parsing.  
+**Completion:** Verified with 9 configuration tests, TypeScript check, production build, secret-name scan of the Next output, API smoke checks on port 8000, and browser smoke testing.
 
 ## TASK-003 — PostgreSQL and migration foundation
-**Status:** BLOCKED  
+**Status:** READY
 **Dependencies:** TASK-002  
 **Purpose:** Establish PostgreSQL, pgvector capability, migrations, and foundational identity/grade tables.  
 **Expected output:** Migration runner and initial tables for users, students, parent relationships, grade periods.  
@@ -51,7 +52,7 @@
 **Verification:** Student cannot access Parent/Admin endpoints/pages; Parent can access admin shell; auth tests pass.  
 
 ## TASK-005 — Object-storage abstraction
-**Status:** BLOCKED  
+**Status:** READY
 **Dependencies:** TASK-002  
 **Purpose:** Preserve original books and student images behind a provider-neutral storage interface.  
 **Expected output:** Upload/store/read metadata interface with signed/private access pattern; local/dev backend supported.  

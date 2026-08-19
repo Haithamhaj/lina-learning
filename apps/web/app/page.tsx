@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { publicConfig } from "@/lib/public-config";
 
 const foundationAreas = [
   {
@@ -34,6 +35,9 @@ export default function HomePage() {
             <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
               The Phase 0 application shell is ready. Product features will be
               added one verified task at a time.
+            </p>
+            <p className="mt-4 text-sm font-medium text-slate-500">
+              Runtime: {publicConfig.appEnv}
             </p>
           </div>
           <Button variant="secondary" size="lg">

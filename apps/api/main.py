@@ -1,11 +1,16 @@
 from fastapi import FastAPI
 
+from services.platform.config import get_settings
+
+
+settings = get_settings()
 
 app = FastAPI(
     title="Lina Learning API",
     version="0.1.0",
-    description="Phase 0 API shell for Lina Personal Learning System.",
+    description=f"Phase 0 API shell for Lina Personal Learning System ({settings.app_env}).",
 )
+app.state.settings = settings
 
 
 @app.get("/health", tags=["platform"])
