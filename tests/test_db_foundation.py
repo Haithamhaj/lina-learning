@@ -39,6 +39,17 @@ def test_foundation_models_match_expected_tables() -> None:
         "content_processing_runs",
         "curriculum_nodes",
         "content_blocks",
+        "learning_sessions",
+        "learning_messages",
+        "candidate_events",
+        "intelligence_processing_runs",
+        "learning_events",
+        "learning_evidence",
+        "current_learning_states",
+        "learner_patterns",
+        "pattern_evidence",
+        "learner_intelligence_cards",
+        "decision_views",
     }
     assert User.__tablename__ == "users"
     assert Student.__tablename__ == "students"
@@ -73,6 +84,17 @@ def test_development_schema_has_foundation_tables() -> None:
         "content_processing_runs",
         "curriculum_nodes",
         "content_blocks",
+        "learning_sessions",
+        "learning_messages",
+        "candidate_events",
+        "intelligence_processing_runs",
+        "learning_events",
+        "learning_evidence",
+        "current_learning_states",
+        "learner_patterns",
+        "pattern_evidence",
+        "learner_intelligence_cards",
+        "decision_views",
     }.issubset(set(inspector.get_table_names()))
 
     with get_engine().connect() as connection:

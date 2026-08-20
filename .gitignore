@@ -35,4 +35,5 @@ attached_assets/
 *.log
 tmp/
 temp/
+.playwright-cli/
 .worktrees/

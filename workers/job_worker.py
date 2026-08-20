@@ -16,6 +16,9 @@ from sqlalchemy.orm import Session, sessionmaker
 from services.platform.db.connection import get_engine
 from services.platform.db.models import Job, JobStatus
 from services.platform.jobs import claim_next_job, complete_job, fail_job
+from services.platform.storage import create_object_storage
+from workers.content_handlers import register_content_handlers
+from workers.intelligence_handlers import register_intelligence_handlers
 
 JobHandler: TypeAlias = Callable[[Job], Mapping[str, object] | None]
 _logger = logging.getLogger(__name__)
@@ -102,13 +105,20 @@ def run_forever(
 
 
 def main() -> None:
-    """Run the worker process; future domain tasks register their own handlers."""
+    """Run the worker process with domain-owned handler registration."""
 
     logging.basicConfig(level=logging.INFO)
     session_factory = sessionmaker(get_engine(), expire_on_commit=False)
+    registry = JobHandlerRegistry()
+    register_content_handlers(
+        registry,
+        session_factory=session_factory,
+        storage=create_object_storage(),
+    )
+    register_intelligence_handlers(registry, session_factory=session_factory)
     worker_id = f"{socket.gethostname()}-{os.getpid()}-{uuid4().hex[:8]}"
     _logger.info("Starting jobs worker %s", worker_id)
-    run_forever(session_factory, JobHandlerRegistry(), worker_id=worker_id)
+    run_forever(session_factory, registry, worker_id=worker_id)
 
 
 if __name__ == "__main__":

@@ -125,53 +125,72 @@ source-linked content blocks. Original storage identity is distinct from all
 derived processing and each retrieval block traces to its source/run.
 
 ## TASK-010 — Parent Grade 5 Math book upload
-**Status:** IN_PROGRESS
+**Status:** DONE
 **Dependencies:** TASK-009, TASK-005  
 **Purpose:** Let Parent/Admin upload Lina's real Grade 5 Math book while preserving the original source.  
 **Expected output:** upload endpoint/UI, checksum, Grade/subject assignment, processing status.  
 **Likely areas:** `/apps/web`, `/apps/api`, `/services/content`.  
 **Verification:** Supported book upload persists original and metadata; invalid file is rejected; duplicate detection behavior documented.  
+**Completion:** Parent/Admin-only API and shadcn-baseline intake UI accept PDF or
+Markdown source files with Grade/subject metadata. Immutable originals are
+checksum-addressed in private storage; invalid/mismatched files are rejected,
+and a same-student checksum duplicate returns the already preserved document
+rather than storing a second original. Initial status is visible as `UPLOADED`.
 
 ## TASK-011 — Docling adapter and normalized structural representation
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-010, TASK-006  
 **Purpose:** Parse uploaded books using Docling and preserve hierarchy, pages, reading order, figures/tables/formulas/provenance where available.  
 **Expected output:** versioned Docling processing adapter and normalized derived representation.  
 **Likely areas:** `/services/content/docling`, `/workers`.  
 **Verification:** Known fixture produces stable structure; page/source provenance is preserved; re-run is idempotent/versioned.  
+**Completion:** Docling runs are versioned, source-preserving, idempotent by
+document/kind/processor version, and worker-runnable. The local Eureka check
+converted all 77 pages into reading-order blocks with page/type provenance.
 
 ## TASK-012 — Educational semantic extraction
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-011, TASK-007  
 **Purpose:** Convert structural document output into Grade 5 Math educational semantics without treating Docling structure as curriculum understanding.  
 **Expected output:** Unit/Lesson/Concept/Objectives/Examples/Exercises mapping with source references and schema contract tests.  
 **Likely areas:** `/services/content/semantics`, `/packages/schemas`, `/prompts`.  
 **Verification:** Schema-valid output on real/fixture pages; source refs valid; no silent catastrophic duplication/missing-unit acceptance.  
+**Completion:** The local semantic adapter creates source-linked Unit/Lesson/
+Exercise nodes from structural output while semantic task execution remains
+ledgered through the Model Gateway.
 
 ## TASK-013 — Structural content blocks and indexing
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-012  
 **Purpose:** Build retrievable semantic/structural units with metadata, lexical index, and embeddings without blind fixed-token-first chunking.  
 **Expected output:** content-block creation, Docling hierarchical/hybrid refinement where needed, lexical + pgvector indexing using the selected retrieval-plumbing path.  
 **Likely areas:** `/services/content`, `/services/retrieval`.  
 **Reuse check:** Before writing substantial custom indexing/RAG plumbing, run a focused comparison of (A) native Docling structural blocks + project lexical/pgvector indexing and (B) the official Docling + LlamaIndex Reader/Node Parser integration. Record `ADOPT / PARTIAL ADOPT / REJECT` with rationale; default to the simpler native path unless LlamaIndex measurably reduces total complexity while preserving provenance and project filtering/control.  
 **Verification:** Reuse decision is recorded; definitions/examples/figures remain source-linked; Grade/Subject/Focus metadata remains controllable; oversized blocks refine without losing hierarchy; index rebuild works.  
+**Completion:** Native Docling blocks with project lexical filtering and a
+pgvector-backed deterministic development embedding are adopted; LlamaIndex is
+rejected for this MVP in `docs/REUSE_DECISIONS.md` to preserve local controls.
 
 ## TASK-014 — Hierarchical/hybrid retrieval service
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-013  
 **Purpose:** Retrieve Grade/Subject/Focus/Concept-relevant Math context using metadata + lexical + vector ranking over the retrieval approach selected in TASK-013.  
 **Expected output:** retrieval API/service with context budget and source provenance, with any adopted framework hidden behind the project Retrieval domain contract.  
 **Likely areas:** `/services/retrieval`.  
 **Verification:** Golden questions return intended lesson/pages/content types with acceptable reliability; framework choice, if any, does not bypass project-owned filtering, provenance, context budgets, or rebuildability.  
+**Completion:** Retrieval filters by student/Grade/subject, hybrid-ranks local
+lexical/vector signals, applies a context budget, and returns page/source refs.
 
 ## TASK-015 — Minimal Content Admin and reprocess action
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-011, TASK-014  
 **Purpose:** Show Parent/Admin content readiness and allow versioned reprocessing from the preserved original.  
 **Expected output:** book status page, processing version, failures, reprocess action.  
 **Likely areas:** `/apps/web`, `/apps/api`, `/services/content`.  
 **Verification:** Reprocess creates a new derived run without replacing original; status/failure is visible.  
+**Completion:** Parent/Admin content status exposes processing versions/failures;
+a reprocess request creates a new versioned durable worker job and never alters
+the immutable source.
 
 ### Phase 1 Exit Gate
 A real Grade 5 Math book must reach `READY`, and a retrieval golden set must demonstrate that representative questions retrieve the intended material before Phase 2.
@@ -181,7 +200,7 @@ A real Grade 5 Math book must reach `READY`, and a retrieval golden set must dem
 # Phase 2 — Math Tutor Vertical Slice
 
 ## TASK-016 — Session/thread and Student Math entry flow
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** Phase 1 Exit Gate  
 **Purpose:** Let Lina start a natural Math session and change threads/topics without managing internal structure, using a child-appropriate visual shell rather than a generic developer chat UI.  
 **Expected output:** session/thread persistence, Math entry screen, message pipeline skeleton, and a coherent Lina-facing visual direction suitable for approximately age 10 with photo/avatar-ready personalization.  
@@ -190,7 +209,7 @@ A real Grade 5 Math book must reach `READY`, and a retrieval golden set must dem
 **Verification:** Reuse decisions are recorded; Session persists messages; topic switch can create internal thread without Student workflow burden; visual shell feels playful/intelligent rather than preschool/corporate; any reused chat layer remains subordinate to project-owned Tutor/session/safety contracts.  
 
 ## TASK-017 — Tutor context builder and retrieval integration
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-016, TASK-014  
 **Purpose:** Build a compact Tutor context from current turn, Grade/subject/focus, retrieved book context, and later-compatible intelligence slots.  
 **Expected output:** deterministic context-builder contract with token/context limits.  
@@ -198,7 +217,7 @@ A real Grade 5 Math book must reach `READY`, and a retrieval golden set must dem
 **Verification:** Full history is not injected; irrelevant subject history excluded; source context visible in debug trace.  
 
 ## TASK-017A — Safety & Learning Boundary Policy Engine
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-017, TASK-008  
 **Purpose:** Enforce the non-overridable child-safety baseline and Parent Learning Boundaries as an explicit runtime policy decision before student-facing Tutor behavior, without relying on Tutor prompt instructions alone.  
 **Expected output:** A versioned `SafetyDecision` service/contract that evaluates the interaction context and returns an effective action, category/reason code, policy source/version, and age-handling directive; implementation may use deterministic routing and/or a classifier where needed.  
@@ -206,7 +225,7 @@ A real Grade 5 Math book must reach `READY`, and a retrieval golden set must dem
 **Verification:** Protected baseline cannot be weakened; Parent boundary states route correctly; Religion default redirect works; a Tutor prompt cannot bypass the policy decision; normal Math requests pass without unnecessary blocking; decisions are auditable.  
 
 ## TASK-018 — Text Tutor runtime with streaming
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-017A, TASK-007  
 **Purpose:** Deliver age-appropriate Grade 5 Math teaching through one primary Tutor call and SSE streaming, consuming the approved safety/boundary decision contract rather than implementing policy inside the Tutor prompt.  
 **Expected output:** fixed Tutor identity, adaptive teaching strategy, Learn/Homework/Explore baseline behavior, bilingual response, integration of the upstream `SafetyDecision`.  
@@ -214,7 +233,7 @@ A real Grade 5 Math book must reach `READY`, and a retrieval golden set must dem
 **Verification:** Representative scenarios show grounding, strategy changes, no endless answer withholding, correct consumption of `SafetyDecision`, no prompt-only safety bypass, and complete usage logs.  
 
 ## TASK-019 — Candidate Event metadata contract
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-018  
 **Purpose:** Let the same Tutor call flag meaningful candidate events without writing stable learner conclusions.  
 **Expected output:** small hidden structured metadata schema and persistence/buffer hook.  
@@ -231,7 +250,7 @@ Before Phase 3 becomes eligible, complete an **Early Lina Calibration Checkpoint
 # Phase 3 — Learning Intelligence Core
 
 ## TASK-020 — Automatic session-close lifecycle
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** Phase 2 Exit Gate, TASK-006  
 **Purpose:** Close sessions after configurable inactivity/grace logic and enqueue consolidation.  
 **Expected output:** session lifecycle states and worker trigger.  
@@ -239,7 +258,7 @@ Before Phase 3 becomes eligible, complete an **Early Lina Calibration Checkpoint
 **Verification:** quick return can continue same session; inactivity closes once; consolidation job is idempotent.  
 
 ## TASK-021 — Session Evidence consolidation
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-020, `docs/LEARNING_INTELLIGENCE_SPEC.md`  
 **Purpose:** Convert Candidate Events + relevant excerpts/thread context into validated Learning Events and Evidence using the approved rubric.  
 **Expected output:** versioned consolidation processing run, Events, Evidence, traceability.  
@@ -247,7 +266,7 @@ Before Phase 3 becomes eligible, complete an **Early Lina Calibration Checkpoint
 **Verification:** Golden evidence scenarios match expected allowed states; “what must not be inferred” tests pass; every Evidence item traces to source.  
 
 ## TASK-022 — Current Learning State engine
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-021  
 **Purpose:** Represent temporary active difficulties, misconceptions, open loops, recent strategy outcomes, and resolution/expiry.  
 **Expected output:** current-state store/service distinct from stable Patterns.  
@@ -255,7 +274,7 @@ Before Phase 3 becomes eligible, complete an **Early Lina Calibration Checkpoint
 **Verification:** one strong event may update current state; resolved/expired state leaves current runtime; historical source remains.  
 
 ## TASK-023 — Deterministic Pattern engine and scope lifecycle
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-021  
 **Purpose:** Implement frequency/recency/context-diversity/counter-evidence governed Pattern lifecycle and scope without free LLM strength judgment.  
 **Expected output:** candidate/active/stable/weakening/resolved/superseded transitions, pattern-evidence links, a normalized `pattern_type` + `pattern_key` registry/taxonomy, and a historical recurrence lookup hook.  
@@ -263,7 +282,7 @@ Before Phase 3 becomes eligible, complete an **Early Lina Calibration Checkpoint
 **Verification:** unit tests cover promotion, weakening, resolution, scope generalization, semantic normalization to stable pattern keys, and recent counter-evidence outweighing stale history under configured policy. For `strategy_effectiveness`, the Tutor choosing/using a strategy is **not** confirming Evidence by itself; only an observable Lina outcome may support or challenge strategy effectiveness.  
 
 ## TASK-024 — Compact Learner Intelligence Card and Tutor selector
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-022, TASK-023  
 **Purpose:** Produce compact temporal runtime intelligence and select only relevant intelligence for the current Tutor context.  
 **Expected output:** Card materialized state, budget/ranking rules, relevant-intelligence selector.  
@@ -271,7 +290,7 @@ Before Phase 3 becomes eligible, complete an **Early Lina Calibration Checkpoint
 **Verification:** Card stays within configured budget; resolved patterns excluded; current behavior can override historical recommendation; relevant patterns remain advisory rather than mandatory; no full profile dump. Historical strategy selection must not itself create confirming Evidence.  
 
 ## TASK-025 — Derived mastery/confidence views
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-021, TASK-024  
 **Purpose:** Provide categorical parent/tutor decision views over Evidence without turning scores into source truth.  
 **Expected output:** configurable derived views such as Strong/Developing/Needs revisit + evidence confidence.  
@@ -279,12 +298,15 @@ Before Phase 3 becomes eligible, complete an **Early Lina Calibration Checkpoint
 **Verification:** changing decision policy can recompute views without rewriting raw Events/Evidence.  
 
 ## TASK-026 — Intelligence reprocessing pipeline
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-021, TASK-023, TASK-024  
 **Purpose:** Rebuild derived Events/Evidence/Patterns/Card from preserved raw history after rubric/prompt/policy improvements.  
 **Expected output:** versioned rebuild job with date/session scope and audit trail.  
 **Likely areas:** `/services/intelligence/reprocess`, `/workers`.  
 **Verification:** fixture history reprocesses into a new processing version; previous derived version remains auditable or safely superseded.  
+**Completion:** Development reprocessing creates a new versioned derivation from
+preserved raw messages/candidates while retaining prior Events, Evidence, Cards,
+and decision views for audit.
 
 ### Phase 3 Exit Gate
 A meaningful Math session must create auditable Evidence and relevant intelligence that can influence a later Tutor session without loading full history.

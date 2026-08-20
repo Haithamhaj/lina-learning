@@ -1,7 +1,9 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from apps.api.routes.auth import router as auth_router
 from apps.api.routes.content import router as content_router
+from apps.api.routes.demo import router as demo_router
 from services.platform.config import get_settings
 
 
@@ -13,8 +15,16 @@ app = FastAPI(
     description=f"Phase 0 API shell for Lina Personal Learning System ({settings.app_env}).",
 )
 app.state.settings = settings
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Authorization", "Content-Type"],
+)
 app.include_router(auth_router)
 app.include_router(content_router)
+app.include_router(demo_router)
 
 
 @app.get("/health", tags=["platform"])

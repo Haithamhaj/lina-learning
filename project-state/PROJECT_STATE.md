@@ -2,9 +2,11 @@
 
 ## Current goal
 
-TASK-010 is in progress with a fixture-document upload and Docling path. A
-decision is required before treating the mandatory Early Lina Calibration
-Checkpoint as satisfied for Phase 3 eligibility.
+Phase 3 Learning Intelligence Core is complete for the approved development
+sandbox: the browser demo exercises real local Grade 5 Eureka content through
+retrieval, Tutor, Candidate Events, Evidence, State/Patterns, Card, decision
+views, later-session personalization, and reprocessing. Early Lina Calibration
+remains explicitly deferred and is not claimed as satisfied.
 
 ## Current reality
 
@@ -45,6 +47,16 @@ Checkpoint as satisfied for Phase 3 eligibility.
 - TASK-009 is marked `DONE` with immutable source-document records, versioned
   derivation runs, Grade-local curriculum nodes, and source-linked content
   blocks. These records remain rebuildable and provenance-first.
+- TASK-010 is marked `DONE` with a Parent/Admin upload endpoint and simple
+  shadcn-baseline intake UI. Supported originals are checksum-addressed,
+  preserved unchanged in private storage, assigned Grade/subject metadata, and
+  start in an inspectable `UPLOADED` state; invalid/mismatched files are
+  rejected and same-student duplicates safely reuse the existing source.
+- TASK-011 through TASK-026 are marked `DONE`: Docling structural conversion,
+  semantic/source-linked retrieval, a small Tutor session path and runtime
+  safety consumption, Candidate Events, worker-backed close/consolidation,
+  derived evidence/state/pattern/card/decision views, and versioned rebuilds
+  are all available in the development-only Sandbox/Test Learner demo.
 
 ## Active decisions
 
@@ -78,9 +90,13 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Active risks
 
-- TASK-010 is in progress. Fixture validation is authorized for content work,
-  but it is not real-book or real-Lina validation. The Phase 2 exit requires an
-  actual Early Lina Calibration Checkpoint before Phase 3 becomes eligible.
+- The real Grade 5 Eureka Math workbook is approved only as local development
+  and test curriculum content; it must remain outside Git. Its sandbox demo
+  validation does not validate claims about Lina or replace real-book validation
+  on Lina's selected curriculum.
+- Early Lina Calibration is explicitly deferred by Product Owner approval for
+  this sandbox-only Phase 1–3 run. It remains required before claims about real
+  Lina or further product expansion.
 - Real AWS/S3 staging verification is deferred and non-blocking. It remains
   recommended before changing the deployment secret because dry-run cannot
   validate conditional-copy permissions for tags, Object Lock, or SSE-KMS.
@@ -90,9 +106,8 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Next recommended action
 
-Decide whether the actual Early Lina Calibration Checkpoint remains mandatory
-before Phase 3, or whether the explicit fixture demo may serve as a documented
-temporary gate waiver. Do not start Phase 4.
+Review the Sandbox/Test Learner loop in the browser and use findings for the
+deferred Early Lina Calibration. Do not start Phase 4.
 
 ## Critical references
 

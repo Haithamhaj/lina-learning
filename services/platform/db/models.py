@@ -5,7 +5,7 @@ to later tasks. These models only establish durable identity and grade-period
 relationships needed by the Phase 0 database foundation.
 """
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
@@ -25,6 +25,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PostgreSQLUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from pgvector.sqlalchemy import Vector
 
 
 class Base(DeclarativeBase):
@@ -231,13 +232,17 @@ class ContentProcessingRun(Base):
     """Versioned structural or semantic derivation from an immutable original."""
 
     __tablename__ = "content_processing_runs"
-    __table_args__ = (Index("ix_content_processing_document_kind", "document_id", "kind"),)
+    __table_args__ = (
+        Index("ix_content_processing_document_kind", "document_id", "kind"),
+        UniqueConstraint("document_id", "kind", "processor_version", name="uq_content_processing_run_version"),
+    )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     document_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_documents.id", ondelete="CASCADE"), nullable=False)
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
     processor_version: Mapped[str] = mapped_column(String(128), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="PENDING", server_default="PENDING")
+    failure_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -262,7 +267,10 @@ class ContentBlock(Base):
     """A source-linked retrieval unit; embeddings are added by TASK-013."""
 
     __tablename__ = "content_blocks"
-    __table_args__ = (Index("ix_content_blocks_document_run", "document_id", "processing_run_id"),)
+    __table_args__ = (
+        Index("ix_content_blocks_document_run", "document_id", "processing_run_id"),
+        Index("ix_content_blocks_embedding", "embedding", postgresql_using="hnsw", postgresql_ops={"embedding": "vector_l2_ops"}),
+    )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     document_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_documents.id", ondelete="CASCADE"), nullable=False)
@@ -273,6 +281,138 @@ class ContentBlock(Base):
     page_number: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     source_ref: Mapped[str] = mapped_column(String(512), nullable=False)
     attributes: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(8), nullable=True)
+
+
+class LearningSession(Base):
+    """Raw-session envelope; downstream intelligence remains derived."""
+
+    __tablename__ = "learning_sessions"
+    __table_args__ = (Index("ix_learning_sessions_student_status", "student_id", "status"),)
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
+    subject: Mapped[str] = mapped_column(String(32), nullable=False, default="MATH", server_default="MATH")
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="OPEN", server_default="OPEN")
+    opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    last_activity_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class LearningMessage(Base):
+    __tablename__ = "learning_messages"
+    __table_args__ = (Index("ix_learning_messages_session_created", "session_id", "created_at"),)
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("learning_sessions.id", ondelete="CASCADE"), nullable=False)
+    role: Mapped[str] = mapped_column(String(16), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    payload: Mapped[dict[str, object]] = mapped_column("metadata", JSONB, nullable=False, default=dict, server_default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class CandidateEvent(Base):
+    __tablename__ = "candidate_events"
+    __table_args__ = (Index("ix_candidate_events_session", "session_id"),)
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("learning_sessions.id", ondelete="CASCADE"), nullable=False)
+    message_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("learning_messages.id", ondelete="SET NULL"))
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    concept_ref: Mapped[str | None] = mapped_column(String(128))
+    signal: Mapped[str] = mapped_column(String(128), nullable=False)
+    payload: Mapped[dict[str, object]] = mapped_column("metadata", JSONB, nullable=False, default=dict, server_default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class IntelligenceProcessingRun(Base):
+    __tablename__ = "intelligence_processing_runs"
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
+    rubric_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    scope: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="COMPLETED", server_default="COMPLETED")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC), server_default=func.now())
+
+
+class LearningEvent(Base):
+    __tablename__ = "learning_events"
+    __table_args__ = (Index("ix_learning_events_run_session", "processing_run_id", "session_id"),)
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("intelligence_processing_runs.id", ondelete="CASCADE"), nullable=False)
+    session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("learning_sessions.id", ondelete="CASCADE"), nullable=False)
+    candidate_event_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("candidate_events.id", ondelete="CASCADE"), nullable=False)
+    subject: Mapped[str] = mapped_column(String(32), nullable=False)
+    concept_ref: Mapped[str | None] = mapped_column(String(128))
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    source_message_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("learning_messages.id", ondelete="SET NULL"))
+
+
+class LearningEvidence(Base):
+    __tablename__ = "learning_evidence"
+    __table_args__ = (Index("ix_learning_evidence_event", "event_id"),)
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    event_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("learning_events.id", ondelete="CASCADE"), nullable=False)
+    concept_ref: Mapped[str | None] = mapped_column(String(128))
+    dimensions: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    relationship: Mapped[str] = mapped_column(String(32), nullable=False, default="insufficient", server_default="insufficient")
+    source_ref: Mapped[str] = mapped_column(String(256), nullable=False)
+
+
+class CurrentLearningState(Base):
+    __tablename__ = "current_learning_states"
+    __table_args__ = (Index("ix_current_learning_states_student_status", "student_id", "status"),)
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
+    processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("intelligence_processing_runs.id", ondelete="CASCADE"), nullable=False)
+    state_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    concept_ref: Mapped[str | None] = mapped_column(String(128))
+    detail: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="ACTIVE", server_default="ACTIVE")
+    evidence_refs: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+
+
+class LearnerPattern(Base):
+    __tablename__ = "learner_patterns"
+    __table_args__ = (Index("ix_learner_patterns_student_status", "student_id", "status"), UniqueConstraint("student_id", "processing_run_id", "pattern_type", "pattern_key", "scope", name="uq_learner_pattern_scope"))
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
+    processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("intelligence_processing_runs.id", ondelete="CASCADE"), nullable=False)
+    pattern_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    pattern_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    scope: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="CANDIDATE", server_default="CANDIDATE")
+    support_count: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0, server_default="0")
+    counter_count: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0, server_default="0")
+    detail: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class PatternEvidence(Base):
+    __tablename__ = "pattern_evidence"
+    __table_args__ = (UniqueConstraint("pattern_id", "evidence_id", name="uq_pattern_evidence"),)
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    pattern_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("learner_patterns.id", ondelete="CASCADE"), nullable=False)
+    evidence_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("learning_evidence.id", ondelete="CASCADE"), nullable=False)
+
+
+class LearnerIntelligenceCard(Base):
+    __tablename__ = "learner_intelligence_cards"
+    __table_args__ = (UniqueConstraint("student_id", "processing_run_id", name="uq_intelligence_card_run"),)
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
+    processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("intelligence_processing_runs.id", ondelete="CASCADE"), nullable=False)
+    payload: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+
+
+class DecisionView(Base):
+    __tablename__ = "decision_views"
+    __table_args__ = (UniqueConstraint("student_id", "processing_run_id", "concept_ref", name="uq_decision_view_run_concept"),)
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
+    processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("intelligence_processing_runs.id", ondelete="CASCADE"), nullable=False)
+    concept_ref: Mapped[str] = mapped_column(String(128), nullable=False)
+    mastery: Mapped[str] = mapped_column(String(32), nullable=False)
+    evidence_confidence: Mapped[str] = mapped_column(String(16), nullable=False)
+    policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
 
 
 class User(Base):

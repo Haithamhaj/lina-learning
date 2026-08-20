@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.platform.db.models import ContentBlock, ContentDocument, ContentProcessingRun
@@ -51,6 +52,24 @@ def create_processing_run(
     return run
 
 
+def find_processing_run(
+    session: Session,
+    *,
+    document_id: UUID,
+    kind: str,
+    processor_version: str,
+) -> ContentProcessingRun | None:
+    """Return the single idempotent derivation run for an input/version pair."""
+
+    return session.execute(
+        select(ContentProcessingRun).where(
+            ContentProcessingRun.document_id == document_id,
+            ContentProcessingRun.kind == kind,
+            ContentProcessingRun.processor_version == processor_version,
+        )
+    ).scalar_one_or_none()
+
+
 def create_content_block(
     session: Session,
     *,
@@ -60,6 +79,8 @@ def create_content_block(
     block_type: str,
     page_number: int | None,
     source_ref: str,
+    attributes: dict[str, object] | None = None,
+    embedding: list[float] | None = None,
 ) -> ContentBlock:
     block = ContentBlock(
         document_id=document_id,
@@ -68,6 +89,8 @@ def create_content_block(
         block_type=block_type,
         page_number=page_number,
         source_ref=source_ref,
+        attributes=attributes or {},
+        embedding=embedding,
     )
     session.add(block)
     session.flush()

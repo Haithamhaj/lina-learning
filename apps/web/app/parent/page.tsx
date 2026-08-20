@@ -1,5 +1,6 @@
 import { RoleSurface } from "@/components/role-surface";
 import { SurfaceHeader } from "@/components/surface-header";
+import { ContentUpload } from "@/components/content-upload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { USER_ROLES } from "@/lib/auth/roles";
 
@@ -32,9 +33,7 @@ export default function ParentPage() {
                 <CardTitle>Learning environment</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm leading-6 text-slate-600">
-                  Grade and book controls will be added in their dedicated tasks.
-                </p>
+                <p className="text-sm leading-6 text-slate-600">Preserve a Grade book before it is processed into learning context.</p>
               </CardContent>
             </Card>
             <Card className="bg-blush">
@@ -48,6 +47,14 @@ export default function ParentPage() {
               </CardContent>
             </Card>
           </section>
+          <Card>
+            <CardHeader>
+              <CardTitle>Add a Grade 5 Math book</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ContentUpload />
+            </CardContent>
+          </Card>
         </div>
       </main>
     </RoleSurface>
