@@ -34,3 +34,4 @@ attached_assets/
 *.log
 tmp/
 temp/
+.worktrees/
