@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from apps.api.routes.auth import router as auth_router
+from apps.api.routes.content import router as content_router
 from services.platform.config import get_settings
 
 
@@ -13,6 +14,7 @@ app = FastAPI(
 )
 app.state.settings = settings
 app.include_router(auth_router)
+app.include_router(content_router)
 
 
 @app.get("/health", tags=["platform"])

@@ -125,7 +125,7 @@ source-linked content blocks. Original storage identity is distinct from all
 derived processing and each retrieval block traces to its source/run.
 
 ## TASK-010 — Parent Grade 5 Math book upload
-**Status:** READY
+**Status:** IN_PROGRESS
 **Dependencies:** TASK-009, TASK-005  
 **Purpose:** Let Parent/Admin upload Lina's real Grade 5 Math book while preserving the original source.  
 **Expected output:** upload endpoint/UI, checksum, Grade/subject assignment, processing status.  

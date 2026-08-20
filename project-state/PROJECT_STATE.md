@@ -2,8 +2,9 @@
 
 ## Current goal
 
-TASK-009 is complete. TASK-010 is ready; the approved fixture vertical slice
-will progress task-by-task through Phase 3 without starting Phase 4.
+TASK-010 is in progress with a fixture-document upload and Docling path. A
+decision is required before treating the mandatory Early Lina Calibration
+Checkpoint as satisfied for Phase 3 eligibility.
 
 ## Current reality
 
@@ -77,8 +78,9 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Active risks
 
-- TASK-010 is `READY`. Phase 1–3 work is authorized to use clearly labelled
-  fixtures, but fixture validation is not real-book or real-Lina validation.
+- TASK-010 is in progress. Fixture validation is authorized for content work,
+  but it is not real-book or real-Lina validation. The Phase 2 exit requires an
+  actual Early Lina Calibration Checkpoint before Phase 3 becomes eligible.
 - Real AWS/S3 staging verification is deferred and non-blocking. It remains
   recommended before changing the deployment secret because dry-run cannot
   validate conditional-copy permissions for tags, Object Lock, or SSE-KMS.
@@ -88,8 +90,9 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Next recommended action
 
-Complete TASK-010 and unlock the fixture content upload/processing path. Do
-not start Phase 4.
+Decide whether the actual Early Lina Calibration Checkpoint remains mandatory
+before Phase 3, or whether the explicit fixture demo may serve as a documented
+temporary gate waiver. Do not start Phase 4.
 
 ## Critical references
 
