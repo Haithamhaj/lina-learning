@@ -206,3 +206,33 @@ def test_failed_new_version_records_failure_without_corrupting_prior_tree(
     assert persisted_document.status == "STRUCTURAL_READY"
     assert persisted_document.original_storage_key == original_storage_key
     assert persisted_document.original_checksum == original_checksum
+
+
+def test_failed_third_version_keeps_two_completed_structural_trees_ready(
+    tmp_path: Path,
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fails if failure handling assumes only one prior completed run exists."""
+
+    storage = LocalObjectStorage(tmp_path / "objects", signing_secret="fixture")
+    monkeypatch.setattr("services.content.processing.extract_structural_items", lambda **_: _items())
+    with postgres_session_factory.begin() as session:
+        document = _source_document(session, storage)
+        first = process_structural_document(session, storage=storage, document=document, processor_version="fixture-v1")
+        second = process_structural_document(session, storage=storage, document=document, processor_version="fixture-v2")
+        monkeypatch.setattr(
+            "services.content.processing.extract_structural_items",
+            lambda **_: (_ for _ in ()).throw(ValueError("third version failed")),
+        )
+        failed = process_structural_document(session, storage=storage, document=document, processor_version="fixture-v3")
+        first_tree_size = session.query(DocumentStructuralItem).filter_by(processing_run_id=first.id).count()
+        second_tree_size = session.query(DocumentStructuralItem).filter_by(processing_run_id=second.id).count()
+        persisted_document = session.get(ContentDocument, document.id)
+
+    assert failed.status == "FAILED"
+    assert failed.failure_detail == "ValueError: third version failed"
+    assert first_tree_size == 7
+    assert second_tree_size == 7
+    assert persisted_document is not None
+    assert persisted_document.status == "STRUCTURAL_READY"

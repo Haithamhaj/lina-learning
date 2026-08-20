@@ -14,6 +14,7 @@ from collections import Counter
 from pathlib import Path
 import sys
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 from uuid import uuid4
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -24,6 +25,7 @@ from sqlalchemy.orm import Session
 from services.content.docling_adapter import extract_structural_items
 from services.content.ingestion import ingest_source_document
 from services.content.processing import process_structural_document
+from services.content.structural_contract import NormalizedStructuralItem
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import DocumentStructuralItem, Student, User
 from services.platform.storage import LocalObjectStorage
@@ -67,6 +69,41 @@ def _assert_adapter_structure(items: list[object]) -> None:
         raise SystemExit("Docling output did not retain page provenance.")
 
 
+def _assert_persisted_matches_normalized(
+    persisted: list[object], normalized: list[NormalizedStructuralItem]
+) -> None:
+    """Confirm the stored run retains each adapter structural relationship."""
+
+    if len(persisted) != len(normalized):
+        raise SystemExit(
+            f"Persisted item count {len(persisted)} differs from adapter count {len(normalized)}."
+        )
+    persisted_by_key = {item.item_key: item for item in persisted}
+    normalized_by_key = {item.item_key: item for item in normalized}
+    if set(persisted_by_key) != set(normalized_by_key):
+        raise SystemExit("Persisted stable item keys differ from adapter output.")
+    id_to_key = {item.id: item.item_key for item in persisted}
+    for expected in normalized:
+        actual = persisted_by_key[expected.item_key]
+        actual_parent_key = id_to_key.get(actual.parent_id)
+        comparisons = (
+            ("parent", actual_parent_key, expected.parent_item_key),
+            ("sibling order", actual.sibling_order, expected.sibling_order),
+            ("reading order", actual.reading_order, expected.reading_order),
+            ("hierarchy depth", actual.hierarchy_depth, expected.hierarchy_depth),
+            ("type", actual.item_type, expected.item_type),
+            ("page", actual.page_number, expected.page_number),
+            ("source reference", actual.source_ref, expected.source_ref),
+            ("provenance", actual.provenance, expected.provenance),
+        )
+        for field, actual_value, expected_value in comparisons:
+            if actual_value != expected_value:
+                raise SystemExit(
+                    f"Persisted {field} mismatch for {expected.item_key}: "
+                    f"expected {expected_value!r}, got {actual_value!r}."
+                )
+
+
 def _verify_persisted_structure(
     database_url: str,
     content: bytes,
@@ -94,7 +131,14 @@ def _verify_persisted_structure(
                     content_type="application/pdf",
                     content=content,
                 )
-                run = process_structural_document(session, storage=storage, document=document)
+                # The adapter has already produced the real Docling output above.
+                # Reuse that exact output to validate persistence without running
+                # OCR/Docling over the full workbook a second time.
+                with patch(
+                    "services.content.processing.extract_structural_items",
+                    return_value=normalized,
+                ):
+                    run = process_structural_document(session, storage=storage, document=document)
                 if run.status != "COMPLETED":
                     raise SystemExit(f"Structural processing failed: {run.failure_detail}")
                 persisted = (
@@ -103,16 +147,7 @@ def _verify_persisted_structure(
                     .order_by(DocumentStructuralItem.reading_order)
                     .all()
                 )
-                if len(persisted) != len(normalized):
-                    raise SystemExit(
-                        f"Persisted item count {len(persisted)} differs from adapter count {len(normalized)}."
-                    )
-                if [item.item_key for item in persisted] != [item.item_key for item in normalized]:
-                    raise SystemExit("Persisted stable item keys differ from adapter output.")
-                if not any(item.parent_id is not None for item in persisted):
-                    raise SystemExit("Persisted structural tree has no parent links.")
-                if not any(item.page_number is not None for item in persisted):
-                    raise SystemExit("Persisted structural tree has no page provenance.")
+                _assert_persisted_matches_normalized(persisted, normalized)
                 session.commit()
                 print(_summary("persisted", persisted))
                 print(f"persisted run={run.id} document={document.id} status={run.status}")

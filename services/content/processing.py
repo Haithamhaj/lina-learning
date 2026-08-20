@@ -88,7 +88,7 @@ def process_structural_document(
                 ContentProcessingRun.kind == "STRUCTURAL",
                 ContentProcessingRun.status == "COMPLETED",
                 ContentProcessingRun.id != run.id,
-            )
+            ).limit(1)
         ).scalar_one_or_none()
         locked_document.status = "STRUCTURAL_READY" if prior_completed_run is not None else "PROCESSING_FAILED"
         session.flush()
