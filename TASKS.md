@@ -17,48 +17,53 @@
 # Phase 0 — Repository & Runtime Foundation
 
 ## TASK-001 — Repository foundation
-**Status:** READY  
+**Status:** DONE
 **Dependencies:** None  
 **Purpose:** Establish the repository-native Codex harness and runnable app skeleton without learning features.  
 **Expected output:** Next.js app shell, FastAPI app shell, repository structure, governing docs in place, documented local run/test commands; shadcn/ui established as the baseline functional web component layer unless a concrete incompatibility is documented.  
 **Likely areas:** `/apps/web`, `/apps/api`, `/services`, `/packages`, `/docs`, `/project-state`, root config files.  
 **Reuse check:** Read `docs/TECHNOLOGY_REUSE_CATALOG.md`; do not add optional UI/motion/RAG/artifact dependencies during foundation scaffolding merely because they may be useful later.  
 **Verification:** Web and API start locally; baseline test commands execute; governing docs including the technology reuse catalog resolve from `AGENTS.md`; base UI setup is modifiable and not template-locked; no Tutor/Science/artifact feature code added.  
+**Completion:** Verified with live web/API workflows, Next.js production build, TypeScript check, FastAPI tests, API smoke requests, and browser smoke test. The shadcn/ui baseline is locally owned and documented in `docs/REUSE_DECISIONS.md`.  
 
 ## TASK-002 — Environment and configuration foundation
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-001  
 **Purpose:** Create typed environment/config handling for web, API, DB, object storage, and model-provider settings.  
 **Expected output:** Example env file, server-side secret handling, configuration validation, no API keys exposed to frontend.  
 **Likely areas:** `/apps/api`, `/apps/web`, `/services/platform/config`.  
 **Verification:** Missing required config fails clearly; frontend bundle contains no server secrets; tests cover config parsing.  
+**Completion:** Verified with 9 configuration tests, TypeScript check, production build, secret-name scan of the Next output, API smoke checks on port 8000, and browser smoke testing.
 
 ## TASK-003 — PostgreSQL and migration foundation
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-002  
 **Purpose:** Establish PostgreSQL, pgvector capability, migrations, and foundational identity/grade tables.  
 **Expected output:** Migration runner and initial tables for users, students, parent relationships, grade periods.  
 **Likely areas:** `/apps/api`, `/services/platform/db`, `/migrations`.  
 **Verification:** Fresh DB migrates up successfully; migration rollback/rebuild path documented; DB integration test passes.  
+**Completion:** Verified with Alembic upgrade/check, PostgreSQL 16 development schema inspection, pgvector enablement, generated downgrade SQL, and 12 passing Python tests.
 
 ## TASK-004 — Parent/Student auth and authorization baseline
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-003  
 **Purpose:** Represent and authorize `PARENT_ADMIN` and `STUDENT` roles with separate protected surfaces.  
 **Expected output:** Baseline login/session mechanism and role checks; separate web shells/routes.  
 **Likely areas:** `/apps/web`, `/apps/api`, `/services/platform/auth`.  
 **Verification:** Student cannot access Parent/Admin endpoints/pages; Parent can access admin shell; auth tests pass.  
+**Completion:** Clerk-managed login/session wiring, role migration, JWT/JWKS verification, role-specific API dependencies, separate `/student` and `/parent` shells, and 15 passing tests. API tests verify both role directions; browser verification confirms the student flow and the parent surface is metadata-driven with a safe student default.
 
 ## TASK-005 — Object-storage abstraction
-**Status:** BLOCKED  
+**Status:** DONE
 **Dependencies:** TASK-002  
 **Purpose:** Preserve original books and student images behind a provider-neutral storage interface.  
 **Expected output:** Upload/store/read metadata interface with signed/private access pattern; local/dev backend supported.  
 **Likely areas:** `/services/platform/storage`.  
 **Verification:** Upload/read/delete test fixture works; originals preserve checksum; no public-by-default student asset URLs.  
+**Completion:** Added a provider-neutral storage contract, local filesystem provider, SHA-256 and metadata preservation, expiring HMAC private capabilities, traversal protection, and atomic collision protection for originals. Extended with a production-ready S3-compatible provider (boto3) using conditional `IfNoneMatch` collision protection, HMAC-authenticated metadata bundles, HTTPS-only endpoint enforcement, and server-mediated private access. Production configuration now fails explicitly when `STORAGE_PROVIDER=local`. Added a resumable `SESSION_SECRET` rotation migration that verifies all metadata before same-key, ETag-guarded S3 copies while preserving object properties and refusing unsupported SSE-C objects. Tests cover both providers, configuration validation, metadata integrity tampering, endpoint security, conditional deletes, and HMAC rotation. Cloud bucket requirements, rotation permissions, and the integrity model are documented in `docs/OBJECT_STORAGE.md`.
 
 ## TASK-006 — DB-backed jobs and worker foundation
-**Status:** BLOCKED  
+**Status:** READY
 **Dependencies:** TASK-003  
 **Purpose:** Support document processing, session consolidation, and rebuild work without Redis/Celery.  
 **Expected output:** `jobs` table, worker loop, retry/failure status, idempotency hook.  
@@ -66,7 +71,7 @@
 **Verification:** Test job moves pending → running → completed; failure is recorded; duplicate/idempotent execution behavior covered.  
 
 ## TASK-007 — AI execution ledger and Model Gateway skeleton
-**Status:** BLOCKED  
+**Status:** READY
 **Dependencies:** TASK-003  
 **Purpose:** Centralize model routing and usage/cost observability before Tutor calls exist.  
 **Expected output:** task-based `ModelGateway` contract, route configuration model, `ai_executions` logging, provider adapter interface.  
@@ -74,7 +79,7 @@
 **Verification:** Mock provider executes by task; model route can change without caller code change; usage/latency/success fields persist.  
 
 ## TASK-008 — Child-safety and Parent Learning Boundary configuration foundation
-**Status:** BLOCKED  
+**Status:** READY
 **Dependencies:** TASK-003, TASK-004  
 **Purpose:** Persist protected baseline policy version and per-student configurable topic boundaries.  
 **Expected output:** policy service contract; topic catalog; Allow / Age-appropriate only / Redirect to parent persistence; protected categories not overrideable.  

@@ -1,0 +1,21 @@
+{
+  "name": "lina-learning",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm --prefix apps/web run dev",
+    "dev:web": "npm --prefix apps/web run dev",
+    "dev:api": "python -m uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload",
+    "typecheck": "npm --prefix apps/web run typecheck",
+    "build": "npm --prefix apps/web run build",
+    "test": "npm run typecheck && python -m pytest"
+  },
+  "devDependencies": {
+    "next": "14.2.35",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  }
+}

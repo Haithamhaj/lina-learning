@@ -23,6 +23,7 @@ venv/
 attached_assets/
 
 # Local/editor files
+.local/storage/
 .DS_Store
 .idea/
 .vscode/
