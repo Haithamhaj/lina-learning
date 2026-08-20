@@ -3,6 +3,7 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import { shadcn } from "@clerk/themes";
 import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 
 const appearance = {
   baseTheme: shadcn,
@@ -40,8 +41,21 @@ export function Providers({
   publishableKey,
 }: {
   children: ReactNode;
-  publishableKey: string;
+  publishableKey?: string;
 }) {
+  const pathname = usePathname();
+  const isDevelopmentDemoRequest =
+    process.env.NODE_ENV === "development" &&
+    (pathname === "/demo" || pathname === "/icon.svg");
+
+  if (!publishableKey && isDevelopmentDemoRequest) {
+    return <>{children}</>;
+  }
+
+  if (!publishableKey) {
+    throw new Error("CLERK_PUBLISHABLE_KEY is required for the web app.");
+  }
+
   return (
     <ClerkProvider
       publishableKey={publishableKey}
