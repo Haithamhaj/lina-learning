@@ -2,10 +2,8 @@
 
 ## Current goal
 
-TASK-001 through TASK-005 remain complete after the approved auth hardening
-corrections. TASK-006 is the next recommended task; TASK-007 and TASK-008 are
-also ready because their declared dependencies are complete. No later task has
-been started.
+TASK-006 is complete. TASK-007 and TASK-008 remain independently ready, but no
+later task has started in this run.
 
 ## Current reality
 
@@ -31,6 +29,12 @@ been started.
   the complete inventory before preserving S3 object properties during
   same-key metadata copies.
   Upload UI remains deferred to a later task.
+- TASK-006 is marked `DONE` with PostgreSQL jobs, database-level idempotency,
+  transaction-safe `FOR UPDATE SKIP LOCKED` claiming, lease recovery,
+  retry/failure recording, and a separate polling worker process. Per-claim
+  lease tokens prevent stale workers from settling a re-leased job. Its registry
+  intentionally has no content/intelligence handlers yet; those remain owned by
+  their future domain tasks.
 
 ## Active decisions
 
@@ -49,6 +53,9 @@ been started.
 - Clerk is adopted for MVP authentication; the Lina backend owns application
   roles and authorization semantics, and Clerk-specific behavior stays in the
   auth adapter/boundary.
+- Use PostgreSQL jobs plus a separate worker process for initial batch work;
+  do not add Redis, Celery, cron infrastructure, or a distributed scheduler
+  without demonstrated scaling need and approval.
 - Preserve the approved documents as source-of-truth references.
 
 ## Protected areas
@@ -59,8 +66,8 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Active risks
 
-- TASK-006, TASK-007, and TASK-008 are `READY`; later tasks remain blocked by
-  their declared dependencies and gates.
+- TASK-007 and TASK-008 are `READY` but out of scope for this run. Later tasks
+  remain blocked by their declared dependencies and gates.
 - Real AWS/S3 staging verification is deferred and non-blocking. It remains
   recommended before changing the deployment secret because dry-run cannot
   validate conditional-copy permissions for tags, Object Lock, or SSE-KMS.
@@ -70,9 +77,9 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Next recommended action
 
-Begin TASK-006 next, using the jobs/worker requirements in `TASKS.md`.
-TASK-007 and TASK-008 may be handled independently afterward. Do not begin later
-tasks until their dependencies are complete.
+Begin TASK-007 next, using its AI execution ledger and Model Gateway
+requirements in `TASKS.md`. TASK-008 may be handled independently afterward.
+Do not begin later tasks until their dependencies are complete.
 
 ## Critical references
 

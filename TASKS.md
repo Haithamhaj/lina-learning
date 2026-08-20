@@ -63,12 +63,21 @@
 **Completion:** Added a provider-neutral storage contract, local filesystem provider, SHA-256 and metadata preservation, expiring HMAC private capabilities, traversal protection, and atomic collision protection for originals. Extended with a production-ready S3-compatible provider (boto3) using conditional `IfNoneMatch` collision protection, HMAC-authenticated metadata bundles, HTTPS-only endpoint enforcement, and server-mediated private access. Production configuration now fails explicitly when `STORAGE_PROVIDER=local`. Added a resumable `SESSION_SECRET` rotation migration that verifies all metadata before same-key, ETag-guarded S3 copies while preserving object properties and refusing unsupported SSE-C objects. Tests cover both providers, configuration validation, metadata integrity tampering, endpoint security, conditional deletes, and HMAC rotation. Cloud bucket requirements, rotation permissions, and the integrity model are documented in `docs/OBJECT_STORAGE.md`.
 
 ## TASK-006 — DB-backed jobs and worker foundation
-**Status:** READY
+**Status:** DONE
 **Dependencies:** TASK-003  
 **Purpose:** Support document processing, session consolidation, and rebuild work without Redis/Celery.  
 **Expected output:** `jobs` table, worker loop, retry/failure status, idempotency hook.  
 **Likely areas:** `/workers`, `/services/platform/jobs`.  
 **Verification:** Test job moves pending → running → completed; failure is recorded; duplicate/idempotent execution behavior covered.  
+**Completion:** Added a PostgreSQL-backed `jobs` table with database-enforced
+partial unique idempotency keys, transaction-safe `FOR UPDATE SKIP LOCKED`
+claiming, lease recovery, deterministic retry/failure recording, and an
+independent worker with `run_once`/`run_forever` and an explicit handler
+registry. Each claim has a fresh lease token, preventing a stale worker from
+settling a recovered job even if the worker identifier is reused. Verified on
+PostgreSQL with concurrent claiming, database constraints, lifecycle,
+retry/failure, recovery, stale-lease fencing, worker handling, migration
+downgrade/upgrade, and Alembic metadata checks.
 
 ## TASK-007 — AI execution ledger and Model Gateway skeleton
 **Status:** READY

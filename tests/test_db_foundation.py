@@ -6,6 +6,7 @@ from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
     Base,
     GradePeriod,
+    Job,
     ParentStudentRelationship,
     Student,
     User,
@@ -30,11 +31,13 @@ def test_foundation_models_match_expected_tables() -> None:
         "students",
         "parent_student_relationships",
         "grade_periods",
+        "jobs",
     }
     assert User.__tablename__ == "users"
     assert Student.__tablename__ == "students"
     assert ParentStudentRelationship.__tablename__ == "parent_student_relationships"
     assert GradePeriod.__tablename__ == "grade_periods"
+    assert Job.__tablename__ == "jobs"
 
 
 @pytest.mark.skipif(
@@ -55,6 +58,7 @@ def test_development_schema_has_foundation_tables() -> None:
         "students",
         "parent_student_relationships",
         "grade_periods",
+        "jobs",
     }.issubset(set(inspector.get_table_names()))
 
     with get_engine().connect() as connection:

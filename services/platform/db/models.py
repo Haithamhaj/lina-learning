@@ -6,6 +6,7 @@ relationships needed by the Phase 0 database foundation.
 """
 
 from datetime import date, datetime
+from enum import Enum
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
@@ -20,13 +21,100 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
-from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PostgreSQLUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
     """Base metadata for the Lina modular monolith."""
+
+
+class JobStatus(str, Enum):
+    """Durable lifecycle states for background work."""
+
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+
+class Job(Base):
+    """Database-backed work item claimed by an independent worker process."""
+
+    __tablename__ = "jobs"
+    __table_args__ = (
+        CheckConstraint("attempt_count >= 0", name="ck_jobs_attempt_count_nonnegative"),
+        CheckConstraint("max_attempts > 0", name="ck_jobs_max_attempts_positive"),
+        CheckConstraint(
+            "status IN ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED')",
+            name="ck_jobs_status",
+        ),
+        Index(
+            "uq_jobs_type_idempotency_key",
+            "job_type",
+            "idempotency_key",
+            unique=True,
+            postgresql_where=text("idempotency_key IS NOT NULL"),
+        ),
+        Index("ix_jobs_claimable", "status", "run_after"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+    job_type: Mapped[str] = mapped_column(String(128), nullable=False)
+    payload: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    idempotency_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default=JobStatus.PENDING.value,
+        server_default=JobStatus.PENDING.value,
+    )
+    attempt_count: Mapped[int] = mapped_column(
+        SmallInteger,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+    max_attempts: Mapped[int] = mapped_column(
+        SmallInteger,
+        nullable=False,
+        default=3,
+        server_default="3",
+    )
+    run_after: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    claimed_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    lease_token: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        nullable=True,
+    )
+    lease_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    result: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
 
 
 class User(Base):
