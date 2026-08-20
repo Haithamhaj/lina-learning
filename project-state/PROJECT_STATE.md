@@ -2,10 +2,9 @@
 
 ## Current goal
 
-Restore the Production Learning Engine acceptance path from the independently
-audited implementation. The active goal is to repair and verify the Content,
-Tutor, and Learning Intelligence contracts before any real-Lina calibration or
-product expansion. TASK-011 is the immediate remediation target.
+Independently review the remediated TASK-011 production structural layer, then
+continue repairing the Production Learning Engine only after approval. No
+real-Lina calibration or product expansion is authorized.
 
 ## Current reality
 
@@ -22,6 +21,12 @@ product expansion. TASK-011 is the immediate remediation target.
   fixtures only. Existing structural, retrieval, Tutor, Candidate Event, and
   derived-intelligence code remains available as a remediation baseline, not as
   a production-complete engine claim.
+- TASK-011 now has a versioned, project-owned Docling structural artifact:
+  explicit parent/child and sibling/read order, hierarchy depth, stable item
+  identity within a run, page/layout provenance, captions, and distinct
+  text/table/picture/formula item types. It was verified with a controlled
+  fixture and the ignored local Eureka PDF on a disposable PostgreSQL database.
+  It is `REVIEW`, not `DONE`; this verifies the structural layer only.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -52,9 +57,10 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-011 must restore a versioned, source-linked Docling structural
-  representation that preserves hierarchy before semantic extraction,
-  indexing, retrieval, Tutor, or intelligence remediation becomes actionable.
+- TASK-011 needs independent review before semantic extraction, indexing,
+  retrieval, Tutor, or intelligence remediation becomes actionable. TASK-012
+  and later remain blocked; the Production Engine Acceptance Gate has not
+  passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
   database/workflow remains a deferred local-development improvement.
@@ -68,9 +74,9 @@ Real Lina decision gates.
 
 ## Next recommended action
 
-Implement and verify **TASK-011 — Docling Structural Representation** only.
-Do not start TASK-012 or later work until TASK-011 satisfies its approved
-contract and verification criteria.
+Conduct an independent review of **TASK-011 — Docling Structural
+Representation**. Do not start TASK-012 or later work unless that review
+approves TASK-011.
 
 ## Critical references
 

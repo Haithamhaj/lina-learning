@@ -10,7 +10,7 @@
 
 ### Status Values
 
-`READY` · `IN_PROGRESS` · `BLOCKED` · `DONE`
+`READY` · `IN_PROGRESS` · `REVIEW` · `BLOCKED` · `DONE`
 
 ---
 
@@ -138,21 +138,24 @@ and a same-student checksum duplicate returns the already preserved document
 rather than storing a second original. Initial status is visible as `UPLOADED`.
 
 ## TASK-011 — Docling adapter and normalized structural representation
-**Status:** IN_PROGRESS
+**Status:** REVIEW
 **Dependencies:** TASK-010, TASK-006  
-**Recovery state:** Reopened by the independent implementation audit. The existing
-Docling path preserves reading-order items and page/type provenance, but does
-not preserve the required structural hierarchy. It is the immediate Production
-Engine remediation target; do not start dependent tasks until its contract and
-verification pass.
+**Recovery state:** Remediated implementation awaiting independent review. The
+Docling adapter now emits a project-owned normalized tree and PostgreSQL stores
+explicit parent/child links, sibling and reading order, hierarchy depth,
+page/layout provenance, stable per-run item keys, captions, and differentiated
+text/table/picture/formula items. Structural processing is versioned by source,
+processor version, and settings version; prior completed runs remain intact.
+Controlled-fixture and local Eureka PDF verification passed, but this is not
+approval of TASK-011, Phase 1, or the Production Engine Acceptance Gate.
 **Purpose:** Parse uploaded books using Docling and preserve hierarchy, pages, reading order, figures/tables/formulas/provenance where available.  
 **Expected output:** versioned Docling processing adapter and normalized derived representation.  
 **Likely areas:** `/services/content/docling`, `/workers`.  
 **Verification:** Known fixture produces stable structure; page/source provenance is preserved; re-run is idempotent/versioned.  
-**Historical implementation note:** The existing Docling path is retained as a
-remediation baseline. Its local Eureka run converted pages into reading-order
-blocks, but that demo result is not task completion because hierarchy remains
-unpreserved.
+**Review note:** The previous flattened `ContentBlock` projection is no longer
+the TASK-011 structural artifact. `document_structural_items` is the source-
+linked, versioned structural layer; retrieval blocks remain a blocked TASK-013
+concern. Do not start TASK-012 until independent review approves this task.
 
 ## TASK-012 — Educational semantic extraction
 **Status:** BLOCKED

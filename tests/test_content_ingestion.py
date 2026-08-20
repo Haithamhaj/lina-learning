@@ -10,10 +10,11 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from services.content.ingestion import ingest_source_document
-from services.content.docling_adapter import StructuralItem, extract_structural_markdown
+from services.content.docling_adapter import extract_structural_markdown
 from services.content.processing import process_markdown_document, process_structural_document
+from services.content.structural_contract import NormalizedStructuralItem
 from services.platform.db.connection import normalize_database_url
-from services.platform.db.models import ContentBlock, ContentDocument, Student, User
+from services.platform.db.models import ContentDocument, DocumentStructuralItem, Student, User
 from services.platform.jobs import enqueue_job
 from services.platform.storage import LocalObjectStorage
 from workers.content_handlers import STRUCTURAL_PROCESSING_JOB, register_content_handlers
@@ -30,7 +31,7 @@ pytestmark = pytest.mark.skipif(
 def postgres_session_factory() -> sessionmaker[Session]:
     engine = create_engine(normalize_database_url(os.environ["DATABASE_URL"]))
     with engine.begin() as connection:
-        connection.execute(text("TRUNCATE content_blocks, curriculum_nodes, content_processing_runs, content_documents CASCADE"))
+        connection.execute(text("TRUNCATE document_structural_items, content_blocks, curriculum_nodes, content_processing_runs, content_documents CASCADE"))
     factory = sessionmaker(engine, expire_on_commit=False)
     yield factory
     engine.dispose()
@@ -148,12 +149,21 @@ def test_structural_processing_is_idempotent_and_preserves_item_provenance(
     monkeypatch.setattr(
         "services.content.processing.extract_structural_items",
         lambda **_: [
-            StructuralItem(
-                text="Use place value to multiply by 10.",
+            NormalizedStructuralItem(
+                item_key="#/texts/4",
+                parent_item_key=None,
+                sibling_order=0,
+                reading_order=0,
+                hierarchy_depth=0,
                 item_type="list_item",
+                text="Use place value to multiply by 10.",
+                caption_text=None,
+                caption_item_keys=(),
+                heading_level=None,
                 page_number=2,
                 source_ref="book.pdf#page=2:item=4",
-                attributes={"label": "list_item", "has_figure": False},
+                provenance={"locations": [{"page_no": 2}]},
+                attributes={"docling_label": "list_item"},
             )
         ],
     )
@@ -165,14 +175,14 @@ def test_structural_processing_is_idempotent_and_preserves_item_provenance(
         )
         first = process_structural_document(session, storage=storage, document=document)
         second = process_structural_document(session, storage=storage, document=document)
-        blocks = session.query(ContentBlock).filter_by(processing_run_id=first.id).all()
+        items = session.query(DocumentStructuralItem).filter_by(processing_run_id=first.id).all()
 
     assert first.id == second.id
     assert first.status == "COMPLETED"
-    assert len(blocks) == 1
-    assert blocks[0].page_number == 2
-    assert blocks[0].source_ref == "book.pdf#page=2:item=4"
-    assert blocks[0].attributes["label"] == "list_item"
+    assert len(items) == 1
+    assert items[0].page_number == 2
+    assert items[0].source_ref == "book.pdf#page=2:item=4"
+    assert items[0].attributes["docling_label"] == "list_item"
 
 
 def test_structural_processing_can_run_through_the_durable_worker(
@@ -202,7 +212,7 @@ def test_structural_processing_can_run_through_the_durable_worker(
     assert run_once(postgres_session_factory, registry, worker_id="content-test") == "COMPLETED"
 
     with postgres_session_factory() as session:
-        assert session.query(ContentBlock).filter_by(document_id=document.id).count() > 0
+        assert session.query(DocumentStructuralItem).filter_by(document_id=document.id).count() > 0
 
 
 def test_parent_upload_endpoint_requires_parent_role(

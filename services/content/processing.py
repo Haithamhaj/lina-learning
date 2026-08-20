@@ -3,18 +3,20 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from importlib.metadata import version
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from services.platform.db.models import ContentBlock, ContentDocument, ContentProcessingRun
+from services.platform.db.models import ContentDocument, ContentProcessingRun, DocumentStructuralItem
 from services.platform.storage import ObjectStorage
 
 from .docling_adapter import extract_structural_items
-from .repository import create_content_block, create_processing_run, find_processing_run
-from services.retrieval.embeddings import deterministic_embedding
+from .repository import create_processing_run, create_structural_items, find_processing_run
 
 DOCLING_PROCESSOR_VERSION = "docling-2.121.0"
+DOCLING_PROCESSOR_NAME = "docling"
+DOCLING_SETTINGS_VERSION = "docling-defaults-v1"
 
 
 def process_structural_document(
@@ -23,6 +25,7 @@ def process_structural_document(
     storage: ObjectStorage,
     document: ContentDocument,
     processor_version: str = DOCLING_PROCESSOR_VERSION,
+    settings_version: str = DOCLING_SETTINGS_VERSION,
 ) -> ContentProcessingRun:
     """Create one source-linked, versioned Docling run for an original document.
 
@@ -40,6 +43,7 @@ def process_structural_document(
         document_id=locked_document.id,
         kind="STRUCTURAL",
         processor_version=processor_version,
+        processor_settings_version=settings_version,
     )
     if run is not None and run.status == "COMPLETED":
         return run
@@ -49,9 +53,13 @@ def process_structural_document(
             document_id=locked_document.id,
             kind="STRUCTURAL",
             processor_version=processor_version,
+            processor_name=DOCLING_PROCESSOR_NAME,
+            library_version=_docling_library_version(),
+            processor_settings_version=settings_version,
+            processor_metadata={"adapter_contract_version": "structural-v1"},
         )
     else:
-        session.execute(delete(ContentBlock).where(ContentBlock.processing_run_id == run.id))
+        session.execute(delete(DocumentStructuralItem).where(DocumentStructuralItem.processing_run_id == run.id))
         run.status = "PENDING"
         run.failure_detail = None
 
@@ -65,22 +73,24 @@ def process_structural_document(
         )
         if not items:
             raise ValueError("Docling produced no structural items for the source document.")
-        for item in items:
-            create_content_block(
-                session,
-                document_id=locked_document.id,
-                processing_run_id=run.id,
-                text=item.text,
-                block_type=item.item_type,
-                page_number=item.page_number,
-                source_ref=item.source_ref,
-                attributes=item.attributes,
-                embedding=deterministic_embedding(item.text),
-            )
+        create_structural_items(
+            session,
+            document_id=locked_document.id,
+            processing_run_id=run.id,
+            items=items,
+        )
     except Exception as error:
         run.status = "FAILED"
         run.failure_detail = f"{type(error).__name__}: {error}"[:1000]
-        locked_document.status = "PROCESSING_FAILED"
+        prior_completed_run = session.execute(
+            select(ContentProcessingRun.id).where(
+                ContentProcessingRun.document_id == locked_document.id,
+                ContentProcessingRun.kind == "STRUCTURAL",
+                ContentProcessingRun.status == "COMPLETED",
+                ContentProcessingRun.id != run.id,
+            )
+        ).scalar_one_or_none()
+        locked_document.status = "STRUCTURAL_READY" if prior_completed_run is not None else "PROCESSING_FAILED"
         session.flush()
         return run
 
@@ -100,3 +110,10 @@ def process_markdown_document(
     """Compatibility name for the original fixture-only task path."""
 
     return process_structural_document(session, storage=storage, document=document)
+
+
+def _docling_library_version() -> str | None:
+    try:
+        return version("docling")
+    except Exception:
+        return None

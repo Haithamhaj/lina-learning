@@ -26,7 +26,7 @@ def postgres_session_factory() -> sessionmaker[Session]:
     with engine.begin() as connection:
         connection.execute(
             text(
-                "TRUNCATE content_blocks, curriculum_nodes, "
+                "TRUNCATE document_structural_items, content_blocks, curriculum_nodes, "
                 "content_processing_runs, content_documents"
             )
         )

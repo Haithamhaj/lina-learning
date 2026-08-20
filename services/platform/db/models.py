@@ -238,17 +238,63 @@ class ContentProcessingRun(Base):
     __tablename__ = "content_processing_runs"
     __table_args__ = (
         Index("ix_content_processing_document_kind", "document_id", "kind"),
-        UniqueConstraint("document_id", "kind", "processor_version", name="uq_content_processing_run_version"),
+        UniqueConstraint(
+            "document_id",
+            "kind",
+            "processor_version",
+            "processor_settings_version",
+            name="uq_content_processing_run_version",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     document_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_documents.id", ondelete="CASCADE"), nullable=False)
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    processor_name: Mapped[str] = mapped_column(String(64), nullable=False, default="unknown", server_default="unknown")
     processor_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    library_version: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    processor_settings_version: Mapped[str] = mapped_column(String(128), nullable=False, default="legacy-unspecified", server_default="legacy-unspecified")
+    processor_metadata: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="PENDING", server_default="PENDING")
     failure_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class DocumentStructuralItem(Base):
+    """A project-owned node from one versioned document structural run.
+
+    TASK-011 stores hierarchy explicitly here.  `ContentBlock` remains a
+    later TASK-013 retrieval projection rather than the structural source.
+    """
+
+    __tablename__ = "document_structural_items"
+    __table_args__ = (
+        UniqueConstraint("processing_run_id", "item_key", name="uq_document_structural_item_key"),
+        CheckConstraint("sibling_order >= 0", name="ck_document_structural_item_sibling_order"),
+        CheckConstraint("reading_order >= 0", name="ck_document_structural_item_reading_order"),
+        CheckConstraint("hierarchy_depth >= 0", name="ck_document_structural_item_hierarchy_depth"),
+        Index("ix_document_structural_items_run_parent_order", "processing_run_id", "parent_id", "sibling_order"),
+        Index("ix_document_structural_items_document_run_order", "document_id", "processing_run_id", "reading_order"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    document_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_documents.id", ondelete="CASCADE"), nullable=False)
+    processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_processing_runs.id", ondelete="CASCADE"), nullable=False)
+    parent_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("document_structural_items.id", ondelete="CASCADE"), nullable=True)
+    item_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    sibling_order: Mapped[int] = mapped_column(nullable=False)
+    reading_order: Mapped[int] = mapped_column(nullable=False)
+    hierarchy_depth: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    item_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    caption_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    caption_item_keys: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    heading_level: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    page_number: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    source_ref: Mapped[str] = mapped_column(String(512), nullable=False)
+    provenance: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    attributes: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
 
 
 class CurriculumNode(Base):
