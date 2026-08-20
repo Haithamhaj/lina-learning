@@ -79,7 +79,7 @@
 **Verification:** Mock provider executes by task; model route can change without caller code change; usage/latency/success fields persist.  
 
 ## TASK-008 — Child-safety and Parent Learning Boundary configuration foundation
-**Status:** BLOCKED  
+**Status:** READY
 **Dependencies:** TASK-003, TASK-004  
 **Purpose:** Persist protected baseline policy version and per-student configurable topic boundaries.  
 **Expected output:** policy service contract; topic catalog; Allow / Age-appropriate only / Redirect to parent persistence; protected categories not overrideable.  

@@ -2,10 +2,10 @@
 
 ## Current goal
 
-TASK-005 and its safe `SESSION_SECRET` rotation follow-up are complete. The
-next recommended task is TASK-006:
-DB-backed jobs and worker foundation. TASK-007 and TASK-008 are also eligible
-because their declared dependencies are complete.
+TASK-001 through TASK-005 remain complete after the approved auth hardening
+corrections. TASK-006 is the next recommended task; TASK-007 and TASK-008 are
+also ready because their declared dependencies are complete. No later task has
+been started.
 
 ## Current reality
 
@@ -19,7 +19,9 @@ because their declared dependencies are complete.
 - TASK-003 is marked `DONE` with an Alembic PostgreSQL foundation, pgvector
   enablement, and identity/grade-period tables applied to development.
 - TASK-004 is marked `DONE` with Replit-managed Clerk authentication, explicit
-  parent/student role enforcement, and separate protected web surfaces.
+  parent/student role enforcement, trusted-role resolution that excludes
+  user-writable metadata, Clerk authorized-party validation, and separate
+  protected web surfaces.
 - TASK-005 is marked `DONE` with a provider-neutral private object contract,
   local filesystem storage, and a production-ready S3-compatible provider with
   HMAC-authenticated metadata bundles, HTTPS-only endpoint enforcement,
@@ -40,7 +42,13 @@ because their declared dependencies are complete.
 - Keep Alembic migrations as the development schema source of truth; apply
   production schema changes through Replit Publish rather than startup DDL.
 - Keep Clerk's browser session cookie transport separate from FastAPI's verified
-  JWT/API role boundary; missing role metadata must default to `STUDENT`.
+  JWT/API role boundary; only signed role claims or Clerk public metadata may
+  establish `PARENT_ADMIN`, while missing or untrusted metadata defaults to
+  `STUDENT`. Validate a present Clerk `azp` against `web_origin` and
+  `allowed_origins`.
+- Clerk is adopted for MVP authentication; the Lina backend owns application
+  roles and authorization semantics, and Clerk-specific behavior stays in the
+  auth adapter/boundary.
 - Preserve the approved documents as source-of-truth references.
 
 ## Protected areas
@@ -51,11 +59,11 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Active risks
 
-- TASK-006, TASK-007, and TASK-008 are now eligible; later tasks remain blocked
-  by their declared dependencies.
-- A real production-like S3 rotation run is still recommended before changing
-  the deployment secret; dry-run cannot validate conditional copy permissions
-  for tags, Object Lock, or SSE-KMS.
+- TASK-006, TASK-007, and TASK-008 are `READY`; later tasks remain blocked by
+  their declared dependencies and gates.
+- Real AWS/S3 staging verification is deferred and non-blocking. It remains
+  recommended before changing the deployment secret because dry-run cannot
+  validate conditional-copy permissions for tags, Object Lock, or SSE-KMS.
 - Browser role testing can create a student session but cannot provision a
   `PARENT_ADMIN` metadata claim; parent authorization is covered by API tests and
   the metadata-driven web guard.

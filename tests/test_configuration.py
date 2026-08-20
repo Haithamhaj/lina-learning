@@ -32,6 +32,24 @@ def test_allowed_origins_accepts_explicit_list() -> None:
     ]
 
 
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("web_origin", ""),
+        ("web_origin", "https://app.example.com/path"),
+        ("web_origin", "https://example .com"),
+        ("web_origin", "https://example.com%2f.evil.test"),
+        ("allowed_origins", ["https://app.example.com/path"]),
+    ],
+)
+def test_trusted_origin_configuration_rejects_missing_or_non_origin_values(
+    field: str,
+    value: str | list[str],
+) -> None:
+    with pytest.raises(ValidationError, match="origin"):
+        Settings(_env_file=None, **{field: value})
+
+
 def test_production_configuration_fails_with_clear_missing_values(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

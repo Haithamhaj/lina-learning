@@ -50,6 +50,25 @@ def _configured_jwks_url() -> str:
     )
 
 
+def _validate_authorized_party(claims: dict[str, Any]) -> None:
+    """Reject a present Clerk ``azp`` claim outside configured trusted origins."""
+
+    authorized_party = claims.get("azp")
+    if authorized_party is None:
+        # Clerk's manual JWT-verification model permits session tokens without
+        # this optional claim.
+        return
+
+    settings = get_settings()
+    trusted_origins = {settings.web_origin, *settings.allowed_origins}
+    if not trusted_origins:
+        raise ClerkConfigurationError(
+            "Clerk authorized-party verification requires trusted origins."
+        )
+    if not isinstance(authorized_party, str) or authorized_party not in trusted_origins:
+        raise PyJWTError("Clerk token has an untrusted authorized party.")
+
+
 @lru_cache(maxsize=4)
 def _jwks_client(jwks_url: str) -> jwt.PyJWKClient:
     return jwt.PyJWKClient(jwks_url)
@@ -65,6 +84,7 @@ def verify_clerk_token(token: str) -> AuthenticatedPrincipal:
         algorithms=["RS256"],
         options={"verify_aud": False},
     )
+    _validate_authorized_party(claims)
     subject = claims.get("sub")
     if not isinstance(subject, str) or not subject:
         raise PyJWTError("Verified Clerk token has no subject.")

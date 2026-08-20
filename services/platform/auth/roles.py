@@ -32,23 +32,18 @@ def _role_candidate(value: Any) -> UserRole | None:
 
 
 def role_from_claims(claims: Mapping[str, Any]) -> UserRole:
-    """Read a role from common Clerk metadata claim shapes safely.
+    """Read a role only from signed claims or Clerk public metadata.
 
     New Clerk users default to STUDENT. Promoting a user to PARENT_ADMIN is an
-    explicit metadata/role assignment and never happens because a claim is
-    missing.
+    explicit backend-controlled assignment and never happens because a claim is
+    missing or supplied through user-writable metadata.
     """
 
     direct = _role_candidate(claims.get("role"))
     if direct is not None:
         return direct
 
-    for key in (
-        "metadata",
-        "public_metadata",
-        "publicMetadata",
-        "unsafe_metadata",
-    ):
+    for key in ("public_metadata", "publicMetadata"):
         metadata = claims.get(key)
         if isinstance(metadata, Mapping):
             nested = _role_candidate(metadata.get("role"))

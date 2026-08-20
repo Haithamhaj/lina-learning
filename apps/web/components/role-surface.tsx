@@ -20,7 +20,6 @@ export function RoleSurface({
   const router = useRouter();
   const role = roleFromClaims({
     ...(sessionClaims ?? {}),
-    metadata: user?.publicMetadata,
     public_metadata: user?.publicMetadata,
   });
 

@@ -25,12 +25,7 @@ export function roleFromClaims(claims: unknown): UserRole {
   const direct = readRole(record.role);
   if (direct) return direct;
 
-  for (const key of [
-    "metadata",
-    "public_metadata",
-    "publicMetadata",
-    "unsafe_metadata",
-  ]) {
+  for (const key of ["public_metadata", "publicMetadata"]) {
     const nested = readRole(asRecord(record[key])?.role);
     if (nested) return nested;
   }
