@@ -24,6 +24,7 @@ attached_assets/
 
 # Local/editor files
 .local/storage/
+.local/eureka/
 .DS_Store
 .idea/
 .vscode/
