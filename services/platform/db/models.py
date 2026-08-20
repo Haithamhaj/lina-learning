@@ -206,6 +206,75 @@ class SafetyAudit(Base):
     )
 
 
+class ContentDocument(Base):
+    """Immutable source document registered for one student's active Grade."""
+
+    __tablename__ = "content_documents"
+    __table_args__ = (
+        UniqueConstraint("student_id", "original_checksum", name="uq_content_document_checksum"),
+        CheckConstraint("grade_level BETWEEN 1 AND 12", name="ck_content_document_grade"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
+    grade_level: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    subject: Mapped[str] = mapped_column(String(32), nullable=False)
+    original_storage_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    original_checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(128), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="UPLOADED", server_default="UPLOADED")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class ContentProcessingRun(Base):
+    """Versioned structural or semantic derivation from an immutable original."""
+
+    __tablename__ = "content_processing_runs"
+    __table_args__ = (Index("ix_content_processing_document_kind", "document_id", "kind"),)
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    document_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_documents.id", ondelete="CASCADE"), nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    processor_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="PENDING", server_default="PENDING")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class CurriculumNode(Base):
+    """A normalized Grade-local curriculum concept with source provenance."""
+
+    __tablename__ = "curriculum_nodes"
+    __table_args__ = (Index("ix_curriculum_nodes_document_parent", "document_id", "parent_id"),)
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    document_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_documents.id", ondelete="CASCADE"), nullable=False)
+    processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_processing_runs.id", ondelete="CASCADE"), nullable=False)
+    parent_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("curriculum_nodes.id", ondelete="CASCADE"), nullable=True)
+    node_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    source_ref: Mapped[str] = mapped_column(String(512), nullable=False)
+    page_number: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+
+
+class ContentBlock(Base):
+    """A source-linked retrieval unit; embeddings are added by TASK-013."""
+
+    __tablename__ = "content_blocks"
+    __table_args__ = (Index("ix_content_blocks_document_run", "document_id", "processing_run_id"),)
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    document_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_documents.id", ondelete="CASCADE"), nullable=False)
+    processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_processing_runs.id", ondelete="CASCADE"), nullable=False)
+    curriculum_node_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("curriculum_nodes.id", ondelete="SET NULL"), nullable=True)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    block_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    page_number: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    source_ref: Mapped[str] = mapped_column(String(512), nullable=False)
+    attributes: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+
+
 class User(Base):
     """Stable identity record without introducing auth behavior."""
 

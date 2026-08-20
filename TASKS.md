@@ -113,15 +113,19 @@ Phase 1 tasks may become `READY` only when TASK-001 through TASK-008 are `DONE` 
 # Phase 1 — Grade 5 Math Content Foundation
 
 ## TASK-009 — Grade/book content data model
-**Status:** READY
+**Status:** DONE
 **Dependencies:** Phase 0 Exit Gate  
 **Purpose:** Model Grade-associated source documents, versioned processing runs, curriculum nodes, content blocks, and provenance.  
 **Expected output:** migrations and repositories for documents, document versions/runs, curriculum nodes, content blocks.  
 **Likely areas:** `/services/content`, `/migrations`.  
 **Verification:** Original and derived artifacts are distinguishable; processing version/provenance is queryable.  
+**Completion:** Added PostgreSQL records for immutable Grade/subject source
+documents, versioned processing runs, Grade-local curriculum nodes, and
+source-linked content blocks. Original storage identity is distinct from all
+derived processing and each retrieval block traces to its source/run.
 
 ## TASK-010 — Parent Grade 5 Math book upload
-**Status:** BLOCKED  
+**Status:** READY
 **Dependencies:** TASK-009, TASK-005  
 **Purpose:** Let Parent/Admin upload Lina's real Grade 5 Math book while preserving the original source.  
 **Expected output:** upload endpoint/UI, checksum, Grade/subject assignment, processing status.  

@@ -35,6 +35,10 @@ def test_foundation_models_match_expected_tables() -> None:
         "ai_executions",
         "student_topic_boundaries",
         "safety_audits",
+        "content_documents",
+        "content_processing_runs",
+        "curriculum_nodes",
+        "content_blocks",
     }
     assert User.__tablename__ == "users"
     assert Student.__tablename__ == "students"
@@ -65,6 +69,10 @@ def test_development_schema_has_foundation_tables() -> None:
         "ai_executions",
         "student_topic_boundaries",
         "safety_audits",
+        "content_documents",
+        "content_processing_runs",
+        "curriculum_nodes",
+        "content_blocks",
     }.issubset(set(inspector.get_table_names()))
 
     with get_engine().connect() as connection:

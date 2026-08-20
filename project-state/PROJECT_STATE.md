@@ -2,7 +2,7 @@
 
 ## Current goal
 
-TASK-008 is complete. TASK-009 is ready; the approved fixture vertical slice
+TASK-009 is complete. TASK-010 is ready; the approved fixture vertical slice
 will progress task-by-task through Phase 3 without starting Phase 4.
 
 ## Current reality
@@ -41,6 +41,9 @@ will progress task-by-task through Phase 3 without starting Phase 4.
 - TASK-008 is marked `DONE` with a deterministic, versioned SafetyDecision
   service, protected baseline routing, persistent per-student family boundaries,
   and audit records. It is the enforced upstream contract for later Tutor work.
+- TASK-009 is marked `DONE` with immutable source-document records, versioned
+  derivation runs, Grade-local curriculum nodes, and source-linked content
+  blocks. These records remain rebuildable and provenance-first.
 
 ## Active decisions
 
@@ -74,7 +77,7 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Active risks
 
-- TASK-009 is `READY`. Phase 1–3 work is authorized to use clearly labelled
+- TASK-010 is `READY`. Phase 1–3 work is authorized to use clearly labelled
   fixtures, but fixture validation is not real-book or real-Lina validation.
 - Real AWS/S3 staging verification is deferred and non-blocking. It remains
   recommended before changing the deployment secret because dry-run cannot
@@ -85,7 +88,7 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Next recommended action
 
-Complete TASK-009 and unlock the fixture content upload/processing path. Do
+Complete TASK-010 and unlock the fixture content upload/processing path. Do
 not start Phase 4.
 
 ## Critical references
