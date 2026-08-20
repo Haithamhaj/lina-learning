@@ -43,6 +43,8 @@ def test_gateway_executes_by_task_and_persists_usage_latency_and_success(
         ModelResult(
             output={"text": "Let us compare the two fractions."},
             input_tokens=12,
+            cached_input_tokens=3,
+            cache_write_tokens=2,
             output_tokens=9,
             estimated_cost_usd=0.0002,
         )
@@ -62,6 +64,8 @@ def test_gateway_executes_by_task_and_persists_usage_latency_and_success(
         assert execution.provider == "mock"
         assert execution.model == "fixture-tutor"
         assert execution.input_tokens == 12
+        assert execution.cached_input_tokens == 3
+        assert execution.cache_write_tokens == 2
         assert execution.output_tokens == 9
         assert execution.latency_ms >= 0
         assert execution.estimated_cost_usd == 0.0002

@@ -103,6 +103,9 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 - Browser role testing can create a student session but cannot provision a
   `PARENT_ADMIN` metadata claim; parent authorization is covered by API tests and
   the metadata-driven web guard.
+- Deferred local-development improvement: provide a disposable PostgreSQL
+  integration-test database/workflow so destructive database tests can run in
+  full without touching the Sandbox/Test Learner demo database.
 
 ## Next recommended action
 

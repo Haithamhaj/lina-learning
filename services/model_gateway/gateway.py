@@ -24,7 +24,11 @@ class ModelResult:
     """Normalized output and usage from a provider adapter."""
 
     output: dict[str, object]
+    # Normal (non-cached) input tokens. Provider adapters normalize any
+    # provider-specific total-input figure before returning this result.
     input_tokens: int | None = None
+    cached_input_tokens: int | None = None
+    cache_write_tokens: int | None = None
     output_tokens: int | None = None
     estimated_cost_usd: float | None = None
 
@@ -89,6 +93,8 @@ class ModelGateway:
             started,
             success=True,
             input_tokens=result.input_tokens,
+            cached_input_tokens=result.cached_input_tokens,
+            cache_write_tokens=result.cache_write_tokens,
             output_tokens=result.output_tokens,
             estimated_cost_usd=result.estimated_cost_usd,
         )
@@ -102,6 +108,8 @@ class ModelGateway:
         *,
         success: bool,
         input_tokens: int | None = None,
+        cached_input_tokens: int | None = None,
+        cache_write_tokens: int | None = None,
         output_tokens: int | None = None,
         estimated_cost_usd: float | None = None,
         failure_code: str | None = None,
@@ -112,6 +120,8 @@ class ModelGateway:
                 provider=route.provider,
                 model=route.model,
                 input_tokens=input_tokens,
+                cached_input_tokens=cached_input_tokens,
+                cache_write_tokens=cache_write_tokens,
                 output_tokens=output_tokens,
                 latency_ms=round((perf_counter() - started) * 1000),
                 estimated_cost_usd=estimated_cost_usd,

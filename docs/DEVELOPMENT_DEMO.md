@@ -50,5 +50,23 @@ surfaces still require a valid development `CLERK_PUBLISHABLE_KEY`. If port
 5002 is unavailable, choose another unused port and use that exact origin in
 both `WEB_ORIGIN` and the Next command.
 
+## Optional live OpenAI Tutor route
+
+The default `mock` route remains useful for deterministic tests. To exercise
+the Sandbox/Test Learner through the Model Gateway with OpenAI, use the
+Git-ignored repository-root `.env` file only:
+
+```dotenv
+MODEL_PROVIDER=openai
+MODEL_NAME=gpt-5.6-luna
+MODEL_API_KEY=
+```
+
+Do not commit the file or place this value in a `NEXT_PUBLIC_*` variable. Restart
+only the API after changing the route. The OpenAI adapter uses the Responses API
+with `store: false`; the `ai_executions` ledger records provider, model, token
+usage (normal input, cached input/writes when returned, and output), latency, estimated
+cost, and success/failure without recording the key.
+
 This proves the sandbox loop only. It does not validate real Lina behavior or
 replace later validation with Lina's chosen school book.

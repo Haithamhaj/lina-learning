@@ -141,7 +141,11 @@ class AIExecution(Base):
     task: Mapped[str] = mapped_column(String(64), nullable=False)
     provider: Mapped[str] = mapped_column(String(64), nullable=False)
     model: Mapped[str] = mapped_column(String(128), nullable=False)
+    # Normal (non-cached) input tokens and cached input tokens are kept apart
+    # so ledger cost estimates can be audited against provider usage.
     input_tokens: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    cached_input_tokens: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    cache_write_tokens: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     output_tokens: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     latency_ms: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     estimated_cost_usd: Mapped[float | None] = mapped_column(nullable=True)
