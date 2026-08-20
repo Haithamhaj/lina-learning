@@ -80,12 +80,17 @@ retry/failure, recovery, stale-lease fencing, worker handling, migration
 downgrade/upgrade, and Alembic metadata checks.
 
 ## TASK-007 — AI execution ledger and Model Gateway skeleton
-**Status:** READY
+**Status:** DONE
 **Dependencies:** TASK-003  
 **Purpose:** Centralize model routing and usage/cost observability before Tutor calls exist.  
 **Expected output:** task-based `ModelGateway` contract, route configuration model, `ai_executions` logging, provider adapter interface.  
 **Likely areas:** `/services/model_gateway`, `/services/platform/observability`.  
 **Verification:** Mock provider executes by task; model route can change without caller code change; usage/latency/success fields persist.  
+**Completion:** Added a provider-neutral, task-routed Model Gateway backed by a
+durable PostgreSQL `ai_executions` ledger. A deterministic local provider
+supports fixtures and tests; callers use application task names while routes may
+change provider/model. The ledger records usage, latency, estimated cost, and
+success/failure without exposing provider SDKs to domain services.
 
 ## TASK-008 — Child-safety and Parent Learning Boundary configuration foundation
 **Status:** READY

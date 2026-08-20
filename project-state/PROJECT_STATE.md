@@ -2,8 +2,9 @@
 
 ## Current goal
 
-TASK-006 is complete. TASK-007 and TASK-008 remain independently ready, but no
-later task has started in this run.
+TASK-007 is complete. TASK-008 is the next ready task; the approved fixture
+vertical slice will then progress task-by-task through Phase 3 without starting
+Phase 4.
 
 ## Current reality
 
@@ -35,6 +36,9 @@ later task has started in this run.
   lease tokens prevent stale workers from settling a re-leased job. Its registry
   intentionally has no content/intelligence handlers yet; those remain owned by
   their future domain tasks.
+- TASK-007 is marked `DONE` with a task-routed Model Gateway and PostgreSQL AI
+  execution ledger. The local deterministic provider is limited to tests and
+  the fixture demo; it is not a production model-provider choice.
 
 ## Active decisions
 
@@ -56,6 +60,8 @@ later task has started in this run.
 - Use PostgreSQL jobs plus a separate worker process for initial batch work;
   do not add Redis, Celery, cron infrastructure, or a distributed scheduler
   without demonstrated scaling need and approval.
+- Keep AI calls behind the Model Gateway; task routes, provider/model identity,
+  usage, latency, estimated cost, and success/failure remain ledgered.
 - Preserve the approved documents as source-of-truth references.
 
 ## Protected areas
@@ -66,8 +72,8 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Active risks
 
-- TASK-007 and TASK-008 are `READY` but out of scope for this run. Later tasks
-  remain blocked by their declared dependencies and gates.
+- TASK-008 is `READY`. Phase 1–3 work is authorized to use clearly labelled
+  fixtures, but fixture validation is not real-book or real-Lina validation.
 - Real AWS/S3 staging verification is deferred and non-blocking. It remains
   recommended before changing the deployment secret because dry-run cannot
   validate conditional-copy permissions for tags, Object Lock, or SSE-KMS.
@@ -77,9 +83,8 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Next recommended action
 
-Begin TASK-007 next, using its AI execution ledger and Model Gateway
-requirements in `TASKS.md`. TASK-008 may be handled independently afterward.
-Do not begin later tasks until their dependencies are complete.
+Complete TASK-008, then unlock and execute the Phase 1 fixture content path.
+Do not start Phase 4.
 
 ## Critical references
 

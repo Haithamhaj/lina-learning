@@ -40,6 +40,15 @@ class JobStatus(str, Enum):
     FAILED = "FAILED"
 
 
+class ModelTask(str, Enum):
+    """Stable names for application-owned model requests."""
+
+    TUTOR = "tutor"
+    SESSION_EVIDENCE = "session_evidence"
+    CURRICULUM_SEMANTICS = "curriculum_semantics"
+    EMBEDDING = "embedding"
+
+
 class Job(Base):
     """Database-backed work item claimed by an independent worker process."""
 
@@ -114,6 +123,31 @@ class Job(Base):
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
+    )
+
+
+class AIExecution(Base):
+    """Immutable operational record for one Model Gateway request."""
+
+    __tablename__ = "ai_executions"
+    __table_args__ = (
+        Index("ix_ai_executions_task_created", "task", "created_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4
+    )
+    task: Mapped[str] = mapped_column(String(64), nullable=False)
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    model: Mapped[str] = mapped_column(String(128), nullable=False)
+    input_tokens: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    output_tokens: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    latency_ms: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    estimated_cost_usd: Mapped[float | None] = mapped_column(nullable=True)
+    success: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    failure_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
 

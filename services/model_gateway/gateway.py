@@ -1,0 +1,122 @@
+"""Provider-independent model routing with durable execution records."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from time import perf_counter
+from typing import Mapping, Protocol
+
+from sqlalchemy.orm import Session
+
+from services.platform.db.models import AIExecution, ModelTask
+
+
+@dataclass(frozen=True)
+class ModelRoute:
+    """The selected provider/model for one application task."""
+
+    provider: str
+    model: str
+
+
+@dataclass(frozen=True)
+class ModelResult:
+    """Normalized output and usage from a provider adapter."""
+
+    output: dict[str, object]
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    estimated_cost_usd: float | None = None
+
+
+class ModelProvider(Protocol):
+    """A provider adapter receives only a route and task-owned payload."""
+
+    def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+        """Perform one model request."""
+
+
+class StaticModelProvider:
+    """Deterministic provider for tests and the local fixture demonstration."""
+
+    def __init__(self, result: ModelResult) -> None:
+        self._result = result
+
+    def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+        del route, payload
+        return self._result
+
+
+class ModelGateway:
+    """Execute by application task while the caller remains provider-agnostic."""
+
+    def __init__(
+        self,
+        session: Session,
+        *,
+        routes: Mapping[ModelTask, ModelRoute],
+        providers: Mapping[str, ModelProvider],
+    ) -> None:
+        self._session = session
+        self._routes = dict(routes)
+        self._providers = dict(providers)
+
+    def set_route(self, task: ModelTask, route: ModelRoute) -> None:
+        """Change routing without requiring callers to know provider details."""
+
+        self._routes[task] = route
+
+    def execute(self, task: ModelTask, payload: dict[str, object]) -> ModelResult:
+        """Call the selected adapter and always record its operational outcome."""
+
+        route = self._routes.get(task)
+        if route is None:
+            raise ValueError(f"No model route is configured for task {task.value!r}.")
+        provider = self._providers.get(route.provider)
+        if provider is None:
+            raise ValueError(f"No provider is configured for {route.provider!r}.")
+
+        started = perf_counter()
+        try:
+            result = provider.execute(route, payload)
+        except Exception as error:
+            self._record(task, route, started, success=False, failure_code=type(error).__name__)
+            raise
+
+        self._record(
+            task,
+            route,
+            started,
+            success=True,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            estimated_cost_usd=result.estimated_cost_usd,
+        )
+        return result
+
+    def _record(
+        self,
+        task: ModelTask,
+        route: ModelRoute,
+        started: float,
+        *,
+        success: bool,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        estimated_cost_usd: float | None = None,
+        failure_code: str | None = None,
+    ) -> None:
+        self._session.add(
+            AIExecution(
+                task=task.value,
+                provider=route.provider,
+                model=route.model,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                latency_ms=round((perf_counter() - started) * 1000),
+                estimated_cost_usd=estimated_cost_usd,
+                success=success,
+                failure_code=failure_code,
+            )
+        )
+        self._session.flush()
