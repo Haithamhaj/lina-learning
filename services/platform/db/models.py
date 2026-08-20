@@ -151,6 +151,61 @@ class AIExecution(Base):
     )
 
 
+class StudentTopicBoundary(Base):
+    """A Parent-controlled restriction for one configurable topic category."""
+
+    __tablename__ = "student_topic_boundaries"
+    __table_args__ = (
+        UniqueConstraint("student_id", "category", name="uq_student_topic_boundary"),
+        CheckConstraint(
+            "state IN ('ALLOW', 'AGE_APPROPRIATE_ONLY', 'REDIRECT_TO_PARENT')",
+            name="ck_student_topic_boundary_state",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4
+    )
+    student_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("students.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    category: Mapped[str] = mapped_column(String(64), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    policy_version: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=1, server_default="1"
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class SafetyAudit(Base):
+    """A compact, non-content policy decision audit record."""
+
+    __tablename__ = "safety_audits"
+    __table_args__ = (Index("ix_safety_audits_student_created", "student_id", "created_at"),)
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4
+    )
+    student_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("students.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    interaction_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    category: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    policy_source: Mapped[str] = mapped_column(String(32), nullable=False)
+    action: Mapped[str] = mapped_column(String(32), nullable=False)
+    reason_code: Mapped[str] = mapped_column(String(128), nullable=False)
+    policy_version: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
 class User(Base):
     """Stable identity record without introducing auth behavior."""
 

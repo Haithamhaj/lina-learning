@@ -2,9 +2,8 @@
 
 ## Current goal
 
-TASK-007 is complete. TASK-008 is the next ready task; the approved fixture
-vertical slice will then progress task-by-task through Phase 3 without starting
-Phase 4.
+TASK-008 is complete. TASK-009 is ready; the approved fixture vertical slice
+will progress task-by-task through Phase 3 without starting Phase 4.
 
 ## Current reality
 
@@ -39,6 +38,9 @@ Phase 4.
 - TASK-007 is marked `DONE` with a task-routed Model Gateway and PostgreSQL AI
   execution ledger. The local deterministic provider is limited to tests and
   the fixture demo; it is not a production model-provider choice.
+- TASK-008 is marked `DONE` with a deterministic, versioned SafetyDecision
+  service, protected baseline routing, persistent per-student family boundaries,
+  and audit records. It is the enforced upstream contract for later Tutor work.
 
 ## Active decisions
 
@@ -72,7 +74,7 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Active risks
 
-- TASK-008 is `READY`. Phase 1–3 work is authorized to use clearly labelled
+- TASK-009 is `READY`. Phase 1–3 work is authorized to use clearly labelled
   fixtures, but fixture validation is not real-book or real-Lina validation.
 - Real AWS/S3 staging verification is deferred and non-blocking. It remains
   recommended before changing the deployment secret because dry-run cannot
@@ -83,8 +85,8 @@ Tutor call, rebuildability, and the Phase 0/real-Lina decision gates.
 
 ## Next recommended action
 
-Complete TASK-008, then unlock and execute the Phase 1 fixture content path.
-Do not start Phase 4.
+Complete TASK-009 and unlock the fixture content upload/processing path. Do
+not start Phase 4.
 
 ## Critical references
 

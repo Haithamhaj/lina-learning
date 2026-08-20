@@ -93,12 +93,17 @@ change provider/model. The ledger records usage, latency, estimated cost, and
 success/failure without exposing provider SDKs to domain services.
 
 ## TASK-008 — Child-safety and Parent Learning Boundary configuration foundation
-**Status:** READY
+**Status:** DONE
 **Dependencies:** TASK-003, TASK-004  
 **Purpose:** Persist protected baseline policy version and per-student configurable topic boundaries.  
 **Expected output:** policy service contract; topic catalog; Allow / Age-appropriate only / Redirect to parent persistence; protected categories not overrideable.  
 **Likely areas:** `/services/platform/safety`, `/apps/api`, DB migrations.  
 **Verification:** Parent can change configurable topic state; cannot disable baseline protection; audit metadata recorded; policy unit tests pass.  
+**Completion:** Added a versioned, database-backed SafetyDecision boundary with
+the approved configurable topic states, protected baseline routing, calm
+redirect/age-handling directives, and compact policy audit records. Parent
+boundary changes are persisted per student and take effect at evaluation time;
+the protected baseline is not a configurable category.
 
 ### Phase 0 Exit Gate
 Phase 1 tasks may become `READY` only when TASK-001 through TASK-008 are `DONE` and local verification is documented.
@@ -108,7 +113,7 @@ Phase 1 tasks may become `READY` only when TASK-001 through TASK-008 are `DONE` 
 # Phase 1 — Grade 5 Math Content Foundation
 
 ## TASK-009 — Grade/book content data model
-**Status:** BLOCKED  
+**Status:** READY
 **Dependencies:** Phase 0 Exit Gate  
 **Purpose:** Model Grade-associated source documents, versioned processing runs, curriculum nodes, content blocks, and provenance.  
 **Expected output:** migrations and repositories for documents, document versions/runs, curriculum nodes, content blocks.  
