@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 from services.model_gateway.gateway import ModelGateway
 from services.platform.db.models import ContentDocument, ContentIndexRun, ContentSemanticItem, ContentSemanticItemSource, ContentSemanticProcessingRun, DocumentStructuralItem, IndexedContentBlock, IndexedContentBlockSource, ModelTask
 
-BLOCK_SCHEMA_VERSION = "semantic-structural-blocks-v1"
-INDEX_SETTINGS_VERSION = "boundary-refinement-v1"
+BLOCK_SCHEMA_VERSION = "semantic-structural-blocks-v2"
+INDEX_SETTINGS_VERSION = "boundary-refinement-v2"
 MAX_BLOCK_CHARS = 2000
 
 
@@ -39,17 +39,24 @@ def build_content_index(session: Session, *, document: ContentDocument, semantic
         candidates = []
         for item in semantic_items:
             item_sources = sources_by_semantic.get(item.id, [])
-            content = "\n".join(value for _, structural in item_sources for value in (structural.text, structural.caption_text) if value).strip() or "\n".join(value for value in (item.title, item.description) if value)
-            if not content: continue
             metadata = _semantic_metadata(item, semantic_by_id)
-            for part_index, part in enumerate(_refine(content)):
-                candidates.append((item, item_sources, part, part_index, metadata))
+            refined_sources = refine_semantic_sources(item_sources)
+            if not refined_sources:
+                fallback_content = "\n".join(value for value in (item.title, item.description) if value)
+                if not fallback_content:
+                    continue
+                if len(fallback_content) > MAX_BLOCK_CHARS:
+                    raise ValueError("Semantic fallback content exceeds the configured block limit without structural boundaries.")
+                refined_sources = [(fallback_content, item_sources)]
+            for part_index, (part, part_sources) in enumerate(refined_sources):
+                candidates.append((item, part_sources, part, part_index, metadata))
         if not candidates: raise ValueError("Semantic run produced no indexable content blocks.")
         result = gateway.execute(ModelTask.EMBEDDING, {"input": [candidate[2] for candidate in candidates], "dimensions": 1536})
         vectors = result.output.get("embeddings")
         if not isinstance(vectors, list) or len(vectors) != len(candidates) or any(not isinstance(vector, list) or len(vector) != 1536 for vector in vectors): raise ValueError("Embedding provider returned unexpected vector dimensions.")
         for (item, item_sources, content, part_index, metadata), vector in zip(candidates, vectors, strict=True):
-            block = IndexedContentBlock(index_run_id=run.id, document_id=document.id, semantic_item_id=item.id, block_key=f"{item.semantic_key}:part-{part_index}", block_type="SEMANTIC", semantic_type=item.semantic_type, grade_level=document.grade_level, subject=document.subject, text=content, embedding=vector, search_vector=func.to_tsvector("english", content), attributes=metadata, **metadata)
+            attributes = {"parent_semantic_key": item.semantic_key, "part_index": part_index, **metadata}
+            block = IndexedContentBlock(index_run_id=run.id, document_id=document.id, semantic_item_id=item.id, block_key=f"{item.semantic_key}:part-{part_index}", block_type="SEMANTIC", semantic_type=item.semantic_type, grade_level=document.grade_level, subject=document.subject, text=content, embedding=vector, search_vector=func.to_tsvector("english", content), attributes=attributes, **metadata)
             session.add(block); session.flush()
             for source_order, (source, structural) in enumerate(item_sources):
                 session.add(IndexedContentBlockSource(block_id=block.id, semantic_item_id=item.id, structural_item_id=structural.id, page_number=source.page_number, source_ref=source.source_ref, source_order=source_order))
@@ -71,8 +78,40 @@ def _semantic_metadata(item: ContentSemanticItem, by_id: dict[object, ContentSem
     return result
 
 
-def _refine(content: str) -> list[str]:
-    return [content[start:start + MAX_BLOCK_CHARS] for start in range(0, len(content), MAX_BLOCK_CHARS)]
+def refine_semantic_sources(
+    item_sources: list[tuple[ContentSemanticItemSource, DocumentStructuralItem]],
+    *,
+    maximum_characters: int = MAX_BLOCK_CHARS,
+) -> list[tuple[str, list[tuple[ContentSemanticItemSource, DocumentStructuralItem]]]]:
+    """Keep a semantic entity whole where possible, refining only at source boundaries.
+
+    Character slicing is reserved for one structural source that is itself too large.
+    """
+    blocks: list[tuple[str, list[tuple[ContentSemanticItemSource, DocumentStructuralItem]]]] = []
+    current_parts: list[str] = []
+    current_sources: list[tuple[ContentSemanticItemSource, DocumentStructuralItem]] = []
+
+    def flush() -> None:
+        if current_parts:
+            blocks.append(("\n".join(current_parts), list(current_sources)))
+            current_parts.clear()
+            current_sources.clear()
+
+    for source, structural in item_sources:
+        source_text = "\n".join(value for value in (structural.text, structural.caption_text) if value).strip()
+        if not source_text:
+            continue
+        if len(source_text) > maximum_characters:
+            flush()
+            for start in range(0, len(source_text), maximum_characters):
+                blocks.append((source_text[start:start + maximum_characters], [(source, structural)]))
+            continue
+        if current_parts and len("\n".join([*current_parts, source_text])) > maximum_characters:
+            flush()
+        current_parts.append(source_text)
+        current_sources.append((source, structural))
+    flush()
+    return blocks
 
 
 def lexical_candidates(session: Session, *, index_run_id: object, query: str, grade_level: int, subject: str, concept_key: str | None = None, limit: int = 20):
