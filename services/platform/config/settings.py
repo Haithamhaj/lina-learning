@@ -118,6 +118,8 @@ class Settings(BaseSettings):
     model_name: str = "mock"
     model_base_url: str | None = None
     model_api_key: SecretStr | None = None
+    embedding_model_name: str = "text-embedding-3-small"
+    embedding_dimensions: int = Field(default=1536, ge=1)
 
     @model_validator(mode="after")
     def validate_service_requirements(self) -> "Settings":

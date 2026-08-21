@@ -159,7 +159,7 @@ linked, versioned structural layer; retrieval blocks remain a blocked TASK-013
 concern.
 
 ## TASK-012 — Educational semantic extraction
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** TASK-011, TASK-007  
 **Recovery state:** Rebuilt for review. The former heuristic Unit/Lesson/Exercise
 mapping has been replaced by a versioned Grade 5 Math semantic derivation from
@@ -167,23 +167,31 @@ the TASK-011 structural tree. It uses the `CURRICULUM_SEMANTICS` Model Gateway
 route, validates a project-owned JSON contract and source/parent/coverage rules,
 and persists explicit semantic-to-structural source lineage. Controlled
 PostgreSQL fixture verification and a bounded real-Eureka (pages 1–2) Luna
-golden passed. This does not approve TASK-012, TASK-013, Phase 1, or the
-Production Engine Acceptance Gate.
+golden passed. This approves the semantic layer only; it does not approve
+TASK-013, Phase 1, or the Production Engine Acceptance Gate.
 **Purpose:** Convert structural document output into Grade 5 Math educational semantics without treating Docling structure as curriculum understanding.  
 **Expected output:** Unit/Lesson/Concept/Objectives/Examples/Exercises mapping with source references and schema contract tests.  
 **Likely areas:** `/services/content/semantics`, `/packages/schemas`, `/prompts`.  
 **Verification:** Schema-valid output on real/fixture pages; source refs valid; no silent catastrophic duplication/missing-unit acceptance.  
 
 ## TASK-013 — Structural content blocks and indexing
-**Status:** BLOCKED
+**Status:** REVIEW
 **Dependencies:** TASK-012  
 **Recovery state:** Reopened by the independent audit. The existing local
 embedding/demo ranking path is not verified as the required structural,
-lexical, and pgvector indexing contract. Blocked until TASK-012 is verified.
+lexical, and pgvector indexing contract. Rebuilt for review using versioned
+semantic/structural blocks, a 1536-dimensional Model-Gateway embedding route,
+PostgreSQL TSVECTOR lexical index, and pgvector HNSW cosine index. Prior index
+runs remain preserved across new identities and failed builds.
 **Purpose:** Build retrievable semantic/structural units with metadata, lexical index, and embeddings without blind fixed-token-first chunking.  
 **Expected output:** content-block creation, Docling hierarchical/hybrid refinement where needed, lexical + pgvector indexing using the selected retrieval-plumbing path.  
 **Likely areas:** `/services/content`, `/services/retrieval`.  
 **Reuse check:** Before writing substantial custom indexing/RAG plumbing, run a focused comparison of (A) native Docling structural blocks + project lexical/pgvector indexing and (B) the official Docling + LlamaIndex Reader/Node Parser integration. Record `ADOPT / PARTIAL ADOPT / REJECT` with rationale; default to the simpler native path unless LlamaIndex measurably reduces total complexity while preserving provenance and project filtering/control.  
+**Reuse decision:** **ADOPT native Docling + PostgreSQL/pgvector; REJECT
+LlamaIndex for TASK-013.** TASK-011/012 already provide project-owned,
+source-linked structure and semantics; native PostgreSQL indexes preserve that
+lineage and metadata filtering without another retrieval framework. Re-evaluate
+only if TASK-014 golden retrieval shows a concrete gap.
 **Verification:** Reuse decision is recorded; definitions/examples/figures remain source-linked; Grade/Subject/Focus metadata remains controllable; oversized blocks refine without losing hierarchy; index rebuild works.  
 
 ## TASK-014 — Hierarchical/hybrid retrieval service

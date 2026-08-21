@@ -23,7 +23,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PostgreSQLUUID
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID as PostgreSQLUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from pgvector.sqlalchemy import Vector
 
@@ -394,12 +394,11 @@ class CurriculumNode(Base):
 
 
 class ContentBlock(Base):
-    """A source-linked retrieval unit; embeddings are added by TASK-013."""
+    """Legacy pre-remediation content projection; not TASK-013 index truth."""
 
     __tablename__ = "content_blocks"
     __table_args__ = (
         Index("ix_content_blocks_document_run", "document_id", "processing_run_id"),
-        Index("ix_content_blocks_embedding", "embedding", postgresql_using="hnsw", postgresql_ops={"embedding": "vector_l2_ops"}),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -411,7 +410,69 @@ class ContentBlock(Base):
     page_number: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     source_ref: Mapped[str] = mapped_column(String(512), nullable=False)
     attributes: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
-    embedding: Mapped[list[float] | None] = mapped_column(Vector(8), nullable=True)
+
+
+class ContentIndexRun(Base):
+    """Versioned retrieval-index derivation from approved semantic content."""
+
+    __tablename__ = "content_index_runs"
+    __table_args__ = (
+        UniqueConstraint("document_id", "semantic_processing_run_id", "block_schema_version", "embedding_route_version", "settings_version", name="uq_content_index_run_identity"),
+        Index("ix_content_index_runs_document_status", "document_id", "status"),
+    )
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    document_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_documents.id", ondelete="CASCADE"), nullable=False)
+    structural_processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_processing_runs.id", ondelete="CASCADE"), nullable=False)
+    semantic_processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_semantic_processing_runs.id", ondelete="CASCADE"), nullable=False)
+    block_schema_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    embedding_route_version: Mapped[str] = mapped_column(String(255), nullable=False)
+    embedding_dimensions: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    settings_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="PENDING", server_default="PENDING")
+    failure_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class IndexedContentBlock(Base):
+    """A queryable semantic/structural retrieval block with DB-owned indexes."""
+
+    __tablename__ = "indexed_content_blocks"
+    __table_args__ = (
+        Index("ix_indexed_content_blocks_filter", "index_run_id", "grade_level", "subject", "unit_key", "lesson_key", "concept_key", "semantic_type"),
+        Index("ix_indexed_content_blocks_search", "search_vector", postgresql_using="gin"),
+        Index("ix_indexed_content_blocks_embedding", "embedding", postgresql_using="hnsw", postgresql_ops={"embedding": "vector_cosine_ops"}),
+    )
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    index_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_index_runs.id", ondelete="CASCADE"), nullable=False)
+    document_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_documents.id", ondelete="CASCADE"), nullable=False)
+    semantic_item_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_semantic_items.id", ondelete="SET NULL"))
+    block_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    block_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    semantic_type: Mapped[str | None] = mapped_column(String(32))
+    grade_level: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    subject: Mapped[str] = mapped_column(String(32), nullable=False)
+    unit_key: Mapped[str | None] = mapped_column(String(255))
+    lesson_key: Mapped[str | None] = mapped_column(String(255))
+    concept_key: Mapped[str | None] = mapped_column(String(255))
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    search_vector: Mapped[object] = mapped_column(TSVECTOR, nullable=False)
+    embedding: Mapped[list[float]] = mapped_column(Vector(1536), nullable=False)
+    attributes: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+
+
+class IndexedContentBlockSource(Base):
+    """Per-block structural and semantic provenance used by later retrieval."""
+
+    __tablename__ = "indexed_content_block_sources"
+    __table_args__ = (UniqueConstraint("block_id", "structural_item_id", name="uq_indexed_content_block_source"),)
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    block_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("indexed_content_blocks.id", ondelete="CASCADE"), nullable=False)
+    semantic_item_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_semantic_items.id", ondelete="SET NULL"))
+    structural_item_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("document_structural_items.id", ondelete="CASCADE"), nullable=False)
+    page_number: Mapped[int | None] = mapped_column(SmallInteger)
+    source_ref: Mapped[str] = mapped_column(String(512), nullable=False)
+    source_order: Mapped[int] = mapped_column(SmallInteger, nullable=False)
 
 
 class LearningSession(Base):

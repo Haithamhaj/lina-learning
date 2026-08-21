@@ -12,7 +12,6 @@ from services.content.repository import create_content_block, create_content_doc
 from services.intelligence.core import close_and_consolidate, consolidate_student_history
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import CandidateEvent, CurrentLearningState, LearningEvidence, Student, User
-from services.retrieval.embeddings import deterministic_embedding
 from services.tutor.runtime import start_session, tutor_turn
 from services.tutor.session_lifecycle import close_inactive_sessions
 from workers.intelligence_handlers import register_intelligence_handlers
@@ -26,7 +25,7 @@ pytestmark = pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="PostgreSQ
 def postgres_session_factory() -> sessionmaker[Session]:
     engine = create_engine(normalize_database_url(os.environ["DATABASE_URL"]))
     with engine.begin() as connection:
-        connection.execute(text("TRUNCATE learning_evidence, learning_events, candidate_events, learning_messages, learning_sessions, current_learning_states, pattern_evidence, learner_patterns, learner_intelligence_cards, decision_views, intelligence_processing_runs, content_semantic_item_sources, content_semantic_items, content_semantic_processing_runs, document_structural_items, content_blocks, curriculum_nodes, content_processing_runs, content_documents CASCADE"))
+        connection.execute(text("TRUNCATE learning_evidence, learning_events, candidate_events, learning_messages, learning_sessions, current_learning_states, pattern_evidence, learner_patterns, learner_intelligence_cards, decision_views, intelligence_processing_runs, indexed_content_block_sources, indexed_content_blocks, content_index_runs, content_semantic_item_sources, content_semantic_items, content_semantic_processing_runs, document_structural_items, content_blocks, curriculum_nodes, content_processing_runs, content_documents CASCADE"))
     factory = sessionmaker(engine, expire_on_commit=False)
     yield factory
     engine.dispose()
@@ -42,7 +41,7 @@ def test_candidate_to_evidence_to_card_and_later_context(postgres_session_factor
         document.status = "STRUCTURAL_READY"
         run = create_processing_run(session, document_id=document.id, kind="STRUCTURAL", processor_version="fixture-v1")
         run.status = "COMPLETED"
-        create_content_block(session, document_id=document.id, processing_run_id=run.id, text="Use place value to multiply decimal numbers by 10. 3.452 × 10 = 34.52.", block_type="exercise", page_number=2, source_ref="fixture#page=2", embedding=deterministic_embedding("Use place value to multiply decimal numbers by 10. 3.452 × 10 = 34.52."))
+        create_content_block(session, document_id=document.id, processing_run_id=run.id, text="Use place value to multiply decimal numbers by 10. 3.452 × 10 = 34.52.", block_type="exercise", page_number=2, source_ref="fixture#page=2")
         first = start_session(session, student_id=student.id)
         turn = tutor_turn(session, learning_session=first, question="I think 3.452 × 10 = 34.52")
         assert turn.candidate_event_id is not None

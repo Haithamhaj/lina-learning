@@ -101,7 +101,6 @@ def create_content_block(
     page_number: int | None,
     source_ref: str,
     attributes: dict[str, object] | None = None,
-    embedding: list[float] | None = None,
 ) -> ContentBlock:
     block = ContentBlock(
         document_id=document_id,
@@ -111,7 +110,6 @@ def create_content_block(
         page_number=page_number,
         source_ref=source_ref,
         attributes=attributes or {},
-        embedding=embedding,
     )
     session.add(block)
     session.flush()
