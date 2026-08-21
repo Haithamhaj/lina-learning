@@ -22,6 +22,7 @@ from services.platform.db.models import (
     CandidateEvent,
     AIExecution,
     CurrentLearningState,
+    DecisionView,
     LearnerIntelligenceCard,
     LearnerPattern,
     LearningEvidence,
@@ -337,6 +338,7 @@ def test_session_consolidation_job_uses_the_closed_session_evidence_handler(
             state_type="active_difficulty",
             status="ACTIVE",
         ).count() == 1
+        assert session.query(DecisionView).count() == 4
         assert provider.calls == 1
         job = session.get(Job, job_id)
         assert job is not None and job.status == "COMPLETED"

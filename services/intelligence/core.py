@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.platform.db.models import (
-    CandidateEvent, CurrentLearningState, DecisionView, IntelligenceProcessingRun,
+    CandidateEvent, CurrentLearningState, IntelligenceProcessingRun,
     LearnerIntelligenceCard, LearnerPattern, LearningEvent, LearningEvidence,
     LearningSession, PatternEvidence,
 )
@@ -17,7 +17,6 @@ from services.intelligence.selection import select_relevant_intelligence_text
 
 RUBRIC_VERSION = "evidence-rubric-v1"
 PATTERN_POLICY_VERSION = "pattern-policy-v1"
-DECISION_POLICY_VERSION = "decision-view-v1"
 
 
 def consolidate_student_history(
@@ -65,8 +64,6 @@ def consolidate_student_history(
         session.add(pattern); session.flush(); patterns.append(pattern)
         for evidence in evidence_items:
             session.add(PatternEvidence(pattern_id=pattern.id, evidence_id=evidence.id))
-        mastery, confidence = _decision_view(needs_support, successes)
-        session.add(DecisionView(student_id=student_id, processing_run_id=run.id, concept_ref=concept, mastery=mastery, evidence_confidence=confidence, policy_version=DECISION_POLICY_VERSION))
     for state in states:
         session.add(state)
     session.flush()
@@ -108,17 +105,6 @@ def _pattern_status(support_count: int, counter_count: int) -> str:
     if support_count >= 2:
         return "ACTIVE"
     return "CANDIDATE"
-
-
-def _decision_view(needs_support: list[LearningEvidence], successes: list[LearningEvidence]) -> tuple[str, str]:
-    total = len(needs_support) + len(successes)
-    if len(successes) >= len(needs_support) and successes:
-        mastery = "Strong" if len(successes) >= 3 else "Demonstrated"
-    elif needs_support:
-        mastery = "Needs Support" if len(needs_support) >= 2 else "Developing"
-    else:
-        mastery = "Developing"
-    return mastery, "High" if total >= 3 else "Medium" if total >= 2 else "Low"
 
 
 def _materialize_card(student_id: UUID, run: IntelligenceProcessingRun, states: list[CurrentLearningState], patterns: list[LearnerPattern]) -> LearnerIntelligenceCard:

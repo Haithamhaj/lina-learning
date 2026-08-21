@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from services.intelligence.consolidation import consolidate_closed_session
 from services.intelligence.current_state import apply_processing_run_current_state
+from services.intelligence.decisions import apply_processing_run_decision_views
 from services.intelligence.patterns import apply_processing_run_patterns
 from services.model_gateway.factory import create_session_evidence_gateway
 from services.model_gateway.gateway import ModelGateway
@@ -50,6 +51,10 @@ def register_intelligence_handlers(
                     session,
                     processing_run_id=outcome.processing_run.id,
                 )
+                decision_views = apply_processing_run_decision_views(
+                    session,
+                    processing_run_id=outcome.processing_run.id,
+                )
             except Exception:
                 session.commit()
                 raise
@@ -60,6 +65,7 @@ def register_intelligence_handlers(
                 "event_count": outcome.event_count,
                 "current_state_count": len(states),
                 "pattern_count": len(patterns),
+                "decision_view_count": len(decision_views),
             }
 
     registry.register(SESSION_CONSOLIDATION_JOB, handle_consolidation)

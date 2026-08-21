@@ -2,8 +2,8 @@
 
 ## Current goal
 
-Review TASK-024 compact Learner Intelligence Card and deterministic relevance
-selection. Do not start TASK-025, real-Lina calibration, or product expansion.
+Review TASK-025 deterministic Decision Views. Do not start TASK-026,
+real-Lina calibration, or product expansion.
 
 ## Current reality
 
@@ -112,7 +112,7 @@ selection. Do not start TASK-025, real-Lina calibration, or product expansion.
   mastery/confidence view, or global/cross-subject pattern is created. It is
   `DONE`, not a Phase 3 or Gate B pass.
 - REC-16 is approved: Context and Subject scopes are recomputed from current
-qualifying concept Evidence, so resolved
+  qualifying concept Evidence, so resolved
   concepts no longer sustain them and one-concept recurrence cannot reactivate
   a resolved broader scope.
 - TASK-024 now builds a compact, versioned on-demand Learner Intelligence Card
@@ -120,8 +120,16 @@ qualifying concept Evidence, so resolved
   It ranks the explicit question before stale focus, State before historical
   guidance, and narrow scope before broad scope within each tier; Card source
   IDs and policy/schema metadata remain internal runtime provenance. It creates
-  no Evidence, State, Pattern, Card database row, mastery, or confidence view.
-  It is `REVIEW`, not a Phase 3 or Gate B pass.
+  no Evidence, State, Pattern, or Card database row. It is `DONE`, not a Phase
+  3 or Gate B pass.
+- TASK-025 now derives versioned categorical Decision Views from validated
+  Evidence, with active Current State and ACTIVE/STABLE concept Pattern context.
+  It persists scoped learning-status, independence, retention, and
+  strategy-effectiveness views with Evidence/State/Pattern IDs, concise
+  deterministic explanations, and policy lineage. Current State and recent
+  independent Evidence outrank historical support Patterns; no raw Tutor text
+  or Candidate Event alone can create a view. It is `REVIEW`, not a Phase 3 or
+  Gate B pass.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -152,7 +160,7 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 and TASK-025 onward remain blocked; TASK-024 awaits independent
+- TASK-015 and TASK-026 onward remain blocked; TASK-025 awaits independent
   review. The Production Engine Acceptance Gate has not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
@@ -167,10 +175,9 @@ Real Lina decision gates.
 
 ## Next recommended action
 
-Review TASK-024 Card budget/relevance ordering, current-behavior conflict
-handling, Tutor context provenance, and the no-decision-view boundary. Do not
-start TASK-025 or later work without explicit authorization and the applicable
-gate.
+Review TASK-025 categorical derivation, evidence provenance, current-versus-
+history conflict handling, and policy-version rebuildability. Do not start
+TASK-026 or later work without explicit authorization and the applicable gate.
 
 ## Critical references
 

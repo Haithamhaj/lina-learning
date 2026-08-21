@@ -649,11 +649,33 @@ class LearnerIntelligenceCard(Base):
 
 class DecisionView(Base):
     __tablename__ = "decision_views"
-    __table_args__ = (UniqueConstraint("student_id", "processing_run_id", "concept_ref", name="uq_decision_view_run_concept"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "student_id",
+            "processing_run_id",
+            "subject",
+            "concept_ref",
+            "view_type",
+            "policy_version",
+            name="uq_decision_view_scope_version",
+        ),
+    )
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("intelligence_processing_runs.id", ondelete="CASCADE"), nullable=False)
+    subject: Mapped[str] = mapped_column(String(32), nullable=False, default="UNKNOWN", server_default="UNKNOWN")
     concept_ref: Mapped[str] = mapped_column(String(128), nullable=False)
+    view_type: Mapped[str] = mapped_column(String(64), nullable=False, default="learning_status", server_default="learning_status")
+    conclusion: Mapped[str] = mapped_column(String(32), nullable=False, default="INSUFFICIENT_EVIDENCE", server_default="INSUFFICIENT_EVIDENCE")
+    confidence: Mapped[str] = mapped_column(String(16), nullable=False, default="LOW", server_default="LOW")
+    explanation: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    evidence_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    state_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    pattern_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    source_versions: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC), server_default=func.now()
+    )
     mastery: Mapped[str] = mapped_column(String(32), nullable=False)
     evidence_confidence: Mapped[str] = mapped_column(String(16), nullable=False)
     policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
