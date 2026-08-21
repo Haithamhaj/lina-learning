@@ -11,8 +11,10 @@ from services.tutor.runtime import TeachingMode, TeachingStrategy, infer_tutor_m
     ("question", "expected"),
     [
         ("Explain equivalent fractions.", TeachingMode.LEARN),
+        ("Why do equivalent fractions have the same value?", TeachingMode.LEARN),
+        ("كيف تعمل الكسور المتكافئة؟", TeachingMode.LEARN),
         ("Help me with my homework worksheet, but do not tell me the answer yet.", TeachingMode.HOMEWORK),
-        ("Why do shadows change during the day?", TeachingMode.EXPLORE),
+        ("I am curious about black holes outside our school topic.", TeachingMode.EXPLORE),
         ("Can we review decimals again?", TeachingMode.REVIEW),
         ("Quiz me on multiplying by 10.", TeachingMode.QUIZ),
         ("ساعدني في واجبي بدون الحل مباشرة.", TeachingMode.HOMEWORK),

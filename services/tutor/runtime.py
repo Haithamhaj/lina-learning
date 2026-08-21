@@ -88,7 +88,19 @@ def infer_tutor_mode(question: str) -> TeachingMode:
         return TeachingMode.QUIZ
     if any(term in normalized for term in ("review", "revise", "again", "راجع", "مراجعة")):
         return TeachingMode.REVIEW
-    if any(term in normalized for term in ("why", "curious", "how does", "لماذا", "كيف يعمل")):
+    if any(
+        term in normalized
+        for term in (
+            "outside our school topic",
+            "outside the school topic",
+            "outside the lesson",
+            "not part of our lesson",
+            "outside class",
+            "خارج موضوع الدرس",
+            "خارج المنهج",
+            "خارج الدرس",
+        )
+    ):
         return TeachingMode.EXPLORE
     return TeachingMode.LEARN
 

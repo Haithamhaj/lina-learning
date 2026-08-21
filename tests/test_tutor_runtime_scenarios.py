@@ -88,7 +88,7 @@ def _runtime(decision: SafetyDecision) -> tuple[TutorRuntime, _ContextBuilder, _
         ("Explain equivalent fractions.", TeachingMode.LEARN, TeachingStrategy.EXPLAIN_WITH_EXAMPLE),
         ("Help with my homework worksheet without the answer yet.", TeachingMode.HOMEWORK, TeachingStrategy.HINT_FIRST),
         ("I am stuck and do not understand fractions.", TeachingMode.LEARN, TeachingStrategy.EXPLAIN_THEN_CHECK),
-        ("Why do shadows change during the day?", TeachingMode.EXPLORE, TeachingStrategy.EXPLAIN_WITH_EXAMPLE),
+        ("I am curious about black holes outside our school topic.", TeachingMode.EXPLORE, TeachingStrategy.EXPLAIN_WITH_EXAMPLE),
         ("Can we review decimals again?", TeachingMode.REVIEW, TeachingStrategy.EXPLAIN_WITH_EXAMPLE),
         ("Quiz me on multiplying by 10.", TeachingMode.QUIZ, TeachingStrategy.EXPLAIN_WITH_EXAMPLE),
         ("ساعدني في واجبي بدون الحل مباشرة.", TeachingMode.HOMEWORK, TeachingStrategy.HINT_FIRST),
