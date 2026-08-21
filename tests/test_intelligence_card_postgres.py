@@ -218,6 +218,75 @@ def test_explicit_question_beats_stale_focus_and_excludes_other_subject_or_unrel
     assert [entry.source_id for entry in card.entries] == [decimals.id]
 
 
+def test_stale_focus_never_enters_an_explicit_unmatched_question(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, _, run = _seed(session)
+        fractions = _pattern(
+            student, run, key="support_need:fractions", detail="Fractions support history.",
+            scope={"scope_type": "concept", "concept_ref": "fractions"}, status="STABLE",
+        )
+        session.add(fractions)
+
+        numeric = _card(
+            session,
+            student,
+            question="What is 0.5 + 0.25?",
+            focus=CurrentFocus(concept_key="fractions"),
+        )
+        word_problem = _card(
+            session,
+            student,
+            question="A bus has 24 seats and 7 are empty. How many are filled?",
+            focus=CurrentFocus(concept_key="fractions"),
+        )
+
+    assert numeric.entries == ()
+    assert word_problem.entries == ()
+
+
+@pytest.mark.parametrize("question", ("continue", "تابعي"))
+def test_low_information_turn_may_use_current_focus(
+    factory: sessionmaker[Session],
+    question: str,
+) -> None:
+    with factory.begin() as session:
+        student, _, run = _seed(session)
+        fractions = _pattern(
+            student, run, key="support_need:fractions", detail="Fractions support history.",
+            scope={"scope_type": "concept", "concept_ref": "fractions"}, status="STABLE",
+        )
+        session.add(fractions)
+        card = _card(session, student, question=question, focus=CurrentFocus(concept_key="fractions"))
+
+    assert [entry.source_id for entry in card.entries] == [fractions.id]
+    assert card.debug.selection_reasons == ("focus_fallback",)
+
+
+def test_explicit_matching_fractions_question_keeps_normal_card_budget_and_provenance(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, _, run = _seed(session)
+        fractions = _pattern(
+            student, run, key="support_need:fractions", detail="Fractions support history.",
+            scope={"scope_type": "concept", "concept_ref": "fractions"}, status="STABLE",
+        )
+        session.add(fractions)
+        card = _card(
+            session,
+            student,
+            question="Can you explain equivalent fractions?",
+            focus=CurrentFocus(concept_key="fractions"),
+            budget=CardBudget(max_entries=1, max_states=1, max_patterns=1, max_characters=200),
+        )
+
+    assert [entry.source_id for entry in card.entries] == [fractions.id]
+    assert card.debug.selected_source_ids == (fractions.id,)
+    assert card.debug.selection_reasons == ("exact_question_concept",)
+
+
 def test_current_independent_change_outranks_broad_support_history(
     factory: sessionmaker[Session],
 ) -> None:

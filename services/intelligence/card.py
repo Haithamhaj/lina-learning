@@ -80,6 +80,23 @@ _STOP_TERMS = {
     "a", "an", "and", "are", "can", "do", "does", "for", "from", "help", "how", "i", "in",
     "is", "it", "me", "my", "of", "please", "the", "this", "to", "what", "why", "with", "you",
 }
+_FOCUS_FALLBACK_TURNS = {
+    "continue",
+    "again",
+    "help me",
+    "i dont understand",
+    "i don t understand",
+    "كمل",
+    "كملي",
+    "تابع",
+    "تابعي",
+    "مرة ثانية",
+    "ساعدني",
+    "لا افهم",
+    "لا أفهم",
+    "ما افهم",
+    "ما فهمت",
+}
 
 
 def build_learner_intelligence_card(
@@ -109,12 +126,14 @@ def build_learner_intelligence_card(
         )
     )
 
-    # An explicit question may use CurrentFocus as a mild fallback only.  Once
-    # anything matches that question, stale focus cannot inject another topic.
+    # CurrentFocus is useful only for known context-dependent continuations.
+    # A substantive but unmatched question must not inherit stale intelligence.
     if any(candidate.question_match for candidate in candidates):
         candidates = [candidate for candidate in candidates if candidate.question_match]
-    else:
+    elif _allows_focus_fallback(question):
         candidates = [candidate for candidate in candidates if candidate.focus_match]
+    else:
+        candidates = []
 
     candidates.sort(
         key=lambda candidate: (
@@ -300,6 +319,11 @@ def _focus_terms(focus: CurrentFocus | None) -> set[str]:
     if focus is None:
         return set()
     return _terms(" ".join(value for value in (focus.unit_key, focus.lesson_key, focus.concept_key) if value))
+
+
+def _allows_focus_fallback(question: str) -> bool:
+    normalized = " ".join(re.findall(r"[^\W_]+", question.casefold(), flags=re.UNICODE))
+    return normalized in _FOCUS_FALLBACK_TURNS
 
 
 def _validate_budget(budget: CardBudget) -> None:
