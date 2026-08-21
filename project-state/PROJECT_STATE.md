@@ -2,9 +2,8 @@
 
 ## Current goal
 
-Independently review the remediated TASK-014 production retrieval layer, then
-continue repairing the Production Learning Engine only after approval. No
-real-Lina calibration or product expansion is authorized.
+Independently review the remediated TASK-016 authenticated Student Math session
+path. Do not start TASK-017 or real-Lina calibration/product expansion.
 
 ## Current reality
 
@@ -39,15 +38,21 @@ real-Lina calibration or product expansion is authorized.
   1536-dimensional pgvector HNSW cosine index. Fixture PostgreSQL tests passed,
   and a live OpenAI `text-embedding-3-small` smoke call returned 1536 values.
   It is `DONE`; this verifies indexing only.
-- TASK-014 now has a project-owned hierarchical/hybrid retrieval service over
+- TASK-014 has a project-owned hierarchical/hybrid retrieval service over
   that index. It applies Grade/Subject and optional current focus narrowing in
   PostgreSQL, keeps lexical and vector candidates inspectable, fuses bounded
   candidate lists deterministically, expands only matching semantic parents,
   returns exact provenance, and enforces a context budget. Its local real
   Eureka pages 1–2 golden passed 7/7 representative cases, and a bounded
   competing-region golden across pages 2, 18, 30, and 42 passed 6/6 cases,
-  including an explicit stale-focus conflict. It is `REVIEW`, not `DONE`; this
-  does not pass Phase 1 or any Production Engine gate.
+  including an explicit stale-focus conflict. It is `DONE`; this does not pass
+  Phase 1 or any Production Engine gate.
+- TASK-016 now has the real authenticated `/student` Math entry path, separate
+  from `/demo`: it derives ownership from the verified Clerk Student subject,
+  creates/resumes an open Math session, persists ordered raw Student messages,
+  restores that history after refresh, and rejects cross-Student access. It is
+  `REVIEW`; Tutor orchestration, safety consumption, Candidate Events, and
+  automatic close are deliberately not part of this path yet.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -78,9 +83,9 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-014 needs independent review before content-admin, Tutor, or intelligence
-  remediation becomes actionable. TASK-015 and later remain blocked; the
-  Production Engine Acceptance Gate has not passed.
+- TASK-016 needs independent review before TASK-017 may begin. TASK-015 and
+  TASK-017 onward remain blocked; the Production Engine Acceptance Gate has not
+  passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
   database/workflow remains a deferred local-development improvement.
@@ -94,9 +99,9 @@ Real Lina decision gates.
 
 ## Next recommended action
 
-Conduct an independent review of **TASK-014 — Hierarchical/hybrid retrieval
-service**. Do not start TASK-015 or later work unless that review approves
-TASK-014.
+Conduct an independent review of **TASK-016 — Session/thread and Student Math
+entry flow**. Do not start TASK-017 or later work unless that review approves
+TASK-016.
 
 ## Critical references
 

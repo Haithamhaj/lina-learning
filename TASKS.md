@@ -195,15 +195,15 @@ only if TASK-014 golden retrieval shows a concrete gap.
 **Verification:** Reuse decision is recorded; definitions/examples/figures remain source-linked; Grade/Subject/Focus metadata remains controllable; oversized blocks refine without losing hierarchy; index rebuild works.  
 
 ## TASK-014 — Hierarchical/hybrid retrieval service
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** TASK-013  
 **Recovery state:** Rebuilt for review using bounded PostgreSQL lexical and
 pgvector candidate queries, deterministic reciprocal-rank fusion, optional
 Grade/Subject/Unit/Lesson/Concept narrowing, semantic-parent expansion, exact
 source provenance, and a context budget. A local real-Eureka pages 1–2 golden
 set passed 7/7 cases (terminology, paraphrase, example, exercise, figure,
-with-focus, and without-focus). This approves retrieval for independent review
-only; it does not pass Phase 1 or the Production Engine Acceptance Gate.
+with-focus, and without-focus). This approved retrieval layer does not by
+itself pass Phase 1 or the Production Engine Acceptance Gate.
 **Purpose:** Retrieve Grade/Subject/Focus/Concept-relevant Math context using metadata + lexical + vector ranking over the retrieval approach selected in TASK-013.  
 **Expected output:** retrieval API/service with context budget and source provenance, with any adopted framework hidden behind the project Retrieval domain contract.  
 **Likely areas:** `/services/retrieval`.  
@@ -228,17 +228,27 @@ A real Grade 5 Math book must reach `READY`, and a retrieval golden set must dem
 # Phase 2 — Math Tutor Vertical Slice
 
 ## TASK-016 — Session/thread and Student Math entry flow
-**Status:** BLOCKED
+**Status:** REVIEW
 **Dependencies:** Phase 1 Exit Gate  
-**Recovery state:** Reopened by the independent audit. The usable interface is
-currently a development-only sandbox; the authenticated Student Math flow and
-thread/topic contract are incomplete. Blocked pending the repaired Phase 1 Exit
-Gate.
+**Recovery state:** Rebuilt for review as the authenticated production path at
+`/student`, separate from the development-only sandbox. A verified Clerk
+Student identity resolves to an application-owned Student profile; the browser
+never supplies `student_id` as authority. The path creates or resumes one open
+Math session, persists ordered Student messages, restores history on refresh,
+and prevents cross-Student reads/writes. It intentionally does not run Tutor
+or automatic session-close behavior; those remain TASK-017 through TASK-020.
 **Purpose:** Let Lina start a natural Math session and change threads/topics without managing internal structure, using a child-appropriate visual shell rather than a generic developer chat UI.  
 **Expected output:** session/thread persistence, Math entry screen, message pipeline skeleton, and a coherent Lina-facing visual direction suitable for approximately age 10 with photo/avatar-ready personalization.  
 **Likely areas:** `/apps/web`, `/apps/api`, `/services/tutor`.  
 **Reuse check:** (1) Evaluate `assistant-ui` custom-runtime fit before hand-building full thread/composer/chat plumbing; test FastAPI/SSE compatibility, project-owned persistence, custom attachments/message parts, safety integration, and styling freedom. (2) Inspect approved Framer/Webflow education visual references plus 21st.dev/Motion Primitives/Magic UI/React Bits sources for reusable patterns. Record the assistant-ui decision and selected visual/component sources. Do not adopt a preschool template or full marketing-template architecture.  
 **Verification:** Reuse decisions are recorded; Session persists messages; topic switch can create internal thread without Student workflow burden; visual shell feels playful/intelligent rather than preschool/corporate; any reused chat layer remains subordinate to project-owned Tutor/session/safety contracts.  
+**Completion note:** The existing `assistant-ui` reuse decision remains
+`REJECT` for this small project-owned persistence path; it would not remove the
+need for the FastAPI/auth/session boundary and is unnecessary before the Tutor
+streaming contract. PostgreSQL API tests cover first visit, open/resume,
+ordered persistence and refresh, ownership isolation, and no close side effect;
+the Student screen calls `/api/v1/student`, never `/api/v1/demo`. TypeScript
+check and production build passed.
 
 ## TASK-017 — Tutor context builder and retrieval integration
 **Status:** BLOCKED
