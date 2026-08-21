@@ -341,24 +341,27 @@ is now under review.
 **Verification:** quick return can continue same session; inactivity closes once; consolidation job is idempotent.  
 
 ## TASK-021 — Session Evidence consolidation
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** TASK-020, `docs/LEARNING_INTELLIGENCE_SPEC.md`  
 **Recovery state:** Closed sessions now enqueue one `SESSION_EVIDENCE` Gateway
 call only when source-linked Candidate Events exist. Strict versioned output
 validation creates contextual Learning Events and categorical Evidence with
 raw-message/Candidate/session/run traceability; empty sessions create none.
-Processing retries reuse the same run safely. No Current State, Pattern, Card,
-or decision-view work runs here. It awaits independent review.
+Processing retries reuse the same run safely. Independent review is complete;
+TASK-022 is now under review. No Pattern, Card, or decision-view work runs
+here.
 **Purpose:** Convert Candidate Events + relevant excerpts/thread context into validated Learning Events and Evidence using the approved rubric.  
 **Expected output:** versioned consolidation processing run, Events, Evidence, traceability.  
 **Likely areas:** `/services/intelligence`, `/prompts/intelligence`, `/packages/schemas`.  
 **Verification:** Golden evidence scenarios match expected allowed states; “what must not be inferred” tests pass; every Evidence item traces to source.  
 
 ## TASK-022 — Current Learning State engine
-**Status:** BLOCKED
+**Status:** REVIEW
 **Dependencies:** TASK-021  
-**Recovery state:** Reopened by the independent audit. Resolution, expiry, and
-current-behavior priority are incomplete. Blocked pending TASK-021.
+**Recovery state:** Versioned, subject-scoped Current State now derives only
+from completed TASK-021 Evidence. Deterministic lifecycle rules create, update,
+resolve, and expire temporary states; active Tutor selection excludes resolved,
+expired, legacy, and other-subject rows. It awaits independent review.
 **Purpose:** Represent temporary active difficulties, misconceptions, open loops, recent strategy outcomes, and resolution/expiry.  
 **Expected output:** current-state store/service distinct from stable Patterns.  
 **Likely areas:** `/services/intelligence/state`.  

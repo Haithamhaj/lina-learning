@@ -10,6 +10,7 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
+from services.intelligence.current_state import CURRENT_STATE_POLICY_VERSION
 from services.intelligence.selection import select_relevant_intelligence
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
@@ -145,15 +146,18 @@ def test_relevant_current_state_outranks_history_and_excludes_inactive_or_other_
         active_state = CurrentLearningState(
             student_id=student.id,
             processing_run_id=run.id,
+            subject="MATH",
             state_type="active_difficulty",
             concept_ref="fractions",
             detail="Needs a small check when comparing fractions.",
             status="ACTIVE",
             evidence_refs=[],
+            policy_version=CURRENT_STATE_POLICY_VERSION,
         )
         inactive_state = CurrentLearningState(
             student_id=student.id,
             processing_run_id=run.id,
+            subject="MATH",
             state_type="active_difficulty",
             concept_ref="fractions",
             detail="Resolved fractions note.",

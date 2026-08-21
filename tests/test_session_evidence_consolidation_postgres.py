@@ -300,8 +300,8 @@ def test_session_consolidation_job_uses_the_closed_session_evidence_handler(
                         "event_summary": "The Student explained equivalent fractions independently.",
                         "school_or_extended": "school",
                         "dimensions": _dimensions(
-                            understanding="demonstrated",
-                            independence="independent",
+                            understanding="not_demonstrated",
+                            independence="substantial_support",
                         ),
                         "relationship": "insufficient",
                     }
@@ -333,6 +333,10 @@ def test_session_consolidation_job_uses_the_closed_session_evidence_handler(
         assert session.get(type(learning_session), learning_session.id).status == "CLOSED"
         assert session.query(LearningEvent).count() == 1
         assert session.query(LearningEvidence).count() == 1
+        assert session.query(CurrentLearningState).filter_by(
+            state_type="active_difficulty",
+            status="ACTIVE",
+        ).count() == 1
         assert provider.calls == 1
         job = session.get(Job, job_id)
         assert job is not None and job.status == "COMPLETED"

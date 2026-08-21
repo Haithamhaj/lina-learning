@@ -2,8 +2,8 @@
 
 ## Current goal
 
-Independently review TASK-021 Session Evidence consolidation evidence. Do not
-start TASK-022, real-Lina calibration, or product expansion.
+Independently review TASK-022 Current Learning State lifecycle evidence. Do not
+start TASK-023, real-Lina calibration, or product expansion.
 
 ## Current reality
 
@@ -96,7 +96,13 @@ start TASK-022, real-Lina calibration, or product expansion.
   approved categorical Evidence rubrics before persistence, and preserves
   session/Candidate/raw-message/run/model lineage. Empty sessions create no
   derived rows; retries reuse their processing run. No Current State, Pattern,
-  Card, mastery, or confidence view is created. TASK-021 is `REVIEW`, not a
+  Card, mastery, or confidence view is created. TASK-021 is `DONE`, not a
+  Phase 3 or Gate B pass.
+- TASK-022 now derives temporary Current Learning State only from completed,
+  source-linked TASK-021 Evidence. States retain Student/subject/concept/type/
+  policy/run/evidence/timestamps, resolve or expire deterministically, and the
+  Tutor selector uses only active same-subject current-policy rows. No Pattern,
+  Card, mastery, or confidence view is created. TASK-022 is `REVIEW`, not a
   Phase 3 or Gate B pass.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
@@ -128,7 +134,7 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 and TASK-022 onward remain blocked; TASK-021 awaits independent
+- TASK-015 and TASK-023 onward remain blocked; TASK-022 awaits independent
   review. The Production Engine Acceptance Gate has not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
@@ -143,8 +149,8 @@ Real Lina decision gates.
 
 ## Next recommended action
 
-Review TASK-021 source-grounded Event/Evidence validation, retry lineage, and
-the no-State/Pattern/Card boundary. Do not start TASK-022 or later work without
+Review TASK-022 evidence-driven State lifecycle, subject isolation, expiry, and
+the no-Pattern/Card boundary. Do not start TASK-023 or later work without
 explicit authorization and the applicable gate.
 
 ## Critical references

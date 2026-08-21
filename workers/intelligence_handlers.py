@@ -9,6 +9,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session, sessionmaker
 
 from services.intelligence.consolidation import consolidate_closed_session
+from services.intelligence.current_state import apply_processing_run_current_state
 from services.model_gateway.factory import create_session_evidence_gateway
 from services.model_gateway.gateway import ModelGateway
 from services.platform.db.models import Job, LearningSession
@@ -40,6 +41,10 @@ def register_intelligence_handlers(
                     learning_session=learning_session,
                     gateway=evidence_gateway_factory(session),
                 )
+                states = apply_processing_run_current_state(
+                    session,
+                    processing_run_id=outcome.processing_run.id,
+                )
             except Exception:
                 session.commit()
                 raise
@@ -48,6 +53,7 @@ def register_intelligence_handlers(
                 "session_id": session_id,
                 "processing_run_id": str(outcome.processing_run.id),
                 "event_count": outcome.event_count,
+                "current_state_count": len(states),
             }
 
     registry.register(SESSION_CONSOLIDATION_JOB, handle_consolidation)

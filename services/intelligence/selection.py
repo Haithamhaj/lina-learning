@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from services.platform.db.models import CurrentLearningState, LearnerPattern
 from services.retrieval.service import CurrentFocus
+from services.intelligence.current_state import CURRENT_STATE_POLICY_VERSION
 
 
 @dataclass(frozen=True)
@@ -40,7 +42,13 @@ def select_relevant_intelligence(
     for state in session.execute(
         select(CurrentLearningState).where(
             CurrentLearningState.student_id == student_id,
+            CurrentLearningState.subject == subject,
             CurrentLearningState.status == "ACTIVE",
+            CurrentLearningState.policy_version == CURRENT_STATE_POLICY_VERSION,
+            or_(
+                CurrentLearningState.expires_at.is_(None),
+                CurrentLearningState.expires_at > datetime.now(UTC),
+            ),
         )
     ).scalars():
         if _is_relevant(state.concept_ref, state.detail, terms, focus):

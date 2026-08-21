@@ -551,15 +551,31 @@ class LearningEvidence(Base):
 
 class CurrentLearningState(Base):
     __tablename__ = "current_learning_states"
-    __table_args__ = (Index("ix_current_learning_states_student_status", "student_id", "status"),)
+    __table_args__ = (
+        Index("ix_current_learning_states_student_status", "student_id", "status"),
+        Index("ix_current_learning_states_student_subject_status", "student_id", "subject", "status"),
+        Index("ix_current_learning_states_expiry", "expires_at"),
+    )
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("intelligence_processing_runs.id", ondelete="CASCADE"), nullable=False)
+    subject: Mapped[str] = mapped_column(String(32), nullable=False, default="UNKNOWN", server_default="UNKNOWN")
     state_type: Mapped[str] = mapped_column(String(64), nullable=False)
     concept_ref: Mapped[str | None] = mapped_column(String(128))
     detail: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="ACTIVE", server_default="ACTIVE")
     evidence_refs: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    policy_version: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="legacy-state-policy-v0", server_default="legacy-state-policy-v0"
+    )
+    detected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC), server_default=func.now()
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class LearnerPattern(Base):
