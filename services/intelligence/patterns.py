@@ -23,6 +23,7 @@ from services.platform.db.models import (
 
 
 PATTERN_POLICY_VERSION = "pattern-policy-v1"
+SUPPORTED_PATTERN_POLICY_VERSIONS = frozenset({PATTERN_POLICY_VERSION})
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,10 @@ PatternRole = Literal["supports", "contradicts", "improvement", "retention_failu
 
 class PatternSourceError(ValueError):
     """The supplied row is not completed, validated TASK-021 Evidence."""
+
+
+class PatternPolicyError(ValueError):
+    """A requested Pattern policy has no executable implementation."""
 
 
 @dataclass(frozen=True)
@@ -140,9 +145,19 @@ def apply_processing_run_patterns(
 
 def _effective_policy(policy: PatternPolicy | None) -> PatternPolicy:
     if policy is not None:
+        require_supported_pattern_policy(policy.version)
         return policy
-    # This keeps a controlled version override useful for deterministic rebuilds.
-    return PatternPolicy(version=PATTERN_POLICY_VERSION)
+    # The compiled default remains explicit for deterministic rebuilds.
+    policy = PatternPolicy(version=PATTERN_POLICY_VERSION)
+    require_supported_pattern_policy(policy.version)
+    return policy
+
+
+def require_supported_pattern_policy(policy_version: str) -> None:
+    """Reject version labels that do not select a compiled Pattern algorithm."""
+
+    if policy_version not in SUPPORTED_PATTERN_POLICY_VERSIONS:
+        raise PatternPolicyError(f"Pattern policy {policy_version!r} is not executable.")
 
 
 def _load_validated_evidence(session: Session, *, evidence_id: UUID) -> _EvidenceContext:

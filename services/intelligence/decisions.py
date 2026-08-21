@@ -25,6 +25,7 @@ from services.platform.db.models import (
 
 
 DECISION_VIEW_POLICY_VERSION = "decision-view-policy-v1"
+SUPPORTED_DECISION_VIEW_POLICY_VERSIONS = frozenset({DECISION_VIEW_POLICY_VERSION})
 _VIEW_TYPES = ("learning_status", "independence", "retention", "strategy_effectiveness")
 _CURRENT_NEEDS_ATTENTION_STATES = {"active_difficulty", "active_misconception", "open_learning_loop"}
 
@@ -38,6 +39,10 @@ class DecisionViewPolicy:
     high_confidence_task_count: int = 3
     medium_confidence_evidence_count: int = 2
     high_confidence_recency_window: timedelta = timedelta(days=30)
+
+
+class DecisionViewPolicyError(ValueError):
+    """A requested Decision View policy has no executable implementation."""
 
 
 @dataclass(frozen=True)
@@ -71,6 +76,7 @@ def derive_decision_views(
     """
 
     effective_policy = policy or DecisionViewPolicy()
+    require_supported_decision_view_policy(effective_policy.version)
     effective_now = now or datetime.now(UTC)
     evidence = _evidence_items(session, student_id=student_id, subject=subject, concept_ref=concept_ref)
     states = _active_states(
@@ -110,6 +116,13 @@ def derive_decision_views(
         result.append(view)
     session.flush()
     return result
+
+
+def require_supported_decision_view_policy(policy_version: str) -> None:
+    """Reject version labels that do not select a compiled Decision View algorithm."""
+
+    if policy_version not in SUPPORTED_DECISION_VIEW_POLICY_VERSIONS:
+        raise DecisionViewPolicyError(f"Decision View policy {policy_version!r} is not executable.")
 
 
 def apply_processing_run_decision_views(

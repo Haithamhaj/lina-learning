@@ -15,6 +15,7 @@ from services.intelligence.current_state import CURRENT_STATE_POLICY_VERSION
 from services.intelligence.core import consolidate_student_history
 from services.intelligence.decisions import (
     DECISION_VIEW_POLICY_VERSION,
+    DecisionViewPolicyError,
     DecisionViewPolicy,
     derive_decision_views,
 )
@@ -459,7 +460,7 @@ def test_strategy_requires_observable_outcome_and_conflict_lowers_confidence(fac
     assert conflicting.confidence != positive_confidence
 
 
-def test_subject_provenance_idempotency_and_policy_history(factory: sessionmaker[Session]) -> None:
+def test_subject_provenance_idempotency_and_uncompiled_policy_rejection(factory: sessionmaker[Session]) -> None:
     with factory.begin() as session:
         student, run = _seed(session)
         evidence = _evidence(session, student=student, run=run, dimensions=_dimensions(understanding="partial", independence="light_support"))
@@ -469,7 +470,8 @@ def test_subject_provenance_idempotency_and_policy_history(factory: sessionmaker
         first = _views(session, student, run)
         second = _views(session, student, run)
         science = _views(session, student, run, subject="SCIENCE")
-        revised = _views(session, student, run, policy=DecisionViewPolicy(version="decision-view-policy-v2"))
+        with pytest.raises(DecisionViewPolicyError):
+            _views(session, student, run, policy=DecisionViewPolicy(version="decision-view-policy-v2"))
 
         assert first["learning_status"].id == second["learning_status"].id
         assert first["learning_status"].evidence_ids == [str(evidence.id)]
@@ -477,9 +479,8 @@ def test_subject_provenance_idempotency_and_policy_history(factory: sessionmaker
         assert first["learning_status"].pattern_ids == [str(pattern.id)]
         assert "validated" in first["learning_status"].explanation.casefold()
         assert science["learning_status"].conclusion == "INSUFFICIENT_EVIDENCE"
-        assert revised["learning_status"].id != first["learning_status"].id
         assert session.query(DecisionView).filter_by(policy_version=DECISION_VIEW_POLICY_VERSION).count() == 8
-        assert session.query(DecisionView).filter_by(policy_version="decision-view-policy-v2").count() == 4
+        assert session.query(DecisionView).filter_by(policy_version="decision-view-policy-v2").count() == 0
         assert session.query(LearningEvidence).count() == 1
         assert session.query(CurrentLearningState).count() == 1
         assert session.query(LearnerPattern).count() == 1

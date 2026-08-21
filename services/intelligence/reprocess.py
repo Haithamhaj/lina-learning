@@ -20,8 +20,8 @@ from services.intelligence.consolidation import (
     require_supported_consolidation_version,
 )
 from services.intelligence.current_state import CURRENT_STATE_POLICY_VERSION, require_supported_current_state_policy
-from services.intelligence.decisions import DECISION_VIEW_POLICY_VERSION
-from services.intelligence.patterns import PATTERN_POLICY_VERSION
+from services.intelligence.decisions import DECISION_VIEW_POLICY_VERSION, require_supported_decision_view_policy
+from services.intelligence.patterns import PATTERN_POLICY_VERSION, require_supported_pattern_policy
 from services.platform.db.models import (
     IntelligenceReprocessRun,
     IntelligenceReprocessSession,
@@ -40,22 +40,26 @@ INTELLIGENCE_REPROCESS_JOB = "INTELLIGENCE_REPROCESS"
 class EvidenceVersionSelection:
     """Explicit Evidence interpretation identity; defaults name the supported contract."""
 
+    provider: str
+    model: str
     schema_version: str = SESSION_EVIDENCE_SCHEMA_VERSION
     prompt_version: str = SESSION_EVIDENCE_PROMPT_VERSION
     rubric_version: str = EVIDENCE_RUBRIC_VERSION
     consolidation_policy_version: str = SESSION_CONSOLIDATION_POLICY_VERSION
-    provider: str | None = None
-    model: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.provider or not self.model:
+            raise ValueError("Evidence provider and model must be explicit for a reprocess request.")
 
 
 @dataclass(frozen=True)
 class IntelligenceReprocessRequest:
     student_id: UUID
+    evidence: EvidenceVersionSelection
     subject: str | None = None
     session_ids: tuple[UUID, ...] = ()
     start_at: datetime | None = None
     end_at: datetime | None = None
-    evidence: EvidenceVersionSelection = EvidenceVersionSelection()
     current_state_policy_version: str = CURRENT_STATE_POLICY_VERSION
     pattern_policy_version: str = PATTERN_POLICY_VERSION
     decision_policy_version: str = DECISION_VIEW_POLICY_VERSION
@@ -342,6 +346,8 @@ def _version_set(request: IntelligenceReprocessRequest) -> dict[str, object]:
 
 def _validate_request_versions(request: IntelligenceReprocessRequest) -> None:
     require_supported_current_state_policy(request.current_state_policy_version)
+    require_supported_pattern_policy(request.pattern_policy_version)
+    require_supported_decision_view_policy(request.decision_policy_version)
     require_supported_consolidation_version(
         ConsolidationVersion(
             schema_version=request.evidence.schema_version,

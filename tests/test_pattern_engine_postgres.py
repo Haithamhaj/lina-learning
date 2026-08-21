@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session, sessionmaker
 import services.intelligence.patterns as patterns_module
 from services.intelligence.patterns import (
     PATTERN_POLICY_VERSION,
+    PatternPolicyError,
     apply_evidence_to_patterns,
     apply_processing_run_patterns,
 )
@@ -733,7 +734,7 @@ def test_one_concept_recurrence_does_not_reactivate_resolved_subject_scope(facto
         ).count() == 0
 
 
-def test_same_identity_and_retry_are_idempotent_and_policy_versions_preserve_history(factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch) -> None:
+def test_same_identity_and_retry_reject_an_uncompiled_policy_label(factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch) -> None:
     with factory.begin() as session:
         student = _student(session)
         evidence = _evidence(session, student=student, dimensions=_support())
@@ -744,10 +745,10 @@ def test_same_identity_and_retry_are_idempotent_and_policy_versions_preserve_his
         assert session.query(LearnerPattern).count() == 1
         assert session.query(PatternEvidence).count() == 1
         monkeypatch.setattr(patterns_module, "PATTERN_POLICY_VERSION", "pattern-policy-v2")
-        rebuilt = apply_processing_run_patterns(session, processing_run_id=session.query(LearningEvent).one().processing_run_id)
+        with pytest.raises(PatternPolicyError):
+            apply_processing_run_patterns(session, processing_run_id=session.query(LearningEvent).one().processing_run_id)
 
-        assert len(rebuilt) == 1
-        assert session.query(LearnerPattern).count() == 2
-        assert {pattern.policy_version for pattern in session.query(LearnerPattern)} == {PATTERN_POLICY_VERSION, "pattern-policy-v2"}
+        assert session.query(LearnerPattern).count() == 1
+        assert {pattern.policy_version for pattern in session.query(LearnerPattern)} == {PATTERN_POLICY_VERSION}
         assert session.query(LearnerIntelligenceCard).count() == 0
         assert session.query(DecisionView).count() == 0

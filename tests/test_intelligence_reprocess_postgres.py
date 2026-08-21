@@ -19,6 +19,8 @@ from services.intelligence.reprocess import (
 )
 from services.intelligence.current_state import CurrentStatePolicyError
 from services.intelligence.consolidation import EvidenceContractError
+from services.intelligence.decisions import DecisionViewPolicyError
+from services.intelligence.patterns import PatternPolicyError
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
@@ -88,6 +90,10 @@ def _closed_session(session: Session, *, closed_at: datetime, student: Student |
     return learning_session
 
 
+def _evidence_identity(*, model: str = "fixture-evidence") -> EvidenceVersionSelection:
+    return EvidenceVersionSelection(provider="fixture", model=model)
+
+
 def test_bounded_preview_and_same_version_request_are_idempotent(factory: sessionmaker[Session]) -> None:
     with factory.begin() as session:
         target = _closed_session(session, closed_at=datetime(2026, 1, 10, tzinfo=UTC))
@@ -96,18 +102,30 @@ def test_bounded_preview_and_same_version_request_are_idempotent(factory: sessio
             student_id=target.student_id,
             subject="MATH",
             session_ids=(target.id,),
-            evidence=EvidenceVersionSelection(),
+            evidence=_evidence_identity(),
         )
 
         preview = preview_intelligence_reprocess(session, request=request)
         first = enqueue_intelligence_reprocess(session, request=request)
         second = enqueue_intelligence_reprocess(session, request=request)
+        different_model = enqueue_intelligence_reprocess(
+            session,
+            request=IntelligenceReprocessRequest(
+                student_id=target.student_id,
+                subject="MATH",
+                session_ids=(target.id,),
+                evidence=_evidence_identity(model="fixture-evidence-v2"),
+            ),
+        )
 
         assert preview.selected_session_ids == (target.id,)
         assert preview.selected_session_count == 1
         assert preview.sessions_needing_processing == 1
         assert first.job.id == second.job.id
         assert first.reprocess_run.id == second.reprocess_run.id
+        assert first.reprocess_run.id != different_model.reprocess_run.id
+        assert first.reprocess_run.version_set["evidence"]["provider"] == "fixture"
+        assert first.reprocess_run.version_set["evidence"]["model"] == "fixture-evidence"
         assert session.get(LearningSession, other.id) is not None
 
 
@@ -118,6 +136,7 @@ def test_date_range_scope_excludes_other_sessions_and_preview_writes_nothing(fac
         _closed_session(session, closed_at=datetime(2025, 3, 10, tzinfo=UTC), student=session.get(Student, first.student_id))
         request = IntelligenceReprocessRequest(
             student_id=first.student_id,
+            evidence=_evidence_identity(),
             subject="MATH",
             start_at=datetime(2025, 2, 1, tzinfo=UTC),
             end_at=datetime(2025, 2, 28, tzinfo=UTC),
@@ -132,11 +151,11 @@ def test_date_range_scope_excludes_other_sessions_and_preview_writes_nothing(fac
 def test_changed_evidence_version_creates_separate_reprocess_request(factory: sessionmaker[Session]) -> None:
     with factory.begin() as session:
         target = _closed_session(session, closed_at=datetime(2025, 1, 10, tzinfo=UTC))
-        base = IntelligenceReprocessRequest(student_id=target.student_id, session_ids=(target.id,))
+        base = IntelligenceReprocessRequest(student_id=target.student_id, session_ids=(target.id,), evidence=_evidence_identity())
         changed = IntelligenceReprocessRequest(
             student_id=target.student_id,
             session_ids=(target.id,),
-            evidence=EvidenceVersionSelection(prompt_version="unsupported-prompt-v9"),
+            evidence=EvidenceVersionSelection(provider="fixture", model="fixture-evidence", prompt_version="unsupported-prompt-v9"),
         )
         first = enqueue_intelligence_reprocess(session, request=base)
         with pytest.raises(EvidenceContractError, match="Evidence interpretation"):
@@ -153,7 +172,7 @@ def test_reprocess_job_preserves_raw_history_and_activates_only_successful_sessi
             student_id=target.student_id,
             subject="MATH",
             session_ids=(target.id,),
-            evidence=EvidenceVersionSelection(),
+            evidence=_evidence_identity(),
         )
         queued = enqueue_intelligence_reprocess(session, request=request)
 
@@ -206,12 +225,30 @@ def test_reprocess_job_preserves_raw_history_and_activates_only_successful_sessi
         assert state.detected_at == target.closed_at
         assert unchanged is not None and unchanged.signal == "solved_independently"
         assert session.query(LearnerIntelligenceCard).count() == 0
+        original_authoritative_run_id = authority.evidence_processing_run_id
+
+    with factory.begin() as session:
+        mismatched = enqueue_intelligence_reprocess(
+            session,
+            request=IntelligenceReprocessRequest(
+                student_id=target.student_id,
+                subject="MATH",
+                session_ids=(target.id,),
+                evidence=_evidence_identity(model="fixture-evidence-v2"),
+            ),
+        )
+    assert run_once(factory, registry, worker_id="reprocess-worker") == "PENDING"
+    with factory() as session:
+        authority = session.query(IntelligenceSessionAuthority).one()
+        failed_run = session.get(IntelligenceReprocessRun, mismatched.reprocess_run.id)
+        assert authority.evidence_processing_run_id == original_authoritative_run_id
+        assert failed_run is not None and failed_run.status == "PARTIAL_FAILED"
 
 
 def test_preview_reuses_exact_completed_evidence_version_without_writing(factory: sessionmaker[Session]) -> None:
     with factory.begin() as session:
         target = _closed_session(session, closed_at=datetime(2025, 1, 10, tzinfo=UTC))
-        request = IntelligenceReprocessRequest(student_id=target.student_id, session_ids=(target.id,))
+        request = IntelligenceReprocessRequest(student_id=target.student_id, session_ids=(target.id,), evidence=_evidence_identity())
         queued = enqueue_intelligence_reprocess(session, request=request)
         session.add(
             IntelligenceProcessingRun(
@@ -235,7 +272,7 @@ def test_preview_reuses_exact_completed_evidence_version_without_writing(factory
             request=IntelligenceReprocessRequest(
                 student_id=target.student_id,
                 session_ids=(target.id,),
-                evidence=EvidenceVersionSelection(provider="fixture", model="fixture-evidence-v2"),
+                evidence=_evidence_identity(model="fixture-evidence-v2"),
             ),
         )
 
@@ -251,9 +288,33 @@ def test_unsupported_current_state_policy_is_rejected_before_reprocess(factory: 
         request = IntelligenceReprocessRequest(
             student_id=target.student_id,
             session_ids=(target.id,),
+            evidence=_evidence_identity(),
             current_state_policy_version="current-state-policy-v9",
         )
 
         with pytest.raises(CurrentStatePolicyError):
+            enqueue_intelligence_reprocess(session, request=request)
+        assert session.query(IntelligenceReprocessRun).count() == 0
+
+
+@pytest.mark.parametrize(
+    ("field", "error"),
+    [("pattern_policy_version", PatternPolicyError), ("decision_policy_version", DecisionViewPolicyError)],
+)
+def test_unsupported_downstream_policy_is_rejected_before_reprocess(
+    factory: sessionmaker[Session],
+    field: str,
+    error: type[Exception],
+) -> None:
+    with factory.begin() as session:
+        target = _closed_session(session, closed_at=datetime(2025, 1, 10, tzinfo=UTC))
+        request = IntelligenceReprocessRequest(
+            student_id=target.student_id,
+            session_ids=(target.id,),
+            evidence=_evidence_identity(),
+            **{field: "unsupported-policy-v99"},
+        )
+
+        with pytest.raises(error):
             enqueue_intelligence_reprocess(session, request=request)
         assert session.query(IntelligenceReprocessRun).count() == 0
