@@ -69,13 +69,15 @@ def reciprocal_rank_fusion(
         for rank, identifier in enumerate(candidates, start=1):
             scores[identifier] = scores.get(identifier, 0.0) + 1.0 / (offset + rank)
             first_seen.setdefault(identifier, source_order * len(candidates) + rank)
-    for identifier in preferred_ids or set():
-        if identifier in scores:
-            scores[identifier] += 1.0 / (offset * 10)
+    preferred = preferred_ids or set()
     return sorted(
         scores,
         key=lambda identifier: (
             -scores[identifier],
+            # Current Focus is an advisory preference. It resolves an equally
+            # relevant rank, but never lets stale focus outrank the current
+            # question's lexical/vector evidence.
+            0 if identifier in preferred else 1,
             first_seen[identifier],
             str(identifier),
         ),

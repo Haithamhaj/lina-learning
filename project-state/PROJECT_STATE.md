@@ -2,8 +2,9 @@
 
 ## Current goal
 
-Independently review the remediated TASK-016 authenticated Student Math session
-path. Do not start TASK-017 or real-Lina calibration/product expansion.
+Independently review the remediated TASK-017 Tutor context builder and relevant
+intelligence selector. Do not start TASK-017A, real-Lina calibration, or
+product expansion.
 
 ## Current reality
 
@@ -51,8 +52,16 @@ path. Do not start TASK-017 or real-Lina calibration/product expansion.
   from `/demo`: it derives ownership from the verified Clerk Student subject,
   creates/resumes an open Math session, persists ordered raw Student messages,
   restores that history after refresh, and rejects cross-Student access. It is
-  `REVIEW`; Tutor orchestration, safety consumption, Candidate Events, and
+  `DONE`; Tutor orchestration, safety consumption, Candidate Events, and
   automatic close are deliberately not part of this path yet.
+- TASK-017 now has a deterministic, inspectable context boundary. It keeps the
+  current question authoritative, limits the recent session window, uses
+  optional persisted topic metadata only as retrieval focus, invokes TASK-014
+  as the sole retrieval service, and admits only relevant active state/recent
+  patterns/stable patterns. Resolved, inactive, irrelevant-subject, and
+  irrelevant Math intelligence do not enter context. It is `REVIEW` and does
+  not implement Tutor behavior, safety consumption, Candidate Events, or
+  streaming.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -83,9 +92,9 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-016 needs independent review before TASK-017 may begin. TASK-015 and
-  TASK-017 onward remain blocked; the Production Engine Acceptance Gate has not
-  passed.
+- TASK-017 needs independent review before TASK-017A may begin. TASK-015 and
+  TASK-017A onward remain blocked; the Production Engine Acceptance Gate has
+  not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
   database/workflow remains a deferred local-development improvement.
@@ -99,9 +108,9 @@ Real Lina decision gates.
 
 ## Next recommended action
 
-Conduct an independent review of **TASK-016 — Session/thread and Student Math
-entry flow**. Do not start TASK-017 or later work unless that review approves
-TASK-016.
+Conduct an independent review of **TASK-017 — Tutor context builder and
+retrieval integration**. Do not start TASK-017A or later work unless that
+review approves TASK-017.
 
 ## Critical references
 

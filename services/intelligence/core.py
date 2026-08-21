@@ -13,6 +13,7 @@ from services.platform.db.models import (
     LearnerIntelligenceCard, LearnerPattern, LearningEvent, LearningEvidence,
     LearningSession, PatternEvidence,
 )
+from services.intelligence.selection import select_relevant_intelligence_text
 
 RUBRIC_VERSION = "evidence-rubric-v1"
 PATTERN_POLICY_VERSION = "pattern-policy-v1"
@@ -82,29 +83,15 @@ def close_and_consolidate(session: Session, *, learning_session: LearningSession
 
 
 def select_relevant_intelligence(session: Session, *, student_id: UUID, subject: str, question: str, budget: int = 900) -> list[str]:
-    """Return a compact advisory slice; never a full historical profile."""
+    """Compatibility text view over the question-relevant selector."""
 
-    card = session.execute(
-        select(LearnerIntelligenceCard)
-        .join(IntelligenceProcessingRun, LearnerIntelligenceCard.processing_run_id == IntelligenceProcessingRun.id)
-        .where(LearnerIntelligenceCard.student_id == student_id)
-        .order_by(IntelligenceProcessingRun.created_at.desc())
-        .limit(1)
-    ).scalar_one_or_none()
-    if card is None:
-        return []
-    entries = card.payload.get("entries", [])
-    if not isinstance(entries, list):
-        return []
-    selected: list[str] = []
-    used = 0
-    for entry in entries:
-        if not isinstance(entry, str) or subject.lower() not in entry.lower():
-            continue
-        if used + len(entry) > budget:
-            break
-        selected.append(entry); used += len(entry)
-    return selected
+    return select_relevant_intelligence_text(
+        session=session,
+        student_id=student_id,
+        subject=subject,
+        question=question,
+        character_budget=budget,
+    )
 
 
 def _evidence_for(signal: str) -> tuple[dict[str, object], str]:

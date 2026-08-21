@@ -228,7 +228,7 @@ A real Grade 5 Math book must reach `READY`, and a retrieval golden set must dem
 # Phase 2 — Math Tutor Vertical Slice
 
 ## TASK-016 — Session/thread and Student Math entry flow
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** Phase 1 Exit Gate  
 **Recovery state:** Rebuilt for review as the authenticated production path at
 `/student`, separate from the development-only sandbox. A verified Clerk
@@ -251,15 +251,26 @@ the Student screen calls `/api/v1/student`, never `/api/v1/demo`. TypeScript
 check and production build passed.
 
 ## TASK-017 — Tutor context builder and retrieval integration
-**Status:** BLOCKED
+**Status:** REVIEW
 **Dependencies:** TASK-016, TASK-014  
-**Recovery state:** Reopened by the independent audit. Current context selection
-does not establish question/focus relevance. Blocked pending TASK-014 and
-TASK-016.
+**Recovery state:** Rebuilt for review as a deterministic, model-free context
+boundary. It keeps the current Student question authoritative; includes only a
+small ordered session window; derives optional lightweight topic metadata from
+persisted message metadata; calls TASK-014 as its sole curriculum boundary; and
+selects only question/focus-relevant active state, recent patterns, and stable
+patterns. Resolved/inactive and irrelevant-subject intelligence is excluded.
+Historical intelligence remains advisory and is never a teaching decision.
 **Purpose:** Build a compact Tutor context from current turn, Grade/subject/focus, retrieved book context, and later-compatible intelligence slots.  
 **Expected output:** deterministic context-builder contract with token/context limits.  
 **Likely areas:** `/services/tutor/context`, `/services/retrieval`.  
 **Verification:** Full history is not injected; irrelevant subject history excluded; source context visible in debug trace.  
+**Completion note:** Context budgets independently bound current-question,
+session, retrieval, and intelligence slices. Debug output records the selected
+session message IDs, retrieval source references, selected intelligence IDs,
+and source kinds. PostgreSQL tests cover question priority, history bounds,
+TASK-014 integration, subject/relevance/status filtering, state-over-history
+priority, topic continuity, and budgets. This is not Tutor behavior, safety
+consumption, Candidate Event, or streaming work.
 
 ## TASK-017A — Safety & Learning Boundary Policy Engine
 **Status:** BLOCKED
