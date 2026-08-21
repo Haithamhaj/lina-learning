@@ -33,7 +33,7 @@ export default function SandboxDemoPage() {
     const studentText = text.trim(); setTurns((value) => [...value, { role: "student", text: studentText }]); setText("");
     const response = await fetch(endpoint(`/sessions/${sessionId}/turn`), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: studentText }) });
     const payload = await response.json() as { text: string; sources: Turn["sources"]; intelligence_used: string[] };
-    setTurns((value) => [...value, { role: "tutor", text: payload.text, sources: payload.sources, intelligence: payload.intelligence_used }]); setStatus("Tutor response saved; Candidate Event is available in the inspector."); await inspect();
+    setTurns((value) => [...value, { role: "tutor", text: payload.text, sources: payload.sources, intelligence: payload.intelligence_used }]); setStatus("Tutor response saved."); await inspect();
   };
   const close = async () => { if (!sessionId) return; await fetch(endpoint(`/sessions/${sessionId}/close`), { method: "POST" }); setStatus("Session closed and consolidated into Evidence and Intelligence."); await inspect(); };
   const reprocess = async () => { await fetch(endpoint("/reprocess"), { method: "POST" }); setStatus("A new derived intelligence version was rebuilt from preserved raw history."); await inspect(); };

@@ -12,8 +12,9 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from services.platform.auth import AuthenticatedPrincipal, UserRole, get_current_principal
 from services.platform.db.connection import normalize_database_url
-from services.platform.db.models import LearningMessage, LearningSession, Student, User
+from services.platform.db.models import AIExecution, LearningMessage, LearningSession, Student, User
 from services.platform.db.session import get_session
+from services.platform.config import Settings
 
 
 pytestmark = pytest.mark.skipif(
@@ -191,3 +192,68 @@ def test_student_session_path_has_no_automatic_close_side_effect(
         assert persisted is not None
         assert persisted.status == "OPEN"
         assert persisted.closed_at is None
+
+
+def test_authenticated_student_tutor_turn_uses_the_real_sse_path_and_persists_response(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with postgres_session_factory.begin() as session:
+        _student(session, "student-one")
+        executions_before = session.query(AIExecution).filter_by(task="tutor").count()
+
+    client = _client(postgres_session_factory, subject="student-one")
+    from services.tutor import runtime as tutor_runtime
+
+    monkeypatch.setattr(
+        tutor_runtime,
+        "get_settings",
+        lambda: Settings(_env_file=None, model_provider="mock"),
+    )
+    try:
+        created = client.post("/api/v1/student/math/session")
+        session_id = created.json()["id"]
+        response = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": "Explain equivalent fractions."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert "event: delta" in response.text
+    assert "event: turn" in response.text
+    with postgres_session_factory() as session:
+        messages = session.query(LearningMessage).filter_by(session_id=UUID(session_id)).order_by(LearningMessage.created_at, LearningMessage.id).all()
+        assert [message.role for message in messages] == ["student", "tutor"]
+        assert messages[-1].payload["source_refs"] == []
+        assert session.query(AIExecution).filter_by(task="tutor").count() == executions_before + 1
+
+
+def test_parent_redirect_stream_never_calls_the_tutor_model(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with postgres_session_factory.begin() as session:
+        _student(session, "student-one")
+        executions_before = session.query(AIExecution).filter_by(task="tutor").count()
+
+    client = _client(postgres_session_factory, subject="student-one")
+    from services.tutor import runtime as tutor_runtime
+
+    monkeypatch.setattr(tutor_runtime, "get_settings", lambda: Settings(_env_file=None, model_provider="mock"))
+    try:
+        session_id = client.post("/api/v1/student/math/session").json()["id"]
+        response = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": "Can you explain prayer?"},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert "event: delta" not in response.text
+    assert "event: turn" in response.text
+    with postgres_session_factory() as session:
+        assert session.query(AIExecution).filter_by(task="tutor").count() == executions_before

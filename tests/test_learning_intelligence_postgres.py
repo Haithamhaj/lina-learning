@@ -57,7 +57,7 @@ def postgres_session_factory() -> sessionmaker[Session]:
     engine.dispose()
 
 
-def test_candidate_to_evidence_to_card_and_later_context(
+def test_tutor_runtime_uses_retrieval_without_creating_candidate_events(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
     with postgres_session_factory.begin() as session:
@@ -147,31 +147,10 @@ def test_candidate_to_evidence_to_card_and_later_context(
         )
         first = start_session(session, student_id=student.id)
         turn = tutor_turn(
-            session, learning_session=first, question="I think 3.452 × 10 = 34.52"
+            session, learning_session=first, question="Can we multiply 8.2 by 10?"
         )
-        assert turn.candidate_event_id is not None
-        close_and_consolidate(session, learning_session=first)
-        assert session.query(LearningEvidence).count() == 1
-        assert session.query(CurrentLearningState).count() == 0
-        later = start_session(session, student_id=student.id)
-        later_turn = tutor_turn(
-            session, learning_session=later, question="Can we multiply 8.2 by 10?"
-        )
-        assert later_turn.sources[0]["source_ref"] == "fixture#page=2"
-        # One support-seeking attempt makes a current state and a non-stable pattern.
-        tutor_turn(
-            session, learning_session=later, question="I tried 8.2 × 10 but I need help"
-        )
-        close_and_consolidate(session, learning_session=later)
-        assert session.query(CurrentLearningState).count() >= 1
-        assert session.query(CandidateEvent).count() >= 3
-        third = start_session(session, student_id=student.id)
-        personalized = tutor_turn(
-            session, learning_session=third, question="Can we multiply 6.4 by 10?"
-        )
-        assert personalized.intelligence
-        rebuilt = consolidate_student_history(session, student_id=student.id)
-        assert rebuilt.rubric_version == "evidence-rubric-v1"
+        assert turn.sources[0]["source_ref"] == "fixture#page=2"
+        assert session.query(CandidateEvent).count() == 0
 
 
 def _embedding_gateway(session: Session) -> ModelGateway:

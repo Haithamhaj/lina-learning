@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from typing import Any
 from urllib.request import Request, urlopen
 
-from services.model_gateway.gateway import ModelResult, ModelRoute
+from services.model_gateway.gateway import (
+    ModelResult,
+    ModelRoute,
+    ModelStreamEvent,
+    StreamComplete,
+    StreamDelta,
+)
 
 
 @dataclass(frozen=True)
@@ -48,14 +54,7 @@ class OpenAIResponsesProvider:
         self._request_sender = request_sender
 
     def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
-        body: dict[str, object] = {
-            "model": route.model,
-            "instructions": str(payload["instructions"]),
-            "input": str(payload["input"]),
-            "store": False,
-        }
-        if "max_output_tokens" in payload:
-            body["max_output_tokens"] = int(payload["max_output_tokens"])
+        body = _request_body(route, payload)
         request = Request(
             self._responses_url,
             data=json.dumps(body).encode(),
@@ -68,45 +67,102 @@ class OpenAIResponsesProvider:
         with self._request_sender(request, timeout=self._timeout_seconds) as response:
             result = json.loads(response.read())
 
-        text = _response_text(result)
-        usage = result.get("usage") if isinstance(result, dict) else None
-        total_input_tokens = int(usage["input_tokens"]) if isinstance(usage, dict) and usage.get("input_tokens") is not None else None
-        output_tokens = int(usage["output_tokens"]) if isinstance(usage, dict) and usage.get("output_tokens") is not None else None
-        input_details = usage.get("input_tokens_details") if isinstance(usage, dict) else None
-        cached_input_tokens = (
-            int(input_details["cached_tokens"])
-            if isinstance(input_details, dict) and input_details.get("cached_tokens") is not None
-            else 0
+        return _model_result(route, result, _response_text(result))
+
+    def stream(self, route: ModelRoute, payload: dict[str, object]) -> Iterator[ModelStreamEvent]:
+        """Forward actual Responses API deltas from one provider request."""
+
+        body = _request_body(route, payload)
+        body["stream"] = True
+        request = Request(
+            self._responses_url,
+            data=json.dumps(body).encode(),
+            headers={
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json",
+                "Accept": "text/event-stream",
+            },
+            method="POST",
         )
-        cache_write_tokens = (
-            int(input_details["cache_write_tokens"])
-            if isinstance(input_details, dict) and input_details.get("cache_write_tokens") is not None
-            else 0
+        parts: list[str] = []
+        with self._request_sender(request, timeout=self._timeout_seconds) as response:
+            for raw_line in response:
+                line = raw_line.decode().strip() if isinstance(raw_line, bytes) else str(raw_line).strip()
+                if not line.startswith("data: "):
+                    continue
+                event = json.loads(line.removeprefix("data: "))
+                if not isinstance(event, dict):
+                    continue
+                event_type = event.get("type")
+                if event_type == "response.output_text.delta":
+                    delta = event.get("delta")
+                    if isinstance(delta, str) and delta:
+                        parts.append(delta)
+                        yield StreamDelta(delta)
+                    continue
+                if event_type == "response.completed":
+                    response_data = event.get("response")
+                    if not isinstance(response_data, dict):
+                        raise ValueError("OpenAI Responses API completed without a response.")
+                    text = "".join(parts).strip() or _response_text(response_data)
+                    yield StreamComplete(_model_result(route, response_data, text))
+                    return
+                if event_type == "response.failed":
+                    raise ValueError("OpenAI Responses API streaming request failed.")
+        raise ValueError("OpenAI Responses API stream ended without a completion event.")
+
+
+def _request_body(route: ModelRoute, payload: dict[str, object]) -> dict[str, object]:
+    body: dict[str, object] = {
+        "model": route.model,
+        "instructions": str(payload["instructions"]),
+        "input": str(payload["input"]),
+        "store": False,
+    }
+    if "max_output_tokens" in payload:
+        body["max_output_tokens"] = int(payload["max_output_tokens"])
+    return body
+
+
+def _model_result(route: ModelRoute, result: object, text: str) -> ModelResult:
+    usage = result.get("usage") if isinstance(result, dict) else None
+    total_input_tokens = int(usage["input_tokens"]) if isinstance(usage, dict) and usage.get("input_tokens") is not None else None
+    output_tokens = int(usage["output_tokens"]) if isinstance(usage, dict) and usage.get("output_tokens") is not None else None
+    input_details = usage.get("input_tokens_details") if isinstance(usage, dict) else None
+    cached_input_tokens = (
+        int(input_details["cached_tokens"])
+        if isinstance(input_details, dict) and input_details.get("cached_tokens") is not None
+        else 0
+    )
+    cache_write_tokens = (
+        int(input_details["cache_write_tokens"])
+        if isinstance(input_details, dict) and input_details.get("cache_write_tokens") is not None
+        else 0
+    )
+    if total_input_tokens is not None:
+        cached_input_tokens = min(max(cached_input_tokens, 0), total_input_tokens)
+        cache_write_tokens = min(
+            max(cache_write_tokens, 0), total_input_tokens - cached_input_tokens
         )
-        if total_input_tokens is not None:
-            cached_input_tokens = min(max(cached_input_tokens, 0), total_input_tokens)
-            cache_write_tokens = min(
-                max(cache_write_tokens, 0), total_input_tokens - cached_input_tokens
-            )
-        normal_input_tokens = (
-            total_input_tokens - cached_input_tokens - cache_write_tokens
-            if total_input_tokens is not None
-            else None
-        )
-        return ModelResult(
-            output={"text": text},
-            input_tokens=normal_input_tokens,
+    normal_input_tokens = (
+        total_input_tokens - cached_input_tokens - cache_write_tokens
+        if total_input_tokens is not None
+        else None
+    )
+    return ModelResult(
+        output={"text": text},
+        input_tokens=normal_input_tokens,
+        cached_input_tokens=cached_input_tokens,
+        cache_write_tokens=cache_write_tokens,
+        output_tokens=output_tokens,
+        estimated_cost_usd=_estimate_cost(
+            route.model,
+            total_input_tokens,
+            output_tokens,
             cached_input_tokens=cached_input_tokens,
             cache_write_tokens=cache_write_tokens,
-            output_tokens=output_tokens,
-            estimated_cost_usd=_estimate_cost(
-                route.model,
-                total_input_tokens,
-                output_tokens,
-                cached_input_tokens=cached_input_tokens,
-                cache_write_tokens=cache_write_tokens,
-            ),
-        )
+        ),
+    )
 
 
 def _response_text(result: object) -> str:

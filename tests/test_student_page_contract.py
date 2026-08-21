@@ -10,4 +10,5 @@ def test_student_page_calls_the_authenticated_backend_path_not_demo_state() -> N
 
     assert "StudentMathSession" in page
     assert "/v1/student/math/session" in math_session
+    assert "/turn/stream" in math_session
     assert "/v1/demo" not in page + math_session

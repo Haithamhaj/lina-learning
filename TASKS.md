@@ -289,11 +289,15 @@ self-harm meaning. The classifier remains deterministic; no model call was
 used. TASK-018 remains blocked pending its own authorization and gate work.
 
 ## TASK-018 — Text Tutor runtime with streaming
-**Status:** BLOCKED
+**Status:** REVIEW
 **Dependencies:** TASK-017A, TASK-007  
-**Recovery state:** Reopened by the independent audit. One Model Gateway call is
-present, but the approved Tutor behavior and actual streaming contract are not
-verified. Blocked pending TASK-017A.
+**Recovery state:** The production boundary now persists the Student message,
+consumes `SafetyDecision` through `TutorSafetyRuntime`, builds the approved
+bounded Tutor context, makes one streamed `ModelTask.TUTOR` call for allowed
+turns, persists the final response, and serves provider-produced SSE events to
+`/student`. Compact deterministic scenarios cover modes, bilingual context,
+grounding/provenance, safety branches, one-call behavior, and interrupted-stream
+persistence. It is awaiting independent review; TASK-019 remains blocked.
 **Purpose:** Deliver age-appropriate Grade 5 Math teaching through one primary Tutor call and SSE streaming, consuming the approved safety/boundary decision contract rather than implementing policy inside the Tutor prompt.  
 **Expected output:** fixed Tutor identity, adaptive teaching strategy, Learn/Homework/Explore baseline behavior, bilingual response, integration of the upstream `SafetyDecision`.  
 **Likely areas:** `/services/tutor`, `/apps/api`, `/apps/web`, `/prompts/tutor`.  

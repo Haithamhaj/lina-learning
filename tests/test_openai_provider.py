@@ -6,7 +6,7 @@ import importlib
 import json
 
 from services.model_gateway.factory import create_tutor_gateway
-from services.model_gateway.gateway import ModelResult, ModelRoute, StaticModelProvider
+from services.model_gateway.gateway import ModelResult, ModelRoute, StaticModelProvider, StreamComplete, StreamDelta
 from services.model_gateway.openai_provider import OpenAIResponsesProvider
 from services.platform.config import Settings
 from services.platform.db.models import ModelTask
@@ -130,6 +130,45 @@ def test_openai_responses_provider_accounts_for_each_luna_prompt_cache_category(
     assert result.cache_write_tokens == 200
     assert result.output_tokens == 100
     assert result.estimated_cost_usd == 0.000645
+
+
+def test_openai_responses_provider_forwards_real_sse_deltas_from_one_request() -> None:
+    captured: dict[str, object] = {}
+
+    class FakeResponse:
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def __iter__(self):
+            return iter(
+                [
+                    b'data: {"type":"response.output_text.delta","delta":"Try "}\n\n',
+                    b'data: {"type":"response.output_text.delta","delta":"this."}\n\n',
+                    b'data: {"type":"response.completed","response":{"usage":{"input_tokens":5,"output_tokens":2}}}\n\n',
+                ]
+            )
+
+    def send(request: object, *, timeout: float) -> FakeResponse:
+        captured["request"] = request
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    events = list(
+        OpenAIResponsesProvider(api_key="test-key", request_sender=send).stream(
+            ModelRoute(provider="openai", model="gpt-5.6-luna"),
+            {"instructions": "Teach calmly.", "input": "Help with fractions."},
+        )
+    )
+
+    request = captured["request"]
+    assert json.loads(request.data.decode())["stream"] is True
+    assert request.get_header("Accept") == "text/event-stream"
+    assert [event.text for event in events if isinstance(event, StreamDelta)] == ["Try ", "this."]
+    assert isinstance(events[-1], StreamComplete)
+    assert events[-1].result.output == {"text": "Try this."}
 
 
 def test_tutor_gateway_uses_openai_route_from_settings() -> None:

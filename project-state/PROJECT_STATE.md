@@ -2,8 +2,8 @@
 
 ## Current goal
 
-Await the authorized next gate before TASK-018. Do not start TASK-018,
-real-Lina calibration, or product expansion.
+Independently review TASK-018 production Tutor runtime evidence. Do not start
+TASK-019, real-Lina calibration, or product expansion.
 
 ## Current reality
 
@@ -69,7 +69,15 @@ real-Lina calibration, or product expansion.
   scenarios covering normal learning, each Parent action, baseline precedence,
   safe educational wording, and implicit self-harm meaning. The classifier
   uses only explicit deterministic phrases/context; no model call was used.
-  This does not implement TASK-018 or pass any gate.
+  This does not pass any gate.
+- TASK-018 now orchestrates the approved production Tutor path: raw Student
+  message persistence → persisted/versioned safety decision → explicit safety
+  runtime action → bounded `TutorContextBuilder` context → one streamed
+  `ModelTask.TUTOR` call for allowed interactions → reliable Tutor response
+  persistence → Student SSE. Redirect/block paths make no Tutor model call.
+  Mode/strategy selection is deterministic and compact; Candidate Events are
+  intentionally absent pending TASK-019. TASK-018 is `REVIEW`, not a Gate B
+  pass.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -100,8 +108,8 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 and TASK-018 onward remain blocked; the Production Engine
-  Acceptance Gate has not passed.
+- TASK-015 and TASK-019 onward remain blocked; TASK-018 awaits independent
+  review. The Production Engine Acceptance Gate has not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
   database/workflow remains a deferred local-development improvement.
@@ -115,8 +123,8 @@ Real Lina decision gates.
 
 ## Next recommended action
 
-Await explicit authorization and the applicable gate before **TASK-018**. Do
-not start TASK-018 or later work.
+Review TASK-018 runtime, streaming, and safety evidence. Do not start TASK-019
+or later work without explicit authorization and the applicable gate.
 
 ## Critical references
 

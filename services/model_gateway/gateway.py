@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from time import perf_counter
+from collections.abc import Iterator
 from typing import Mapping, Protocol
 
 from sqlalchemy.orm import Session
@@ -33,11 +34,37 @@ class ModelResult:
     estimated_cost_usd: float | None = None
 
 
+@dataclass(frozen=True)
+class StreamDelta:
+    """One provider-produced text delta for a streaming model response."""
+
+    text: str
+
+
+@dataclass(frozen=True)
+class StreamComplete:
+    """The provider's final normalized result after its streamed response."""
+
+    result: ModelResult
+
+
+ModelStreamEvent = StreamDelta | StreamComplete
+
+
 class ModelProvider(Protocol):
     """A provider adapter receives only a route and task-owned payload."""
 
     def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
         """Perform one model request."""
+
+
+class StreamingModelProvider(Protocol):
+    """Optional streaming extension for a provider-neutral model adapter."""
+
+    def stream(
+        self, route: ModelRoute, payload: dict[str, object]
+    ) -> Iterator[ModelStreamEvent]:
+        """Perform one streamed model request."""
 
 
 class StaticModelProvider:
@@ -49,6 +76,15 @@ class StaticModelProvider:
     def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
         del route, payload
         return self._result
+
+    def stream(
+        self, route: ModelRoute, payload: dict[str, object]
+    ) -> Iterator[ModelStreamEvent]:
+        result = self.execute(route, payload)
+        text = result.output.get("text")
+        if isinstance(text, str) and text:
+            yield StreamDelta(text)
+        yield StreamComplete(result)
 
 
 class ModelGateway:
@@ -105,6 +141,46 @@ class ModelGateway:
             estimated_cost_usd=result.estimated_cost_usd,
         )
         return result
+
+    def stream(self, task: ModelTask, payload: dict[str, object]) -> Iterator[ModelStreamEvent]:
+        """Stream one task call and record it exactly once on completion or failure."""
+
+        route = self.route_for(task)
+        provider = self._providers.get(route.provider)
+        if provider is None:
+            raise ValueError(f"No provider is configured for {route.provider!r}.")
+        stream = getattr(provider, "stream", None)
+        if not callable(stream):
+            raise ValueError(f"Provider {route.provider!r} does not support streaming.")
+
+        started = perf_counter()
+        completed = False
+        try:
+            for event in stream(route, payload):
+                if isinstance(event, StreamDelta):
+                    yield event
+                    continue
+                if isinstance(event, StreamComplete):
+                    completed = True
+                    self._record(
+                        task,
+                        route,
+                        started,
+                        success=True,
+                        input_tokens=event.result.input_tokens,
+                        cached_input_tokens=event.result.cached_input_tokens,
+                        cache_write_tokens=event.result.cache_write_tokens,
+                        output_tokens=event.result.output_tokens,
+                        estimated_cost_usd=event.result.estimated_cost_usd,
+                    )
+                    yield event
+                    return
+                raise ValueError("Streaming provider returned an invalid event.")
+            raise ValueError("Streaming provider ended without a final result.")
+        except Exception as error:
+            if not completed:
+                self._record(task, route, started, success=False, failure_code=type(error).__name__)
+            raise
 
     def _record(
         self,

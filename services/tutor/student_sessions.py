@@ -124,6 +124,7 @@ def append_student_message(
         role="student",
         content=content,
         payload={"source": "student-session-v1"},
+        created_at=datetime.now(UTC),
     )
     session.add(message)
     learning_session.last_activity_at = datetime.now(UTC)

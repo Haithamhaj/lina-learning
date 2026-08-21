@@ -5,7 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
+import json
+from collections.abc import Iterator
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -19,6 +23,7 @@ from services.tutor.student_sessions import (
     owned_open_math_session,
     student_for_authenticated_subject,
 )
+from services.tutor.runtime import TutorTextDelta, TutorTurn, create_tutor_runtime
 
 
 router = APIRouter(prefix="/api/v1/student", tags=["student"])
@@ -112,4 +117,64 @@ def post_math_message(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Message content is required.")
     return StudentMessageResponse.from_model(
         append_student_message(session, learning_session=learning_session, content=content)
+    )
+
+
+@router.post("/math/session/{session_id}/turn/stream")
+def stream_math_tutor_turn(
+    session_id: UUID,
+    request: StudentMessageRequest,
+    principal: AuthenticatedPrincipal = Depends(require_role(UserRole.STUDENT)),
+    session: Session = Depends(get_session),
+) -> StreamingResponse:
+    """Forward provider-produced Tutor deltas over the authenticated Student SSE path."""
+
+    student = _student_for_principal(session, principal)
+    learning_session = owned_open_math_session(session, student_id=student.id, session_id=session_id)
+    if learning_session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Open Math session not found.")
+    content = request.content.strip()
+    if not content:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Message content is required.")
+    bind = session.get_bind()
+    student_id = student.id
+
+    def events() -> Iterator[str]:
+        stream_session = Session(bind)
+        try:
+            owned_session = owned_open_math_session(
+                stream_session, student_id=student_id, session_id=session_id
+            )
+            if owned_session is None:
+                return
+            runtime = create_tutor_runtime(stream_session)
+            turn_stream = runtime.stream_turn(learning_session=owned_session, question=content)
+            for event in turn_stream:
+                if isinstance(event, TutorTextDelta):
+                    yield f"event: delta\ndata: {json.dumps({'text': event.text})}\n\n"
+                elif isinstance(event, TutorTurn):
+                    payload = {
+                        "text": event.text,
+                        "sources": event.sources,
+                        "intelligence_used": event.intelligence,
+                        "mode": event.mode.value,
+                        "strategy": event.strategy.value,
+                        "safety": event.safety,
+                    }
+                    yield f"event: turn\ndata: {json.dumps(payload)}\n\n"
+            stream_session.commit()
+        except GeneratorExit:
+            turn_stream.close()
+            stream_session.commit()
+            raise
+        except Exception:
+            stream_session.rollback()
+            raise
+        finally:
+            stream_session.close()
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

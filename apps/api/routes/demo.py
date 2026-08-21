@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-import json
-from datetime import UTC, datetime
-from typing import Iterator
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -67,23 +63,12 @@ def _perform_turn(session: Session, session_id: UUID, request: TurnRequest) -> d
     if learning_session is None or learning_session.student_id != student.id or learning_session.status != "OPEN":
         raise HTTPException(status_code=404, detail="Open sandbox session not found.")
     turn = tutor_turn(session, learning_session=learning_session, question=request.text)
-    return {"text": turn.text, "sources": turn.sources, "candidate_event_id": str(turn.candidate_event_id) if turn.candidate_event_id else None, "intelligence_used": turn.intelligence}
+    return {"text": turn.text, "sources": turn.sources, "intelligence_used": turn.intelligence}
 
 
 @router.post("/sessions/{session_id}/turn")
 def create_turn(session_id: UUID, request: TurnRequest, session: Session = Depends(get_session)) -> dict[str, object]:
     return _perform_turn(session, session_id, request)
-
-
-@router.post("/sessions/{session_id}/stream")
-def stream_turn(session_id: UUID, request: TurnRequest, session: Session = Depends(get_session)) -> StreamingResponse:
-    """A small SSE transport; Tutor logic and persistence remain backend-owned."""
-
-    payload = _perform_turn(session, session_id, request)
-    def events() -> Iterator[str]:
-        yield f"event: tutor_turn\ndata: {json.dumps(payload)}\n\n"
-        yield "event: done\ndata: {}\n\n"
-    return StreamingResponse(events(), media_type="text/event-stream")
 
 
 @router.post("/sessions/{session_id}/close")

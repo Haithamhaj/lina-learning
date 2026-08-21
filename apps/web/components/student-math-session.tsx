@@ -20,6 +20,10 @@ type MathSession = {
   messages: Message[];
 };
 
+type TutorTurn = {
+  text: string;
+};
+
 async function errorFrom(response: Response): Promise<Error> {
   const payload = (await response.json().catch(() => ({}))) as { detail?: string };
   return new Error(payload.detail ?? "Your learning space could not be opened.");
@@ -69,7 +73,15 @@ export function StudentMathSession() {
     setError("");
     try {
       const token = await getToken();
-      const response = await fetch(`${publicConfig.apiBaseUrl}/v1/student/math/session/${learningSession.id}/messages`, {
+      const now = new Date().toISOString();
+      const studentId = `local-student-${Date.now()}`;
+      const tutorId = `local-tutor-${Date.now()}`;
+      setLearningSession((current) => current ? {
+        ...current,
+        messages: [...current.messages, { id: studentId, role: "student", content, created_at: now }, { id: tutorId, role: "tutor", content: "", created_at: now }],
+      } : current);
+      setDraft("");
+      const response = await fetch(`${publicConfig.apiBaseUrl}/v1/student/math/session/${learningSession.id}/turn/stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -78,9 +90,36 @@ export function StudentMathSession() {
         body: JSON.stringify({ content }),
       });
       if (!response.ok) throw await errorFrom(response);
-      const message = (await response.json()) as Message;
-      setLearningSession((current) => current ? { ...current, messages: [...current.messages, message] } : current);
-      setDraft("");
+      if (!response.body) throw new Error("The Tutor response stream was unavailable.");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const next = await reader.read();
+        if (next.done) break;
+        buffer += decoder.decode(next.value, { stream: true });
+        const events = buffer.split("\n\n");
+        buffer = events.pop() ?? "";
+        for (const rawEvent of events) {
+          const type = rawEvent.match(/^event: (.+)$/m)?.[1];
+          const rawData = rawEvent.match(/^data: (.+)$/m)?.[1];
+          if (!type || !rawData) continue;
+          const payload = JSON.parse(rawData) as { text?: string };
+          if (type === "delta" && payload.text) {
+            setLearningSession((current) => current ? {
+              ...current,
+              messages: current.messages.map((message) => message.id === tutorId ? { ...message, content: `${message.content}${payload.text}` } : message),
+            } : current);
+          }
+          if (type === "turn") {
+            const turn = payload as TutorTurn;
+            setLearningSession((current) => current ? {
+              ...current,
+              messages: current.messages.map((message) => message.id === tutorId ? { ...message, content: turn.text } : message),
+            } : current);
+          }
+        }
+      }
       setState("ready");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Your message could not be saved.");
@@ -104,7 +143,7 @@ export function StudentMathSession() {
       <div className="grid max-h-80 gap-3 overflow-y-auto rounded-2xl bg-[#f5f7fb] p-4" aria-live="polite">
         {learningSession?.messages.length ? learningSession.messages.map((message) => (
           <p className="rounded-xl bg-white px-3 py-2 text-sm text-slate-700" key={message.id}>
-            <span className="font-semibold text-ink">You: </span>{message.content}
+            <span className="font-semibold text-ink">{message.role === "tutor" ? "Lina: " : "You: "}</span>{message.content || "…"}
           </p>
         )) : <p className="text-sm text-slate-600">What Math idea would you like to work on?</p>}
       </div>
@@ -120,11 +159,11 @@ export function StudentMathSession() {
           disabled={state === "sending"}
         />
         <Button type="submit" disabled={!draft.trim() || state === "sending"}>
-          {state === "sending" ? "Saving…" : "Send"}
+          {state === "sending" ? "Lina is thinking…" : "Send"}
         </Button>
       </form>
       {error ? <p className="text-sm text-red-700" role="alert">{error}</p> : null}
-      <p className="text-xs text-slate-500">Tutor responses will be connected in the next Tutor runtime task.</p>
+      <p className="text-xs text-slate-500">Lina replies as she works through the next step with you.</p>
     </section>
   );
 }
