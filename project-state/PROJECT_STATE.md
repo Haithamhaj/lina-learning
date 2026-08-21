@@ -128,8 +128,10 @@ real-Lina calibration, or product expansion.
   strategy-effectiveness views with Evidence/State/Pattern IDs, concise
   deterministic explanations, and policy lineage. Current State and recent
   independent Evidence outrank historical support Patterns; no raw Tutor text
-  or Candidate Event alone can create a view. It is `REVIEW`, not a Phase 3 or
-  Gate B pass.
+  or Candidate Event alone can create a view. REC-18 corrected Evidence
+  version semantics: only the latest completed interpretation of each raw
+  Candidate observation counts, while older versions remain historical. It is
+  `REVIEW`, not a Phase 3 or Gate B pass.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 

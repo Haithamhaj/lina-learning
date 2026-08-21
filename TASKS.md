@@ -402,7 +402,8 @@ derives categorical views from these sources.
 learning-status, independence, retention, and strategy-effectiveness views
 from validated Evidence plus current State/Pattern context. Views retain source
 IDs/explanations and policy lineage; they await review. No TASK-026
-reprocessing orchestration is included.
+reprocessing orchestration is included. REC-18 correction ensures one latest
+completed Evidence interpretation per raw Candidate observation is counted.
 **Purpose:** Provide categorical parent/tutor decision views over Evidence without turning scores into source truth.  
 **Expected output:** configurable derived views such as Strong/Developing/Needs revisit + evidence confidence.  
 **Likely areas:** `/services/intelligence/decisions`.  

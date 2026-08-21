@@ -159,18 +159,38 @@ def _evidence_items(
     concept_ref: str,
 ) -> list[_EvidenceItem]:
     rows = session.execute(
-        select(LearningEvidence, LearningEvent, CandidateEvent)
+        select(LearningEvidence, LearningEvent, CandidateEvent, IntelligenceProcessingRun)
         .join(LearningEvent, LearningEvidence.event_id == LearningEvent.id)
         .join(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
+        .join(IntelligenceProcessingRun, LearningEvent.processing_run_id == IntelligenceProcessingRun.id)
         .where(
-            LearningEvent.subject == subject,
-            LearningEvent.concept_ref == concept_ref,
-            LearningEvidence.concept_ref == concept_ref,
+            IntelligenceProcessingRun.status == "COMPLETED",
             CandidateEvent.session_id.in_(select(LearningSession.id).where(LearningSession.student_id == student_id)),
         )
-        .order_by(CandidateEvent.created_at, LearningEvidence.id)
     ).all()
-    return [_EvidenceItem(evidence, event, candidate) for evidence, event, candidate in rows]
+    selected: dict[UUID, tuple[_EvidenceItem, IntelligenceProcessingRun]] = {}
+    for evidence, event, candidate, run in rows:
+        item = _EvidenceItem(evidence, event, candidate)
+        prior = selected.get(candidate.id)
+        if prior is None or _version_key(run, event) > _version_key(prior[1], prior[0].event):
+            selected[candidate.id] = (item, run)
+    authoritative = (
+        item
+        for item, _ in selected.values()
+        if item.event.subject == subject
+        and item.event.concept_ref == concept_ref
+        and item.evidence.concept_ref == concept_ref
+    )
+    return sorted(
+        authoritative,
+        key=lambda item: (item.candidate.created_at, str(item.candidate.id)),
+    )
+
+
+def _version_key(run: IntelligenceProcessingRun, event: LearningEvent) -> tuple[datetime, str, str]:
+    """Latest completed interpretation wins for one immutable raw observation."""
+
+    return run.created_at, str(run.id), str(event.id)
 
 
 def _active_states(

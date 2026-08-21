@@ -141,6 +141,52 @@ def _evidence(
     return evidence
 
 
+def _reprocessed_evidence(
+    session: Session,
+    *,
+    source: LearningEvidence,
+    student: Student,
+    dimensions: dict[str, str],
+    created_at: datetime,
+    relationship: str = "improvement",
+    concept: str | None = None,
+) -> tuple[LearningEvidence, IntelligenceProcessingRun]:
+    source_event = session.get(LearningEvent, source.event_id)
+    assert source_event is not None
+    run = IntelligenceProcessingRun(
+        student_id=student.id,
+        rubric_version="evidence-rubric-v2",
+        policy_version="session-consolidation-policy-v2",
+        scope={"reprocesses_event_id": str(source_event.id)},
+        status="COMPLETED",
+        created_at=created_at,
+    )
+    session.add(run)
+    session.flush()
+    event = LearningEvent(
+        processing_run_id=run.id,
+        session_id=source_event.session_id,
+        candidate_event_id=source_event.candidate_event_id,
+        subject=source_event.subject,
+        concept_ref=concept or source_event.concept_ref,
+        event_type=source_event.event_type,
+        description="Reprocessed validated fixture evidence.",
+        source_message_id=source_event.source_message_id,
+    )
+    session.add(event)
+    session.flush()
+    evidence = LearningEvidence(
+        event_id=event.id,
+        concept_ref=concept or source.concept_ref,
+        dimensions=dimensions,
+        relationship=relationship,
+        source_ref=source.source_ref,
+    )
+    session.add(evidence)
+    session.flush()
+    return evidence, run
+
+
 def _state(
     student: Student,
     run: IntelligenceProcessingRun,
@@ -271,6 +317,78 @@ def test_diverse_demonstrated_evidence_is_strong_with_higher_confidence(factory:
     assert views["learning_status"].conclusion == "STRONG"
     assert views["learning_status"].confidence == "HIGH"
     assert "3 validated" in views["learning_status"].explanation.casefold()
+
+
+def test_reprocessing_versions_of_one_observation_count_once_and_keep_selected_provenance(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, base_run = _seed(session)
+        original = _evidence(
+            session,
+            student=student,
+            run=base_run,
+            dimensions=_dimensions(understanding="strong_demonstration", independence="independent"),
+        )
+        second, second_run = _reprocessed_evidence(
+            session,
+            source=original,
+            student=student,
+            dimensions=_dimensions(understanding="strong_demonstration", independence="independent"),
+            created_at=datetime.now(UTC) + timedelta(seconds=1),
+        )
+        latest, latest_run = _reprocessed_evidence(
+            session,
+            source=original,
+            student=student,
+            dimensions=_dimensions(understanding="strong_demonstration", independence="independent"),
+            created_at=datetime.now(UTC) + timedelta(seconds=2),
+        )
+        first = _views(session, student, latest_run)
+        second_pass = _views(session, student, latest_run)
+
+        status = first["learning_status"]
+        assert status.conclusion == "DEVELOPING"
+        assert status.confidence == "LOW"
+        assert status.evidence_ids == [str(latest.id)]
+        assert status.source_versions["evidence_processing_run_ids"] == [str(latest_run.id)]
+        assert first["learning_status"].id == second_pass["learning_status"].id
+        assert session.query(LearningEvidence).count() == 3
+        assert session.get(LearningEvidence, original.id) is not None
+        assert session.get(LearningEvidence, second.id) is not None
+        assert session.get(LearningEvidence, latest.id) is not None
+        assert session.query(CurrentLearningState).count() == 0
+        assert session.query(LearnerPattern).count() == 0
+        assert session.query(LearnerIntelligenceCard).count() == 0
+
+
+def test_newer_reprocessed_interpretation_replaces_only_the_selected_view_input(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, base_run = _seed(session)
+        older = _evidence(
+            session,
+            student=student,
+            run=base_run,
+            dimensions=_dimensions(understanding="partial", independence="light_support"),
+        )
+        newer, newer_run = _reprocessed_evidence(
+            session,
+            source=older,
+            student=student,
+            dimensions=_dimensions(understanding="strong_demonstration", independence="independent"),
+            created_at=datetime.now(UTC) + timedelta(seconds=1),
+            concept="decimals",
+        )
+        stale_concept = _views(session, student, newer_run)
+        views = _views(session, student, newer_run, concept="decimals")
+
+    assert views["independence"].conclusion == "STRONG"
+    assert views["learning_status"].evidence_ids == [str(newer.id)]
+    assert str(older.id) not in views["learning_status"].evidence_ids
+    assert stale_concept["learning_status"].conclusion == "INSUFFICIENT_EVIDENCE"
+    assert stale_concept["learning_status"].evidence_ids == []
 
 
 def test_active_state_and_current_independence_outrank_old_support_history(factory: sessionmaker[Session]) -> None:
