@@ -56,7 +56,11 @@ class RetrievalContext:
 
 
 def reciprocal_rank_fusion(
-    lexical_ids: list[UUID | str], vector_ids: list[UUID | str], *, offset: int = 60
+    lexical_ids: list[UUID | str],
+    vector_ids: list[UUID | str],
+    *,
+    preferred_ids: set[UUID | str] | None = None,
+    offset: int = 60,
 ) -> list[UUID | str]:
     """Fuse two bounded DB-ranked lists without treating scores as comparable."""
     scores: dict[UUID | str, float] = {}
@@ -65,6 +69,9 @@ def reciprocal_rank_fusion(
         for rank, identifier in enumerate(candidates, start=1):
             scores[identifier] = scores.get(identifier, 0.0) + 1.0 / (offset + rank)
             first_seen.setdefault(identifier, source_order * len(candidates) + rank)
+    for identifier in preferred_ids or set():
+        if identifier in scores:
+            scores[identifier] += 1.0 / (offset * 10)
     return sorted(
         scores,
         key=lambda identifier: (
@@ -128,46 +135,52 @@ class RetrievalService:
         if index_run_id is None:
             return RetrievalContext(UUID(int=0), [], RetrievalDebug((), (), ()))
         semantic_types = _semantic_type_hints(question)
+        query_embedding = self._query_embedding(question)
         lexical_ids = self._lexical_candidate_ids(
             index_run_id=index_run_id,
             question=question,
             grade_level=grade_level,
             subject=subject,
-            focus=focus,
+            focus=None,
             semantic_types=semantic_types,
             limit=candidate_limit,
         )
         vector_ids = self._vector_candidate_ids(
             index_run_id=index_run_id,
-            question=question,
+            embedding=query_embedding,
             grade_level=grade_level,
             subject=subject,
-            focus=focus,
+            focus=None,
             semantic_types=semantic_types,
             limit=candidate_limit,
         )
-        if focus is not None and not lexical_ids:
-            unfocused_lexical_ids = self._lexical_candidate_ids(
-                index_run_id=index_run_id,
-                question=question,
-                grade_level=grade_level,
-                subject=subject,
-                focus=None,
-                semantic_types=semantic_types,
-                limit=candidate_limit,
-            )
-            if unfocused_lexical_ids:
-                lexical_ids = unfocused_lexical_ids
-                vector_ids = self._vector_candidate_ids(
+        focused_ids: set[UUID] = set()
+        if focus is not None:
+            focused_ids.update(
+                self._lexical_candidate_ids(
                     index_run_id=index_run_id,
                     question=question,
                     grade_level=grade_level,
                     subject=subject,
-                    focus=None,
+                    focus=focus,
                     semantic_types=semantic_types,
                     limit=candidate_limit,
                 )
-        fused_ids = reciprocal_rank_fusion(lexical_ids, vector_ids)
+            )
+            focused_ids.update(
+                self._vector_candidate_ids(
+                    index_run_id=index_run_id,
+                    embedding=query_embedding,
+                    grade_level=grade_level,
+                    subject=subject,
+                    focus=focus,
+                    semantic_types=semantic_types,
+                    limit=candidate_limit,
+                )
+            )
+        fused_ids = reciprocal_rank_fusion(
+            lexical_ids, vector_ids, preferred_ids=focused_ids
+        )
         direct_blocks = self._blocks_by_rank(fused_ids)
         expanded_blocks = self._semantic_expansion(
             index_run_id=index_run_id,
@@ -254,11 +267,27 @@ class RetrievalService:
             ).scalars()
         )
 
-    def _vector_candidate_ids(self, **filters: object) -> list[UUID]:
-        if self._embedding_gateway is None:
+    def _vector_candidate_ids(
+        self, *, embedding: list[float] | None, **filters: object
+    ) -> list[UUID]:
+        if embedding is None:
             return []
-        question = str(filters.pop("question"))
         limit = int(filters.pop("limit"))
+        statement = self._filtered_blocks(**filters)  # type: ignore[arg-type]
+        return list(
+            self._session.execute(
+                statement.order_by(
+                    IndexedContentBlock.embedding.cosine_distance(embedding),
+                    IndexedContentBlock.id,
+                )
+                .with_only_columns(IndexedContentBlock.id)
+                .limit(limit)
+            ).scalars()
+        )
+
+    def _query_embedding(self, question: str) -> list[float] | None:
+        if self._embedding_gateway is None:
+            return None
         result = self._embedding_gateway.execute(
             ModelTask.EMBEDDING, {"input": [question], "dimensions": 1536}
         )
@@ -272,17 +301,7 @@ class RetrievalService:
             raise ValueError(
                 "Embedding gateway returned an unexpected query embedding."
             )
-        statement = self._filtered_blocks(**filters)  # type: ignore[arg-type]
-        return list(
-            self._session.execute(
-                statement.order_by(
-                    IndexedContentBlock.embedding.cosine_distance(embeddings[0]),
-                    IndexedContentBlock.id,
-                )
-                .with_only_columns(IndexedContentBlock.id)
-                .limit(limit)
-            ).scalars()
-        )
+        return embeddings[0]
 
     def _blocks_by_rank(
         self, identifiers: list[UUID | str]

@@ -79,6 +79,8 @@ def _gateway(session: Session) -> ModelGateway:
                     embeddings.append([0.9, 0.1] + [0.0] * 1534)
                 elif "decimal" in content:
                     embeddings.append([0.0, 1.0] + [0.0] * 1534)
+                elif "meters" in content:
+                    embeddings.append([0.0, 0.0, 1.0] + [0.0] * 1533)
                 else:
                     embeddings.append([0.1, 0.1] + [0.0] * 1534)
             return ModelResult(output={"embeddings": embeddings})
@@ -359,3 +361,18 @@ def test_explicit_question_overrides_stale_current_focus_when_lexically_targeted
         )
 
     assert blocks and blocks[0].source_ref == "fixture#page=18"
+
+
+def test_outside_focus_relevance_outranks_overlapping_stale_focus(factory) -> None:
+    with factory.begin() as session:
+        student, _ = _seed(session)
+        blocks = RetrievalService(
+            session, embedding_gateway=_gateway(session)
+        ).retrieve(
+            student_id=student.id,
+            question="What value converts 3 meters to centimeters?",
+            focus=CurrentFocus(lesson_key="lesson-1", concept_key="place-value"),
+            limit=1,
+        )
+
+    assert blocks[0].source_ref == "fixture#page=18"
