@@ -86,6 +86,7 @@ def _evidence(
     context_ref: str | None = None,
     strategy_key: str | None = None,
     observed_outcome: str | None = None,
+    signal: str = "fixture_signal",
 ) -> LearningEvidence:
     occurred_at = created_at or datetime(2026, 8, 22, 12, tzinfo=UTC)
     learning_session = LearningSession(
@@ -121,7 +122,7 @@ def _evidence(
         message_id=None,
         event_type=event_type,
         concept_ref=concept,
-        signal="fixture_signal",
+        signal=signal,
         payload=payload,
         created_at=occurred_at,
     )
@@ -302,6 +303,176 @@ def test_strategy_selection_without_observable_outcome_creates_no_strategy_patte
 
         assert apply_evidence_to_patterns(session, evidence_id=evidence.id) == []
         assert session.query(LearnerPattern).count() == 0
+
+
+def test_specific_repeated_misconception_promotes_active_then_stable(factory: sessionmaker[Session]) -> None:
+    with factory.begin() as session:
+        student = _student(session)
+        signal = "adds_denominators_when_adding_fractions"
+        first = _evidence(
+            session,
+            student=student,
+            event_type="misconception_signal",
+            dimensions=_support(),
+            signal=signal,
+            task_ref="fraction_sum_a",
+            created_at=datetime(2026, 7, 1, 12, tzinfo=UTC),
+        )
+        second = _evidence(
+            session,
+            student=student,
+            event_type="misconception_signal",
+            dimensions=_support(),
+            signal=signal,
+            task_ref="fraction_sum_b",
+            created_at=datetime(2026, 7, 8, 12, tzinfo=UTC),
+        )
+        third = _evidence(
+            session,
+            student=student,
+            event_type="misconception_signal",
+            dimensions=_support(),
+            signal=signal,
+            task_ref="fraction_sum_c",
+            created_at=datetime(2026, 7, 20, 12, tzinfo=UTC),
+        )
+
+        apply_evidence_to_patterns(session, evidence_id=first.id, now=datetime(2026, 7, 1, 13, tzinfo=UTC))
+        apply_evidence_to_patterns(session, evidence_id=second.id, now=datetime(2026, 7, 8, 13, tzinfo=UTC))
+        pattern = session.query(LearnerPattern).filter_by(
+            pattern_type="misconception_recurrence",
+            pattern_key=f"misconception:{signal}",
+        ).one()
+        assert pattern.status == "ACTIVE"
+
+        apply_evidence_to_patterns(session, evidence_id=third.id, now=datetime(2026, 7, 20, 13, tzinfo=UTC))
+
+        assert pattern.status == "STABLE"
+
+
+def test_specific_recent_counter_evidence_weakens_only_its_misconception(factory: sessionmaker[Session]) -> None:
+    with factory.begin() as session:
+        student = _student(session)
+        target = "adds_denominators_when_adding_fractions"
+        unrelated = "treats_larger_denominator_as_larger_fraction"
+        for signal in (target, unrelated):
+            for day, task in ((1, "a"), (8, "b"), (20, "c")):
+                apply_evidence_to_patterns(
+                    session,
+                    evidence_id=_evidence(
+                        session,
+                        student=student,
+                        event_type="misconception_signal",
+                        dimensions=_support(),
+                        signal=signal,
+                        task_ref=f"{signal}:{task}",
+                        created_at=datetime(2026, 7, day, 12, tzinfo=UTC),
+                    ).id,
+                    now=datetime(2026, 7, 20, 13, tzinfo=UTC),
+                )
+        counter = _evidence(
+            session,
+            student=student,
+            event_type="independent_success",
+            dimensions=_independent(),
+            relationship="improvement",
+            signal=target,
+            task_ref="correct_fraction_sum",
+            created_at=datetime(2026, 8, 22, 12, tzinfo=UTC),
+        )
+
+        apply_evidence_to_patterns(session, evidence_id=counter.id, now=datetime(2026, 8, 22, 13, tzinfo=UTC))
+
+        patterns = {
+            pattern.pattern_key: pattern
+            for pattern in session.query(LearnerPattern).filter_by(pattern_type="misconception_recurrence")
+        }
+        assert patterns[f"misconception:{target}"].status == "WEAKENING"
+        assert patterns[f"misconception:{target}"].counter_count == 1
+        assert patterns[f"misconception:{unrelated}"].status == "STABLE"
+        assert patterns[f"misconception:{unrelated}"].counter_count == 0
+
+
+def test_sufficient_specific_fresh_counter_evidence_resolves_exact_misconception(factory: sessionmaker[Session]) -> None:
+    with factory.begin() as session:
+        student = _student(session)
+        signal = "adds_denominators_when_adding_fractions"
+        for day, task in ((1, "a"), (8, "b"), (20, "c")):
+            apply_evidence_to_patterns(
+                session,
+                evidence_id=_evidence(
+                    session,
+                    student=student,
+                    event_type="misconception_signal",
+                    dimensions=_support(),
+                    signal=signal,
+                    task_ref=task,
+                    created_at=datetime(2026, 7, day, 12, tzinfo=UTC),
+                ).id,
+            )
+        counters = [
+            _evidence(
+                session,
+                student=student,
+                event_type="independent_success",
+                dimensions=_independent(),
+                relationship="improvement",
+                signal=signal,
+                task_ref=f"resolved:{day}",
+                created_at=datetime(2026, 8, day, 12, tzinfo=UTC),
+            )
+            for day in (20, 22)
+        ]
+
+        for counter in counters:
+            apply_evidence_to_patterns(session, evidence_id=counter.id, now=datetime(2026, 8, 22, 13, tzinfo=UTC))
+
+        pattern = session.query(LearnerPattern).filter_by(
+            pattern_type="misconception_recurrence",
+            pattern_key=f"misconception:{signal}",
+        ).one()
+        assert pattern.status == "RESOLVED"
+        assert pattern.counter_count == 2
+        assert session.query(PatternEvidence).filter_by(pattern_id=pattern.id).count() == 5
+
+
+def test_ambiguous_independent_success_does_not_create_generic_misconception_counter(factory: sessionmaker[Session]) -> None:
+    with factory.begin() as session:
+        student = _student(session)
+        signal = "adds_denominators_when_adding_fractions"
+        for task in ("a", "b"):
+            apply_evidence_to_patterns(
+                session,
+                evidence_id=_evidence(
+                    session,
+                    student=student,
+                    event_type="misconception_signal",
+                    dimensions=_support(),
+                    signal=signal,
+                    task_ref=task,
+                ).id,
+            )
+        ambiguous = _evidence(
+            session,
+            student=student,
+            event_type="independent_success",
+            dimensions=_independent(),
+            relationship="improvement",
+            signal="solved_independently",
+        )
+
+        apply_evidence_to_patterns(session, evidence_id=ambiguous.id)
+
+        pattern = session.query(LearnerPattern).filter_by(
+            pattern_type="misconception_recurrence",
+            pattern_key=f"misconception:{signal}",
+        ).one()
+        assert pattern.status == "ACTIVE"
+        assert pattern.counter_count == 0
+        assert session.query(LearnerPattern).filter_by(
+            pattern_type="misconception_recurrence",
+            pattern_key="misconception:observed",
+        ).count() == 0
 
 
 def test_valid_strategy_outcome_supports_and_contradiction_weakens_strategy_pattern(factory: sessionmaker[Session]) -> None:

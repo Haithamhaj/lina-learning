@@ -77,7 +77,7 @@ def apply_evidence_to_patterns(
 
     effective_policy = _effective_policy(policy)
     item = _load_validated_evidence(session, evidence_id=evidence_id)
-    targets = _pattern_targets(item)
+    targets = _pattern_targets(session, item=item, policy=effective_policy)
     if not targets:
         return []
 
@@ -182,7 +182,12 @@ def _load_validated_evidence(session: Session, *, evidence_id: UUID) -> _Evidenc
     )
 
 
-def _pattern_targets(item: _EvidenceContext) -> list[tuple[str, str, PatternRole]]:
+def _pattern_targets(
+    session: Session,
+    *,
+    item: _EvidenceContext,
+    policy: PatternPolicy,
+) -> list[tuple[str, str, PatternRole]]:
     dimensions = item.evidence.dimensions
     supports_need = dimensions.get("understanding") in {"not_demonstrated", "partial"} or dimensions.get(
         "independence"
@@ -200,7 +205,9 @@ def _pattern_targets(item: _EvidenceContext) -> list[tuple[str, str, PatternRole
     if item.event.event_type == "misconception_signal":
         targets.append(("misconception_recurrence", f"misconception:{_normalized_token(item.candidate.signal, fallback='observed')}", "supports"))
     elif independent and relationship in {"contradicts", "improvement"}:
-        targets.append(("misconception_recurrence", "misconception:observed", relationship))
+        misconception_key = _matching_misconception_key(session, item=item, policy=policy)
+        if misconception_key is not None:
+            targets.append(("misconception_recurrence", misconception_key, relationship))
 
     strategy_key = _normalized_token((item.candidate.payload or {}).get("strategy_key"), fallback="")
     strategy_outcome = (item.candidate.payload or {}).get("observed_student_outcome")
@@ -221,6 +228,28 @@ def _pattern_targets(item: _EvidenceContext) -> list[tuple[str, str, PatternRole
     if persistence in {"continued_independently", "continued_with_support", "stopped"}:
         targets.append(("learning_behavior", f"persistence:{persistence}", "supports"))
     return targets
+
+
+def _matching_misconception_key(
+    session: Session,
+    *,
+    item: _EvidenceContext,
+    policy: PatternPolicy,
+) -> str | None:
+    normalized_signal = _normalized_token(item.candidate.signal, fallback="")
+    if not normalized_signal:
+        return None
+    pattern_key = f"misconception:{normalized_signal}"
+    existing = session.execute(
+        select(LearnerPattern.id).where(
+            LearnerPattern.student_id == item.learning_session.student_id,
+            LearnerPattern.policy_version == policy.version,
+            LearnerPattern.pattern_type == "misconception_recurrence",
+            LearnerPattern.pattern_key == pattern_key,
+            LearnerPattern.scope_key == _scope_key(_concept_scope(item)),
+        )
+    ).scalar_one_or_none()
+    return pattern_key if existing is not None else None
 
 
 def _concept_scope(item: _EvidenceContext) -> dict[str, str]:
