@@ -11,7 +11,6 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from services.intelligence.consolidation import SESSION_EVIDENCE_SCHEMA_VERSION
 from services.platform.db.models import (
     CandidateEvent,
     IntelligenceProcessingRun,
@@ -162,7 +161,7 @@ def _load_validated_evidence(session: Session, *, evidence_id: UUID) -> _Evidenc
     if (
         run.status != "COMPLETED"
         or learning_session.status != "CLOSED"
-        or run_scope.get("consolidation_schema_version") != SESSION_EVIDENCE_SCHEMA_VERSION
+        or not _supported_evidence_schema(run_scope.get("consolidation_schema_version"))
         or run_scope.get("session_id") != str(learning_session.id)
         or event.subject != "MATH"
         or evidence.concept_ref != event.concept_ref
@@ -180,6 +179,12 @@ def _load_validated_evidence(session: Session, *, evidence_id: UUID) -> _Evidenc
         task_ref=_normalized_token(payload.get("task_ref"), fallback=f"concept:{event.concept_ref or 'unknown'}"),
         context_ref=_normalized_token(payload.get("context_ref"), fallback="math_practice"),
     )
+
+
+def _supported_evidence_schema(value: object) -> bool:
+    """Permit explicitly versioned TASK-021 outputs selected by reprocessing."""
+
+    return isinstance(value, str) and value.startswith("session-evidence-")
 
 
 def _pattern_targets(

@@ -172,11 +172,24 @@ class ConsolidationOutcome:
     model_called: bool
 
 
+@dataclass(frozen=True)
+class ConsolidationVersion:
+    """Explicit, auditable interpretation identity for a session rebuild."""
+
+    schema_version: str = SESSION_EVIDENCE_SCHEMA_VERSION
+    prompt_version: str = SESSION_EVIDENCE_PROMPT_VERSION
+    rubric_version: str = EVIDENCE_RUBRIC_VERSION
+    policy_version: str = SESSION_CONSOLIDATION_POLICY_VERSION
+    provider: str | None = None
+    model: str | None = None
+
+
 def consolidate_closed_session(
     session: Session,
     *,
     learning_session: LearningSession,
     gateway: ModelGateway,
+    version: ConsolidationVersion | None = None,
 ) -> ConsolidationOutcome:
     """Create validated Event/Evidence rows for one closed session only."""
 
@@ -184,7 +197,17 @@ def consolidate_closed_session(
         raise ConsolidationError("Only CLOSED sessions are eligible for consolidation.")
 
     route = gateway.route_for(ModelTask.SESSION_EVIDENCE)
-    run = _find_or_create_run(session, learning_session=learning_session, route=route)
+    selected_version = version or _default_consolidation_version()
+    if selected_version.provider is not None and selected_version.provider != route.provider:
+        raise ConsolidationError("Selected evidence provider does not match the configured Gateway route.")
+    if selected_version.model is not None and selected_version.model != route.model:
+        raise ConsolidationError("Selected evidence model does not match the configured Gateway route.")
+    run = _find_or_create_run(
+        session,
+        learning_session=learning_session,
+        route=route,
+        version=selected_version,
+    )
     if run.status == "COMPLETED":
         return ConsolidationOutcome(
             processing_run=run,
@@ -249,23 +272,35 @@ def mark_consolidation_failed(
     session.flush()
 
 
+def _default_consolidation_version() -> ConsolidationVersion:
+    """Read module constants at call time so a deployed contract upgrade is explicit."""
+
+    return ConsolidationVersion(
+        schema_version=SESSION_EVIDENCE_SCHEMA_VERSION,
+        prompt_version=SESSION_EVIDENCE_PROMPT_VERSION,
+        rubric_version=EVIDENCE_RUBRIC_VERSION,
+        policy_version=SESSION_CONSOLIDATION_POLICY_VERSION,
+    )
+
+
 def _find_or_create_run(
     session: Session,
     *,
     learning_session: LearningSession,
     route: object,
+    version: ConsolidationVersion,
 ) -> IntelligenceProcessingRun:
     existing = session.execute(
         select(IntelligenceProcessingRun)
         .where(
             IntelligenceProcessingRun.student_id == learning_session.student_id,
-            IntelligenceProcessingRun.rubric_version == EVIDENCE_RUBRIC_VERSION,
-            IntelligenceProcessingRun.policy_version == SESSION_CONSOLIDATION_POLICY_VERSION,
+            IntelligenceProcessingRun.rubric_version == version.rubric_version,
+            IntelligenceProcessingRun.policy_version == version.policy_version,
             IntelligenceProcessingRun.scope["session_id"].astext == str(learning_session.id),
             IntelligenceProcessingRun.scope["consolidation_schema_version"].astext
-            == SESSION_EVIDENCE_SCHEMA_VERSION,
+            == version.schema_version,
             IntelligenceProcessingRun.scope["prompt_version"].astext
-            == SESSION_EVIDENCE_PROMPT_VERSION,
+            == version.prompt_version,
             IntelligenceProcessingRun.scope["provider"].astext == getattr(route, "provider"),
             IntelligenceProcessingRun.scope["model"].astext == getattr(route, "model"),
         )
@@ -278,13 +313,13 @@ def _find_or_create_run(
     model = getattr(route, "model")
     run = IntelligenceProcessingRun(
         student_id=learning_session.student_id,
-        rubric_version=EVIDENCE_RUBRIC_VERSION,
-        policy_version=SESSION_CONSOLIDATION_POLICY_VERSION,
+        rubric_version=version.rubric_version,
+        policy_version=version.policy_version,
         status="RUNNING",
         scope={
             "session_id": str(learning_session.id),
-            "consolidation_schema_version": SESSION_EVIDENCE_SCHEMA_VERSION,
-            "prompt_version": SESSION_EVIDENCE_PROMPT_VERSION,
+            "consolidation_schema_version": version.schema_version,
+            "prompt_version": version.prompt_version,
             "provider": provider,
             "model": model,
         },

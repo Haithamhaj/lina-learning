@@ -8,7 +8,6 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from services.intelligence.consolidation import SESSION_EVIDENCE_SCHEMA_VERSION
 from services.platform.db.models import (
     CandidateEvent,
     CurrentLearningState,
@@ -164,12 +163,18 @@ def _load_validated_evidence(
     if (
         run.status != "COMPLETED"
         or learning_session.status != "CLOSED"
-        or scope.get("consolidation_schema_version") != SESSION_EVIDENCE_SCHEMA_VERSION
+        or not _supported_evidence_schema(scope.get("consolidation_schema_version"))
         or scope.get("session_id") != str(event.session_id)
         or evidence.concept_ref != event.concept_ref
     ):
         raise CurrentStateSourceError("Current State requires completed, validated TASK-021 Evidence.")
     return evidence, event, learning_session, run
+
+
+def _supported_evidence_schema(value: object) -> bool:
+    """Allow explicitly versioned TASK-021 contracts during a bounded rebuild."""
+
+    return isinstance(value, str) and value.startswith("session-evidence-")
 
 
 def _states_for_evidence(session: Session, *, evidence_id: UUID) -> list[CurrentLearningState]:

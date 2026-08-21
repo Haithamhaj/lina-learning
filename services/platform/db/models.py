@@ -524,6 +524,60 @@ class IntelligenceProcessingRun(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC), server_default=func.now())
 
 
+class IntelligenceReprocessRun(Base):
+    """Auditable bounded rebuild request; source and derived rows remain immutable."""
+
+    __tablename__ = "intelligence_reprocess_runs"
+    __table_args__ = (
+        UniqueConstraint("idempotency_key", name="uq_intelligence_reprocess_idempotency"),
+        Index("ix_intelligence_reprocess_student_status", "student_id", "status"),
+    )
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    # Deliberately not an FK: queue fixtures and job retention may be truncated
+    # independently while this durable audit still retains the original job ID.
+    job_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    scope: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    version_set: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="PENDING", server_default="PENDING")
+    result: Mapped[dict[str, object] | None] = mapped_column(JSONB)
+    error: Mapped[str | None] = mapped_column(Text)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class IntelligenceReprocessSession(Base):
+    """One retryable session result inside a bounded reprocessing run."""
+
+    __tablename__ = "intelligence_reprocess_sessions"
+    __table_args__ = (UniqueConstraint("reprocess_run_id", "session_id", name="uq_intelligence_reprocess_session"),)
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    reprocess_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("intelligence_reprocess_runs.id", ondelete="CASCADE"), nullable=False)
+    session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("learning_sessions.id", ondelete="CASCADE"), nullable=False)
+    evidence_processing_run_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("intelligence_processing_runs.id", ondelete="SET NULL"))
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="PENDING", server_default="PENDING")
+    result: Mapped[dict[str, object] | None] = mapped_column(JSONB)
+    error: Mapped[str | None] = mapped_column(Text)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class IntelligenceSessionAuthority(Base):
+    """Explicit default Evidence interpretation for one immutable raw session."""
+
+    __tablename__ = "intelligence_session_authorities"
+    __table_args__ = (UniqueConstraint("student_id", "session_id", name="uq_intelligence_session_authority"),)
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
+    session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("learning_sessions.id", ondelete="CASCADE"), nullable=False)
+    reprocess_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("intelligence_reprocess_runs.id", ondelete="CASCADE"), nullable=False)
+    evidence_processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("intelligence_processing_runs.id", ondelete="CASCADE"), nullable=False)
+    activated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class LearningEvent(Base):
     __tablename__ = "learning_events"
     __table_args__ = (Index("ix_learning_events_run_session", "processing_run_id", "session_id"),)

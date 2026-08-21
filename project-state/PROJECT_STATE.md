@@ -2,8 +2,8 @@
 
 ## Current goal
 
-Review TASK-025 deterministic Decision Views. Do not start TASK-026,
-real-Lina calibration, or product expansion.
+Review TASK-026 versioned Intelligence reprocessing. Do not start real-Lina
+calibration or product expansion.
 
 ## Current reality
 
@@ -131,7 +131,14 @@ real-Lina calibration, or product expansion.
   or Candidate Event alone can create a view. REC-18 corrected Evidence
   version semantics: only the latest completed interpretation of each raw
   Candidate observation counts, while older versions remain historical. It is
-  `REVIEW`, not a Phase 3 or Gate B pass.
+  `DONE`, not a Phase 3 or Gate B pass.
+- TASK-026 now provides bounded, DB-job-backed reprocessing for selected
+  CLOSED sessions by student/subject/session IDs or date range. Each durable
+  reprocess run records its exact Evidence interpretation and downstream policy
+  versions, keeps per-session result/error state, and activates a session's
+  Evidence processing run only after that session finishes successfully. Raw
+  messages/Candidates and historical derived rows remain preserved; no Card is
+  materialized. It is `REVIEW`, not a Phase 3 or Gate B pass.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -162,8 +169,9 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 and TASK-026 onward remain blocked; TASK-025 awaits independent
-  review. The Production Engine Acceptance Gate has not passed.
+- TASK-015 and TASK-027 onward remain blocked; TASK-026 awaits independent
+  review and the applicable gate. The Production Engine Acceptance Gate has
+  not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
   database/workflow remains a deferred local-development improvement.
@@ -177,9 +185,9 @@ Real Lina decision gates.
 
 ## Next recommended action
 
-Review TASK-025 categorical derivation, evidence provenance, current-versus-
-history conflict handling, and policy-version rebuildability. Do not start
-TASK-026 or later work without explicit authorization and the applicable gate.
+Review TASK-026 bounded reprocessing, version authority, chronology handling,
+failure/retry reporting, and historical preservation. Do not start calibration
+or later work without explicit authorization and the applicable gate.
 
 ## Critical references
 

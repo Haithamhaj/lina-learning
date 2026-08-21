@@ -396,12 +396,12 @@ derives categorical views from these sources.
 **Verification:** Card stays within configured budget; resolved patterns excluded; current behavior can override historical recommendation; relevant patterns remain advisory rather than mandatory; no full profile dump. Historical strategy selection must not itself create confirming Evidence.  
 
 ## TASK-025 — Derived mastery/confidence views
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** TASK-021, TASK-024  
 **Recovery state:** A versioned deterministic policy now persists categorical
 learning-status, independence, retention, and strategy-effectiveness views
 from validated Evidence plus current State/Pattern context. Views retain source
-IDs/explanations and policy lineage; they await review. No TASK-026
+IDs/explanations and policy lineage; independent review is complete. No TASK-026
 reprocessing orchestration is included. REC-18 correction ensures one latest
 completed Evidence interpretation per raw Candidate observation is counted.
 **Purpose:** Provide categorical parent/tutor decision views over Evidence without turning scores into source truth.  
@@ -410,11 +410,13 @@ completed Evidence interpretation per raw Candidate observation is counted.
 **Verification:** changing decision policy can recompute views without rewriting raw Events/Evidence.  
 
 ## TASK-026 — Intelligence reprocessing pipeline
-**Status:** BLOCKED
+**Status:** REVIEW
 **Dependencies:** TASK-021, TASK-023, TASK-024, TASK-025
-**Recovery state:** Reopened by the independent audit. Existing demo rebuilds
-are not the required scoped, version-selectable, job-backed reprocessing
-pipeline. Blocked pending TASK-021, TASK-023, TASK-024, and TASK-025.
+**Recovery state:** A bounded, job-backed reprocess run now records explicit
+session/date scope, Evidence interpretation identity, downstream policy
+versions, durable per-session results, and an activation record only after a
+selected closed session succeeds. It preserves raw history and prior derived
+rows; the Card remains on-demand. It awaits independent review.
 **Purpose:** Rebuild derived Events/Evidence/Patterns/Card from preserved raw history after rubric/prompt/policy improvements.  
 **Expected output:** versioned rebuild job with date/session scope and audit trail.  
 **Likely areas:** `/services/intelligence/reprocess`, `/workers`.  

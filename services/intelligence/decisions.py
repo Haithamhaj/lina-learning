@@ -16,6 +16,7 @@ from services.platform.db.models import (
     CurrentLearningState,
     DecisionView,
     IntelligenceProcessingRun,
+    IntelligenceSessionAuthority,
     LearnerPattern,
     LearningEvidence,
     LearningEvent,
@@ -168,8 +169,17 @@ def _evidence_items(
             CandidateEvent.session_id.in_(select(LearningSession.id).where(LearningSession.student_id == student_id)),
         )
     ).all()
+    authoritative_runs = {
+        row.session_id: row.evidence_processing_run_id
+        for row in session.execute(
+            select(IntelligenceSessionAuthority).where(IntelligenceSessionAuthority.student_id == student_id)
+        ).scalars()
+    }
     selected: dict[UUID, tuple[_EvidenceItem, IntelligenceProcessingRun]] = {}
     for evidence, event, candidate, run in rows:
+        authoritative_run_id = authoritative_runs.get(event.session_id)
+        if authoritative_run_id is not None and event.processing_run_id != authoritative_run_id:
+            continue
         item = _EvidenceItem(evidence, event, candidate)
         prior = selected.get(candidate.id)
         if prior is None or _version_key(run, event) > _version_key(prior[1], prior[0].event):
