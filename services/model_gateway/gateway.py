@@ -70,12 +70,18 @@ class ModelGateway:
 
         self._routes[task] = route
 
-    def execute(self, task: ModelTask, payload: dict[str, object]) -> ModelResult:
-        """Call the selected adapter and always record its operational outcome."""
+    def route_for(self, task: ModelTask) -> ModelRoute:
+        """Expose route metadata without exposing a provider adapter."""
 
         route = self._routes.get(task)
         if route is None:
             raise ValueError(f"No model route is configured for task {task.value!r}.")
+        return route
+
+    def execute(self, task: ModelTask, payload: dict[str, object]) -> ModelResult:
+        """Call the selected adapter and always record its operational outcome."""
+
+        route = self.route_for(task)
         provider = self._providers.get(route.provider)
         if provider is None:
             raise ValueError(f"No provider is configured for {route.provider!r}.")

@@ -297,8 +297,88 @@ class DocumentStructuralItem(Base):
     attributes: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
 
 
+class ContentSemanticProcessingRun(Base):
+    """One versioned Grade 5 Math semantic derivation of a structural run."""
+
+    __tablename__ = "content_semantic_processing_runs"
+    __table_args__ = (
+        UniqueConstraint(
+            "document_id",
+            "structural_processing_run_id",
+            "semantic_schema_version",
+            "prompt_version",
+            "model_route_version",
+            "settings_version",
+            name="uq_content_semantic_processing_identity",
+        ),
+        Index("ix_content_semantic_runs_document_status", "document_id", "status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    document_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_documents.id", ondelete="CASCADE"), nullable=False)
+    structural_processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_processing_runs.id", ondelete="CASCADE"), nullable=False)
+    semantic_schema_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    model_route_version: Mapped[str] = mapped_column(String(255), nullable=False)
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    model: Mapped[str] = mapped_column(String(128), nullable=False)
+    settings_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    settings_metadata: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="PENDING", server_default="PENDING")
+    failure_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ContentSemanticItem(Base):
+    """A project-owned educational meaning with explicit source-item lineage."""
+
+    __tablename__ = "content_semantic_items"
+    __table_args__ = (
+        UniqueConstraint("semantic_processing_run_id", "semantic_key", name="uq_content_semantic_item_key"),
+        CheckConstraint("sibling_order >= 0", name="ck_content_semantic_item_sibling_order"),
+        Index("ix_content_semantic_items_run_parent_order", "semantic_processing_run_id", "parent_id", "sibling_order"),
+        Index("ix_content_semantic_items_document_type", "document_id", "semantic_type"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    document_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_documents.id", ondelete="CASCADE"), nullable=False)
+    semantic_processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_semantic_processing_runs.id", ondelete="CASCADE"), nullable=False)
+    parent_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_semantic_items.id", ondelete="CASCADE"), nullable=True)
+    semantic_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    semantic_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    normalized_concept_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sibling_order: Mapped[int] = mapped_column(nullable=False)
+    attributes: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+
+
+class ContentSemanticItemSource(Base):
+    """Denormalized source/page reference for one semantic-to-structural link."""
+
+    __tablename__ = "content_semantic_item_sources"
+    __table_args__ = (
+        UniqueConstraint("semantic_item_id", "structural_item_id", name="uq_content_semantic_item_source"),
+        CheckConstraint("source_order >= 0", name="ck_content_semantic_item_source_order"),
+        Index("ix_content_semantic_sources_structural", "structural_item_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    semantic_item_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_semantic_items.id", ondelete="CASCADE"), nullable=False)
+    structural_item_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("document_structural_items.id", ondelete="CASCADE"), nullable=False)
+    structural_item_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    page_number: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    source_ref: Mapped[str] = mapped_column(String(512), nullable=False)
+    source_order: Mapped[int] = mapped_column(nullable=False)
+
+
 class CurriculumNode(Base):
-    """A normalized Grade-local curriculum concept with source provenance."""
+    """Legacy curriculum projection retained for pre-remediation demo data.
+
+    TASK-012 semantic truth now resides in ``ContentSemanticItem`` and its
+    versioned source links; this table is not overwritten by new extraction.
+    """
 
     __tablename__ = "curriculum_nodes"
     __table_args__ = (Index("ix_curriculum_nodes_document_parent", "document_id", "parent_id"),)

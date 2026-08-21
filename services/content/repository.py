@@ -11,9 +11,13 @@ from services.platform.db.models import (
     ContentBlock,
     ContentDocument,
     ContentProcessingRun,
+    ContentSemanticItem,
+    ContentSemanticItemSource,
+    ContentSemanticProcessingRun,
     DocumentStructuralItem,
 )
 
+from .semantic_contract import SemanticExtractionItem
 from .structural_contract import NormalizedStructuralItem
 
 
@@ -158,3 +162,101 @@ def create_structural_items(
         persisted_by_key[item.item_key].parent_id = parent.id
     session.flush()
     return [persisted_by_key[item.item_key] for item in items]
+
+
+def create_semantic_processing_run(
+    session: Session,
+    *,
+    document_id: UUID,
+    structural_processing_run_id: UUID,
+    semantic_schema_version: str,
+    prompt_version: str,
+    model_route_version: str,
+    provider: str,
+    model: str,
+    settings_version: str,
+    settings_metadata: dict[str, object],
+) -> ContentSemanticProcessingRun:
+    run = ContentSemanticProcessingRun(
+        document_id=document_id,
+        structural_processing_run_id=structural_processing_run_id,
+        semantic_schema_version=semantic_schema_version,
+        prompt_version=prompt_version,
+        model_route_version=model_route_version,
+        provider=provider,
+        model=model,
+        settings_version=settings_version,
+        settings_metadata=settings_metadata,
+    )
+    session.add(run)
+    session.flush()
+    return run
+
+
+def find_semantic_processing_run(
+    session: Session,
+    *,
+    document_id: UUID,
+    structural_processing_run_id: UUID,
+    semantic_schema_version: str,
+    prompt_version: str,
+    model_route_version: str,
+    settings_version: str,
+) -> ContentSemanticProcessingRun | None:
+    return session.execute(
+        select(ContentSemanticProcessingRun)
+        .where(
+            ContentSemanticProcessingRun.document_id == document_id,
+            ContentSemanticProcessingRun.structural_processing_run_id == structural_processing_run_id,
+            ContentSemanticProcessingRun.semantic_schema_version == semantic_schema_version,
+            ContentSemanticProcessingRun.prompt_version == prompt_version,
+            ContentSemanticProcessingRun.model_route_version == model_route_version,
+            ContentSemanticProcessingRun.settings_version == settings_version,
+        )
+        .limit(1)
+    ).scalar_one_or_none()
+
+
+def create_semantic_items(
+    session: Session,
+    *,
+    document_id: UUID,
+    semantic_processing_run_id: UUID,
+    items: list[SemanticExtractionItem],
+    structural_items_by_key: dict[str, DocumentStructuralItem],
+) -> list[ContentSemanticItem]:
+    """Persist an already validated semantic tree and its exact source links."""
+
+    persisted_by_key: dict[str, ContentSemanticItem] = {}
+    for item in items:
+        persisted = ContentSemanticItem(
+            document_id=document_id,
+            semantic_processing_run_id=semantic_processing_run_id,
+            semantic_key=item.semantic_key,
+            semantic_type=item.semantic_type,
+            title=item.title,
+            normalized_concept_key=item.normalized_concept_key,
+            description=item.description,
+            sibling_order=item.sibling_order,
+            attributes=item.metadata,
+        )
+        session.add(persisted)
+        persisted_by_key[item.semantic_key] = persisted
+    session.flush()
+    for item in items:
+        if item.parent_semantic_key is not None:
+            persisted_by_key[item.semantic_key].parent_id = persisted_by_key[item.parent_semantic_key].id
+        for source_order, structural_key in enumerate(item.structural_item_keys):
+            structural_item = structural_items_by_key[structural_key]
+            session.add(
+                ContentSemanticItemSource(
+                    semantic_item_id=persisted_by_key[item.semantic_key].id,
+                    structural_item_id=structural_item.id,
+                    structural_item_key=structural_item.item_key,
+                    page_number=structural_item.page_number,
+                    source_ref=structural_item.source_ref,
+                    source_order=source_order,
+                )
+            )
+    session.flush()
+    return [persisted_by_key[item.semantic_key] for item in items]

@@ -31,7 +31,7 @@ pytestmark = pytest.mark.skipif(
 def postgres_session_factory() -> sessionmaker[Session]:
     engine = create_engine(normalize_database_url(os.environ["DATABASE_URL"]))
     with engine.begin() as connection:
-        connection.execute(text("TRUNCATE document_structural_items, content_blocks, curriculum_nodes, content_processing_runs, content_documents CASCADE"))
+        connection.execute(text("TRUNCATE content_semantic_item_sources, content_semantic_items, content_semantic_processing_runs, document_structural_items, content_blocks, curriculum_nodes, content_processing_runs, content_documents CASCADE"))
     factory = sessionmaker(engine, expire_on_commit=False)
     yield factory
     engine.dispose()

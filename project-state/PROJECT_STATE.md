@@ -2,9 +2,9 @@
 
 ## Current goal
 
-Independently review the remediated TASK-011 production structural layer, then
-continue repairing the Production Learning Engine only after approval. No
-real-Lina calibration or product expansion is authorized.
+Independently review the remediated TASK-012 production educational-semantic
+layer, then continue repairing the Production Learning Engine only after
+approval. No real-Lina calibration or product expansion is authorized.
 
 ## Current reality
 
@@ -21,12 +21,18 @@ real-Lina calibration or product expansion is authorized.
   fixtures only. Existing structural, retrieval, Tutor, Candidate Event, and
   derived-intelligence code remains available as a remediation baseline, not as
   a production-complete engine claim.
-- TASK-011 now has a versioned, project-owned Docling structural artifact:
+- TASK-011 is independently accepted and has a versioned, project-owned Docling structural artifact:
   explicit parent/child and sibling/read order, hierarchy depth, stable item
   identity within a run, page/layout provenance, captions, and distinct
   text/table/picture/formula item types. It was verified with a controlled
   fixture and the ignored local Eureka PDF on a disposable PostgreSQL database.
-  It is `REVIEW`, not `DONE`; this verifies the structural layer only.
+  It is `DONE`; this verifies the structural layer only.
+- TASK-012 now has a separate, versioned Grade 5 Math semantic derivation with
+  schema/prompt/model-route/settings/source-structural-run identity, explicit
+  semantic parent/child relationships, and per-source structural/page/source
+  links. Its bounded Model-Gateway extraction and PostgreSQL fixture/versioning
+  tests passed; its local Eureka pages 1–2 semantic golden passed through the
+  configured OpenAI Luna route. It is `REVIEW`, not `DONE`.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -57,10 +63,9 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-011 needs independent review before semantic extraction, indexing,
-  retrieval, Tutor, or intelligence remediation becomes actionable. TASK-012
-  and later remain blocked; the Production Engine Acceptance Gate has not
-  passed.
+- TASK-012 needs independent review before indexing, retrieval, Tutor, or
+  intelligence remediation becomes actionable. TASK-013 and later remain
+  blocked; the Production Engine Acceptance Gate has not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
   database/workflow remains a deferred local-development improvement.
@@ -74,9 +79,9 @@ Real Lina decision gates.
 
 ## Next recommended action
 
-Conduct an independent review of **TASK-011 — Docling Structural
-Representation**. Do not start TASK-012 or later work unless that review
-approves TASK-011.
+Conduct an independent review of **TASK-012 — Educational Semantic
+Extraction**. Do not start TASK-013 or later work unless that review approves
+TASK-012.
 
 ## Critical references
 

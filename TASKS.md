@@ -138,32 +138,37 @@ and a same-student checksum duplicate returns the already preserved document
 rather than storing a second original. Initial status is visible as `UPLOADED`.
 
 ## TASK-011 — Docling adapter and normalized structural representation
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** TASK-010, TASK-006  
-**Recovery state:** Remediated implementation awaiting independent review. The
+**Recovery state:** Independently reviewed and accepted. The
 Docling adapter now emits a project-owned normalized tree and PostgreSQL stores
 explicit parent/child links, sibling and reading order, hierarchy depth,
 page/layout provenance, stable per-run item keys, captions, and differentiated
 text/table/picture/formula items. Structural processing is versioned by source,
 processor version, and settings version; prior completed runs remain intact.
-Controlled-fixture and local Eureka PDF verification passed, but this is not
-approval of TASK-011, Phase 1, or the Production Engine Acceptance Gate.
+Controlled-fixture and local Eureka PDF verification passed. This is approval
+of the structural layer only; it is not Phase 1 or Production Engine Acceptance
+Gate approval.
 **Purpose:** Parse uploaded books using Docling and preserve hierarchy, pages, reading order, figures/tables/formulas/provenance where available.  
 **Expected output:** versioned Docling processing adapter and normalized derived representation.  
 **Likely areas:** `/services/content/docling`, `/workers`.  
 **Verification:** Known fixture produces stable structure; page/source provenance is preserved; re-run is idempotent/versioned.  
-**Review note:** The previous flattened `ContentBlock` projection is no longer
+**Implementation note:** The previous flattened `ContentBlock` projection is no longer
 the TASK-011 structural artifact. `document_structural_items` is the source-
 linked, versioned structural layer; retrieval blocks remain a blocked TASK-013
-concern. Do not start TASK-012 until independent review approves this task.
+concern.
 
 ## TASK-012 — Educational semantic extraction
-**Status:** BLOCKED
+**Status:** REVIEW
 **Dependencies:** TASK-011, TASK-007  
-**Recovery state:** Reopened by the independent audit. The existing heuristic
-Unit/Lesson/Exercise mapping does not satisfy the required semantic schema,
-coverage validation, or source-validation contract. Blocked until TASK-011 is
-verified.
+**Recovery state:** Rebuilt for review. The former heuristic Unit/Lesson/Exercise
+mapping has been replaced by a versioned Grade 5 Math semantic derivation from
+the TASK-011 structural tree. It uses the `CURRICULUM_SEMANTICS` Model Gateway
+route, validates a project-owned JSON contract and source/parent/coverage rules,
+and persists explicit semantic-to-structural source lineage. Controlled
+PostgreSQL fixture verification and a bounded real-Eureka (pages 1–2) Luna
+golden passed. This does not approve TASK-012, TASK-013, Phase 1, or the
+Production Engine Acceptance Gate.
 **Purpose:** Convert structural document output into Grade 5 Math educational semantics without treating Docling structure as curriculum understanding.  
 **Expected output:** Unit/Lesson/Concept/Objectives/Examples/Exercises mapping with source references and schema contract tests.  
 **Likely areas:** `/services/content/semantics`, `/packages/schemas`, `/prompts`.  

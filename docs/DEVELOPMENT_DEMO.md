@@ -17,6 +17,40 @@ uv run --with-requirements apps/api/requirements.txt alembic upgrade head
 uv run --with-requirements apps/api/requirements.txt python scripts/setup_eureka_demo.py
 ```
 
+This creates or reuses the immutable source and the approved Docling structural
+run. It intentionally does not make an untracked model call. To generate a
+versioned Grade 5 Math semantic derivation after configuring the server-only
+Model Gateway route below, run:
+
+```bash
+uv run --with-requirements apps/api/requirements.txt \
+  python scripts/setup_eureka_demo.py --extract-semantics
+```
+
+Semantic extraction uses deterministic reading-order batches of at most 40
+TASK-011 structural items. Each request receives its local tree/page/source
+context plus only compact previously discovered Unit/Lesson/Concept keys. The
+model must explicitly link or mark every item in a batch unclassified; the
+backend then validates source links, parent keys, duplicate keys, coverage, and
+version identity before persistence. This is distinct from later retrieval and
+does not create embeddings or an index.
+
+For the small real-content semantic golden check, first run the structural
+verifier into a disposable database, configure the server-only model route, and
+then run:
+
+```bash
+uv run --with-requirements apps/api/requirements.txt \
+  python scripts/verify_eureka_semantic_representation.py \
+  --database-url "$DATABASE_URL"
+```
+
+The golden set uses the real module cover and first place-value practice region
+(pages 1–2). It verifies the Grade 5 Module identity, a lesson-level grouping,
+place-value concept, instructional objective, worked example, practice,
+figure, and source/page links. It is a bounded semantic-quality check, not a
+claim that the entire workbook has completed downstream retrieval validation.
+
 Start the API from the repository root. `WEB_ORIGIN` must exactly match the
 browser URL, including its host and port, because it is used for both CORS and
 Clerk authorized-party validation.
