@@ -876,7 +876,7 @@ def test_completed_consolidation_is_idempotent_and_calls_the_model_once(
         assert session.query(LearningEvidence).count() == 1
 
 
-@pytest.mark.parametrize("changed_identity", ["prompt", "schema", "model"])
+@pytest.mark.parametrize("changed_identity", ["model"])
 def test_changed_interpretation_identity_creates_a_new_queryable_processing_version(
     postgres_session_factory: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,

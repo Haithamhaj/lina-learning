@@ -17,14 +17,16 @@ from services.intelligence.consolidation import (
     SESSION_CONSOLIDATION_POLICY_VERSION,
     SESSION_EVIDENCE_PROMPT_VERSION,
     SESSION_EVIDENCE_SCHEMA_VERSION,
+    require_supported_consolidation_version,
 )
-from services.intelligence.current_state import CURRENT_STATE_POLICY_VERSION
+from services.intelligence.current_state import CURRENT_STATE_POLICY_VERSION, require_supported_current_state_policy
 from services.intelligence.decisions import DECISION_VIEW_POLICY_VERSION
 from services.intelligence.patterns import PATTERN_POLICY_VERSION
 from services.platform.db.models import (
     IntelligenceReprocessRun,
     IntelligenceReprocessSession,
     IntelligenceSessionAuthority,
+    IntelligenceProcessingRun,
     Job,
     LearningSession,
 )
@@ -69,6 +71,7 @@ class IntelligenceReprocessRequest:
 class ReprocessPreview:
     selected_session_ids: tuple[UUID, ...]
     selected_session_count: int
+    sessions_with_matching_processing: int
     sessions_needing_processing: int
     version_set: dict[str, object]
 
@@ -80,11 +83,14 @@ class EnqueuedReprocess:
 
 
 def preview_intelligence_reprocess(session: Session, *, request: IntelligenceReprocessRequest) -> ReprocessPreview:
+    _validate_request_versions(request)
     selected = _selected_sessions(session, request=request)
+    matching = _sessions_with_matching_evidence(session, selected=selected, evidence=request.evidence)
     return ReprocessPreview(
         selected_session_ids=tuple(item.id for item in selected),
         selected_session_count=len(selected),
-        sessions_needing_processing=len(selected),
+        sessions_with_matching_processing=len(matching),
+        sessions_needing_processing=len(selected) - len(matching),
         version_set=_version_set(request),
     )
 
@@ -92,6 +98,7 @@ def preview_intelligence_reprocess(session: Session, *, request: IntelligenceRep
 def enqueue_intelligence_reprocess(session: Session, *, request: IntelligenceReprocessRequest) -> EnqueuedReprocess:
     """Create exactly one durable job/run for one normalized request/version set."""
 
+    _validate_request_versions(request)
     selected = _selected_sessions(session, request=request)
     scope = _scope(request, selected)
     version_set = _version_set(request)
@@ -183,7 +190,12 @@ def process_intelligence_reprocess_session(
         ),
     )
     observed_at = learning_session.closed_at or learning_session.last_activity_at
-    states = apply_processing_run_current_state(session, processing_run_id=outcome.processing_run.id, now=observed_at)
+    states = apply_processing_run_current_state(
+        session,
+        processing_run_id=outcome.processing_run.id,
+        now=observed_at,
+        policy_version=str(versions["current_state_policy_version"]),
+    )
     patterns = apply_processing_run_patterns(
         session,
         processing_run_id=outcome.processing_run.id,
@@ -286,6 +298,39 @@ def _scope(request: IntelligenceReprocessRequest, selected: list[LearningSession
     }
 
 
+def _sessions_with_matching_evidence(
+    session: Session,
+    *,
+    selected: list[LearningSession],
+    evidence: EvidenceVersionSelection,
+) -> set[UUID]:
+    session_ids = {item.id for item in selected}
+    if not session_ids:
+        return set()
+    rows = session.execute(
+        select(IntelligenceProcessingRun.scope).where(
+            IntelligenceProcessingRun.status == "COMPLETED",
+            IntelligenceProcessingRun.rubric_version == evidence.rubric_version,
+            IntelligenceProcessingRun.policy_version == evidence.consolidation_policy_version,
+            IntelligenceProcessingRun.scope["session_id"].astext.in_([str(item) for item in session_ids]),
+            IntelligenceProcessingRun.scope["consolidation_schema_version"].astext == evidence.schema_version,
+            IntelligenceProcessingRun.scope["prompt_version"].astext == evidence.prompt_version,
+        )
+    ).scalars()
+    matched: set[UUID] = set()
+    for scope in rows:
+        if not isinstance(scope, dict):
+            continue
+        if evidence.provider is not None and scope.get("provider") != evidence.provider:
+            continue
+        if evidence.model is not None and scope.get("model") != evidence.model:
+            continue
+        raw_session_id = scope.get("session_id")
+        if isinstance(raw_session_id, str):
+            matched.add(UUID(raw_session_id))
+    return matched
+
+
 def _version_set(request: IntelligenceReprocessRequest) -> dict[str, object]:
     return {
         "evidence": asdict(request.evidence),
@@ -293,6 +338,20 @@ def _version_set(request: IntelligenceReprocessRequest) -> dict[str, object]:
         "pattern_policy_version": request.pattern_policy_version,
         "decision_policy_version": request.decision_policy_version,
     }
+
+
+def _validate_request_versions(request: IntelligenceReprocessRequest) -> None:
+    require_supported_current_state_policy(request.current_state_policy_version)
+    require_supported_consolidation_version(
+        ConsolidationVersion(
+            schema_version=request.evidence.schema_version,
+            prompt_version=request.evidence.prompt_version,
+            rubric_version=request.evidence.rubric_version,
+            policy_version=request.evidence.consolidation_policy_version,
+            provider=request.evidence.provider,
+            model=request.evidence.model,
+        )
+    )
 
 
 def _idempotency_key(student_id: UUID, scope: dict[str, object], version_set: dict[str, object]) -> str:

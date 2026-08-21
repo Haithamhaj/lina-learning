@@ -19,6 +19,7 @@ from services.platform.db.models import (
 
 
 CURRENT_STATE_POLICY_VERSION = "current-state-policy-v1"
+SUPPORTED_CURRENT_STATE_POLICY_VERSIONS = frozenset({CURRENT_STATE_POLICY_VERSION})
 _SHORT_LIVED_STATE_WINDOWS = {
     "recent_strategy_success": timedelta(days=14),
     "recent_strategy_failure": timedelta(days=14),
@@ -31,17 +32,24 @@ class CurrentStateSourceError(ValueError):
     """The supplied Evidence is not a completed TASK-021 output."""
 
 
+class CurrentStatePolicyError(ValueError):
+    """A requested Current State policy has no executable implementation."""
+
+
 def apply_evidence_to_current_state(
     session: Session,
     *,
     evidence_id: UUID,
     now: datetime | None = None,
+    policy_version: str | None = None,
 ) -> list[CurrentLearningState]:
     """Apply one validated Evidence item without creating Patterns or decision views."""
 
+    policy_version = policy_version or CURRENT_STATE_POLICY_VERSION
+    _require_supported_policy(policy_version)
     effective_now = now or datetime.now(UTC)
     evidence, event, learning_session, run = _load_validated_evidence(session, evidence_id=evidence_id)
-    existing = _states_for_evidence(session, evidence_id=evidence.id)
+    existing = _states_for_evidence(session, evidence_id=evidence.id, policy_version=policy_version)
     if existing:
         return existing
 
@@ -55,6 +63,7 @@ def apply_evidence_to_current_state(
             state_types=("active_difficulty", "active_misconception", "open_learning_loop"),
             evidence_id=evidence.id,
             now=effective_now,
+            policy_version=policy_version,
         )
     elif _partial_improvement(dimensions, evidence.relationship):
         touched = _mark_states_resolving(
@@ -65,6 +74,7 @@ def apply_evidence_to_current_state(
             state_types=("active_difficulty", "active_misconception", "open_learning_loop"),
             evidence_id=evidence.id,
             now=effective_now,
+            policy_version=policy_version,
         )
     else:
         touched = []
@@ -79,6 +89,7 @@ def apply_evidence_to_current_state(
                 state_types=("current_retention_concern",),
                 evidence_id=evidence.id,
                 now=effective_now,
+                policy_version=policy_version,
             )
         )
 
@@ -93,6 +104,7 @@ def apply_evidence_to_current_state(
             detail=detail,
             evidence_id=evidence.id,
             now=effective_now,
+            policy_version=policy_version,
         )
         if state not in touched:
             touched.append(state)
@@ -105,9 +117,12 @@ def apply_processing_run_current_state(
     *,
     processing_run_id: UUID,
     now: datetime | None = None,
+    policy_version: str | None = None,
 ) -> list[CurrentLearningState]:
     """Idempotently derive state for every validated Evidence item in one completed run."""
 
+    policy_version = policy_version or CURRENT_STATE_POLICY_VERSION
+    _require_supported_policy(policy_version)
     evidence_ids = session.execute(
         select(LearningEvidence.id)
         .join(LearningEvent, LearningEvidence.event_id == LearningEvent.id)
@@ -117,7 +132,12 @@ def apply_processing_run_current_state(
     ).scalars()
     states: list[CurrentLearningState] = []
     for evidence_id in evidence_ids:
-        for state in apply_evidence_to_current_state(session, evidence_id=evidence_id, now=now):
+        for state in apply_evidence_to_current_state(
+            session,
+            evidence_id=evidence_id,
+            now=now,
+            policy_version=policy_version,
+        ):
             if state not in states:
                 states.append(state)
     return states
@@ -177,11 +197,22 @@ def _supported_evidence_schema(value: object) -> bool:
     return isinstance(value, str) and value.startswith("session-evidence-")
 
 
-def _states_for_evidence(session: Session, *, evidence_id: UUID) -> list[CurrentLearningState]:
+def _require_supported_policy(policy_version: str) -> None:
+    if policy_version not in SUPPORTED_CURRENT_STATE_POLICY_VERSIONS and policy_version != CURRENT_STATE_POLICY_VERSION:
+        raise CurrentStatePolicyError(f"Current State policy {policy_version!r} is not executable.")
+
+
+def require_supported_current_state_policy(policy_version: str) -> None:
+    """Validate a requested policy before a durable reprocess request is queued."""
+
+    _require_supported_policy(policy_version)
+
+
+def _states_for_evidence(session: Session, *, evidence_id: UUID, policy_version: str) -> list[CurrentLearningState]:
     return list(
         session.execute(
             select(CurrentLearningState).where(
-                CurrentLearningState.policy_version == CURRENT_STATE_POLICY_VERSION,
+                CurrentLearningState.policy_version == policy_version,
                 CurrentLearningState.evidence_refs.contains([str(evidence_id)]),
             )
         ).scalars()
@@ -241,6 +272,7 @@ def _upsert_active_state(
     detail: str,
     evidence_id: UUID,
     now: datetime,
+    policy_version: str,
 ) -> CurrentLearningState:
     state = _matching_states(
         session,
@@ -249,6 +281,7 @@ def _upsert_active_state(
         concept_ref=concept_ref,
         state_types=(state_type,),
         statuses=("ACTIVE", "RESOLVING"),
+        policy_version=policy_version,
     ).first()
     if state is None:
         state = CurrentLearningState(
@@ -260,7 +293,7 @@ def _upsert_active_state(
             detail=detail,
             status="ACTIVE",
             evidence_refs=[str(evidence_id)],
-            policy_version=CURRENT_STATE_POLICY_VERSION,
+            policy_version=policy_version,
             detected_at=now,
             updated_at=now,
             expires_at=(now + _SHORT_LIVED_STATE_WINDOWS[state_type])
@@ -290,6 +323,7 @@ def _resolve_states(
     state_types: tuple[str, ...],
     evidence_id: UUID,
     now: datetime,
+    policy_version: str,
 ) -> list[CurrentLearningState]:
     states = list(
         _matching_states(
@@ -299,6 +333,7 @@ def _resolve_states(
             concept_ref=concept_ref,
             state_types=state_types,
             statuses=("ACTIVE", "RESOLVING"),
+            policy_version=policy_version,
         )
     )
     for state in states:
@@ -318,6 +353,7 @@ def _mark_states_resolving(
     state_types: tuple[str, ...],
     evidence_id: UUID,
     now: datetime,
+    policy_version: str,
 ) -> list[CurrentLearningState]:
     states = list(
         _matching_states(
@@ -327,6 +363,7 @@ def _mark_states_resolving(
             concept_ref=concept_ref,
             state_types=state_types,
             statuses=("ACTIVE",),
+            policy_version=policy_version,
         )
     )
     for state in states:
@@ -344,13 +381,14 @@ def _matching_states(
     concept_ref: str | None,
     state_types: tuple[str, ...],
     statuses: tuple[str, ...],
+    policy_version: str,
 ):
     query = select(CurrentLearningState).where(
         CurrentLearningState.student_id == student_id,
         CurrentLearningState.subject == subject,
         CurrentLearningState.state_type.in_(state_types),
         CurrentLearningState.status.in_(statuses),
-        CurrentLearningState.policy_version == CURRENT_STATE_POLICY_VERSION,
+        CurrentLearningState.policy_version == policy_version,
     )
     if concept_ref is None:
         query = query.where(CurrentLearningState.concept_ref.is_(None))

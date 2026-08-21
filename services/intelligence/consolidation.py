@@ -165,6 +165,10 @@ class ConsolidationValidationError(ConsolidationError):
     """Model output does not have enough source-grounded support to persist."""
 
 
+class EvidenceContractError(ConsolidationError):
+    """A requested Evidence identity has no executable parser/prompt contract."""
+
+
 @dataclass(frozen=True)
 class ConsolidationOutcome:
     processing_run: IntelligenceProcessingRun
@@ -184,6 +188,22 @@ class ConsolidationVersion:
     model: str | None = None
 
 
+_EXECUTABLE_CONSOLIDATION_VERSION = ConsolidationVersion()
+
+
+def require_supported_consolidation_version(version: ConsolidationVersion) -> None:
+    """Reject metadata-only identities; only compiled contracts may be recorded."""
+
+    executable = (
+        version.schema_version == _EXECUTABLE_CONSOLIDATION_VERSION.schema_version
+        and version.prompt_version == _EXECUTABLE_CONSOLIDATION_VERSION.prompt_version
+        and version.rubric_version == _EXECUTABLE_CONSOLIDATION_VERSION.rubric_version
+        and version.policy_version == _EXECUTABLE_CONSOLIDATION_VERSION.policy_version
+    )
+    if not executable:
+        raise EvidenceContractError("Evidence interpretation is not an executable registered contract.")
+
+
 def consolidate_closed_session(
     session: Session,
     *,
@@ -198,6 +218,7 @@ def consolidate_closed_session(
 
     route = gateway.route_for(ModelTask.SESSION_EVIDENCE)
     selected_version = version or _default_consolidation_version()
+    require_supported_consolidation_version(selected_version)
     if selected_version.provider is not None and selected_version.provider != route.provider:
         raise ConsolidationError("Selected evidence provider does not match the configured Gateway route.")
     if selected_version.model is not None and selected_version.model != route.model:
@@ -273,14 +294,9 @@ def mark_consolidation_failed(
 
 
 def _default_consolidation_version() -> ConsolidationVersion:
-    """Read module constants at call time so a deployed contract upgrade is explicit."""
+    """Return the identity of the parser/prompt contract compiled into this process."""
 
-    return ConsolidationVersion(
-        schema_version=SESSION_EVIDENCE_SCHEMA_VERSION,
-        prompt_version=SESSION_EVIDENCE_PROMPT_VERSION,
-        rubric_version=EVIDENCE_RUBRIC_VERSION,
-        policy_version=SESSION_CONSOLIDATION_POLICY_VERSION,
-    )
+    return _EXECUTABLE_CONSOLIDATION_VERSION
 
 
 def _find_or_create_run(
