@@ -164,6 +164,54 @@ def _concept_pattern(session: Session) -> LearnerPattern:
     return session.query(LearnerPattern).filter_by(pattern_type="support_need").one()
 
 
+def _scope_pattern(session: Session, *, scope_type: str) -> LearnerPattern:
+    return (
+        session.query(LearnerPattern)
+        .filter_by(pattern_type="support_need")
+        .filter(LearnerPattern.scope["scope_type"].astext == scope_type)
+        .one()
+    )
+
+
+def _scope_support(
+    session: Session,
+    *,
+    student: Student,
+    concept: str,
+    context: str,
+    task: str,
+    occurred_at: datetime,
+) -> LearningEvidence:
+    return _evidence(
+        session,
+        student=student,
+        concept=concept,
+        dimensions=_support(),
+        context_ref=context,
+        task_ref=task,
+        created_at=occurred_at,
+    )
+
+
+def _scope_counter(
+    session: Session,
+    *,
+    student: Student,
+    concept: str,
+    task: str,
+    occurred_at: datetime,
+) -> LearningEvidence:
+    return _evidence(
+        session,
+        student=student,
+        concept=concept,
+        dimensions=_independent(),
+        relationship="improvement",
+        task_ref=task,
+        created_at=occurred_at,
+    )
+
+
 def test_one_evidence_creates_candidate_never_active_or_stable(factory: sessionmaker[Session]) -> None:
     with factory.begin() as session:
         student = _student(session)
@@ -502,6 +550,187 @@ def test_scope_starts_concept_specific_then_broadens_only_across_diverse_math_co
         broader = session.query(LearnerPattern).filter_by(pattern_type="support_need").filter(LearnerPattern.scope["scope_type"].astext == "context").one()
         assert broader.scope["context_ref"] == "math_word_problems"
         assert session.query(LearnerPattern).filter(LearnerPattern.scope["scope_type"].astext == "global").count() == 0
+
+
+def test_one_concept_and_near_identical_tasks_remain_concept_scoped(factory: sessionmaker[Session]) -> None:
+    with factory.begin() as session:
+        student = _student(session)
+        for day in (1, 8, 20):
+            apply_evidence_to_patterns(
+                session,
+                evidence_id=_scope_support(
+                    session,
+                    student=student,
+                    concept="equivalent_fractions",
+                    context="math_word_problems",
+                    task="same_fraction_prompt",
+                    occurred_at=datetime(2026, 7, day, 12, tzinfo=UTC),
+                ).id,
+                now=datetime(2026, 7, 20, 13, tzinfo=UTC),
+            )
+
+        assert session.query(LearnerPattern).filter(
+            LearnerPattern.scope["scope_type"].astext.in_(("context", "subject", "cross_subject", "global"))
+        ).count() == 0
+
+
+def test_context_scope_requires_three_distinct_concepts(factory: sessionmaker[Session]) -> None:
+    with factory.begin() as session:
+        student = _student(session)
+        for index, concept in enumerate(("equivalent_fractions", "decimal_place_value"), start=1):
+            apply_evidence_to_patterns(
+                session,
+                evidence_id=_scope_support(
+                    session,
+                    student=student,
+                    concept=concept,
+                    context="math_word_problems",
+                    task=concept,
+                    occurred_at=datetime(2026, 7, index, 12, tzinfo=UTC),
+                ).id,
+            )
+        assert session.query(LearnerPattern).filter(
+            LearnerPattern.scope["scope_type"].astext == "context"
+        ).count() == 0
+
+        apply_evidence_to_patterns(
+            session,
+            evidence_id=_scope_support(
+                session,
+                student=student,
+                concept="ratio_reasoning",
+                context="math_word_problems",
+                task="ratio_reasoning",
+                occurred_at=datetime(2026, 7, 3, 12, tzinfo=UTC),
+            ).id,
+        )
+
+        assert _scope_pattern(session, scope_type="context").scope["context_ref"] == "math_word_problems"
+
+
+def test_subject_scope_requires_two_qualifying_contexts(factory: sessionmaker[Session]) -> None:
+    with factory.begin() as session:
+        student = _student(session)
+        for context, concepts in {
+            "math_word_problems": ("equivalent_fractions", "decimal_place_value", "ratio_reasoning"),
+            "math_visual_models": ("area_models", "number_lines", "bar_models"),
+        }.items():
+            for index, concept in enumerate(concepts, start=1):
+                apply_evidence_to_patterns(
+                    session,
+                    evidence_id=_scope_support(
+                        session,
+                        student=student,
+                        concept=concept,
+                        context=context,
+                        task=f"{context}:{concept}",
+                        occurred_at=datetime(2026, 7, index, 12, tzinfo=UTC),
+                    ).id,
+                )
+            if context == "math_word_problems":
+                assert session.query(LearnerPattern).filter(
+                    LearnerPattern.scope["scope_type"].astext == "subject"
+                ).count() == 0
+
+        assert _scope_pattern(session, scope_type="subject").scope == {"scope_type": "subject", "subject": "MATH"}
+
+
+def test_resolved_concept_support_recomputes_broad_scope_without_touching_other_concepts(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student = _student(session)
+        concepts = ("equivalent_fractions", "decimal_place_value", "ratio_reasoning")
+        for index, concept in enumerate(concepts, start=1):
+            apply_evidence_to_patterns(
+                session,
+                evidence_id=_scope_support(
+                    session,
+                    student=student,
+                    concept=concept,
+                    context="math_word_problems",
+                    task=concept,
+                    occurred_at=datetime(2026, 7, index, 12, tzinfo=UTC),
+                ).id,
+            )
+        broad = _scope_pattern(session, scope_type="context")
+        target_id = session.query(LearnerPattern).filter(
+            LearnerPattern.scope["scope_type"].astext == "concept",
+            LearnerPattern.scope["concept_ref"].astext == "equivalent_fractions",
+        ).one().id
+        other = session.query(LearnerPattern).filter(
+            LearnerPattern.scope["scope_type"].astext == "concept",
+            LearnerPattern.scope["concept_ref"].astext == "decimal_place_value",
+        ).one()
+        for day in (20, 22):
+            apply_evidence_to_patterns(
+                session,
+                evidence_id=_scope_counter(
+                    session,
+                    student=student,
+                    concept="equivalent_fractions",
+                    task=f"independent:{day}",
+                    occurred_at=datetime(2026, 8, day, 12, tzinfo=UTC),
+                ).id,
+                now=datetime(2026, 8, 22, 13, tzinfo=UTC),
+            )
+
+        assert session.get(LearnerPattern, target_id).status == "RESOLVED"
+        assert other.status == "CANDIDATE"
+        assert broad.status == "WEAKENING"
+
+
+def test_one_concept_recurrence_does_not_reactivate_resolved_subject_scope(factory: sessionmaker[Session]) -> None:
+    with factory.begin() as session:
+        student = _student(session)
+        contexts = {
+            "math_word_problems": ("equivalent_fractions", "decimal_place_value", "ratio_reasoning"),
+            "math_visual_models": ("area_models", "number_lines", "bar_models"),
+        }
+        for context, concepts in contexts.items():
+            for index, concept in enumerate(concepts, start=1):
+                apply_evidence_to_patterns(
+                    session,
+                    evidence_id=_scope_support(
+                        session,
+                        student=student,
+                        concept=concept,
+                        context=context,
+                        task=f"{context}:{concept}",
+                        occurred_at=datetime(2026, 7, index, 12, tzinfo=UTC),
+                    ).id,
+                )
+        subject = _scope_pattern(session, scope_type="subject")
+        for concepts in contexts.values():
+            for concept in concepts:
+                for day in (20, 22):
+                    apply_evidence_to_patterns(
+                        session,
+                        evidence_id=_scope_counter(
+                            session,
+                            student=student,
+                            concept=concept,
+                            task=f"{concept}:independent:{day}",
+                            occurred_at=datetime(2026, 8, day, 12, tzinfo=UTC),
+                        ).id,
+                        now=datetime(2026, 8, 22, 13, tzinfo=UTC),
+                    )
+        assert subject.status == "RESOLVED"
+
+        recurrence = _scope_support(
+            session,
+            student=student,
+            concept="equivalent_fractions",
+            context="math_word_problems",
+            task="fresh_recurrence",
+            occurred_at=datetime(2026, 9, 1, 12, tzinfo=UTC),
+        )
+        apply_evidence_to_patterns(session, evidence_id=recurrence.id, now=datetime(2026, 9, 1, 13, tzinfo=UTC))
+
+        assert subject.status == "RESOLVED"
+        assert session.query(LearnerPattern).filter(
+            LearnerPattern.scope["scope_type"].astext.in_(("cross_subject", "global"))
+        ).count() == 0
 
 
 def test_same_identity_and_retry_are_idempotent_and_policy_versions_preserve_history(factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch) -> None:

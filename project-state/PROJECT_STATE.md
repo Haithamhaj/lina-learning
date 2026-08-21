@@ -111,6 +111,11 @@ start TASK-024, real-Lina calibration, or product expansion.
   concept and can broaden only through diverse Math evidence; no Card,
   mastery/confidence view, or global/cross-subject pattern is created. It is
   `REVIEW`, not a Phase 3 or Gate B pass.
+- REC-16 verified deterministic scope/generalization: Context and Subject
+  scopes are recomputed from current qualifying concept Evidence, so resolved
+  concepts no longer sustain them and one-concept recurrence cannot reactivate
+  a resolved broader scope. TASK-023 remains `REVIEW`; TASK-024 remains
+  `BLOCKED`.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 

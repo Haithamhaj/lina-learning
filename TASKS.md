@@ -374,7 +374,9 @@ TASK-023 is now under review.
 **Recovery state:** Completed TASK-021 Evidence now drives a versioned,
 deterministic Math Pattern engine with normalized taxonomy/identity, evidence
 links, lifecycle, scope promotion, counter-evidence, and recurrence handling.
-It awaits independent review. No Card or decision-view work runs here.
+REC-16 verified scope/generalization behavior and corrected broad-scope
+recomputation from current supporting concepts. It awaits independent review.
+No Card or decision-view work runs here.
 **Purpose:** Implement frequency/recency/context-diversity/counter-evidence governed Pattern lifecycle and scope without free LLM strength judgment.  
 **Expected output:** candidate/active/stable/weakening/resolved/superseded transitions, pattern-evidence links, a normalized `pattern_type` + `pattern_key` registry/taxonomy, and a historical recurrence lookup hook.  
 **Likely areas:** `/services/intelligence/patterns`.  
