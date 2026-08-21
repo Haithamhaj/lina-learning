@@ -164,6 +164,22 @@ def _seed(session: Session):
                 {},
                 {},
             ),
+            NormalizedStructuralItem(
+                "four",
+                None,
+                3,
+                3,
+                0,
+                "text",
+                "Convert meters to centimeters by multiplying by 100.",
+                None,
+                (),
+                1,
+                18,
+                "fixture#page=18",
+                {},
+                {},
+            ),
         ],
     )
     semantic_run = create_semantic_processing_run(
@@ -240,6 +256,28 @@ def _seed(session: Session):
                 sibling_order=0,
                 metadata={},
             ),
+            SemanticExtractionItem(
+                semantic_key="lesson-2",
+                semantic_type="LESSON",
+                title="Metric conversions",
+                description=None,
+                normalized_concept_key=None,
+                parent_semantic_key=None,
+                structural_item_keys=["four"],
+                sibling_order=1,
+                metadata={},
+            ),
+            SemanticExtractionItem(
+                semantic_key="metric-conversions",
+                semantic_type="CONCEPT",
+                title="Metric conversions",
+                description="Meters and centimeters",
+                normalized_concept_key="metric-conversions",
+                parent_semantic_key="lesson-2",
+                structural_item_keys=["four"],
+                sibling_order=0,
+                metadata={},
+            ),
         ],
     )
     index_run = build_content_index(
@@ -305,3 +343,19 @@ def test_retrieval_uses_explicit_semantic_content_type_request(factory) -> None:
         )
 
     assert blocks and {block.semantic_type for block in blocks} == {"EXAMPLE"}
+
+
+def test_explicit_question_overrides_stale_current_focus_when_lexically_targeted(
+    factory,
+) -> None:
+    with factory.begin() as session:
+        student, _ = _seed(session)
+        blocks = RetrievalService(
+            session, embedding_gateway=_gateway(session)
+        ).retrieve(
+            student_id=student.id,
+            question="How many centimeters are in 3 meters?",
+            focus=CurrentFocus(lesson_key="lesson-1", concept_key="place-value"),
+        )
+
+    assert blocks and blocks[0].source_ref == "fixture#page=18"

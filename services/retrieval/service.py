@@ -146,6 +146,27 @@ class RetrievalService:
             semantic_types=semantic_types,
             limit=candidate_limit,
         )
+        if focus is not None and not lexical_ids:
+            unfocused_lexical_ids = self._lexical_candidate_ids(
+                index_run_id=index_run_id,
+                question=question,
+                grade_level=grade_level,
+                subject=subject,
+                focus=None,
+                semantic_types=semantic_types,
+                limit=candidate_limit,
+            )
+            if unfocused_lexical_ids:
+                lexical_ids = unfocused_lexical_ids
+                vector_ids = self._vector_candidate_ids(
+                    index_run_id=index_run_id,
+                    question=question,
+                    grade_level=grade_level,
+                    subject=subject,
+                    focus=None,
+                    semantic_types=semantic_types,
+                    limit=candidate_limit,
+                )
         fused_ids = reciprocal_rank_fusion(lexical_ids, vector_ids)
         direct_blocks = self._blocks_by_rank(fused_ids)
         expanded_blocks = self._semantic_expansion(
@@ -381,5 +402,30 @@ def _semantic_type_hints(question: str) -> tuple[str, ...]:
 
 def _lexical_query(question: str):
     """Build a safe OR query so conversational filler cannot suppress a match."""
-    terms = re.findall(r"[a-z0-9]+", question.casefold())
+    terms = [
+        term
+        for term in re.findall(r"[a-z0-9]+", question.casefold())
+        if term
+        not in {
+            "a",
+            "an",
+            "and",
+            "are",
+            "can",
+            "how",
+            "i",
+            "in",
+            "is",
+            "me",
+            "of",
+            "the",
+            "these",
+            "to",
+            "we",
+            "what",
+        }
+        and not (term.isdigit() and len(term) == 1)
+    ]
+    if not terms:
+        terms = ["__no_lexical_terms__"]
     return func.to_tsquery("english", " | ".join(terms))

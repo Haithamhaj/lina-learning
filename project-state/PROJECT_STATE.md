@@ -44,8 +44,10 @@ real-Lina calibration or product expansion is authorized.
   PostgreSQL, keeps lexical and vector candidates inspectable, fuses bounded
   candidate lists deterministically, expands only matching semantic parents,
   returns exact provenance, and enforces a context budget. Its local real
-  Eureka pages 1–2 golden passed 7/7 representative cases. It is `REVIEW`, not
-  `DONE`; this does not pass Phase 1 or any Production Engine gate.
+  Eureka pages 1–2 golden passed 7/7 representative cases, and a bounded
+  competing-region golden across pages 2, 18, 30, and 42 passed 6/6 cases,
+  including an explicit stale-focus conflict. It is `REVIEW`, not `DONE`; this
+  does not pass Phase 1 or any Production Engine gate.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 

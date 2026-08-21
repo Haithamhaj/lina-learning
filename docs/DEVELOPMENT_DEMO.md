@@ -75,6 +75,24 @@ the expected semantic type and page/source provenance. It is a bounded
 retrieval-quality check for pages 1–2, not a claim that the entire workbook or
 real-Lina behavior has been validated.
 
+For the bounded competing-region retrieval check (pages 2, 18, 30, and 42),
+reuse the same completed structural run and run:
+
+```bash
+uv run --with-requirements apps/api/requirements.txt \
+  python scripts/prepare_eureka_retrieval_multiregion.py \
+  --database-url "$DATABASE_URL"
+
+uv run --with-requirements apps/api/requirements.txt \
+  python scripts/verify_eureka_retrieval_multiregion.py \
+  --database-url "$DATABASE_URL"
+```
+
+This uses four bounded real regions, not full-workbook semantic processing. It
+checks competing concepts, paraphrase, exact source/page provenance, bounded
+cross-region leakage, aligned current focus, and a stale-focus conflict where
+the explicit current question must remain retrievable.
+
 Start the API from the repository root. `WEB_ORIGIN` must exactly match the
 browser URL, including its host and port, because it is used for both CORS and
 Clerk authorized-party validation.
