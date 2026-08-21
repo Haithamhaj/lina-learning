@@ -2,8 +2,8 @@
 
 ## Current goal
 
-Independently review TASK-020 automatic session lifecycle evidence. Do not
-start TASK-021, real-Lina calibration, or product expansion.
+Independently review TASK-021 Session Evidence consolidation evidence. Do not
+start TASK-022, real-Lina calibration, or product expansion.
 
 ## Current reality
 
@@ -89,7 +89,15 @@ start TASK-021, real-Lina calibration, or product expansion.
   `SESSION_CONSOLIDATION` job and the next Student entry receives a new OPEN
   session. The worker tick performs only lifecycle/queue work; Candidate Event
   interpretation and all derived intelligence remain deferred. TASK-020 is
-  `REVIEW`, not a Phase 3 or Gate B pass.
+  `DONE`, not a Phase 3 or Gate B pass.
+- TASK-021 now consumes only CLOSED sessions with valid source-linked Candidate
+  Events. It sends compact relevant Student/Tutor excerpts through one
+  structured `SESSION_EVIDENCE` Gateway call, validates contextual Events and
+  approved categorical Evidence rubrics before persistence, and preserves
+  session/Candidate/raw-message/run/model lineage. Empty sessions create no
+  derived rows; retries reuse their processing run. No Current State, Pattern,
+  Card, mastery, or confidence view is created. TASK-021 is `REVIEW`, not a
+  Phase 3 or Gate B pass.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -120,7 +128,7 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 and TASK-021 onward remain blocked; TASK-020 awaits independent
+- TASK-015 and TASK-022 onward remain blocked; TASK-021 awaits independent
   review. The Production Engine Acceptance Gate has not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
@@ -135,8 +143,8 @@ Real Lina decision gates.
 
 ## Next recommended action
 
-Review TASK-020 lifecycle timing, idempotent close/job enqueue, and the
-no-derived-intelligence boundary. Do not start TASK-021 or later work without
+Review TASK-021 source-grounded Event/Evidence validation, retry lineage, and
+the no-State/Pattern/Card boundary. Do not start TASK-022 or later work without
 explicit authorization and the applicable gate.
 
 ## Critical references

@@ -327,24 +327,28 @@ Before Phase 3 becomes eligible, complete an **Early Lina Calibration Checkpoint
 # Phase 3 — Learning Intelligence Core
 
 ## TASK-020 — Automatic session-close lifecycle
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** Phase 2 Exit Gate, TASK-006  
 **Recovery state:** A versioned central inactivity-plus-grace policy now keeps
 quick returns in the same OPEN session, closes only after the full window, and
 atomically writes one deferred `SESSION_CONSOLIDATION` job. Lifecycle scans use
 row locks and the durable job idempotency key; no Candidate validation or
-derived intelligence work runs here. It awaits independent review.
+derived intelligence work runs here. Independent review is complete; TASK-021
+is now under review.
 **Purpose:** Close sessions after configurable inactivity/grace logic and enqueue consolidation.  
 **Expected output:** session lifecycle states and worker trigger.  
 **Likely areas:** `/services/tutor/session`, `/workers`.  
 **Verification:** quick return can continue same session; inactivity closes once; consolidation job is idempotent.  
 
 ## TASK-021 — Session Evidence consolidation
-**Status:** BLOCKED
+**Status:** REVIEW
 **Dependencies:** TASK-020, `docs/LEARNING_INTELLIGENCE_SPEC.md`  
-**Recovery state:** Reopened by the independent audit. Existing signal mapping
-is not rubric-based Evidence validation with required source/context checks.
-Blocked pending TASK-020.
+**Recovery state:** Closed sessions now enqueue one `SESSION_EVIDENCE` Gateway
+call only when source-linked Candidate Events exist. Strict versioned output
+validation creates contextual Learning Events and categorical Evidence with
+raw-message/Candidate/session/run traceability; empty sessions create none.
+Processing retries reuse the same run safely. No Current State, Pattern, Card,
+or decision-view work runs here. It awaits independent review.
 **Purpose:** Convert Candidate Events + relevant excerpts/thread context into validated Learning Events and Evidence using the approved rubric.  
 **Expected output:** versioned consolidation processing run, Events, Evidence, traceability.  
 **Likely areas:** `/services/intelligence`, `/prompts/intelligence`, `/packages/schemas`.  
