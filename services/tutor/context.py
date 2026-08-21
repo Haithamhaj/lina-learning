@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.intelligence.selection import RelevantIntelligence, select_relevant_intelligence
+from services.model_gateway.factory import create_embedding_gateway
 from services.platform.db.models import LearningMessage, LearningSession
 from services.retrieval.service import CurrentFocus, RetrievedBlock, RetrievalService
 
@@ -70,7 +71,10 @@ class TutorContextBuilder:
         budget: ContextBudget = ContextBudget(),
     ) -> None:
         self._session = session
-        self._retrieval = retrieval_service or RetrievalService(session)
+        self._retrieval = retrieval_service or RetrievalService(
+            session,
+            embedding_gateway=create_embedding_gateway(session),
+        )
         self._budget = budget
 
     def build(
