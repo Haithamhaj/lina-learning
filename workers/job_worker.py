@@ -17,6 +17,10 @@ from services.platform.db.connection import get_engine
 from services.platform.db.models import Job, JobStatus
 from services.platform.jobs import claim_next_job, complete_job, fail_job
 from services.platform.storage import create_object_storage
+from services.tutor.session_lifecycle import (
+    SessionLifecyclePolicy,
+    close_inactive_sessions,
+)
 from workers.content_handlers import register_content_handlers
 from workers.intelligence_handlers import register_intelligence_handlers
 
@@ -40,6 +44,23 @@ class JobHandlerRegistry:
     def get(self, job_type: str) -> JobHandler | None:
         return self._handlers.get(job_type)
 
+    def job_types(self) -> tuple[str, ...]:
+        """Return only the job contracts this worker can safely execute."""
+
+        return tuple(self._handlers)
+
+
+def run_session_lifecycle_once(
+    session_factory: sessionmaker[Session],
+    *,
+    now: datetime | None = None,
+    policy: SessionLifecyclePolicy | None = None,
+) -> int:
+    """Close eligible sessions and durably queue their deferred consolidation."""
+
+    with session_factory.begin() as session:
+        return len(close_inactive_sessions(session, now=now, policy=policy))
+
 
 def run_once(
     session_factory: sessionmaker[Session],
@@ -51,8 +72,16 @@ def run_once(
     """Claim and handle at most one job without holding a database lock to run it."""
 
     claim_time = now or datetime.now(UTC)
+    job_types = registry.job_types()
+    if not job_types:
+        return None
     with session_factory.begin() as session:
-        job = claim_next_job(session, worker_id=worker_id, now=claim_time)
+        job = claim_next_job(
+            session,
+            worker_id=worker_id,
+            now=claim_time,
+            job_types=job_types,
+        )
         if job is None:
             return None
         session.expunge(job)
@@ -99,6 +128,7 @@ def run_forever(
         raise ValueError("idle_seconds must be positive.")
 
     while True:
+        run_session_lifecycle_once(session_factory)
         status = run_once(session_factory, registry, worker_id=worker_id)
         if status is None:
             time.sleep(idle_seconds)

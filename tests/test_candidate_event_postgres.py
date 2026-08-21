@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -93,7 +94,12 @@ def test_same_call_candidate_persists_raw_source_and_never_creates_derived_intel
         student = Student(user_id=user.id, display_name="Fixture")
         session.add(student)
         session.flush()
-        learning_session = LearningSession(student_id=student.id, subject="MATH")
+        initial_activity = datetime(2020, 1, 1, tzinfo=UTC)
+        learning_session = LearningSession(
+            student_id=student.id,
+            subject="MATH",
+            last_activity_at=initial_activity,
+        )
         session.add(learning_session)
         session.flush()
         provider = _Provider()
@@ -121,5 +127,6 @@ def test_same_call_candidate_persists_raw_source_and_never_creates_derived_intel
         assert candidate.payload["source_message_ids"] == [str(source.id)]
         assert candidate.payload["model_route"] == {"provider": "fixture", "model": "fixture-tutor"}
         assert tutor_message.payload["candidate_metadata_status"] == "persisted"
+        assert learning_session.last_activity_at > initial_activity
         assert session.query(LearningEvent).count() == 0
         assert session.query(LearningEvidence).count() == 0

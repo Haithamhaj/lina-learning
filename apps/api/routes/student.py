@@ -109,7 +109,9 @@ def post_math_message(
     session: Session = Depends(get_session),
 ) -> StudentMessageResponse:
     student = _student_for_principal(session, principal)
-    learning_session = owned_open_math_session(session, student_id=student.id, session_id=session_id)
+    learning_session = owned_open_math_session(
+        session, student_id=student.id, session_id=session_id, lock=True
+    )
     if learning_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Open Math session not found.")
     content = request.content.strip()
@@ -143,7 +145,7 @@ def stream_math_tutor_turn(
         stream_session = Session(bind)
         try:
             owned_session = owned_open_math_session(
-                stream_session, student_id=student_id, session_id=session_id
+                stream_session, student_id=student_id, session_id=session_id, lock=True
             )
             if owned_session is None:
                 return

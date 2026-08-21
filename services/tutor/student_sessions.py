@@ -1,8 +1,4 @@
-"""Persistence operations for the authenticated Student Math entry path.
-
-This module intentionally owns only open/resume/create and message persistence.
-Tutor orchestration and automatic session close remain separate later tasks.
-"""
+"""Persistence operations for the authenticated Student Math entry path."""
 
 from __future__ import annotations
 
@@ -13,6 +9,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.platform.db.models import LearningMessage, LearningSession, Student, User
+from services.tutor.session_lifecycle import (
+    SessionLifecyclePolicy,
+    close_session_if_eligible,
+    session_lifecycle_policy,
+)
 
 
 def student_for_authenticated_subject(
@@ -60,12 +61,16 @@ def open_or_resume_math_session(
     session: Session,
     *,
     student_id: UUID,
+    now: datetime | None = None,
+    lifecycle_policy: SessionLifecyclePolicy | None = None,
 ) -> LearningSession:
-    """Return the latest open Math session, creating one only when needed."""
+    """Resume an eligible Math session or close-and-replace an expired one."""
 
     # Locking the Student row serializes simultaneous first/open requests for
     # this Student without imposing a global session constraint.
     session.execute(select(Student.id).where(Student.id == student_id).with_for_update()).scalar_one()
+    current = now or datetime.now(UTC)
+    policy = lifecycle_policy or session_lifecycle_policy()
     learning_session = session.execute(
         select(LearningSession)
         .where(
@@ -74,11 +79,28 @@ def open_or_resume_math_session(
             LearningSession.status == "OPEN",
         )
         .order_by(LearningSession.last_activity_at.desc(), LearningSession.opened_at.desc())
+        .with_for_update()
         .limit(1)
     ).scalar_one_or_none()
+    if learning_session is not None and close_session_if_eligible(
+        session,
+        learning_session=learning_session,
+        now=current,
+        policy=policy,
+    ):
+        learning_session = None
     if learning_session is None:
-        learning_session = LearningSession(student_id=student_id, subject="MATH", status="OPEN")
+        learning_session = LearningSession(
+            student_id=student_id,
+            subject="MATH",
+            status="OPEN",
+            opened_at=current,
+            last_activity_at=current,
+        )
         session.add(learning_session)
+        session.flush()
+    else:
+        learning_session.last_activity_at = current
         session.flush()
     return learning_session
 
@@ -88,17 +110,19 @@ def owned_open_math_session(
     *,
     student_id: UUID,
     session_id: UUID,
+    lock: bool = False,
 ) -> LearningSession | None:
     """Look up an open Math session within the authenticated Student boundary."""
 
-    return session.execute(
-        select(LearningSession).where(
-            LearningSession.id == session_id,
-            LearningSession.student_id == student_id,
-            LearningSession.subject == "MATH",
-            LearningSession.status == "OPEN",
-        )
-    ).scalar_one_or_none()
+    statement = select(LearningSession).where(
+        LearningSession.id == session_id,
+        LearningSession.student_id == student_id,
+        LearningSession.subject == "MATH",
+        LearningSession.status == "OPEN",
+    )
+    if lock:
+        statement = statement.with_for_update()
+    return session.execute(statement).scalar_one_or_none()
 
 
 def ordered_messages(session: Session, *, learning_session: LearningSession) -> list[LearningMessage]:

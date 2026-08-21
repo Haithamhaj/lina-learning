@@ -33,9 +33,10 @@ from services.platform.db.models import (
     User,
 )
 from services.tutor.runtime import start_session, tutor_turn
-from services.tutor.session_lifecycle import close_inactive_sessions
-from workers.intelligence_handlers import register_intelligence_handlers
-from workers.job_worker import JobHandlerRegistry, run_once
+from services.tutor.session_lifecycle import (
+    SessionLifecyclePolicy,
+    close_inactive_sessions,
+)
 
 
 pytestmark = pytest.mark.skipif(
@@ -168,9 +169,15 @@ def _embedding_gateway(session: Session) -> ModelGateway:
     )
 
 
-def test_inactive_session_closes_once_and_worker_consolidates(
+def test_inactive_session_closes_once_and_leaves_consolidation_for_later_task(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
+    now = datetime(2026, 8, 21, 12, tzinfo=UTC)
+    policy = SessionLifecyclePolicy(
+        version="fixture-v1",
+        inactivity=timedelta(minutes=10),
+        grace=timedelta(minutes=5),
+    )
     with postgres_session_factory.begin() as session:
         user = User(identity_provider="fixture", external_subject=uuid4().hex)
         session.add(user)
@@ -179,18 +186,12 @@ def test_inactive_session_closes_once_and_worker_consolidates(
         session.add(student)
         session.flush()
         learning_session = start_session(session, student_id=student.id)
-        learning_session.last_activity_at = datetime.now(UTC) - timedelta(hours=1)
-        assert close_inactive_sessions(session, inactivity=timedelta(minutes=10)) == [
+        learning_session.last_activity_at = now - timedelta(hours=1)
+        assert close_inactive_sessions(session, now=now, policy=policy) == [
             learning_session
         ]
-    registry = JobHandlerRegistry()
-    register_intelligence_handlers(registry, session_factory=postgres_session_factory)
-    assert (
-        run_once(postgres_session_factory, registry, worker_id="intelligence-test")
-        == "COMPLETED"
-    )
     with postgres_session_factory() as session:
         assert (
             session.get(type(learning_session), learning_session.id).status == "CLOSED"
         )
-        assert close_inactive_sessions(session, inactivity=timedelta(minutes=10)) == []
+        assert close_inactive_sessions(session, now=now, policy=policy) == []

@@ -190,7 +190,7 @@ class TutorRuntime:
         strategy = select_teaching_strategy(content, mode=mode)
         if not safety.continue_to_tutor:
             yield self._persist_turn(
-                learning_session.id,
+                learning_session,
                 safety.redirect_directive or "Please ask a trusted grown-up for help with this topic.",
                 None,
                 safety,
@@ -239,7 +239,7 @@ class TutorRuntime:
                 result=result,
             )
             turn = self._persist_turn(
-                learning_session.id,
+                learning_session,
                 final_text,
                 context,
                 safety,
@@ -298,7 +298,7 @@ class TutorRuntime:
 
     def _persist_turn(
         self,
-        session_id: UUID,
+        learning_session: LearningSession,
         text: str,
         context: TutorContext | None,
         safety: TutorSafetyRuntime,
@@ -317,13 +317,14 @@ class TutorRuntime:
             payload["context_debug"] = {"session_message_ids": [str(identifier) for identifier in context.debug.session_message_ids], "retrieval_source_refs": list(context.debug.retrieval_source_refs), "intelligence_source_ids": [str(identifier) for identifier in context.debug.intelligence_source_ids]}
         self._session.add(
             LearningMessage(
-                session_id=session_id,
+                session_id=learning_session.id,
                 role="tutor",
                 content=text,
                 payload=payload,
                 created_at=datetime.now(UTC),
             )
         )
+        learning_session.last_activity_at = datetime.now(UTC)
         self._session.flush()
         return TutorTurn(text, sources, intelligence, mode, strategy, safety.audit_metadata())
 

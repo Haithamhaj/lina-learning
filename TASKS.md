@@ -305,13 +305,13 @@ primary call; no new Tutor runtime authority or second model call is introduced.
 **Verification:** Representative scenarios show grounding, strategy changes, no endless answer withholding, correct consumption of `SafetyDecision`, no prompt-only safety bypass, and complete usage logs.  
 
 ## TASK-019 — Candidate Event metadata contract
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** TASK-018  
 **Recovery state:** The primary Tutor call now returns a versioned, structured
 student-facing text plus hidden Candidate Event metadata envelope. Valid
 source-linked candidates persist without creating Events, Evidence, state, or
-patterns; absent/malformed metadata never blocks the Tutor response. It awaits
-independent review; TASK-020 remains blocked.
+patterns; absent/malformed metadata never blocks the Tutor response. Independent
+review is complete; TASK-020 is now under review.
 **Purpose:** Let the same Tutor call flag meaningful candidate events without writing stable learner conclusions.  
 **Expected output:** small hidden structured metadata schema and persistence/buffer hook.  
 **Likely areas:** `/services/tutor`, `/packages/schemas`, `/prompts/tutor`.  
@@ -327,11 +327,13 @@ Before Phase 3 becomes eligible, complete an **Early Lina Calibration Checkpoint
 # Phase 3 — Learning Intelligence Core
 
 ## TASK-020 — Automatic session-close lifecycle
-**Status:** BLOCKED
+**Status:** REVIEW
 **Dependencies:** Phase 2 Exit Gate, TASK-006  
-**Recovery state:** Reopened by the independent audit. The worker foundation is
-preserved, but quick-return, grace, and consistently idempotent close behavior
-are incomplete. Blocked pending the repaired Phase 2 Exit Gate.
+**Recovery state:** A versioned central inactivity-plus-grace policy now keeps
+quick returns in the same OPEN session, closes only after the full window, and
+atomically writes one deferred `SESSION_CONSOLIDATION` job. Lifecycle scans use
+row locks and the durable job idempotency key; no Candidate validation or
+derived intelligence work runs here. It awaits independent review.
 **Purpose:** Close sessions after configurable inactivity/grace logic and enqueue consolidation.  
 **Expected output:** session lifecycle states and worker trigger.  
 **Likely areas:** `/services/tutor/session`, `/workers`.  

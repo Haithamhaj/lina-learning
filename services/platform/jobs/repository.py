@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
@@ -78,6 +79,7 @@ def claim_next_job(
     worker_id: str,
     now: datetime | None = None,
     lease_duration: timedelta = DEFAULT_LEASE_DURATION,
+    job_types: Collection[str] | None = None,
 ) -> Job | None:
     """Atomically lease one eligible PostgreSQL job using ``SKIP LOCKED``."""
 
@@ -85,6 +87,10 @@ def claim_next_job(
         raise ValueError("worker_id must be non-empty.")
     if lease_duration <= timedelta(0):
         raise ValueError("lease_duration must be positive.")
+
+    registered_types = tuple(job_types) if job_types is not None else None
+    if registered_types == ():
+        return None
 
     claim_time = now or _utc_now()
     eligible = or_(
@@ -95,6 +101,8 @@ def claim_next_job(
             Job.lease_expires_at <= claim_time,
         ),
     )
+    if registered_types is not None:
+        eligible = and_(eligible, Job.job_type.in_(registered_types))
 
     while True:
         job = session.execute(

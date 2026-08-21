@@ -2,8 +2,8 @@
 
 ## Current goal
 
-Independently review TASK-019 Candidate Event metadata evidence. Do not start
-TASK-020, real-Lina calibration, or product expansion.
+Independently review TASK-020 automatic session lifecycle evidence. Do not
+start TASK-021, real-Lina calibration, or product expansion.
 
 ## Current reality
 
@@ -52,7 +52,7 @@ TASK-020, real-Lina calibration, or product expansion.
   creates/resumes an open Math session, persists ordered raw Student messages,
   restores that history after refresh, and rejects cross-Student access. It is
   `DONE`; Tutor orchestration, safety consumption, Candidate Events, and
-  automatic close are deliberately not part of this path yet.
+  automatic close is now governed separately by TASK-020.
 - TASK-017 now has a deterministic, inspectable context boundary. It keeps the
   current question authoritative, limits the recent session window, uses
   optional persisted topic metadata only as retrieval focus, invokes TASK-014
@@ -82,7 +82,14 @@ TASK-020, real-Lina calibration, or product expansion.
   metadata; deterministic validation persists only source-linked candidates.
   Absent/malformed metadata is recorded on the Tutor message without blocking
   the response. No Learning Event, Evidence, state, pattern, or learner label
-  is created. TASK-019 is `REVIEW`, not a Phase 2 Exit Gate or Gate B pass.
+  is created. TASK-019 is `DONE`, not a Phase 2 Exit Gate or Gate B pass.
+- TASK-020 adds a centrally configured, versioned inactivity-plus-grace
+  lifecycle. Student return before closure refreshes the same OPEN session;
+  after the full window, a row-locked close atomically records one deferred
+  `SESSION_CONSOLIDATION` job and the next Student entry receives a new OPEN
+  session. The worker tick performs only lifecycle/queue work; Candidate Event
+  interpretation and all derived intelligence remain deferred. TASK-020 is
+  `REVIEW`, not a Phase 3 or Gate B pass.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -113,7 +120,7 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 and TASK-020 onward remain blocked; TASK-019 awaits independent
+- TASK-015 and TASK-021 onward remain blocked; TASK-020 awaits independent
   review. The Production Engine Acceptance Gate has not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
@@ -128,9 +135,9 @@ Real Lina decision gates.
 
 ## Next recommended action
 
-Review TASK-019 Candidate Event contract, source linkage, and no-derived-state
-evidence. Do not start TASK-020 or later work without explicit authorization
-and the applicable gate.
+Review TASK-020 lifecycle timing, idempotent close/job enqueue, and the
+no-derived-intelligence boundary. Do not start TASK-021 or later work without
+explicit authorization and the applicable gate.
 
 ## Critical references
 

@@ -121,6 +121,15 @@ class Settings(BaseSettings):
     embedding_model_name: str = "text-embedding-3-small"
     embedding_dimensions: int = Field(default=1536, ge=1)
 
+    # Session lifecycle is deliberately centralized so production calibration
+    # does not leak timing decisions into Student routes or workers.
+    session_lifecycle_policy_version: str = Field(
+        default="session-lifecycle-v1",
+        min_length=1,
+    )
+    session_inactivity_seconds: int = Field(default=20 * 60, gt=0)
+    session_grace_seconds: int = Field(default=5 * 60, ge=0)
+
     @model_validator(mode="after")
     def validate_service_requirements(self) -> "Settings":
         """Fail clearly when an enabled deployment mode is incomplete."""

@@ -9,7 +9,10 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from services.intelligence.core import close_and_consolidate
 from services.platform.db.models import Job, LearningSession
-from services.tutor.session_lifecycle import CONSOLIDATE_SESSION_JOB
+
+# This is a pre-TASK-020 development-only job. TASK-020 emits the deferred
+# SESSION_CONSOLIDATION contract instead; TASK-021 will own its handler.
+CONSOLIDATE_SESSION_JOB = "intelligence.consolidate_session"
 
 if TYPE_CHECKING:
     from workers.job_worker import JobHandlerRegistry

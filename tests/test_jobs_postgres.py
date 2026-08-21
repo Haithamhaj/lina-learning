@@ -372,3 +372,28 @@ def test_run_once_completes_one_job_with_a_registered_handler(
         assert completed is not None
         assert completed.status == JobStatus.COMPLETED
         assert completed.result == {"doubled": 14}
+
+
+def test_worker_leaves_deferred_session_consolidation_pending_until_its_handler_exists(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    with postgres_session_factory.begin() as session:
+        job_id = enqueue_job(
+            session,
+            job_type="SESSION_CONSOLIDATION",
+            payload={"session_id": "fixture-session"},
+            run_after=NOW,
+        ).id
+
+    assert run_once(
+        postgres_session_factory,
+        JobHandlerRegistry(),
+        worker_id="test-worker",
+        now=NOW,
+    ) is None
+
+    with postgres_session_factory() as session:
+        pending = session.get(Job, job_id)
+        assert pending is not None
+        assert pending.status == JobStatus.PENDING
+        assert pending.attempt_count == 0
