@@ -113,3 +113,28 @@ def test_contract_rejects_unaccounted_structural_items_without_an_arbitrary_rati
 
     with pytest.raises(SemanticContractError, match="unaccounted structural items"):
         validate_semantic_output(output, available_structural_item_keys={"root", "ignored"})
+
+
+def test_contract_accepts_an_all_unclassified_decorative_batch() -> None:
+    output = parse_semantic_output(
+        _output(items=[], unclassified=["decorative-picture", "footer"])
+    )
+
+    validate_semantic_output(
+        output,
+        available_structural_item_keys={"decorative-picture", "footer"},
+    )
+
+    assert output.items == []
+
+
+def test_contract_rejects_all_unclassified_batch_with_missing_source_accounting() -> None:
+    output = parse_semantic_output(
+        _output(items=[], unclassified=["decorative-picture"])
+    )
+
+    with pytest.raises(SemanticContractError, match="unaccounted structural items"):
+        validate_semantic_output(
+            output,
+            available_structural_item_keys={"decorative-picture", "footer"},
+        )

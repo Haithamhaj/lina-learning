@@ -51,7 +51,7 @@ class SemanticExtractionOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     schema_version: Literal[SEMANTIC_SCHEMA_VERSION]
-    items: list[SemanticExtractionItem] = Field(min_length=1)
+    items: list[SemanticExtractionItem]
     unclassified_structural_item_keys: list[str] = Field(default_factory=list)
 
 
