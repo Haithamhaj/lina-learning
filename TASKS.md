@@ -175,7 +175,7 @@ TASK-013, Phase 1, or the Production Engine Acceptance Gate.
 **Verification:** Schema-valid output on real/fixture pages; source refs valid; no silent catastrophic duplication/missing-unit acceptance.  
 
 ## TASK-013 — Structural content blocks and indexing
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** TASK-012  
 **Recovery state:** Reopened by the independent audit. The existing local
 embedding/demo ranking path is not verified as the required structural,
@@ -195,11 +195,15 @@ only if TASK-014 golden retrieval shows a concrete gap.
 **Verification:** Reuse decision is recorded; definitions/examples/figures remain source-linked; Grade/Subject/Focus metadata remains controllable; oversized blocks refine without losing hierarchy; index rebuild works.  
 
 ## TASK-014 — Hierarchical/hybrid retrieval service
-**Status:** BLOCKED
+**Status:** REVIEW
 **Dependencies:** TASK-013  
-**Recovery state:** Reopened by the independent audit. Real-book retrieval
-goldens and the required Grade/Subject/Focus/Concept relevance contract remain
-unverified. Blocked until TASK-013 is verified.
+**Recovery state:** Rebuilt for review using bounded PostgreSQL lexical and
+pgvector candidate queries, deterministic reciprocal-rank fusion, optional
+Grade/Subject/Unit/Lesson/Concept narrowing, semantic-parent expansion, exact
+source provenance, and a context budget. A local real-Eureka pages 1–2 golden
+set passed 7/7 cases (terminology, paraphrase, example, exercise, figure,
+with-focus, and without-focus). This approves retrieval for independent review
+only; it does not pass Phase 1 or the Production Engine Acceptance Gate.
 **Purpose:** Retrieve Grade/Subject/Focus/Concept-relevant Math context using metadata + lexical + vector ranking over the retrieval approach selected in TASK-013.  
 **Expected output:** retrieval API/service with context budget and source provenance, with any adopted framework hidden behind the project Retrieval domain contract.  
 **Likely areas:** `/services/retrieval`.  

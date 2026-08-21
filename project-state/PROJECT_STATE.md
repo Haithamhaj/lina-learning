@@ -2,9 +2,9 @@
 
 ## Current goal
 
-Independently review the remediated TASK-013 production retrieval-index layer,
-then continue repairing the Production Learning Engine only after
-approval. No real-Lina calibration or product expansion is authorized.
+Independently review the remediated TASK-014 production retrieval layer, then
+continue repairing the Production Learning Engine only after approval. No
+real-Lina calibration or product expansion is authorized.
 
 ## Current reality
 
@@ -33,12 +33,19 @@ approval. No real-Lina calibration or product expansion is authorized.
   links. Its bounded Model-Gateway extraction and PostgreSQL fixture/versioning
   tests passed; its local Eureka pages 1–2 semantic golden passed through the
   configured OpenAI Luna route. It is `DONE`; this verifies the semantic layer only.
-- TASK-013 now has a separate versioned retrieval index derived from a completed
+- TASK-013 is independently verified and has a separate versioned retrieval index derived from a completed
   semantic run: source-linked semantic/structural blocks, Grade/Subject/Unit/
   Lesson/Concept/type metadata, PostgreSQL TSVECTOR lexical index, and a
   1536-dimensional pgvector HNSW cosine index. Fixture PostgreSQL tests passed,
   and a live OpenAI `text-embedding-3-small` smoke call returned 1536 values.
-  It is `REVIEW`, not `DONE`.
+  It is `DONE`; this verifies indexing only.
+- TASK-014 now has a project-owned hierarchical/hybrid retrieval service over
+  that index. It applies Grade/Subject and optional current focus narrowing in
+  PostgreSQL, keeps lexical and vector candidates inspectable, fuses bounded
+  candidate lists deterministically, expands only matching semantic parents,
+  returns exact provenance, and enforces a context budget. Its local real
+  Eureka pages 1–2 golden passed 7/7 representative cases. It is `REVIEW`, not
+  `DONE`; this does not pass Phase 1 or any Production Engine gate.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -69,9 +76,9 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-013 needs independent review before retrieval, Tutor, or intelligence
-  remediation becomes actionable. TASK-014 and later remain
-  blocked; the Production Engine Acceptance Gate has not passed.
+- TASK-014 needs independent review before content-admin, Tutor, or intelligence
+  remediation becomes actionable. TASK-015 and later remain blocked; the
+  Production Engine Acceptance Gate has not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
   database/workflow remains a deferred local-development improvement.
@@ -85,9 +92,9 @@ Real Lina decision gates.
 
 ## Next recommended action
 
-Conduct an independent review of **TASK-013 — Structural Content Blocks and
-Indexing**. Do not start TASK-014 or later work unless that review approves
-TASK-013.
+Conduct an independent review of **TASK-014 — Hierarchical/hybrid retrieval
+service**. Do not start TASK-015 or later work unless that review approves
+TASK-014.
 
 ## Critical references
 

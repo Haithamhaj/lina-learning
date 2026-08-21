@@ -1,4 +1,4 @@
-"""Project-owned, provenance-first hybrid retrieval for the Math vertical slice."""
+"""Project-owned hierarchical and hybrid retrieval over the TASK-013 index."""
 
 from __future__ import annotations
 
@@ -6,11 +6,24 @@ from dataclasses import dataclass
 import re
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from services.platform.db.models import ContentBlock, ContentDocument
+from services.model_gateway.gateway import ModelGateway
+from services.platform.db.models import (
+    ContentDocument,
+    ContentIndexRun,
+    IndexedContentBlock,
+    IndexedContentBlockSource,
+    ModelTask,
+)
 
+
+@dataclass(frozen=True)
+class CurrentFocus:
+    unit_key: str | None = None
+    lesson_key: str | None = None
+    concept_key: str | None = None
 
 
 @dataclass(frozen=True)
@@ -20,13 +33,56 @@ class RetrievedBlock:
     page_number: int | None
     block_type: str
     score: float
+    semantic_key: str
+    semantic_type: str | None
+    concept_key: str | None
+    source_refs: tuple[str, ...]
+    page_numbers: tuple[int | None, ...]
+    matched: bool
+
+
+@dataclass(frozen=True)
+class RetrievalDebug:
+    lexical_block_ids: tuple[UUID, ...]
+    vector_block_ids: tuple[UUID, ...]
+    fused_block_ids: tuple[UUID, ...]
+
+
+@dataclass(frozen=True)
+class RetrievalContext:
+    index_run_id: UUID
+    blocks: list[RetrievedBlock]
+    debug: RetrievalDebug
+
+
+def reciprocal_rank_fusion(
+    lexical_ids: list[UUID | str], vector_ids: list[UUID | str], *, offset: int = 60
+) -> list[UUID | str]:
+    """Fuse two bounded DB-ranked lists without treating scores as comparable."""
+    scores: dict[UUID | str, float] = {}
+    first_seen: dict[UUID | str, int] = {}
+    for source_order, candidates in enumerate((lexical_ids, vector_ids)):
+        for rank, identifier in enumerate(candidates, start=1):
+            scores[identifier] = scores.get(identifier, 0.0) + 1.0 / (offset + rank)
+            first_seen.setdefault(identifier, source_order * len(candidates) + rank)
+    return sorted(
+        scores,
+        key=lambda identifier: (
+            -scores[identifier],
+            first_seen[identifier],
+            str(identifier),
+        ),
+    )
 
 
 class RetrievalService:
-    """Keep filtering, ranking, budgets, and provenance in the Lina domain."""
+    """Retrieve a bounded, source-linked curriculum slice from PostgreSQL."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(
+        self, session: Session, *, embedding_gateway: ModelGateway | None = None
+    ) -> None:
         self._session = session
+        self._embedding_gateway = embedding_gateway
 
     def retrieve(
         self,
@@ -35,32 +91,295 @@ class RetrievalService:
         question: str,
         grade_level: int = 5,
         subject: str = "MATH",
+        focus: CurrentFocus | None = None,
         limit: int = 4,
         character_budget: int = 2400,
     ) -> list[RetrievedBlock]:
-        terms = set(re.findall(r"[a-z0-9]+", question.lower()))
-        rows = self._session.execute(
-            select(ContentBlock, ContentDocument)
-            .join(ContentDocument, ContentBlock.document_id == ContentDocument.id)
+        """Compatibility convenience returning only the selected context blocks."""
+        return self.retrieve_with_debug(
+            student_id=student_id,
+            question=question,
+            grade_level=grade_level,
+            subject=subject,
+            focus=focus,
+            block_limit=limit,
+            character_budget=character_budget,
+        ).blocks
+
+    def retrieve_with_debug(
+        self,
+        *,
+        student_id: UUID,
+        question: str,
+        grade_level: int = 5,
+        subject: str = "MATH",
+        focus: CurrentFocus | None = None,
+        candidate_limit: int = 20,
+        block_limit: int = 4,
+        character_budget: int = 2400,
+    ) -> RetrievalContext:
+        if not question.strip():
+            raise ValueError("A retrieval question is required.")
+        if candidate_limit <= 0 or block_limit <= 0 or character_budget <= 0:
+            raise ValueError("Retrieval limits must be positive.")
+        index_run_id = self._latest_index_run(
+            student_id=student_id, grade_level=grade_level, subject=subject
+        )
+        if index_run_id is None:
+            return RetrievalContext(UUID(int=0), [], RetrievalDebug((), (), ()))
+        semantic_types = _semantic_type_hints(question)
+        lexical_ids = self._lexical_candidate_ids(
+            index_run_id=index_run_id,
+            question=question,
+            grade_level=grade_level,
+            subject=subject,
+            focus=focus,
+            semantic_types=semantic_types,
+            limit=candidate_limit,
+        )
+        vector_ids = self._vector_candidate_ids(
+            index_run_id=index_run_id,
+            question=question,
+            grade_level=grade_level,
+            subject=subject,
+            focus=focus,
+            semantic_types=semantic_types,
+            limit=candidate_limit,
+        )
+        fused_ids = reciprocal_rank_fusion(lexical_ids, vector_ids)
+        direct_blocks = self._blocks_by_rank(fused_ids)
+        expanded_blocks = self._semantic_expansion(
+            index_run_id=index_run_id,
+            direct_blocks=direct_blocks,
+            maximum_blocks=block_limit,
+        )
+        selected = self._assemble_context(
+            [*direct_blocks, *expanded_blocks],
+            direct_ids=set(fused_ids),
+            block_limit=block_limit,
+            character_budget=character_budget,
+        )
+        return RetrievalContext(
+            index_run_id,
+            selected,
+            RetrievalDebug(tuple(lexical_ids), tuple(vector_ids), tuple(fused_ids)),
+        )
+
+    def _latest_index_run(
+        self, *, student_id: UUID, grade_level: int, subject: str
+    ) -> UUID | None:
+        return self._session.execute(
+            select(ContentIndexRun.id)
+            .join(ContentDocument, ContentDocument.id == ContentIndexRun.document_id)
             .where(
                 ContentDocument.student_id == student_id,
                 ContentDocument.grade_level == grade_level,
                 ContentDocument.subject == subject,
-                ContentDocument.status == "STRUCTURAL_READY",
+                ContentIndexRun.status == "COMPLETED",
             )
-        ).all()
-        ranked: list[RetrievedBlock] = []
-        for block, _ in rows:
-            block_terms = set(re.findall(r"[a-z0-9]+", block.text.lower()))
-            lexical = len(terms & block_terms)
-            score = lexical * 10
-            if lexical:
-                ranked.append(RetrievedBlock(block.text, block.source_ref, block.page_number, block.block_type, score))
+            .order_by(
+                ContentIndexRun.completed_at.desc(), ContentIndexRun.created_at.desc()
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+
+    def _filtered_blocks(
+        self,
+        *,
+        index_run_id: UUID,
+        grade_level: int,
+        subject: str,
+        focus: CurrentFocus | None,
+        semantic_types: tuple[str, ...],
+    ):
+        statement = select(IndexedContentBlock).where(
+            IndexedContentBlock.index_run_id == index_run_id,
+            IndexedContentBlock.grade_level == grade_level,
+            IndexedContentBlock.subject == subject,
+        )
+        if focus is not None:
+            if focus.unit_key is not None:
+                statement = statement.where(
+                    IndexedContentBlock.unit_key == focus.unit_key
+                )
+            if focus.lesson_key is not None:
+                statement = statement.where(
+                    IndexedContentBlock.lesson_key == focus.lesson_key
+                )
+            if focus.concept_key is not None:
+                statement = statement.where(
+                    IndexedContentBlock.concept_key == focus.concept_key
+                )
+        if semantic_types:
+            statement = statement.where(
+                IndexedContentBlock.semantic_type.in_(semantic_types)
+            )
+        return statement
+
+    def _lexical_candidate_ids(self, **filters: object) -> list[UUID]:
+        question = str(filters.pop("question"))
+        limit = int(filters.pop("limit"))
+        statement = self._filtered_blocks(**filters)  # type: ignore[arg-type]
+        query = _lexical_query(question)
+        return list(
+            self._session.execute(
+                statement.where(IndexedContentBlock.search_vector.op("@@")(query))
+                .order_by(
+                    func.ts_rank_cd(IndexedContentBlock.search_vector, query).desc(),
+                    IndexedContentBlock.id,
+                )
+                .with_only_columns(IndexedContentBlock.id)
+                .limit(limit)
+            ).scalars()
+        )
+
+    def _vector_candidate_ids(self, **filters: object) -> list[UUID]:
+        if self._embedding_gateway is None:
+            return []
+        question = str(filters.pop("question"))
+        limit = int(filters.pop("limit"))
+        result = self._embedding_gateway.execute(
+            ModelTask.EMBEDDING, {"input": [question], "dimensions": 1536}
+        )
+        embeddings = result.output.get("embeddings")
+        if (
+            not isinstance(embeddings, list)
+            or len(embeddings) != 1
+            or not isinstance(embeddings[0], list)
+            or len(embeddings[0]) != 1536
+        ):
+            raise ValueError(
+                "Embedding gateway returned an unexpected query embedding."
+            )
+        statement = self._filtered_blocks(**filters)  # type: ignore[arg-type]
+        return list(
+            self._session.execute(
+                statement.order_by(
+                    IndexedContentBlock.embedding.cosine_distance(embeddings[0]),
+                    IndexedContentBlock.id,
+                )
+                .with_only_columns(IndexedContentBlock.id)
+                .limit(limit)
+            ).scalars()
+        )
+
+    def _blocks_by_rank(
+        self, identifiers: list[UUID | str]
+    ) -> list[IndexedContentBlock]:
+        ids = [identifier for identifier in identifiers if isinstance(identifier, UUID)]
+        if not ids:
+            return []
+        by_id = {
+            block.id: block
+            for block in self._session.execute(
+                select(IndexedContentBlock).where(IndexedContentBlock.id.in_(ids))
+            ).scalars()
+        }
+        return [by_id[identifier] for identifier in ids if identifier in by_id]
+
+    def _semantic_expansion(
+        self,
+        *,
+        index_run_id: UUID,
+        direct_blocks: list[IndexedContentBlock],
+        maximum_blocks: int,
+    ) -> list[IndexedContentBlock]:
+        semantic_item_ids = [
+            block.semantic_item_id
+            for block in direct_blocks
+            if block.semantic_item_id is not None
+        ]
+        if not semantic_item_ids:
+            return []
+        direct_ids = [block.id for block in direct_blocks]
+        return list(
+            self._session.execute(
+                select(IndexedContentBlock)
+                .where(
+                    IndexedContentBlock.index_run_id == index_run_id,
+                    IndexedContentBlock.semantic_item_id.in_(semantic_item_ids),
+                    IndexedContentBlock.id.not_in(direct_ids),
+                )
+                .order_by(
+                    IndexedContentBlock.semantic_item_id, IndexedContentBlock.block_key
+                )
+                .limit(maximum_blocks)
+            ).scalars()
+        )
+
+    def _assemble_context(
+        self,
+        blocks: list[IndexedContentBlock],
+        *,
+        direct_ids: set[UUID | str],
+        block_limit: int,
+        character_budget: int,
+    ) -> list[RetrievedBlock]:
         selected: list[RetrievedBlock] = []
-        used = 0
-        for item in sorted(ranked, key=lambda value: value.score, reverse=True):
-            if len(selected) >= limit or used + len(item.text) > character_budget:
+        used_characters = 0
+        sources_by_block = self._sources_by_block([block.id for block in blocks])
+        for block in blocks:
+            if (
+                len(selected) >= block_limit
+                or used_characters + len(block.text) > character_budget
+            ):
                 continue
-            selected.append(item)
-            used += len(item.text)
+            sources = sources_by_block.get(block.id, [])
+            source_refs = tuple(source.source_ref for source in sources)
+            page_numbers = tuple(source.page_number for source in sources)
+            selected.append(
+                RetrievedBlock(
+                    text=block.text,
+                    source_ref=source_refs[0] if source_refs else "",
+                    page_number=page_numbers[0] if page_numbers else None,
+                    block_type=block.block_type,
+                    score=0.0,
+                    semantic_key=str(
+                        block.attributes.get("parent_semantic_key", block.block_key)
+                    ),
+                    semantic_type=block.semantic_type,
+                    concept_key=block.concept_key,
+                    source_refs=source_refs,
+                    page_numbers=page_numbers,
+                    matched=block.id in direct_ids,
+                )
+            )
+            used_characters += len(block.text)
         return selected
+
+    def _sources_by_block(
+        self, block_ids: list[UUID]
+    ) -> dict[UUID, list[IndexedContentBlockSource]]:
+        if not block_ids:
+            return {}
+        result: dict[UUID, list[IndexedContentBlockSource]] = {}
+        for source in self._session.execute(
+            select(IndexedContentBlockSource)
+            .where(IndexedContentBlockSource.block_id.in_(block_ids))
+            .order_by(
+                IndexedContentBlockSource.block_id,
+                IndexedContentBlockSource.source_order,
+            )
+        ).scalars():
+            result.setdefault(source.block_id, []).append(source)
+        return result
+
+
+def _semantic_type_hints(question: str) -> tuple[str, ...]:
+    """Use explicit user requests as metadata narrowing, never as a teaching decision."""
+    words = set(re.findall(r"[a-z]+", question.casefold()))
+    if words.intersection({"example", "examples"}):
+        return ("EXAMPLE",)
+    if words.intersection({"exercise", "exercises", "practice", "problem", "problems"}):
+        return ("EXERCISE",)
+    if words.intersection({"figure", "picture", "diagram", "chart"}):
+        return ("FIGURE", "TABLE")
+    if words.intersection({"formula", "equation"}):
+        return ("FORMULA",)
+    return ()
+
+
+def _lexical_query(question: str):
+    """Build a safe OR query so conversational filler cannot suppress a match."""
+    terms = re.findall(r"[a-z0-9]+", question.casefold())
+    return func.to_tsquery("english", " | ".join(terms))

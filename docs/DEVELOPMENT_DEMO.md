@@ -51,6 +51,30 @@ place-value concept, instructional objective, worked example, practice,
 figure, and source/page links. It is a bounded semantic-quality check, not a
 claim that the entire workbook has completed downstream retrieval validation.
 
+## Real Eureka retrieval golden
+
+Use a **disposable** Lina PostgreSQL database with a completed TASK-011 Eureka
+structural run. With the server-only OpenAI Model Gateway configured, prepare
+the bounded pages 1–2 semantic/index fixture once, then run the retrieval
+golden verifier:
+
+```bash
+uv run --with-requirements apps/api/requirements.txt \
+  python scripts/prepare_eureka_retrieval_golden.py \
+  --database-url "$DATABASE_URL"
+
+uv run --with-requirements apps/api/requirements.txt \
+  python scripts/verify_eureka_retrieval.py \
+  --database-url "$DATABASE_URL"
+```
+
+The retrieval golden verifies seven manually selected question styles against
+the persisted real source: terminology, paraphrase, worked example, exercise,
+figure, with-current-focus, and without-current-focus. Each case must return
+the expected semantic type and page/source provenance. It is a bounded
+retrieval-quality check for pages 1–2, not a claim that the entire workbook or
+real-Lina behavior has been validated.
+
 Start the API from the repository root. `WEB_ORIGIN` must exactly match the
 browser URL, including its host and port, because it is used for both CORS and
 Clerk authorized-party validation.
