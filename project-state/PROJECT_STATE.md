@@ -2,8 +2,8 @@
 
 ## Current goal
 
-Independently review TASK-022 Current Learning State lifecycle evidence. Do not
-start TASK-023, real-Lina calibration, or product expansion.
+Independently review TASK-023 deterministic Pattern lifecycle evidence. Do not
+start TASK-024, real-Lina calibration, or product expansion.
 
 ## Current reality
 
@@ -102,8 +102,15 @@ start TASK-023, real-Lina calibration, or product expansion.
   source-linked TASK-021 Evidence. States retain Student/subject/concept/type/
   policy/run/evidence/timestamps, resolve or expire deterministically, and the
   Tutor selector uses only active same-subject current-policy rows. No Pattern,
-  Card, mastery, or confidence view is created. TASK-022 is `REVIEW`, not a
+  Card, mastery, or confidence view is created. TASK-022 is `DONE`, not a
   Phase 3 or Gate B pass.
+- TASK-023 now derives only deterministic, versioned Math Patterns from
+  completed TASK-021 Evidence. It uses normalized type/key/scope identity,
+  per-Evidence support/challenge provenance, configurable lifecycle thresholds,
+  recency weighting, counter-evidence, and recurrence cycles. Scope starts at
+  concept and can broaden only through diverse Math evidence; no Card,
+  mastery/confidence view, or global/cross-subject pattern is created. It is
+  `REVIEW`, not a Phase 3 or Gate B pass.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -134,7 +141,7 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 and TASK-023 onward remain blocked; TASK-022 awaits independent
+- TASK-015 and TASK-024 onward remain blocked; TASK-023 awaits independent
   review. The Production Engine Acceptance Gate has not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
@@ -149,8 +156,9 @@ Real Lina decision gates.
 
 ## Next recommended action
 
-Review TASK-022 evidence-driven State lifecycle, subject isolation, expiry, and
-the no-Pattern/Card boundary. Do not start TASK-023 or later work without
+Review TASK-023 normalized Pattern identity, lifecycle/counter-evidence,
+scope/recurrence, and the no-Card/no-decision-view boundary. Do not start
+TASK-024 or later work without
 explicit authorization and the applicable gate.
 
 ## Critical references

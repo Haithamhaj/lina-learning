@@ -356,23 +356,25 @@ here.
 **Verification:** Golden evidence scenarios match expected allowed states; “what must not be inferred” tests pass; every Evidence item traces to source.  
 
 ## TASK-022 — Current Learning State engine
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** TASK-021  
 **Recovery state:** Versioned, subject-scoped Current State now derives only
 from completed TASK-021 Evidence. Deterministic lifecycle rules create, update,
 resolve, and expire temporary states; active Tutor selection excludes resolved,
-expired, legacy, and other-subject rows. It awaits independent review.
+expired, legacy, and other-subject rows. Independent review is complete;
+TASK-023 is now under review.
 **Purpose:** Represent temporary active difficulties, misconceptions, open loops, recent strategy outcomes, and resolution/expiry.  
 **Expected output:** current-state store/service distinct from stable Patterns.  
 **Likely areas:** `/services/intelligence/state`.  
 **Verification:** one strong event may update current state; resolved/expired state leaves current runtime; historical source remains.  
 
 ## TASK-023 — Deterministic Pattern engine and scope lifecycle
-**Status:** BLOCKED
+**Status:** REVIEW
 **Dependencies:** TASK-021  
-**Recovery state:** Reopened by the independent audit. Existing counters do not
-satisfy normalized identity, lifecycle, recency, scope, counter-evidence, or
-strategy-effectiveness requirements. Blocked pending TASK-021.
+**Recovery state:** Completed TASK-021 Evidence now drives a versioned,
+deterministic Math Pattern engine with normalized taxonomy/identity, evidence
+links, lifecycle, scope promotion, counter-evidence, and recurrence handling.
+It awaits independent review. No Card or decision-view work runs here.
 **Purpose:** Implement frequency/recency/context-diversity/counter-evidence governed Pattern lifecycle and scope without free LLM strength judgment.  
 **Expected output:** candidate/active/stable/weakening/resolved/superseded transitions, pattern-evidence links, a normalized `pattern_type` + `pattern_key` registry/taxonomy, and a historical recurrence lookup hook.  
 **Likely areas:** `/services/intelligence/patterns`.  
@@ -383,7 +385,7 @@ strategy-effectiveness requirements. Blocked pending TASK-021.
 **Dependencies:** TASK-022, TASK-023  
 **Recovery state:** Reopened by the independent audit. Card budgeting and
 question-relevant selection do not satisfy the approved runtime contract.
-Blocked pending TASK-022 and TASK-023.
+Blocked pending TASK-023.
 **Purpose:** Produce compact temporal runtime intelligence and select only relevant intelligence for the current Tutor context.  
 **Expected output:** Card materialized state, budget/ranking rules, relevant-intelligence selector.  
 **Likely areas:** `/services/intelligence/card`, `/services/tutor/context`.  

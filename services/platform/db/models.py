@@ -580,17 +580,41 @@ class CurrentLearningState(Base):
 
 class LearnerPattern(Base):
     __tablename__ = "learner_patterns"
-    __table_args__ = (Index("ix_learner_patterns_student_status", "student_id", "status"), UniqueConstraint("student_id", "processing_run_id", "pattern_type", "pattern_key", "scope", name="uq_learner_pattern_scope"))
+    __table_args__ = (
+        Index("ix_learner_patterns_student_status", "student_id", "status"),
+        UniqueConstraint(
+            "student_id",
+            "policy_version",
+            "pattern_type",
+            "pattern_key",
+            "scope_key",
+            name="uq_learner_pattern_scope",
+        ),
+    )
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("intelligence_processing_runs.id", ondelete="CASCADE"), nullable=False)
     pattern_type: Mapped[str] = mapped_column(String(64), nullable=False)
     pattern_key: Mapped[str] = mapped_column(String(128), nullable=False)
     scope: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    scope_key: Mapped[str] = mapped_column(String(256), nullable=False, default="legacy", server_default="legacy")
+    policy_version: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="legacy-pattern-policy-v0", server_default="legacy-pattern-policy-v0"
+    )
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="CANDIDATE", server_default="CANDIDATE")
     support_count: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0, server_default="0")
     counter_count: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0, server_default="0")
     detail: Mapped[str] = mapped_column(Text, nullable=False)
+    first_detected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC), server_default=func.now()
+    )
+    cycle_started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC), server_default=func.now()
+    )
+    cycle_number: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1, server_default="1")
+    last_supported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_challenged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class PatternEvidence(Base):
@@ -599,6 +623,19 @@ class PatternEvidence(Base):
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     pattern_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("learner_patterns.id", ondelete="CASCADE"), nullable=False)
     evidence_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("learning_evidence.id", ondelete="CASCADE"), nullable=False)
+    relationship: Mapped[str] = mapped_column(String(32), nullable=False, default="supports", server_default="supports")
+    processing_run_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("intelligence_processing_runs.id", ondelete="SET NULL")
+    )
+    policy_version: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="legacy-pattern-policy-v0", server_default="legacy-pattern-policy-v0"
+    )
+    task_ref: Mapped[str] = mapped_column(String(128), nullable=False, default="legacy", server_default="legacy")
+    context_ref: Mapped[str] = mapped_column(String(128), nullable=False, default="legacy", server_default="legacy")
+    cycle_number: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1, server_default="1")
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC), server_default=func.now()
+    )
 
 
 class LearnerIntelligenceCard(Base):
