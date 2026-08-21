@@ -10,6 +10,7 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
+import services.intelligence.consolidation as consolidation_module
 from services.intelligence.consolidation import (
     ConsolidationError,
     ConsolidationValidationError,
@@ -49,7 +50,7 @@ pytestmark = pytest.mark.skipif(
 def postgres_session_factory() -> sessionmaker[Session]:
     engine = create_engine(normalize_database_url(os.environ["DATABASE_URL"]))
     with engine.begin() as connection:
-        connection.execute(text("TRUNCATE jobs, users CASCADE"))
+        connection.execute(text("TRUNCATE ai_executions, jobs, users CASCADE"))
     factory = sessionmaker(engine, expire_on_commit=False)
     yield factory
     engine.dispose()
@@ -174,6 +175,49 @@ def _event_output(
             }
         ],
     }
+
+
+def _prior_validated_evidence(
+    session: Session,
+    *,
+    learning_session: LearningSession,
+    candidate: CandidateEvent,
+    source_message: LearningMessage,
+    understanding: str,
+) -> LearningEvidence:
+    """Persist an already-completed, source-linked Evidence record from a prior session."""
+
+    run = IntelligenceProcessingRun(
+        student_id=learning_session.student_id,
+        rubric_version="evidence-rubric-v1",
+        policy_version="session-consolidation-policy-v1",
+        status="COMPLETED",
+        scope={"session_id": str(learning_session.id)},
+    )
+    session.add(run)
+    session.flush()
+    event = LearningEvent(
+        processing_run_id=run.id,
+        session_id=learning_session.id,
+        candidate_event_id=candidate.id,
+        subject="MATH",
+        concept_ref="equivalent_fractions",
+        event_type=candidate.event_type,
+        description="Prior validated concept evidence.",
+        source_message_id=source_message.id,
+    )
+    session.add(event)
+    session.flush()
+    evidence = LearningEvidence(
+        event_id=event.id,
+        concept_ref="equivalent_fractions",
+        dimensions=_dimensions(understanding=understanding),
+        relationship="supports",
+        source_ref=f"session:{learning_session.id}:candidate:{candidate.id}:message:{source_message.id}",
+    )
+    session.add(evidence)
+    session.flush()
+    return evidence
 
 
 def test_closed_session_uses_one_source_grounded_model_call_and_never_creates_later_intelligence(
@@ -564,7 +608,7 @@ def test_immediate_repeat_cannot_claim_retention(
         assert session.query(LearningEvidence).count() == 0
 
 
-def test_meaningfully_delayed_revisit_can_record_retention_contextually(
+def test_old_candidate_only_cannot_support_a_retention_claim(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
     now = datetime(2026, 8, 21, 12, tzinfo=UTC)
@@ -603,9 +647,170 @@ def test_meaningfully_delayed_revisit_can_record_retention_contextually(
             providers={"fixture": provider},
         )
 
+        with pytest.raises(ConsolidationValidationError, match="Retention"):
+            consolidate_closed_session(session, learning_session=learning_session, gateway=gateway)
+
+        assert session.query(LearningEvidence).count() == 0
+
+
+def test_old_misconception_evidence_cannot_support_a_retention_claim(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    now = datetime(2026, 8, 21, 12, tzinfo=UTC)
+    with postgres_session_factory.begin() as session:
+        prior_session = _closed_session(session)
+        prior_candidate, prior_message = _candidate(
+            session,
+            learning_session=prior_session,
+            event_type="misconception_signal",
+            created_at=now - timedelta(days=8),
+        )
+        _prior_validated_evidence(
+            session,
+            learning_session=prior_session,
+            candidate=prior_candidate,
+            source_message=prior_message,
+            understanding="not_demonstrated",
+        )
+        learning_session = LearningSession(
+            student_id=prior_session.student_id,
+            subject="MATH",
+            status="CLOSED",
+            closed_at=now,
+        )
+        session.add(learning_session)
+        session.flush()
+        candidate, source_message = _candidate(
+            session,
+            learning_session=learning_session,
+            event_type="retention_check",
+            created_at=now,
+        )
+        provider = _Provider(
+            _event_output(
+                candidate,
+                source_message,
+                dimensions=_dimensions(retention="retained", understanding="demonstrated"),
+                retention_context="meaningfully_delayed",
+            )
+        )
+        gateway = ModelGateway(
+            session,
+            routes={ModelTask.SESSION_EVIDENCE: ModelRoute("fixture", "fixture-evidence")},
+            providers={"fixture": provider},
+        )
+
+        with pytest.raises(ConsolidationValidationError, match="Retention"):
+            consolidate_closed_session(session, learning_session=learning_session, gateway=gateway)
+
+        assert session.query(LearningEvidence).count() == 1
+
+
+def test_prior_demonstrated_understanding_allows_a_delayed_retention_check(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    now = datetime(2026, 8, 21, 12, tzinfo=UTC)
+    with postgres_session_factory.begin() as session:
+        prior_session = _closed_session(session)
+        prior_session.closed_at = now - timedelta(days=8)
+        prior_candidate, prior_message = _candidate(
+            session,
+            learning_session=prior_session,
+            created_at=now - timedelta(days=8),
+        )
+        _prior_validated_evidence(
+            session,
+            learning_session=prior_session,
+            candidate=prior_candidate,
+            source_message=prior_message,
+            understanding="demonstrated",
+        )
+        learning_session = LearningSession(
+            student_id=prior_session.student_id,
+            subject="MATH",
+            status="CLOSED",
+            closed_at=now,
+        )
+        session.add(learning_session)
+        session.flush()
+        candidate, source_message = _candidate(
+            session,
+            learning_session=learning_session,
+            event_type="retention_check",
+            created_at=now,
+        )
+        provider = _Provider(
+            _event_output(
+                candidate,
+                source_message,
+                dimensions=_dimensions(retention="retained", understanding="demonstrated"),
+                retention_context="meaningfully_delayed",
+            )
+        )
+        gateway = ModelGateway(
+            session,
+            routes={ModelTask.SESSION_EVIDENCE: ModelRoute("fixture", "fixture-evidence")},
+            providers={"fixture": provider},
+        )
+
         consolidate_closed_session(session, learning_session=learning_session, gateway=gateway)
 
-        assert session.query(LearningEvidence).one().dimensions["retention"] == "retained"
+        evidence = session.query(LearningEvidence).all()
+        assert len(evidence) == 2
+        assert any(item.dimensions["retention"] == "retained" for item in evidence)
+
+
+def test_immediate_prior_demonstrated_understanding_cannot_support_retention(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    now = datetime(2026, 8, 21, 12, tzinfo=UTC)
+    with postgres_session_factory.begin() as session:
+        prior_session = _closed_session(session)
+        prior_session.closed_at = now - timedelta(days=1)
+        prior_candidate, prior_message = _candidate(
+            session,
+            learning_session=prior_session,
+            created_at=now - timedelta(days=1),
+        )
+        _prior_validated_evidence(
+            session,
+            learning_session=prior_session,
+            candidate=prior_candidate,
+            source_message=prior_message,
+            understanding="demonstrated",
+        )
+        learning_session = LearningSession(
+            student_id=prior_session.student_id,
+            subject="MATH",
+            status="CLOSED",
+            closed_at=now,
+        )
+        session.add(learning_session)
+        session.flush()
+        candidate, source_message = _candidate(
+            session,
+            learning_session=learning_session,
+            event_type="retention_check",
+            created_at=now,
+        )
+        provider = _Provider(
+            _event_output(
+                candidate,
+                source_message,
+                dimensions=_dimensions(retention="retained", understanding="demonstrated"),
+                retention_context="meaningfully_delayed",
+            )
+        )
+        gateway = ModelGateway(
+            session,
+            routes={ModelTask.SESSION_EVIDENCE: ModelRoute("fixture", "fixture-evidence")},
+            providers={"fixture": provider},
+        )
+
+        with pytest.raises(ConsolidationValidationError, match="Retention"):
+            consolidate_closed_session(session, learning_session=learning_session, gateway=gateway)
+
+        assert session.query(LearningEvidence).count() == 1
 
 
 def test_malformed_output_is_rejected_without_partial_events_or_evidence(
@@ -663,6 +868,69 @@ def test_completed_consolidation_is_idempotent_and_calls_the_model_once(
         assert session.query(IntelligenceProcessingRun).count() == 1
         assert session.query(LearningEvent).count() == 1
         assert session.query(LearningEvidence).count() == 1
+
+
+@pytest.mark.parametrize("changed_identity", ["prompt", "schema", "model"])
+def test_changed_interpretation_identity_creates_a_new_queryable_processing_version(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    changed_identity: str,
+) -> None:
+    with postgres_session_factory.begin() as session:
+        learning_session = _closed_session(session)
+        candidate, source_message = _candidate(session, learning_session=learning_session)
+        provider = _Provider(
+            _event_output(
+                candidate,
+                source_message,
+                dimensions=_dimensions(understanding="demonstrated", independence="independent"),
+            )
+        )
+        first_gateway = ModelGateway(
+            session,
+            routes={ModelTask.SESSION_EVIDENCE: ModelRoute("fixture", "fixture-evidence-v1")},
+            providers={"fixture": provider},
+        )
+        first = consolidate_closed_session(
+            session,
+            learning_session=learning_session,
+            gateway=first_gateway,
+        )
+
+        if changed_identity == "prompt":
+            monkeypatch.setattr(
+                consolidation_module,
+                "SESSION_EVIDENCE_PROMPT_VERSION",
+                "session-evidence-prompt-v2",
+            )
+            second_gateway = first_gateway
+        elif changed_identity == "schema":
+            monkeypatch.setattr(
+                consolidation_module,
+                "SESSION_EVIDENCE_SCHEMA_VERSION",
+                "session-evidence-v2",
+            )
+            second_gateway = first_gateway
+        else:
+            second_gateway = ModelGateway(
+                session,
+                routes={ModelTask.SESSION_EVIDENCE: ModelRoute("fixture", "fixture-evidence-v2")},
+                providers={"fixture": provider},
+            )
+
+        second = consolidate_closed_session(
+            session,
+            learning_session=learning_session,
+            gateway=second_gateway,
+        )
+
+        runs = session.query(IntelligenceProcessingRun).order_by(IntelligenceProcessingRun.created_at).all()
+        assert first.processing_run.id != second.processing_run.id
+        assert first.processing_run.id in {run.id for run in runs}
+        assert len(runs) == 2
+        assert session.query(LearningEvent).filter_by(processing_run_id=first.processing_run.id).count() == 1
+        assert session.query(LearningEvidence).count() == 2
+        assert provider.calls == 2
 
 
 def test_failed_job_retry_reuses_its_processing_version_without_duplicate_rows(

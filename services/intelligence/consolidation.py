@@ -262,6 +262,12 @@ def _find_or_create_run(
             IntelligenceProcessingRun.rubric_version == EVIDENCE_RUBRIC_VERSION,
             IntelligenceProcessingRun.policy_version == SESSION_CONSOLIDATION_POLICY_VERSION,
             IntelligenceProcessingRun.scope["session_id"].astext == str(learning_session.id),
+            IntelligenceProcessingRun.scope["consolidation_schema_version"].astext
+            == SESSION_EVIDENCE_SCHEMA_VERSION,
+            IntelligenceProcessingRun.scope["prompt_version"].astext
+            == SESSION_EVIDENCE_PROMPT_VERSION,
+            IntelligenceProcessingRun.scope["provider"].astext == getattr(route, "provider"),
+            IntelligenceProcessingRun.scope["model"].astext == getattr(route, "model"),
         )
         .with_for_update()
     ).scalar_one_or_none()
@@ -464,7 +470,7 @@ def _validate_inference_boundaries(
     if dimensions.retention != "not_tested" and (
         candidate.event_type != "retention_check"
         or event.retention_context != "meaningfully_delayed"
-        or not _has_meaningful_prior_concept_signal(
+        or not _has_meaningful_prior_concept_evidence(
             session,
             learning_session=learning_session,
             candidate=candidate,
@@ -480,7 +486,7 @@ def _validate_inference_boundaries(
         raise ConsolidationValidationError("Self-correction evidence needs a self-correction Candidate Event.")
 
 
-def _has_meaningful_prior_concept_signal(
+def _has_meaningful_prior_concept_evidence(
     session: Session,
     *,
     learning_session: LearningSession,
@@ -489,15 +495,28 @@ def _has_meaningful_prior_concept_signal(
     if candidate.concept_ref is None:
         return False
     prior = session.execute(
-        select(CandidateEvent.created_at)
-        .join(LearningSession, CandidateEvent.session_id == LearningSession.id)
+        select(LearningSession.closed_at)
+        .select_from(LearningEvidence)
+        .join(LearningEvent, LearningEvidence.event_id == LearningEvent.id)
+        .join(
+            IntelligenceProcessingRun,
+            LearningEvent.processing_run_id == IntelligenceProcessingRun.id,
+        )
+        .join(LearningSession, LearningEvent.session_id == LearningSession.id)
         .where(
             LearningSession.student_id == learning_session.student_id,
-            CandidateEvent.session_id != learning_session.id,
-            CandidateEvent.concept_ref == candidate.concept_ref,
-            CandidateEvent.created_at < candidate.created_at,
+            LearningEvent.session_id != learning_session.id,
+            LearningEvent.subject == learning_session.subject,
+            LearningEvent.concept_ref == candidate.concept_ref,
+            LearningEvidence.concept_ref == candidate.concept_ref,
+            LearningEvidence.dimensions["understanding"].astext.in_(
+                ("demonstrated", "strong_demonstration")
+            ),
+            IntelligenceProcessingRun.status == "COMPLETED",
+            LearningSession.closed_at.is_not(None),
+            LearningSession.closed_at < candidate.created_at,
         )
-        .order_by(CandidateEvent.created_at.desc())
+        .order_by(LearningSession.closed_at.desc())
         .limit(1)
     ).scalar_one_or_none()
     return prior is not None and candidate.created_at - prior >= timedelta(days=7)
