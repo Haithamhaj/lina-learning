@@ -13,10 +13,15 @@ from sqlalchemy.orm import Session
 from services.model_gateway.factory import create_tutor_gateway
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
 from services.platform.config import get_settings
-from services.platform.db.models import LearningMessage, LearningSession, ModelTask
+from services.platform.db.models import CandidateEvent, LearningMessage, LearningSession, ModelTask
 from services.platform.safety import SafetyPolicyService
 from services.retrieval.service import RetrievalService
 from services.tutor.context import TutorContext, TutorContextBuilder
+from services.tutor.candidate_events import (
+    CandidateEventContractError,
+    TUTOR_OUTPUT_RESPONSE_SCHEMA,
+    parse_candidate_event_metadata,
+)
 from services.tutor.safety import TutorSafetyRuntime, consume_safety_decision
 from services.tutor.student_sessions import append_student_message
 
@@ -76,7 +81,10 @@ TUTOR_SHARED_INSTRUCTIONS = (
     "historical learning notes. Never announce learner labels or internal records. The book is curriculum grounding, "
     "not a script: use valid examples, analogies, or visual descriptions when useful. For homework, allow a meaningful "
     "attempt and hint before giving an answer; if the Student is genuinely stuck, explain clearly, explain why, then ask "
-    "one new application check. Do not withhold answers endlessly. Safety policy is enforced before this call; do not mention internal policies."
+    "one new application check. Do not withhold answers endlessly. Safety policy is enforced before this call; do not mention internal policies. "
+    "Return the student-facing reply only in the structured `text` field. Set hidden `candidate_metadata` to null for greetings, thanks, generic chat, "
+    "or when no meaningful learning signal occurred. Emit Candidate Event metadata only for a specific, source-linked learning signal; never treat a chosen "
+    "Tutor strategy as an outcome without an observable Student result. Never mention hidden metadata in text."
 )
 
 
@@ -125,6 +133,7 @@ def build_tutor_model_payload(
     mode: TeachingMode = TeachingMode.LEARN,
     strategy: TeachingStrategy = TeachingStrategy.EXPLAIN_WITH_EXAMPLE,
     session_messages: list[dict[str, str]] | None = None,
+    candidate_source_message_id: UUID | None = None,
 ) -> dict[str, object]:
     """Build bounded model input from the project-owned Tutor context only."""
 
@@ -136,12 +145,18 @@ def build_tutor_model_payload(
         f"{message['role']}: {message['content']}" for message in (session_messages or [])
     ) or "No prior session messages were selected."
     safety_context = f"\n\nAge-handling directive:\n{safety_directive}" if safety_directive else ""
+    candidate_context = (
+        "\n\nHidden Candidate Event source link:\n"
+        f"If metadata is meaningful, use only this raw Student message ID: {candidate_source_message_id}."
+        if candidate_source_message_id is not None
+        else ""
+    )
     return {
         "instructions": TUTOR_SHARED_INSTRUCTIONS,
         "input": (
             f"Teaching mode: {mode.value}\nTeaching strategy: {strategy.value}\n\n"
             f"Student question:\n{question}\n\nSmall recent session window:\n{session_context}\n\n"
-            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}"
+            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}"
         ),
         "max_output_tokens": 350,
         "question": question,
@@ -149,6 +164,8 @@ def build_tutor_model_payload(
         "intelligence": intelligence or [],
         "mode": mode.value,
         "strategy": strategy.value,
+        "response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA,
+        "candidate_source_message_id": str(candidate_source_message_id) if candidate_source_message_id is not None else None,
     }
 
 
@@ -166,17 +183,31 @@ class TutorRuntime:
         if not content:
             raise ValueError("A current Student question is required.")
         learning_session.last_activity_at = datetime.now(UTC)
-        append_student_message(self._session, learning_session=learning_session, content=content)
+        student_message = append_student_message(self._session, learning_session=learning_session, content=content)
         decision = self._safety_policy.evaluate(student_id=learning_session.student_id, text=content, interaction_ref=str(learning_session.id))
         safety = consume_safety_decision(decision)
         mode = infer_tutor_mode(content)
         strategy = select_teaching_strategy(content, mode=mode)
         if not safety.continue_to_tutor:
-            yield self._persist_turn(learning_session.id, safety.redirect_directive or "Please ask a trusted grown-up for help with this topic.", None, safety, mode, strategy)
+            yield self._persist_turn(
+                learning_session.id,
+                safety.redirect_directive or "Please ask a trusted grown-up for help with this topic.",
+                None,
+                safety,
+                mode,
+                strategy,
+                candidate_metadata_status="not_requested",
+            )
             return
 
         context = self._context_builder.build(learning_session=learning_session, question=content)
-        payload = _payload_from_context(context, mode=mode, strategy=strategy, safety=safety)
+        payload = _payload_from_context(
+            context,
+            mode=mode,
+            strategy=strategy,
+            safety=safety,
+            candidate_source_message_id=student_message.id,
+        )
         model_stream = self._gateway.stream(ModelTask.TUTOR, payload)
         text_parts: list[str] = []
         result: ModelResult | None = None
@@ -202,13 +233,86 @@ class TutorRuntime:
             final_text = str(result.output.get("text")) if result is not None else "".join(text_parts)
             if not final_text:
                 final_text = "Let’s pause here and try the next step together."
-            turn = self._persist_turn(learning_session.id, final_text, context, safety, mode, strategy)
+            candidate_metadata_status, candidate_metadata_error = self._persist_candidates(
+                learning_session=learning_session,
+                source_message=student_message,
+                result=result,
+            )
+            turn = self._persist_turn(
+                learning_session.id,
+                final_text,
+                context,
+                safety,
+                mode,
+                strategy,
+                candidate_metadata_status=candidate_metadata_status,
+                candidate_metadata_error=candidate_metadata_error,
+            )
         yield turn
 
-    def _persist_turn(self, session_id: UUID, text: str, context: TutorContext | None, safety: TutorSafetyRuntime, mode: TeachingMode, strategy: TeachingStrategy) -> TutorTurn:
+    def _persist_candidates(
+        self,
+        *,
+        learning_session: LearningSession,
+        source_message: LearningMessage,
+        result: ModelResult | None,
+    ) -> tuple[str, str | None]:
+        if result is not None:
+            metadata_error = result.output.get("candidate_metadata_error")
+            if isinstance(metadata_error, str):
+                return "invalid", metadata_error
+        raw_metadata = result.output.get("candidate_metadata") if result is not None else None
+        if raw_metadata is None:
+            return "absent", None
+        try:
+            metadata = parse_candidate_event_metadata(
+                raw_metadata,
+                allowed_source_message_ids={source_message.id},
+            )
+        except CandidateEventContractError:
+            return "invalid", "candidate_contract_invalid"
+        if not metadata.candidates:
+            return "absent", None
+        route = self._gateway.route_for(ModelTask.TUTOR)
+        for candidate in metadata.candidates:
+            self._session.add(
+                CandidateEvent(
+                    session_id=learning_session.id,
+                    message_id=source_message.id,
+                    event_type=candidate.event_type,
+                    concept_ref=candidate.concept_ref,
+                    signal=candidate.signal,
+                    payload={
+                        "candidate_schema_version": metadata.version,
+                        "summary": candidate.summary,
+                        "school_or_extended": candidate.school_or_extended,
+                        "source_message_ids": [str(identifier) for identifier in candidate.source_message_ids],
+                        "subject": learning_session.subject,
+                        "observed_student_outcome": candidate.observed_student_outcome,
+                        "model_route": {"provider": route.provider, "model": route.model},
+                    },
+                )
+            )
+        self._session.flush()
+        return "persisted", None
+
+    def _persist_turn(
+        self,
+        session_id: UUID,
+        text: str,
+        context: TutorContext | None,
+        safety: TutorSafetyRuntime,
+        mode: TeachingMode,
+        strategy: TeachingStrategy,
+        *,
+        candidate_metadata_status: str,
+        candidate_metadata_error: str | None = None,
+    ) -> TutorTurn:
         sources = _source_metadata(context)
         intelligence = [item.text for item in context.intelligence] if context else []
-        payload: dict[str, object] = {"source_refs": [source["source_ref"] for source in sources], "intelligence_used": intelligence, "safety": safety.audit_metadata(), "mode": mode.value, "strategy": strategy.value}
+        payload: dict[str, object] = {"source_refs": [source["source_ref"] for source in sources], "intelligence_used": intelligence, "safety": safety.audit_metadata(), "mode": mode.value, "strategy": strategy.value, "candidate_metadata_status": candidate_metadata_status}
+        if candidate_metadata_error is not None:
+            payload["candidate_metadata_error"] = candidate_metadata_error
         if context is not None:
             payload["context_debug"] = {"session_message_ids": [str(identifier) for identifier in context.debug.session_message_ids], "retrieval_source_refs": list(context.debug.retrieval_source_refs), "intelligence_source_ids": [str(identifier) for identifier in context.debug.intelligence_source_ids]}
         self._session.add(
@@ -224,8 +328,15 @@ class TutorRuntime:
         return TutorTurn(text, sources, intelligence, mode, strategy, safety.audit_metadata())
 
 
-def _payload_from_context(context: TutorContext, *, mode: TeachingMode, strategy: TeachingStrategy, safety: TutorSafetyRuntime) -> dict[str, object]:
-    return build_tutor_model_payload(question=context.question, sources=[{"ref": block.source_ref, "text": block.text} for block in context.retrieval], intelligence=[item.text for item in context.intelligence], safety_directive=safety.tutor_directive, mode=mode, strategy=strategy, session_messages=[{"role": message.role, "content": message.content} for message in context.session_messages])
+def _payload_from_context(
+    context: TutorContext,
+    *,
+    mode: TeachingMode,
+    strategy: TeachingStrategy,
+    safety: TutorSafetyRuntime,
+    candidate_source_message_id: UUID,
+) -> dict[str, object]:
+    return build_tutor_model_payload(question=context.question, sources=[{"ref": block.source_ref, "text": block.text} for block in context.retrieval], intelligence=[item.text for item in context.intelligence], safety_directive=safety.tutor_directive, mode=mode, strategy=strategy, session_messages=[{"role": message.role, "content": message.content} for message in context.session_messages], candidate_source_message_id=candidate_source_message_id)
 
 
 def _source_metadata(context: TutorContext | None) -> list[dict[str, object]]:

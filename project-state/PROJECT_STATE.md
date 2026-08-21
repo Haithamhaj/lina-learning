@@ -2,8 +2,8 @@
 
 ## Current goal
 
-Independently review TASK-018 production Tutor runtime evidence. Do not start
-TASK-019, real-Lina calibration, or product expansion.
+Independently review TASK-019 Candidate Event metadata evidence. Do not start
+TASK-020, real-Lina calibration, or product expansion.
 
 ## Current reality
 
@@ -75,9 +75,14 @@ TASK-019, real-Lina calibration, or product expansion.
   runtime action → bounded `TutorContextBuilder` context → one streamed
   `ModelTask.TUTOR` call for allowed interactions → reliable Tutor response
   persistence → Student SSE. Redirect/block paths make no Tutor model call.
-  Mode/strategy selection is deterministic and compact; Candidate Events are
-  intentionally absent pending TASK-019. TASK-018 is `REVIEW`, not a Gate B
-  pass.
+  Mode/strategy selection is deterministic and compact. It is `DONE`, not a
+  Gate B pass.
+- TASK-019 adds a project-owned `candidate-event-v1` contract to that same
+  primary call. OpenAI structured output separates public text from hidden
+  metadata; deterministic validation persists only source-linked candidates.
+  Absent/malformed metadata is recorded on the Tutor message without blocking
+  the response. No Learning Event, Evidence, state, pattern, or learner label
+  is created. TASK-019 is `REVIEW`, not a Phase 2 Exit Gate or Gate B pass.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -108,7 +113,7 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 and TASK-019 onward remain blocked; TASK-018 awaits independent
+- TASK-015 and TASK-020 onward remain blocked; TASK-019 awaits independent
   review. The Production Engine Acceptance Gate has not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
@@ -123,8 +128,9 @@ Real Lina decision gates.
 
 ## Next recommended action
 
-Review TASK-018 runtime, streaming, and safety evidence. Do not start TASK-019
-or later work without explicit authorization and the applicable gate.
+Review TASK-019 Candidate Event contract, source linkage, and no-derived-state
+evidence. Do not start TASK-020 or later work without explicit authorization
+and the applicable gate.
 
 ## Critical references
 

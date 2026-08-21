@@ -224,6 +224,7 @@ def test_authenticated_student_tutor_turn_uses_the_real_sse_path_and_persists_re
     assert response.headers["content-type"].startswith("text/event-stream")
     assert "event: delta" in response.text
     assert "event: turn" in response.text
+    assert "candidate" not in response.text
     with postgres_session_factory() as session:
         messages = session.query(LearningMessage).filter_by(session_id=UUID(session_id)).order_by(LearningMessage.created_at, LearningMessage.id).all()
         assert [message.role for message in messages] == ["student", "tutor"]

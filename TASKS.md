@@ -286,10 +286,10 @@ to the approved action semantics. Blocked pending TASK-017.
 scenario suite: normal Math/Science, every Parent boundary action, baseline
 precedence, a safe educational sensitive-word reference, and implicit Arabic
 self-harm meaning. The classifier remains deterministic; no model call was
-used. TASK-018 remains blocked pending its own authorization and gate work.
+used. TASK-018 is DONE; TASK-019 is under independent review.
 
 ## TASK-018 — Text Tutor runtime with streaming
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** TASK-017A, TASK-007  
 **Recovery state:** The production boundary now persists the Student message,
 consumes `SafetyDecision` through `TutorSafetyRuntime`, builds the approved
@@ -297,18 +297,21 @@ bounded Tutor context, makes one streamed `ModelTask.TUTOR` call for allowed
 turns, persists the final response, and serves provider-produced SSE events to
 `/student`. Compact deterministic scenarios cover modes, bilingual context,
 grounding/provenance, safety branches, one-call behavior, and interrupted-stream
-persistence. It is awaiting independent review; TASK-019 remains blocked.
+persistence. TASK-019 now adds hidden Candidate Event metadata to that same
+primary call; no new Tutor runtime authority or second model call is introduced.
 **Purpose:** Deliver age-appropriate Grade 5 Math teaching through one primary Tutor call and SSE streaming, consuming the approved safety/boundary decision contract rather than implementing policy inside the Tutor prompt.  
 **Expected output:** fixed Tutor identity, adaptive teaching strategy, Learn/Homework/Explore baseline behavior, bilingual response, integration of the upstream `SafetyDecision`.  
 **Likely areas:** `/services/tutor`, `/apps/api`, `/apps/web`, `/prompts/tutor`.  
 **Verification:** Representative scenarios show grounding, strategy changes, no endless answer withholding, correct consumption of `SafetyDecision`, no prompt-only safety bypass, and complete usage logs.  
 
 ## TASK-019 — Candidate Event metadata contract
-**Status:** BLOCKED
+**Status:** REVIEW
 **Dependencies:** TASK-018  
-**Recovery state:** Reopened by the independent audit. Existing digit-based
-demo heuristics are not the approved meaningful Candidate Event schema or
-verification contract. Blocked pending TASK-018.
+**Recovery state:** The primary Tutor call now returns a versioned, structured
+student-facing text plus hidden Candidate Event metadata envelope. Valid
+source-linked candidates persist without creating Events, Evidence, state, or
+patterns; absent/malformed metadata never blocks the Tutor response. It awaits
+independent review; TASK-020 remains blocked.
 **Purpose:** Let the same Tutor call flag meaningful candidate events without writing stable learner conclusions.  
 **Expected output:** small hidden structured metadata schema and persistence/buffer hook.  
 **Likely areas:** `/services/tutor`, `/packages/schemas`, `/prompts/tutor`.  

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from typing import Any
@@ -67,7 +68,7 @@ class OpenAIResponsesProvider:
         with self._request_sender(request, timeout=self._timeout_seconds) as response:
             result = json.loads(response.read())
 
-        return _model_result(route, result, _response_text(result))
+        return _model_result(route, result, _normalize_output(_response_text(result), payload))
 
     def stream(self, route: ModelRoute, payload: dict[str, object]) -> Iterator[ModelStreamEvent]:
         """Forward actual Responses API deltas from one provider request."""
@@ -85,6 +86,7 @@ class OpenAIResponsesProvider:
             method="POST",
         )
         parts: list[str] = []
+        text_extractor = _StructuredTutorTextExtractor() if _has_response_schema(payload) else None
         with self._request_sender(request, timeout=self._timeout_seconds) as response:
             for raw_line in response:
                 line = raw_line.decode().strip() if isinstance(raw_line, bytes) else str(raw_line).strip()
@@ -98,14 +100,21 @@ class OpenAIResponsesProvider:
                     delta = event.get("delta")
                     if isinstance(delta, str) and delta:
                         parts.append(delta)
-                        yield StreamDelta(delta)
+                        student_text = text_extractor.feed(delta) if text_extractor is not None else delta
+                        if student_text:
+                            yield StreamDelta(student_text)
                     continue
                 if event_type == "response.completed":
                     response_data = event.get("response")
                     if not isinstance(response_data, dict):
                         raise ValueError("OpenAI Responses API completed without a response.")
-                    text = "".join(parts).strip() or _response_text(response_data)
-                    yield StreamComplete(_model_result(route, response_data, text))
+                    raw_text = "".join(parts).strip() or _response_text(response_data)
+                    output = _normalize_output(
+                        raw_text,
+                        payload,
+                        fallback_text=text_extractor.text if text_extractor is not None else None,
+                    )
+                    yield StreamComplete(_model_result(route, response_data, output))
                     return
                 if event_type == "response.failed":
                     raise ValueError("OpenAI Responses API streaming request failed.")
@@ -121,10 +130,23 @@ def _request_body(route: ModelRoute, payload: dict[str, object]) -> dict[str, ob
     }
     if "max_output_tokens" in payload:
         body["max_output_tokens"] = int(payload["max_output_tokens"])
+    response_schema = payload.get("response_schema")
+    if isinstance(response_schema, dict):
+        name = response_schema.get("name")
+        schema = response_schema.get("schema")
+        if isinstance(name, str) and isinstance(schema, dict):
+            body["text"] = {
+                "format": {
+                    "type": "json_schema",
+                    "name": name,
+                    "schema": schema,
+                    "strict": True,
+                }
+            }
     return body
 
 
-def _model_result(route: ModelRoute, result: object, text: str) -> ModelResult:
+def _model_result(route: ModelRoute, result: object, output: dict[str, object]) -> ModelResult:
     usage = result.get("usage") if isinstance(result, dict) else None
     total_input_tokens = int(usage["input_tokens"]) if isinstance(usage, dict) and usage.get("input_tokens") is not None else None
     output_tokens = int(usage["output_tokens"]) if isinstance(usage, dict) and usage.get("output_tokens") is not None else None
@@ -150,7 +172,7 @@ def _model_result(route: ModelRoute, result: object, text: str) -> ModelResult:
         else None
     )
     return ModelResult(
-        output={"text": text},
+        output=output,
         input_tokens=normal_input_tokens,
         cached_input_tokens=cached_input_tokens,
         cache_write_tokens=cache_write_tokens,
@@ -163,6 +185,92 @@ def _model_result(route: ModelRoute, result: object, text: str) -> ModelResult:
             cache_write_tokens=cache_write_tokens,
         ),
     )
+
+
+def _has_response_schema(payload: dict[str, object]) -> bool:
+    response_schema = payload.get("response_schema")
+    return isinstance(response_schema, dict) and isinstance(response_schema.get("name"), str)
+
+
+def _normalize_output(
+    text: str,
+    payload: dict[str, object],
+    *,
+    fallback_text: str | None = None,
+) -> dict[str, object]:
+    if not _has_response_schema(payload):
+        return {"text": text}
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        if fallback_text:
+            return {
+                "text": fallback_text,
+                "candidate_metadata": None,
+                "candidate_metadata_error": "structured_output_invalid_json",
+            }
+        raise ValueError("OpenAI structured Tutor output is not valid JSON.") from None
+    if not isinstance(parsed, dict) or not isinstance(parsed.get("text"), str) or not parsed["text"].strip():
+        raise ValueError("OpenAI structured Tutor output has no student-facing text.")
+    if "candidate_metadata" not in parsed:
+        return {
+            "text": parsed["text"],
+            "candidate_metadata": None,
+            "candidate_metadata_error": "candidate_metadata_missing",
+        }
+    return {"text": parsed["text"], "candidate_metadata": parsed["candidate_metadata"]}
+
+
+class _StructuredTutorTextExtractor:
+    """Emit only the `text` JSON-string value while retaining raw structured output."""
+
+    _TEXT_PREFIX = re.compile(r'"text"\s*:\s*"')
+
+    def __init__(self) -> None:
+        self._prefix = ""
+        self._started = False
+        self._complete = False
+        self._escaped = False
+        self._unicode_digits = ""
+        self.text = ""
+
+    def feed(self, delta: str) -> str:
+        if self._complete:
+            return ""
+        if not self._started:
+            self._prefix += delta
+            match = self._TEXT_PREFIX.search(self._prefix)
+            if match is None:
+                return ""
+            self._started = True
+            delta = self._prefix[match.end():]
+            self._prefix = ""
+        emitted: list[str] = []
+        for character in delta:
+            if self._unicode_digits:
+                self._unicode_digits += character
+                if len(self._unicode_digits) == 4:
+                    emitted.append(chr(int(self._unicode_digits, 16)))
+                    self._unicode_digits = ""
+                    self._escaped = False
+                continue
+            if self._escaped:
+                if character == "u":
+                    self._unicode_digits = ""
+                    continue
+                emitted.append({"n": "\n", "r": "\r", "t": "\t", "b": "\b", "f": "\f"}.get(character, character))
+                self._escaped = False
+                continue
+            if character == "\\":
+                self._escaped = True
+                continue
+            if character == '"':
+                self._complete = True
+                break
+            emitted.append(character)
+        chunk = "".join(emitted)
+        self.text += chunk
+        return chunk
 
 
 def _response_text(result: object) -> str:

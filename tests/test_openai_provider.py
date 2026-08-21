@@ -171,6 +171,52 @@ def test_openai_responses_provider_forwards_real_sse_deltas_from_one_request() -
     assert events[-1].result.output == {"text": "Try this."}
 
 
+def test_openai_responses_provider_streams_student_text_from_a_structured_tutor_result() -> None:
+    captured: dict[str, object] = {}
+
+    class FakeResponse:
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def __iter__(self):
+            return iter(
+                [
+                    b'data: {"type":"response.output_text.delta","delta":"{\\"text\\":\\"Try "}\n\n',
+                    b'data: {"type":"response.output_text.delta","delta":"one step.\\",\\"candidate_metadata\\":{\\"version\\":\\"candidate-event-v1\\",\\"candidates\\":[]}}"}\n\n',
+                    b'data: {"type":"response.completed","response":{"usage":{"input_tokens":5,"output_tokens":2}}}\n\n',
+                ]
+            )
+
+    def send(request: object, *, timeout: float) -> FakeResponse:
+        captured["request"] = request
+        return FakeResponse()
+
+    events = list(
+        OpenAIResponsesProvider(api_key="test-key", request_sender=send).stream(
+            ModelRoute(provider="openai", model="gpt-5.6-luna"),
+            {
+                "instructions": "Teach calmly.",
+                "input": "Help with fractions.",
+                "response_schema": {"name": "tutor_turn_v1", "schema": {"type": "object"}},
+            },
+        )
+    )
+
+    request = captured["request"]
+    body = json.loads(request.data.decode())
+    assert body["text"]["format"] == {
+        "type": "json_schema", "name": "tutor_turn_v1", "schema": {"type": "object"}, "strict": True,
+    }
+    assert [event.text for event in events if isinstance(event, StreamDelta)] == ["Try ", "one step."]
+    assert events[-1].result.output == {
+        "text": "Try one step.",
+        "candidate_metadata": {"version": "candidate-event-v1", "candidates": []},
+    }
+
+
 def test_tutor_gateway_uses_openai_route_from_settings() -> None:
     """A configured OpenAI Tutor call records its configured provider and model."""
 

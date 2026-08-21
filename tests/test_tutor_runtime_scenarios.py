@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
-from services.platform.db.models import LearningMessage, ModelTask
+from services.platform.db.models import CandidateEvent, LearningMessage, ModelTask
 from services.platform.safety import SafetyAction, SafetyDecision
 from services.retrieval.service import RetrievedBlock
 from services.tutor.context import SessionContextMessage, TutorContext, TutorContextDebug
@@ -20,6 +20,8 @@ class _Session:
         self.rows: list[object] = []
 
     def add(self, row: object) -> None:
+        if isinstance(row, LearningMessage) and row.id is None:
+            row.id = uuid4()
         self.rows.append(row)
 
     def flush(self) -> None:
@@ -56,10 +58,11 @@ class _Policy:
 
 
 class _Provider:
-    def __init__(self, text: str = "Try one small step.") -> None:
+    def __init__(self, text: str = "Try one small step.", candidate_metadata: object | None = None) -> None:
         self.calls = 0
         self.payloads: list[dict[str, object]] = []
         self.text = text
+        self.candidate_metadata = candidate_metadata
 
     def stream(self, route: ModelRoute, payload: dict[str, object]):
         del route
@@ -67,17 +70,23 @@ class _Provider:
         self.payloads.append(payload)
         yield StreamDelta(self.text[:8])
         yield StreamDelta(self.text[8:])
-        yield StreamComplete(ModelResult(output={"text": self.text}, input_tokens=4, output_tokens=3))
+        metadata = self.candidate_metadata(payload) if callable(self.candidate_metadata) else self.candidate_metadata
+        output: dict[str, object] = {"text": self.text}
+        if metadata is not None:
+            output["candidate_metadata"] = metadata
+        yield StreamComplete(ModelResult(output=output, input_tokens=4, output_tokens=3))
 
 
 def _decision(action: SafetyAction = SafetyAction.ALLOW, directive: str | None = None) -> SafetyDecision:
     return SafetyDecision(action, None, "BASELINE", 1, f"TEST_{action.value}", "normal", directive)
 
 
-def _runtime(decision: SafetyDecision) -> tuple[TutorRuntime, _ContextBuilder, _Provider, _Session]:
+def _runtime(
+    decision: SafetyDecision, candidate_metadata: object | None = None,
+) -> tuple[TutorRuntime, _ContextBuilder, _Provider, _Session]:
     session = _Session()
     context = _ContextBuilder()
-    provider = _Provider()
+    provider = _Provider(candidate_metadata=candidate_metadata)
     gateway = ModelGateway(session, routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")}, providers={"fixture": provider})
     return TutorRuntime(session, context_builder=context, safety_policy=_Policy(decision), gateway=gateway), context, provider, session
 
@@ -159,3 +168,96 @@ def test_interrupted_stream_drains_provider_and_persists_the_final_tutor_respons
     assert provider.calls == 1
     assert [message.role for message in messages] == ["student", "tutor"]
     assert messages[-1].content == "Try one small step."
+
+
+def _candidate_for_current_message(
+    session: _Session,
+    *,
+    event_type: str,
+    signal: str,
+    observed_student_outcome: str | None = None,
+) -> dict[str, object]:
+    student_message = next(
+        row for row in session.rows if isinstance(row, LearningMessage) and row.role == "student"
+    )
+    candidate: dict[str, object] = {
+        "version": "candidate-event-v1",
+        "candidates": [{
+            "event_type": event_type,
+            "concept_ref": "equivalent_fractions",
+            "summary": "The Student made a meaningful fraction-learning contribution.",
+            "signal": signal,
+            "source_message_ids": [str(student_message.id)],
+            "school_or_extended": "school",
+        }],
+    }
+    if observed_student_outcome is not None:
+        candidate["candidates"][0]["observed_student_outcome"] = observed_student_outcome
+    return candidate
+
+
+@pytest.mark.parametrize("question", ["Hello Lina!", "Thank you for helping me."])
+def test_greeting_and_thanks_record_candidate_metadata_absence(question: str) -> None:
+    runtime, _, _, session = _runtime(_decision())
+
+    list(runtime.stream_turn(learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), last_activity_at=None), question=question))
+
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    assert not [row for row in session.rows if isinstance(row, CandidateEvent)]
+    assert tutor_message.payload["candidate_metadata_status"] == "absent"
+
+
+@pytest.mark.parametrize(
+    ("event_type", "signal", "outcome"),
+    [
+        ("independent_success", "solved_independently", None),
+        ("guided_success", "completed_after_light_hint", None),
+        ("misconception_signal", "treated_numerators_and_denominators_as_separate_values", None),
+        ("self_correction", "corrected_fraction_comparison", None),
+        ("explanation_attempt", "explained_equivalent_fraction_reasoning", None),
+        ("transfer_attempt", "applied_fraction_equivalence_to_a_recipe", None),
+        ("open_loop_created", "explicitly_stuck_without_outcome", None),
+        ("strategy_outcome", "visual_example_followed_by_correct_application", "The Student correctly applied the visual example."),
+    ],
+)
+def test_valid_same_call_candidate_metadata_is_persisted_with_raw_source_linkage(
+    event_type: str, signal: str, outcome: str | None,
+) -> None:
+    session_holder: dict[str, _Session] = {}
+
+    def metadata(_: dict[str, object]) -> dict[str, object]:
+        return _candidate_for_current_message(session_holder["session"], event_type=event_type, signal=signal, observed_student_outcome=outcome)
+
+    runtime, _, provider, session = _runtime(_decision(), metadata)
+    session_holder["session"] = session
+    list(runtime.stream_turn(learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None), question="I worked out why one half equals two fourths."))
+
+    candidate = next(row for row in session.rows if isinstance(row, CandidateEvent))
+    student_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "student")
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    assert provider.calls == 1
+    assert candidate.session_id == student_message.session_id
+    assert candidate.message_id == student_message.id
+    assert candidate.event_type == event_type
+    assert candidate.payload["subject"] == "MATH"
+    assert candidate.payload["source_message_ids"] == [str(student_message.id)]
+    assert tutor_message.payload["candidate_metadata_status"] == "persisted"
+
+
+@pytest.mark.parametrize(
+    "candidate_metadata",
+    [
+        {"version": "candidate-event-v1", "candidates": [{"event_type": "not_a_real_event"}]},
+        {"version": "candidate-event-v1", "candidates": [{"event_type": "strategy_outcome", "summary": "Tutor used an example."}]},
+    ],
+)
+def test_malformed_candidate_metadata_never_breaks_the_tutor_response(candidate_metadata: dict[str, object]) -> None:
+    runtime, _, provider, session = _runtime(_decision(), candidate_metadata)
+
+    events = list(runtime.stream_turn(learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), last_activity_at=None), question="I am stuck with fractions."))
+
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    assert events[-1].text == "Try one small step."
+    assert provider.calls == 1
+    assert not [row for row in session.rows if isinstance(row, CandidateEvent)]
+    assert tutor_message.payload["candidate_metadata_status"] == "invalid"
