@@ -362,32 +362,33 @@ here.
 from completed TASK-021 Evidence. Deterministic lifecycle rules create, update,
 resolve, and expire temporary states; active Tutor selection excludes resolved,
 expired, legacy, and other-subject rows. Independent review is complete;
-TASK-023 is now under review.
+TASK-024 is now under review.
 **Purpose:** Represent temporary active difficulties, misconceptions, open loops, recent strategy outcomes, and resolution/expiry.  
 **Expected output:** current-state store/service distinct from stable Patterns.  
 **Likely areas:** `/services/intelligence/state`.  
 **Verification:** one strong event may update current state; resolved/expired state leaves current runtime; historical source remains.  
 
 ## TASK-023 — Deterministic Pattern engine and scope lifecycle
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** TASK-021  
 **Recovery state:** Completed TASK-021 Evidence now drives a versioned,
 deterministic Math Pattern engine with normalized taxonomy/identity, evidence
 links, lifecycle, scope promotion, counter-evidence, and recurrence handling.
-REC-16 verified scope/generalization behavior and corrected broad-scope
-recomputation from current supporting concepts. It awaits independent review.
-No Card or decision-view work runs here.
+REC-16 is approved: scope/generalization is recomputed from current supporting
+concepts. TASK-024 now consumes those derived rows; no decision-view work runs
+here.
 **Purpose:** Implement frequency/recency/context-diversity/counter-evidence governed Pattern lifecycle and scope without free LLM strength judgment.  
 **Expected output:** candidate/active/stable/weakening/resolved/superseded transitions, pattern-evidence links, a normalized `pattern_type` + `pattern_key` registry/taxonomy, and a historical recurrence lookup hook.  
 **Likely areas:** `/services/intelligence/patterns`.  
 **Verification:** unit tests cover promotion, weakening, resolution, scope generalization, semantic normalization to stable pattern keys, and recent counter-evidence outweighing stale history under configured policy. For `strategy_effectiveness`, the Tutor choosing/using a strategy is **not** confirming Evidence by itself; only an observable Lina outcome may support or challenge strategy effectiveness.  
 
 ## TASK-024 — Compact Learner Intelligence Card and Tutor selector
-**Status:** BLOCKED
+**Status:** REVIEW
 **Dependencies:** TASK-022, TASK-023  
-**Recovery state:** Reopened by the independent audit. Card budgeting and
-question-relevant selection do not satisfy the approved runtime contract.
-Blocked pending TASK-023.
+**Recovery state:** An on-demand, versioned compact Card now ranks relevant
+active Current State and ACTIVE/STABLE current-policy Patterns before applying
+centralized bounds. Tutor context receives only that selected slice with
+source-ID/policy provenance. It awaits review; no Decision View is created.
 **Purpose:** Produce compact temporal runtime intelligence and select only relevant intelligence for the current Tutor context.  
 **Expected output:** Card materialized state, budget/ranking rules, relevant-intelligence selector.  
 **Likely areas:** `/services/intelligence/card`, `/services/tutor/context`.  

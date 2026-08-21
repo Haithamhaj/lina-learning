@@ -11,6 +11,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from services.intelligence.current_state import CURRENT_STATE_POLICY_VERSION
+from services.intelligence.patterns import PATTERN_POLICY_VERSION
 from services.intelligence.selection import select_relevant_intelligence
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
@@ -174,6 +175,7 @@ def test_relevant_current_state_outranks_history_and_excludes_inactive_or_other_
             support_count=3,
             counter_count=0,
             detail="Historical fractions support note.",
+            policy_version=PATTERN_POLICY_VERSION,
         )
         science = LearnerPattern(
             student_id=student.id,
@@ -185,6 +187,7 @@ def test_relevant_current_state_outranks_history_and_excludes_inactive_or_other_
             support_count=3,
             counter_count=0,
             detail="Science plants note.",
+            policy_version=PATTERN_POLICY_VERSION,
         )
         unrelated_math = LearnerPattern(
             student_id=student.id,
@@ -196,6 +199,7 @@ def test_relevant_current_state_outranks_history_and_excludes_inactive_or_other_
             support_count=3,
             counter_count=0,
             detail="Math decimals note.",
+            policy_version=PATTERN_POLICY_VERSION,
         )
         resolved = LearnerPattern(
             student_id=student.id,
@@ -207,6 +211,7 @@ def test_relevant_current_state_outranks_history_and_excludes_inactive_or_other_
             support_count=3,
             counter_count=3,
             detail="Resolved historical fractions note.",
+            policy_version=PATTERN_POLICY_VERSION,
         )
         session.add_all([active_state, inactive_state, stable_math, science, unrelated_math, resolved])
         session.flush()
@@ -243,6 +248,7 @@ def test_current_question_is_authoritative_over_relevant_stable_history(
                 support_count=3,
                 counter_count=0,
                 detail="Older history says fractions sometimes needed support.",
+                policy_version=PATTERN_POLICY_VERSION,
             )
         )
         context = TutorContextBuilder(

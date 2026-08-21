@@ -8,7 +8,8 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from services.intelligence.selection import RelevantIntelligence, select_relevant_intelligence
+from services.intelligence.card import CardBudget, build_learner_intelligence_card
+from services.intelligence.selection import RelevantIntelligence
 from services.model_gateway.factory import create_embedding_gateway
 from services.platform.db.models import LearningMessage, LearningSession
 from services.retrieval.service import CurrentFocus, RetrievedBlock, RetrievalService
@@ -37,6 +38,8 @@ class TutorContextDebug:
     retrieval_source_refs: tuple[str, ...]
     intelligence_source_ids: tuple[UUID, ...]
     intelligence_source_kinds: tuple[str, ...]
+    intelligence_card_schema_version: str = "not-built"
+    intelligence_card_policy_version: str = "not-built"
 
 
 @dataclass(frozen=True)
@@ -102,15 +105,23 @@ class TutorContextBuilder:
                 character_budget=self._budget.retrieval_characters,
             )
         )
+        card = build_learner_intelligence_card(
+            self._session,
+            student_id=learning_session.student_id,
+            subject=learning_session.subject,
+            question=question,
+            focus=effective_focus,
+            budget=self._card_budget(),
+        )
         intelligence = tuple(
-            select_relevant_intelligence(
-                self._session,
-                student_id=learning_session.student_id,
-                subject=learning_session.subject,
-                question=question,
-                focus=effective_focus,
-                character_budget=self._budget.intelligence_characters,
+            RelevantIntelligence(
+                source_kind=entry.source_kind,
+                source_id=entry.source_id,
+                text=entry.text,
+                concept_ref=entry.concept_ref,
+                priority=entry.priority,
             )
+            for entry in card.entries
         )
         return TutorContext(
             question=question,
@@ -126,8 +137,15 @@ class TutorContextBuilder:
                 retrieval_source_refs=tuple(block.source_ref for block in retrieval),
                 intelligence_source_ids=tuple(item.source_id for item in intelligence),
                 intelligence_source_kinds=tuple(item.source_kind for item in intelligence),
+                intelligence_card_schema_version=card.schema_version,
+                intelligence_card_policy_version=card.policy_version,
             ),
         )
+
+    def _card_budget(self) -> CardBudget:
+        """Keep the existing Tutor allocation while using the centralized Card policy."""
+
+        return CardBudget(max_characters=self._budget.intelligence_characters)
 
     def _recent_messages(self, session_id: UUID) -> tuple[SessionContextMessage, ...]:
         rows = list(
