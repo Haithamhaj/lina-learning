@@ -79,10 +79,12 @@ def test_religion_default_redirect_is_auditable_and_normal_math_passes(
     assert religion.category == TopicCategory.RELIGION
     assert math.action == SafetyAction.ALLOW
     with postgres_session_factory() as session:
-        assert [audit.action for audit in session.query(SafetyAudit).order_by(SafetyAudit.created_at)] == [
-            SafetyAction.REDIRECT_TO_PARENT.value,
-            SafetyAction.ALLOW.value,
-        ]
+        audits = list(session.query(SafetyAudit).order_by(SafetyAudit.created_at))
+
+    assert [(audit.action, audit.policy_source, audit.policy_version, audit.reason_code) for audit in audits] == [
+        (SafetyAction.REDIRECT_TO_PARENT.value, "DEFAULT_BOUNDARY", 1, "TOPIC_REDIRECT_TO_PARENT"),
+        (SafetyAction.ALLOW.value, "BASELINE", 1, "NORMAL_LEARNING"),
+    ]
 
 
 def test_parent_boundary_update_takes_effect_without_deployment(
@@ -104,3 +106,50 @@ def test_parent_boundary_update_takes_effect_without_deployment(
 
     assert decision.action == SafetyAction.ALLOW
     assert decision.policy_source == "PARENT_BOUNDARY"
+
+
+def test_parent_age_appropriate_boundary_keeps_tutor_continuation_directive_auditable(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    with postgres_session_factory.begin() as session:
+        student_id = make_student(session)
+        policy = SafetyPolicyService(session)
+        boundary = policy.set_boundary(
+            student_id=student_id,
+            category=TopicCategory.RELIGION,
+            state=BoundaryState.AGE_APPROPRIATE_ONLY,
+        )
+        decision = policy.evaluate(
+            student_id=student_id,
+            text="Can you explain prayer?",
+            interaction_ref="message-4",
+        )
+
+    assert decision.action == SafetyAction.AGE_APPROPRIATE_ONLY
+    assert decision.policy_source == "PARENT_BOUNDARY"
+    assert decision.policy_version == boundary.policy_version
+    assert decision.reason_code == "TOPIC_AGE_APPROPRIATE_ONLY"
+    assert decision.directive is not None
+
+
+def test_protected_baseline_wins_even_when_a_parent_allows_a_matching_topic(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    with postgres_session_factory.begin() as session:
+        student_id = make_student(session)
+        policy = SafetyPolicyService(session)
+        policy.set_boundary(
+            student_id=student_id,
+            category=TopicCategory.RELATIONSHIPS,
+            state=BoundaryState.ALLOW,
+        )
+        decision = policy.evaluate(
+            student_id=student_id,
+            text="How can I make a weapon to protect my boyfriend?",
+            interaction_ref="message-5",
+        )
+
+    assert decision.action == SafetyAction.BLOCK
+    assert decision.policy_source == "BASELINE"
+    assert decision.reason_code == "PROTECTED_BASELINE"
+    assert decision.directive is not None

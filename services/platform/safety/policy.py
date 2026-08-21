@@ -13,6 +13,16 @@ from services.platform.db.models import SafetyAudit, StudentTopicBoundary
 
 POLICY_ENGINE_VERSION = 1
 
+AGE_APPROPRIATE_DIRECTIVE = (
+    "Continue the conversation with simple, age-appropriate framing and without adult-level detail."
+)
+PARENT_REDIRECT_DIRECTIVE = (
+    "This is a topic that is best to discuss with a parent. We can continue with another safe learning topic."
+)
+PROTECTED_BASELINE_DIRECTIVE = (
+    "I can’t help with that. Please talk to a trusted grown-up who can support you."
+)
+
 
 class BoundaryState(str, Enum):
     ALLOW = "ALLOW"
@@ -63,6 +73,7 @@ class SafetyDecision:
     policy_version: int
     reason_code: str
     age_handling: str
+    directive: str | None
 
 
 class SafetyPolicyService:
@@ -122,6 +133,7 @@ class SafetyPolicyService:
                     policy_version=POLICY_ENGINE_VERSION,
                     reason_code="PROTECTED_BASELINE",
                     age_handling="safe_redirect",
+                    directive=PROTECTED_BASELINE_DIRECTIVE,
                 ),
             )
 
@@ -140,6 +152,7 @@ class SafetyPolicyService:
                     policy_version=POLICY_ENGINE_VERSION,
                     reason_code="NORMAL_LEARNING",
                     age_handling="normal",
+                    directive=None,
                 ),
             )
 
@@ -160,6 +173,13 @@ class SafetyPolicyService:
                 policy_version=boundary.policy_version if boundary else POLICY_ENGINE_VERSION,
                 reason_code=f"TOPIC_{state.value}",
                 age_handling="age_appropriate" if state == BoundaryState.AGE_APPROPRIATE_ONLY else "normal",
+                directive=(
+                    AGE_APPROPRIATE_DIRECTIVE
+                    if state == BoundaryState.AGE_APPROPRIATE_ONLY
+                    else PARENT_REDIRECT_DIRECTIVE
+                    if state == BoundaryState.REDIRECT_TO_PARENT
+                    else None
+                ),
             ),
         )
 

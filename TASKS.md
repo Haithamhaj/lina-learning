@@ -251,7 +251,7 @@ the Student screen calls `/api/v1/student`, never `/api/v1/demo`. TypeScript
 check and production build passed.
 
 ## TASK-017 — Tutor context builder and retrieval integration
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** TASK-016, TASK-014  
 **Recovery state:** Rebuilt for review as a deterministic, model-free context
 boundary. It keeps the current Student question authoritative; includes only a
@@ -273,7 +273,7 @@ priority, topic continuity, and budgets. This is not Tutor behavior, safety
 consumption, Candidate Event, or streaming work.
 
 ## TASK-017A — Safety & Learning Boundary Policy Engine
-**Status:** BLOCKED
+**Status:** REVIEW
 **Dependencies:** TASK-017, TASK-008  
 **Recovery state:** Reopened by the independent audit. The policy foundation is
 preserved, but Tutor runtime does not consume `AGE_APPROPRIATE_ONLY` according

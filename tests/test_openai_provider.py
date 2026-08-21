@@ -21,6 +21,7 @@ def test_tutor_runtime_exposes_a_provider_neutral_model_payload() -> None:
         question="How does 4.2 × 10 change the decimal point?",
         sources=[{"ref": "Eureka#page=16", "text": "Use a place value chart."}],
         intelligence=["Recent support need: place value × 10."],
+        safety_directive="Use simple framing and avoid adult-level detail.",
     )
 
     assert payload["max_output_tokens"] == 350
@@ -30,6 +31,7 @@ def test_tutor_runtime_exposes_a_provider_neutral_model_payload() -> None:
     assert "Recent support need" not in payload["instructions"]
     assert "Eureka#page=16" in payload["input"]
     assert "Recent support need" in payload["input"]
+    assert "Use simple framing and avoid adult-level detail." in payload["input"]
     assert "internal policies" in payload["instructions"]
     assert "Sandbox/Test Learner" not in payload["instructions"]
 

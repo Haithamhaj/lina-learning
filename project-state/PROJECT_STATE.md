@@ -2,9 +2,8 @@
 
 ## Current goal
 
-Independently review the remediated TASK-017 Tutor context builder and relevant
-intelligence selector. Do not start TASK-017A, real-Lina calibration, or
-product expansion.
+Independently review TASK-017A Safety & Learning Boundary Policy Engine
+consumption. Do not start TASK-018, real-Lina calibration, or product expansion.
 
 ## Current reality
 
@@ -59,9 +58,14 @@ product expansion.
   optional persisted topic metadata only as retrieval focus, invokes TASK-014
   as the sole retrieval service, and admits only relevant active state/recent
   patterns/stable patterns. Resolved, inactive, irrelevant-subject, and
-  irrelevant Math intelligence do not enter context. It is `REVIEW` and does
-  not implement Tutor behavior, safety consumption, Candidate Events, or
-  streaming.
+  irrelevant Math intelligence do not enter context. It is `DONE` and does not
+  implement Tutor behavior, safety consumption, Candidate Events, or streaming.
+- TASK-017A now explicitly consumes the persisted, versioned SafetyDecision
+  before Tutor work: ALLOW and AGE_APPROPRIATE_ONLY continue distinctly; the
+  latter carries its age-handling directive; parent redirects and protected
+  baseline actions return their policy-defined calm redirect directives. Its
+  isolated PostgreSQL policy/contract tests and the full Python suite passed;
+  it is `REVIEW`. This does not implement TASK-018 or pass any gate.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -92,8 +96,8 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-017 needs independent review before TASK-017A may begin. TASK-015 and
-  TASK-017A onward remain blocked; the Production Engine Acceptance Gate has
+- TASK-017A needs independent review before TASK-018 may begin. TASK-015 and
+  TASK-018 onward remain blocked; the Production Engine Acceptance Gate has
   not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
@@ -108,9 +112,9 @@ Real Lina decision gates.
 
 ## Next recommended action
 
-Conduct an independent review of **TASK-017 — Tutor context builder and
-retrieval integration**. Do not start TASK-017A or later work unless that
-review approves TASK-017.
+Conduct an independent review of **TASK-017A — Safety & Learning Boundary
+Policy Engine consumption**. Do not start TASK-018 or later work unless that
+review approves TASK-017A.
 
 ## Critical references
 
