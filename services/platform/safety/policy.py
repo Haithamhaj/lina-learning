@@ -54,9 +54,22 @@ _DEFAULT_BOUNDARIES = {
     TopicCategory.DEATH_GRIEF: BoundaryState.AGE_APPROPRIATE_ONLY,
     TopicCategory.FAMILY_FINANCES: BoundaryState.AGE_APPROPRIATE_ONLY,
 }
-_BASELINE_TERMS = ("suicide", "kill myself", "hurt myself", "make a weapon")
+_PROTECTED_BASELINE_PHRASES = (
+    "kill myself",
+    "hurt myself",
+    "make a weapon",
+    "لا أريد أن أعيش بعد الآن",
+    "لا أريد العيش",
+    "أريد أن أؤذي نفسي",
+    "سأقتل نفسي",
+)
+_SAFE_EDUCATIONAL_SELF_HARM_CONTEXT = (
+    "health lesson",
+    "safe definition",
+    "definition safe for a child",
+)
 _CATEGORY_TERMS = {
-    TopicCategory.RELIGION: ("prayer", "religion", "god", "mosque"),
+    TopicCategory.RELIGION: ("prayer", "religion", "god", "mosque", "صلاة", "دين", "الله", "مسجد"),
     TopicCategory.HUMAN_REPRODUCTION: ("sex education", "reproduction"),
     TopicCategory.RELATIONSHIPS: ("dating", "boyfriend", "girlfriend"),
     TopicCategory.POLITICS: ("politics", "election", "president"),
@@ -122,7 +135,7 @@ class SafetyPolicyService:
         interaction_ref: str | None = None,
     ) -> SafetyDecision:
         normalized = text.lower()
-        if any(term in normalized for term in _BASELINE_TERMS):
+        if _matches_protected_baseline(normalized):
             return self._audit(
                 student_id,
                 interaction_ref,
@@ -202,3 +215,13 @@ class SafetyPolicyService:
         )
         self._session.flush()
         return decision
+
+
+def _matches_protected_baseline(normalized_text: str) -> bool:
+    """Block direct harmful intent while allowing an explicitly safe definition request."""
+
+    if any(phrase in normalized_text for phrase in _PROTECTED_BASELINE_PHRASES):
+        return True
+    if "suicide" not in normalized_text:
+        return False
+    return not any(context in normalized_text for context in _SAFE_EDUCATIONAL_SELF_HARM_CONTEXT)

@@ -273,7 +273,7 @@ priority, topic continuity, and budgets. This is not Tutor behavior, safety
 consumption, Candidate Event, or streaming work.
 
 ## TASK-017A — Safety & Learning Boundary Policy Engine
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** TASK-017, TASK-008  
 **Recovery state:** Reopened by the independent audit. The policy foundation is
 preserved, but Tutor runtime does not consume `AGE_APPROPRIATE_ONLY` according
@@ -282,6 +282,11 @@ to the approved action semantics. Blocked pending TASK-017.
 **Expected output:** A versioned `SafetyDecision` service/contract that evaluates the interaction context and returns an effective action, category/reason code, policy source/version, and age-handling directive; implementation may use deterministic routing and/or a classifier where needed.  
 **Likely areas:** `/services/platform/safety`, `/services/tutor/context`, `/apps/api`, `/packages/schemas`.  
 **Verification:** Protected baseline cannot be weakened; Parent boundary states route correctly; Religion default redirect works; a Tutor prompt cannot bypass the policy decision; normal Math requests pass without unnecessary blocking; decisions are auditable.  
+**Completion note:** REC-09 added an isolated PostgreSQL deterministic golden
+scenario suite: normal Math/Science, every Parent boundary action, baseline
+precedence, a safe educational sensitive-word reference, and implicit Arabic
+self-harm meaning. The classifier remains deterministic; no model call was
+used. TASK-018 remains blocked pending its own authorization and gate work.
 
 ## TASK-018 — Text Tutor runtime with streaming
 **Status:** BLOCKED

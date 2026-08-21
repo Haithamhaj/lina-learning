@@ -2,8 +2,8 @@
 
 ## Current goal
 
-Independently review TASK-017A Safety & Learning Boundary Policy Engine
-consumption. Do not start TASK-018, real-Lina calibration, or product expansion.
+Await the authorized next gate before TASK-018. Do not start TASK-018,
+real-Lina calibration, or product expansion.
 
 ## Current reality
 
@@ -65,7 +65,11 @@ consumption. Do not start TASK-018, real-Lina calibration, or product expansion.
   latter carries its age-handling directive; parent redirects and protected
   baseline actions return their policy-defined calm redirect directives. Its
   isolated PostgreSQL policy/contract tests and the full Python suite passed;
-  it is `REVIEW`. This does not implement TASK-018 or pass any gate.
+  it is `DONE`. REC-09 added eight deterministic English/Arabic golden
+  scenarios covering normal learning, each Parent action, baseline precedence,
+  safe educational wording, and implicit self-harm meaning. The classifier
+  uses only explicit deterministic phrases/context; no model call was used.
+  This does not implement TASK-018 or pass any gate.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -96,9 +100,8 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-017A needs independent review before TASK-018 may begin. TASK-015 and
-  TASK-018 onward remain blocked; the Production Engine Acceptance Gate has
-  not passed.
+- TASK-015 and TASK-018 onward remain blocked; the Production Engine
+  Acceptance Gate has not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
   database/workflow remains a deferred local-development improvement.
@@ -112,9 +115,8 @@ Real Lina decision gates.
 
 ## Next recommended action
 
-Conduct an independent review of **TASK-017A — Safety & Learning Boundary
-Policy Engine consumption**. Do not start TASK-018 or later work unless that
-review approves TASK-017A.
+Await explicit authorization and the applicable gate before **TASK-018**. Do
+not start TASK-018 or later work.
 
 ## Critical references
 
