@@ -9,8 +9,8 @@ export default function StudentPage() {
       requiredRole={USER_ROLES.STUDENT}
       redirectPath="/parent"
     >
-      <main className="min-h-screen bg-[#f5f7fb] px-5 py-8 text-ink sm:px-8 lg:px-12">
-        <div className="mx-auto flex max-w-6xl flex-col gap-10">
+      <main className="min-h-screen bg-[linear-gradient(135deg,#fbf9ff_0%,#f4fbfa_52%,#fff8ef_100%)] px-4 py-6 text-ink sm:px-8 sm:py-10 lg:px-12">
+        <div className="mx-auto flex max-w-5xl flex-col gap-8 sm:gap-10">
           <SurfaceHeader
             eyebrow="Math with Tutor"
             title="Let’s work it out together."

@@ -20,10 +20,22 @@ def test_student_math_surface_uses_tutor_language_and_a_child_safe_unavailable_s
     workspace = Path(__file__).parents[1]
     math_session = (workspace / "apps/web/components/student-math-session.tsx").read_text()
 
-    assert "Tutor: " in math_session
+    assert 'message.role === "tutor" ? "Tutor" : "Lina"' in math_session
     assert "Tutor is thinking…" in math_session
     assert "Lina: " not in math_session
     assert "Lina is thinking…" not in math_session
     assert "Math is getting ready." in math_session
     assert "finish setting up your book" in math_session
     assert 'if ("ready" in next) {\n            setLearningSession(null);\n            setError("");' in math_session
+
+
+def test_student_math_surface_has_lina_tutor_visual_and_bilingual_ready_markers() -> None:
+    """Catches loss of the visual distinction and direction-aware child chat treatment."""
+
+    workspace = Path(__file__).parents[1]
+    math_session = (workspace / "apps/web/components/student-math-session.tsx").read_text()
+
+    assert 'message.role === "tutor" ? "Tutor" : "Lina"' in math_session
+    assert 'dir="auto"' in math_session
+    assert "Welcome to Math" in math_session
+    assert "Tutor is thinking…" in math_session

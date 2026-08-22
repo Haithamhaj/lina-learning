@@ -28,6 +28,29 @@ type TutorTurn = {
   text: string;
 };
 
+function ChatAvatar({ participant }: { participant: "Lina" | "Tutor" }) {
+  const isTutor = participant === "Tutor";
+  return (
+    <span
+      aria-hidden="true"
+      className={`flex size-10 shrink-0 items-center justify-center rounded-2xl text-sm font-bold shadow-sm ${isTutor ? "bg-[#17334f] text-[#f4fbff]" : "bg-[#eadbff] text-[#5b3d91]"}`}
+    >
+      {isTutor ? "✦" : "L"}
+    </span>
+  );
+}
+
+function MathMotifs() {
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+      <span className="absolute -left-8 top-16 grid size-28 place-items-center rounded-full border border-[#d9cbf4] bg-[#f1ebff]/70 text-3xl font-display text-[#8a6cbd]">½</span>
+      <span className="absolute right-8 top-8 grid size-20 rotate-12 place-items-center rounded-[1.7rem] border border-[#bfe7df] bg-[#e5f7f2]/80 text-2xl font-display text-[#368879]">△</span>
+      <span className="absolute bottom-24 right-[-1.5rem] grid size-24 -rotate-6 place-items-center rounded-full border border-[#f4d6ae] bg-[#fff3df]/80 text-2xl font-display text-[#cb7a34]">×</span>
+      <span className="absolute bottom-8 left-1/4 text-4xl font-display text-[#d7c6f5]/70">+ 5</span>
+    </div>
+  );
+}
+
 async function errorFrom(response: Response): Promise<Error> {
   const payload = (await response.json().catch(() => ({}))) as { detail?: string };
   return new Error(payload.detail ?? "Your learning space could not be opened.");
@@ -144,52 +167,81 @@ export function StudentMathSession() {
   }
   if (state === "unavailable") {
     return (
-      <section aria-label="Math is getting ready" className="rounded-3xl bg-white p-6 text-center shadow-sm">
-        <h2 className="font-display text-2xl text-ink">Math is getting ready.</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">Ask a grown-up to finish setting up your book.</p>
-        <Button className="mt-5" type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</Button>
+      <section aria-label="Math is getting ready" className="relative overflow-hidden rounded-[2rem] border border-white/80 bg-white/90 p-7 text-center shadow-[0_18px_50px_-32px_rgba(69,46,113,0.55)] sm:p-10">
+        <MathMotifs />
+        <div className="relative mx-auto max-w-md">
+          <div aria-hidden="true" className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#ede5ff] text-2xl text-[#6a4ba2]">½</div>
+          <h2 className="mt-5 font-display text-3xl text-ink">Math is getting ready.</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600">Ask a grown-up to finish setting up your book.</p>
+          <Button className="mt-6" type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</Button>
+        </div>
       </section>
     );
   }
   if (state === "error" && !learningSession) {
     return (
-      <section className="rounded-2xl bg-white p-5 text-sm text-red-700" role="alert">
-        <p>{error}</p>
-        <Button className="mt-4" type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</Button>
+      <section className="rounded-[2rem] border border-rose-100 bg-white p-6 text-center text-sm text-rose-800 shadow-sm" role="alert">
+        <p className="font-semibold">Let’s try opening Math again.</p>
+        <p className="mt-2 text-rose-700">{error}</p>
+        <Button className="mt-5" type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</Button>
       </section>
     );
   }
 
   return (
-    <section aria-label="Math learning session" className="grid gap-4 rounded-3xl bg-white p-5 shadow-sm sm:p-6">
-      <div>
-        <h2 className="font-display text-2xl text-ink">Math</h2>
-        <p className="mt-1 text-sm text-slate-600">Pick up where you left off. Your work stays in this learning session.</p>
+    <section aria-label="Math learning session" className="relative overflow-hidden rounded-[2rem] border border-white/90 bg-white/95 p-4 shadow-[0_18px_60px_-34px_rgba(47,35,81,0.55)] sm:p-6">
+      <MathMotifs />
+      <div className="relative grid gap-5">
+        <div className="flex items-start gap-4 rounded-[1.5rem] border border-[#ece6fa] bg-[#fbfaff] px-4 py-4 sm:px-5">
+          <div aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#e8ddff] text-xl text-[#60428e]">∠</div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#7557a7]">Your Math space</p>
+            <h2 className="mt-1 font-display text-2xl text-ink">Pick up where you left off.</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-600">Ask, try an answer, or tell Tutor what feels tricky.</p>
+          </div>
+        </div>
+        <div className="min-h-80 max-h-[28rem] overflow-y-auto rounded-[1.5rem] border border-[#ebe9f4] bg-[#f8f8fc]/90 p-3 sm:p-4" aria-live="polite">
+          {learningSession?.messages.length ? <div className="grid gap-4">{learningSession.messages.map((message) => {
+            const participant = message.role === "tutor" ? "Tutor" : "Lina";
+            const isTutor = participant === "Tutor";
+            const isThinking = isTutor && !message.content && state === "sending";
+            return (
+              <article className={`flex items-end gap-2.5 ${isTutor ? "justify-start" : "justify-end"}`} key={message.id}>
+                {isTutor ? <ChatAvatar participant="Tutor" /> : null}
+                <div className={`max-w-[82%] rounded-[1.35rem] px-4 py-3 shadow-sm ${isTutor ? "rounded-bl-md border border-[#d4e7e4] bg-[#edf9f7] text-[#163b3b]" : "rounded-br-md bg-[#6a4ba2] text-white"}`}>
+                  <p className={`text-xs font-bold ${isTutor ? "text-[#418377]" : "text-[#eadfff]"}`}>{participant}</p>
+                  {isThinking ? <p className="mt-1.5 flex items-center gap-2 text-sm"><span className="flex gap-1" aria-hidden="true"><span className="size-1.5 rounded-full bg-current opacity-60" /><span className="size-1.5 rounded-full bg-current opacity-80" /><span className="size-1.5 rounded-full bg-current" /></span>Tutor is thinking…</p> : <p dir="auto" className="mt-1.5 whitespace-pre-wrap text-sm leading-6">{message.content}</p>}
+                </div>
+                {!isTutor ? <ChatAvatar participant="Lina" /> : null}
+              </article>
+            );
+          })}</div> : <div className="grid min-h-72 place-items-center px-4 text-center">
+            <div className="max-w-sm">
+              <div aria-hidden="true" className="mx-auto grid size-16 place-items-center rounded-[1.4rem] bg-[#e9f7f3] text-3xl text-[#328577]">✎</div>
+              <h3 className="mt-5 font-display text-2xl text-ink">Welcome to Math</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Start with a question, an answer you tried, or something you would like Tutor to explain.</p>
+            </div>
+          </div>}
+        </div>
+        <form className="rounded-[1.5rem] border border-[#e6e0f2] bg-white p-3 shadow-sm sm:grid sm:grid-cols-[1fr_auto] sm:items-center sm:gap-3 sm:p-4" onSubmit={send}>
+          <label className="sr-only" htmlFor="student-math-message">Your Math question or attempt</label>
+          <input
+            id="student-math-message"
+            dir="auto"
+            className="h-12 w-full rounded-2xl bg-[#f8f7fb] px-4 text-sm text-ink outline-none ring-[#9c7ac9] transition focus:ring-2"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="Ask a question or share what you tried"
+            maxLength={4000}
+            disabled={state === "sending"}
+          />
+          <Button className="mt-3 w-full sm:mt-0 sm:w-auto" type="submit" disabled={!draft.trim() || state === "sending"}>
+            {state === "sending" ? "Tutor is thinking…" : "Send"}
+          </Button>
+        </form>
+        {error ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert"><span>{error}</span><Button type="button" variant="secondary" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Reload chat</Button></div> : null}
+        <p className="text-center text-xs text-slate-500">Tutor will help you work through the next step.</p>
       </div>
-      <div className="grid max-h-80 gap-3 overflow-y-auto rounded-2xl bg-[#f5f7fb] p-4" aria-live="polite">
-        {learningSession?.messages.length ? learningSession.messages.map((message) => (
-          <p className="rounded-xl bg-white px-3 py-2 text-sm text-slate-700" key={message.id}>
-            <span className="font-semibold text-ink">{message.role === "tutor" ? "Tutor: " : "You: "}</span>{message.content || "…"}
-          </p>
-        )) : <p className="text-sm text-slate-600">What Math idea would you like to work on?</p>}
-      </div>
-      <form className="grid gap-3 sm:grid-cols-[1fr_auto]" onSubmit={send}>
-        <label className="sr-only" htmlFor="student-math-message">Your Math question or attempt</label>
-        <input
-          id="student-math-message"
-          className="rounded-xl border border-slate-200 px-4 py-3 text-sm text-ink"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder="Share a question or show what you tried"
-          maxLength={4000}
-          disabled={state === "sending"}
-        />
-        <Button type="submit" disabled={!draft.trim() || state === "sending"}>
-          {state === "sending" ? "Tutor is thinking…" : "Send"}
-        </Button>
-      </form>
-      {error ? <div className="flex flex-wrap items-center gap-3 text-sm text-red-700" role="alert"><span>{error}</span><Button type="button" variant="secondary" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Reload chat</Button></div> : null}
-      <p className="text-xs text-slate-500">Tutor will help you work through the next step.</p>
     </section>
   );
 }
