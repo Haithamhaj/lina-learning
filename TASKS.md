@@ -370,7 +370,7 @@ TASK-024 is now under review.
 **Verification:** one strong event may update current state; resolved/expired state leaves current runtime; historical source remains.  
 
 ## TASK-023 — Deterministic Pattern engine and scope lifecycle
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** TASK-021  
 **Recovery state:** Completed TASK-021 Evidence now drives a versioned,
 deterministic Math Pattern engine with normalized taxonomy/identity, evidence
@@ -378,7 +378,7 @@ links, lifecycle, scope promotion, counter-evidence, and recurrence handling.
 Specific misconception improvement Evidence now challenges only its matching
 normalized Pattern key. Context/subject recomputation includes support and
 counter Evidence relationships with queryable lineage, while promotion requires
-current qualifying concept and task diversity. Awaiting review; no
+current qualifying concept and task diversity. REC-16 review is complete; no
 decision-view work runs here.
 **Purpose:** Implement frequency/recency/context-diversity/counter-evidence governed Pattern lifecycle and scope without free LLM strength judgment.  
 **Expected output:** candidate/active/stable/weakening/resolved/superseded transitions, pattern-evidence links, a normalized `pattern_type` + `pattern_key` registry/taxonomy, and a historical recurrence lookup hook.  
@@ -386,13 +386,14 @@ decision-view work runs here.
 **Verification:** unit tests cover promotion, weakening, resolution, scope generalization, semantic normalization to stable pattern keys, and recent counter-evidence outweighing stale history under configured policy. For `strategy_effectiveness`, the Tutor choosing/using a strategy is **not** confirming Evidence by itself; only an observable Lina outcome may support or challenge strategy effectiveness.  
 
 ## TASK-024 — Compact Learner Intelligence Card and Tutor selector
-**Status:** DONE
+**Status:** REVIEW
 **Dependencies:** TASK-022, TASK-023  
 **Recovery state:** An on-demand, versioned compact Card now ranks relevant
 active Current State and ACTIVE/STABLE current-policy Patterns before applying
 centralized bounds. Tutor context receives only that selected slice with
-source-ID/policy provenance. Independent review is complete; TASK-025 now
-derives categorical views from these sources.
+source-ID/policy provenance. REC-20 corrected scope ranking so an exact
+concept Pattern outranks a broader Pattern even when the latter is ACTIVE.
+Awaiting review; no decision-view work runs here.
 **Purpose:** Produce compact temporal runtime intelligence and select only relevant intelligence for the current Tutor context.  
 **Expected output:** Card materialized state, budget/ranking rules, relevant-intelligence selector.  
 **Likely areas:** `/services/intelligence/card`, `/services/tutor/context`.  

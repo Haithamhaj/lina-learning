@@ -310,6 +310,33 @@ def test_current_independent_change_outranks_broad_support_history(
     assert card.entries[0].selection_reason == "exact_question_concept"
 
 
+def test_exact_concept_pattern_outranks_active_subject_pattern(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, _, run = _seed(session)
+        exact = _pattern(
+            student,
+            run,
+            key="support_need:fractions",
+            detail="Fractions comparison support history.",
+            scope={"scope_type": "concept", "concept_ref": "fractions"},
+            status="STABLE",
+        )
+        broad = _pattern(
+            student,
+            run,
+            key="support_need:math",
+            detail="Fractions can sometimes need broader Math support.",
+            scope={"scope_type": "subject"},
+            status="ACTIVE",
+        )
+        session.add_all((exact, broad))
+        card = _card(session, student, question="Please help me compare fractions.")
+
+    assert [entry.source_id for entry in card.entries] == [exact.id, broad.id]
+
+
 def test_card_ranks_before_budgeting_and_preserves_deterministic_debug_provenance(
     factory: sessionmaker[Session],
 ) -> None:

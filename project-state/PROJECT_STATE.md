@@ -2,8 +2,9 @@
 
 ## Current goal
 
-Review TASK-026 versioned Intelligence reprocessing. Do not start real-Lina
-calibration or product expansion.
+Review the corrected TASK-024 runtime Card selector and TASK-026 versioned
+Intelligence reprocessing. Do not start real-Lina calibration or product
+expansion.
 
 ## Current reality
 
@@ -112,11 +113,11 @@ calibration or product expansion.
   recency weighting, counter-evidence, and recurrence cycles. Scope starts at
   concept and can broaden only through diverse Math evidence; no Card,
   mastery/confidence view, or global/cross-subject pattern is created. It is
-  `REVIEW`, not a Phase 3 or Gate B pass. REC-19 corrects counter-evidence
+  `DONE`, not a Phase 3 or Gate B pass. REC-19 corrects counter-evidence
   handling: a validated specific misconception improvement challenges only
   that exact normalized key, and promoted scopes retain contributing support
   and counter Evidence lineage for the same deterministic lifecycle.
-- REC-16 is `REVIEW`: Context and Subject scopes are recomputed from current
+- REC-16 is `DONE`: Context and Subject scopes are recomputed from current
   qualifying concept and task-diverse Evidence, so resolved concepts no longer
   sustain them, one worksheet cannot create generalization, and one-concept
   recurrence cannot reactivate a resolved broader scope.
@@ -125,8 +126,9 @@ calibration or product expansion.
   It ranks the explicit question before stale focus, State before historical
   guidance, and narrow scope before broad scope within each tier; Card source
   IDs and policy/schema metadata remain internal runtime provenance. It creates
-  no Evidence, State, Pattern, or Card database row. It is `DONE`, not a Phase
-  3 or Gate B pass.
+  no Evidence, State, Pattern, or Card database row. REC-20 ensures exact
+  applicable Pattern scope outranks broader ACTIVE scope while Current State
+  remains first. It is `REVIEW`, not a Phase 3 or Gate B pass.
 - TASK-025 now derives versioned categorical Decision Views from validated
   Evidence, with active Current State and ACTIVE/STABLE concept Pattern context.
   It persists scoped learning-status, independence, retention, and
@@ -174,7 +176,7 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 and TASK-027 onward remain blocked; TASK-023 and TASK-026 await
+- TASK-015 and TASK-027 onward remain blocked; TASK-024 and TASK-026 await
   independent review and the applicable gate. The Production Engine Acceptance Gate has
   not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo

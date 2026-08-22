@@ -137,8 +137,9 @@ def build_learner_intelligence_card(
 
     candidates.sort(
         key=lambda candidate: (
+            0 if candidate.entry.source_kind == "current_state" else 1,
+            0 if candidate.entry.source_kind == "current_state" else candidate.scope_priority,
             candidate.source_priority,
-            candidate.scope_priority,
             -candidate.recency.timestamp(),
             str(candidate.entry.source_id),
         )
