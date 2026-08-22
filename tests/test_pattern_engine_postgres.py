@@ -575,6 +575,30 @@ def test_one_concept_and_near_identical_tasks_remain_concept_scoped(factory: ses
         ).count() == 0
 
 
+def test_multiple_concepts_from_one_worksheet_do_not_create_context_generalization(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student = _student(session)
+        for day, concept in ((1, "equivalent_fractions"), (8, "decimal_place_value"), (15, "ratio_reasoning")):
+            apply_evidence_to_patterns(
+                session,
+                evidence_id=_scope_support(
+                    session,
+                    student=student,
+                    concept=concept,
+                    context="math_word_problems",
+                    task="shared_review_worksheet",
+                    occurred_at=datetime(2026, 7, day, 12, tzinfo=UTC),
+                ).id,
+                now=datetime(2026, 7, 20, 13, tzinfo=UTC),
+            )
+
+        assert session.query(LearnerPattern).filter(
+            LearnerPattern.scope["scope_type"].astext == "context"
+        ).count() == 0
+
+
 def test_context_scope_requires_three_distinct_concepts(factory: sessionmaker[Session]) -> None:
     with factory.begin() as session:
         student = _student(session)

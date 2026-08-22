@@ -40,6 +40,7 @@ class PatternPolicy:
     resolution_counter_count: int = 2
     resolution_score_multiplier: float = 1.25
     scope_concept_count: int = 3
+    scope_task_count: int = 3
     scope_context_count: int = 2
 
 
@@ -500,7 +501,10 @@ def _broaden_supported_scope(
     }
     for context_ref in set(grouped).union(existing_context_by_ref):
         rows = grouped.get(context_ref, [])
-        qualifies = _distinct_concept_count(promotable_by_context.get(context_ref, [])) >= policy.scope_concept_count
+        qualifies = _qualifies_context_scope(
+            promotable_by_context.get(context_ref, []),
+            policy=policy,
+        )
         broader = existing_context_by_ref.get(context_ref)
         if qualifies:
             scope = {"scope_type": "context", "subject": "MATH", "context_ref": context_ref}
@@ -539,7 +543,7 @@ def _broaden_supported_scope(
     qualifying_contexts = {
         context
         for context, rows in promotable_by_context.items()
-        if _distinct_concept_count(rows) >= policy.scope_concept_count
+        if _qualifies_context_scope(rows, policy=policy)
     }
     subject_rows = [row for rows in grouped.values() for row in rows]
     subject_qualifies = len(qualifying_contexts) >= policy.scope_context_count
@@ -628,6 +632,17 @@ def _distinct_concept_count(
     rows: list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent, IntelligenceProcessingRun, LearnerPattern]],
 ) -> int:
     return len({event.concept_ref for _, _, event, _, _, _ in rows if event.concept_ref})
+
+
+def _qualifies_context_scope(
+    rows: list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent, IntelligenceProcessingRun, LearnerPattern]],
+    *,
+    policy: PatternPolicy,
+) -> bool:
+    return (
+        _distinct_concept_count(rows) >= policy.scope_concept_count
+        and len({link.task_ref for link, _, _, _, _, _ in rows}) >= policy.scope_task_count
+    )
 
 
 def _recompute_scope_pattern(

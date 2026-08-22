@@ -116,10 +116,10 @@ calibration or product expansion.
   handling: a validated specific misconception improvement challenges only
   that exact normalized key, and promoted scopes retain contributing support
   and counter Evidence lineage for the same deterministic lifecycle.
-- REC-16 is approved: Context and Subject scopes are recomputed from current
-  qualifying concept Evidence, so resolved
-  concepts no longer sustain them and one-concept recurrence cannot reactivate
-  a resolved broader scope.
+- REC-16 is `REVIEW`: Context and Subject scopes are recomputed from current
+  qualifying concept and task-diverse Evidence, so resolved concepts no longer
+  sustain them, one worksheet cannot create generalization, and one-concept
+  recurrence cannot reactivate a resolved broader scope.
 - TASK-024 now builds a compact, versioned on-demand Learner Intelligence Card
   from active, same-subject Current State plus relevant ACTIVE/STABLE Patterns.
   It ranks the explicit question before stale focus, State before historical
