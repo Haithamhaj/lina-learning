@@ -443,7 +443,7 @@ A meaningful Math session must create auditable Evidence and relevant intelligen
 ---
 
 ## REC-20 — Parent–Student Authorization
-**Status:** REVIEW
+**Status:** DONE
 **Gate B:** PASSED
 **Purpose:** Require a verified Parent to reach a Student only through a local
 Parent `User` and an explicit durable Parent/Student relationship.
@@ -458,11 +458,25 @@ isolation. No Parent dashboard or learning intelligence is exposed here.
 
 ---
 
+## REC-21 — Disposable PostgreSQL Test Environment
+**Status:** REVIEW
+**Purpose:** Run the full Python suite against one migration-first, disposable
+pgvector PostgreSQL database without development-data dependence.
+**Completion note:** Canonical npm commands create a named local pgvector
+container, require the exact `lina_learning_test` database plus an explicit
+test flag, apply Alembic from zero, execute all Python tests, and remove the
+container/volume. Existing per-test schema isolation remains intact. CI can use
+the same runner against an externally managed pgvector service.
+**Verification:** A clean migration and full Python run passed twice on the
+disposable database; the test guard rejects any non-canonical database URL.
+
+---
+
 # Phase 4 — Parent Basic Visibility & Control
 
 ## TASK-027 — Parent Overview and Math insight views
 **Status:** BLOCKED  
-**Dependencies:** Phase 3 Exit Gate, REC-20 independent approval
+**Dependencies:** Phase 3 Exit Gate, REC-21 independent approval
 **Purpose:** Let Parent understand current focus, important changes, learning state, and useful insights without surveillance-style activity counts.  
 **Expected output:** Overview + Math views using categorical decision views and evidence-linked insights.  
 **Likely areas:** `/apps/web`, `/apps/api`, `/services/intelligence`.  

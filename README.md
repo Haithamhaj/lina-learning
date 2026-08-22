@@ -75,10 +75,22 @@ requirements.
 ### Verification
 
 ```bash
-npm run typecheck
-npm run build
-python -m pytest
+npm run test:db:up
+npm run test:python
+npm run test:db:down
 ```
+
+`npm run test:python` resets the named `lina_learning_test` database, applies
+the complete Alembic history, runs the full Python suite, and removes the
+container and volume afterward. It refuses to run against any other database
+name and requires the runner's explicit `LINA_TEST_DATABASE=1` boundary, so
+test fixtures cannot truncate the development database. `npm run test` adds
+the web typecheck before that same Python path.
+
+For CI, provide a PostgreSQL service with pgvector and the exact
+`lina_learning_test` database, then set
+`LINA_TEST_DATABASE_MANAGED_EXTERNALLY=1` and run `npm run test:python`.
+The runner still applies migrations and enables every PostgreSQL suite.
 
 The foundation intentionally does not include Tutor, retrieval, Learning
 Intelligence, multimodal, artifact, content-processing, or upload UI features.

@@ -11,7 +11,11 @@
     "dev:api": "python -m uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload",
     "typecheck": "npm --prefix apps/web run typecheck",
     "build": "npm --prefix apps/web run build",
-    "test": "npm run typecheck && python -m pytest"
+    "test:db:up": "uv run --with-requirements apps/api/requirements.txt --with pytest python scripts/test_postgres.py up",
+    "test:db:down": "uv run --with-requirements apps/api/requirements.txt --with pytest python scripts/test_postgres.py down",
+    "test:db:reset": "uv run --with-requirements apps/api/requirements.txt --with pytest python scripts/test_postgres.py reset",
+    "test:python": "uv run --with-requirements apps/api/requirements.txt --with pytest python scripts/test_postgres.py test",
+    "test": "npm run typecheck && npm run test:python"
   },
   "devDependencies": {
     "next": "14.2.35",

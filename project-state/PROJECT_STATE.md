@@ -3,8 +3,9 @@
 ## Current goal
 
 Gate B production acceptance is `PASSED` after independent composed verification
-of TASK-026. REC-20 Parent–Student Authorization is `REVIEW`; do not begin
-Parent visibility work until it receives independent approval.
+of TASK-026. REC-20 Parent–Student Authorization is `DONE`; REC-21 Disposable
+PostgreSQL Test Environment is `REVIEW`. Do not begin Parent visibility work
+until REC-21 receives independent approval.
 
 ## Current reality
 
@@ -158,7 +159,11 @@ Parent visibility work until it receives independent approval.
 - REC-20 adds a durable, explicit Parent/Student relationship boundary. A
   verified Clerk Parent must resolve to the matching local Parent `User` and an
   explicit link before the minimal Student identity summary is returned. It is
-  `REVIEW`; no Parent dashboard, learning intelligence, or linking UX exists.
+  `DONE`; no Parent dashboard, learning intelligence, or linking UX exists.
+- REC-21 adds one canonical, disposable pgvector PostgreSQL test database. Its
+  runner requires the exact test database name and an explicit test flag before
+  migrations or PostgreSQL fixtures can run, applies the complete Alembic
+  history, and removes its named container/volume after the full suite.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -189,23 +194,22 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 remains blocked. TASK-027 onward remains blocked until REC-20
+- TASK-015 remains blocked. TASK-027 onward remains blocked until REC-21
   receives independent approval, despite Gate B having passed.
-- The temporary local PostgreSQL instance is appropriate for the sandbox demo
-  but not for destructive integration tests. A disposable PostgreSQL test
-  database/workflow remains a deferred local-development improvement.
+- The disposable PostgreSQL runner needs local Docker or a CI-managed pgvector
+  service; it fails closed rather than falling back to the development database.
 - Real AWS/S3 staging verification remains deferred and non-blocking; do not
   request credentials or remove the existing S3 implementation.
 - The following remain frozen until the applicable later gates pass: Lina
   Validation UI beyond the existing surface; Science; Voice/STT; production
   Vision/handwriting/drawing; Learning Canvas; Interactive Artifact Engine;
   advanced motion/gamification; Grade-transition production work; and Phase 4
-  work pending REC-20 independent approval.
+  work pending REC-21 independent approval.
 
 ## Next recommended action
 
-Independently review REC-20 Parent–Student Authorization before unblocking
-TASK-027. Do not start Parent visibility work without that approval.
+Independently review REC-21 Disposable PostgreSQL Test Environment before
+unblocking TASK-027. Do not start Parent visibility work without that approval.
 
 ## Critical references
 
