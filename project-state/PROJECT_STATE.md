@@ -3,10 +3,10 @@
 ## Current goal
 
 Gate B production acceptance is `PASSED` after independent composed verification
-of TASK-026. REC-20 Parent–Student Authorization and REC-21 Disposable
-PostgreSQL Test Environment are `DONE`; REC-22 AI Execution Lineage is
-`REVIEW`. Do not begin Parent visibility work until REC-22 receives independent
-approval.
+of TASK-026. REC-20 Parent–Student Authorization, REC-21 Disposable PostgreSQL
+Test Environment, and REC-22 AI Execution Lineage are `DONE`; REC-23 Parent
+Content Status Read API is `REVIEW`. Do not begin Parent visibility work until
+REC-23 receives independent approval.
 
 ## Current reality
 
@@ -171,6 +171,12 @@ approval.
   embeddings. Attempts retain their provider/model/usage outcome and can share
   an explicit logical operation identifier; no prompts, responses, raw vectors,
   trace backend, or Parent UI was added.
+- REC-23 adds one Parent-authorized, read-only content-status projection. It
+  returns only document identity, Grade/Subject, compact current-pipeline stage
+  readiness, and sanitized failure code/message after the existing explicit
+  Parent/Student link is verified. No content text, storage keys, processing
+  metadata, learning intelligence, dashboard, mutation, or background work is
+  exposed.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -201,7 +207,7 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 remains blocked. TASK-027 onward remains blocked until REC-21
+- TASK-015 remains blocked. TASK-027 onward remains blocked until REC-23
   receives independent approval, despite Gate B having passed.
 - The disposable PostgreSQL runner needs local Docker or a CI-managed pgvector
   service; it fails closed rather than falling back to the development database.
@@ -211,11 +217,11 @@ Real Lina decision gates.
   Validation UI beyond the existing surface; Science; Voice/STT; production
   Vision/handwriting/drawing; Learning Canvas; Interactive Artifact Engine;
   advanced motion/gamification; Grade-transition production work; and Phase 4
-  work pending REC-21 independent approval.
+  work pending REC-23 independent approval.
 
 ## Next recommended action
 
-Independently review REC-21 Disposable PostgreSQL Test Environment before
+Independently review REC-23 Parent Content Status Read API before
 unblocking TASK-027. Do not start Parent visibility work without that approval.
 
 ## Critical references

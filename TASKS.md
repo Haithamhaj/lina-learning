@@ -430,7 +430,7 @@ history and prior derived rows remain preserved; the Card remains on-demand.
 Independent composed acceptance verification is complete: a bounded Math
 journey reached later Tutor context with source lineage, current behavior
 overriding historical support, safe failure handling, and authority replacement.
-Gate B is `PASSED`; TASK-027+ remains blocked pending independent REC-22
+Gate B is `PASSED`; TASK-027+ remains blocked pending independent REC-23
 approval.
 **Purpose:** Rebuild derived Events/Evidence/Patterns/Card from preserved raw history after rubric/prompt/policy improvements.  
 **Expected output:** versioned rebuild job with date/session scope and audit trail.  
@@ -473,7 +473,7 @@ disposable database; the test guard rejects any non-canonical database URL.
 ---
 
 ## REC-22 — AI Execution Lineage
-**Status:** REVIEW
+**Status:** DONE
 **Purpose:** Extend the existing Model Gateway ledger with compact,
 identifier-only lineage for Tutor, Session Evidence, semantic extraction, and
 embedding operations.
@@ -490,11 +490,29 @@ required before Parent visibility work begins.
 
 ---
 
+## REC-23 — Parent Content Status Read API
+**Status:** REVIEW
+**Purpose:** Give an explicitly linked Parent a compact, read-only view of
+which Student content documents exist and whether their current retrieval
+pipeline is uploaded, processing, ready, or failed.
+**Completion note:** The Parent-only route first uses the REC-20 authorization
+boundary, then reads a deterministic current lineage: newest structural run,
+newest semantic run for that structural run, and newest index for that semantic
+run. Historical runs remain internal and cannot make a newer pipeline appear
+ready or failed. Responses expose only document identity, Grade/Subject,
+compact stage states, and sanitized failure codes/messages.
+**Verification:** Isolated PostgreSQL tests cover authorization isolation, no
+content, every pipeline stage, current-lineage replacement, stale-index
+protection, sanitization, deterministic ordering, and GET non-mutation.
+Independent approval is required before Parent visibility work begins.
+
+---
+
 # Phase 4 — Parent Basic Visibility & Control
 
 ## TASK-027 — Parent Overview and Math insight views
 **Status:** BLOCKED  
-**Dependencies:** Phase 3 Exit Gate, REC-22 independent approval
+**Dependencies:** Phase 3 Exit Gate, REC-23 independent approval
 **Purpose:** Let Parent understand current focus, important changes, learning state, and useful insights without surveillance-style activity counts.  
 **Expected output:** Overview + Math views using categorical decision views and evidence-linked insights.  
 **Likely areas:** `/apps/web`, `/apps/api`, `/services/intelligence`.  
