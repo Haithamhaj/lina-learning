@@ -386,28 +386,28 @@ decision-view work runs here.
 **Verification:** unit tests cover promotion, weakening, resolution, scope generalization, semantic normalization to stable pattern keys, and recent counter-evidence outweighing stale history under configured policy. For `strategy_effectiveness`, the Tutor choosing/using a strategy is **not** confirming Evidence by itself; only an observable Lina outcome may support or challenge strategy effectiveness.  
 
 ## TASK-024 — Compact Learner Intelligence Card and Tutor selector
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** TASK-022, TASK-023  
 **Recovery state:** An on-demand, versioned compact Card now ranks relevant
 active Current State and ACTIVE/STABLE current-policy Patterns before applying
 centralized bounds. Tutor context receives only that selected slice with
 source-ID/policy provenance. REC-20 corrected scope ranking so an exact
 concept Pattern outranks a broader Pattern even when the latter is ACTIVE.
-Awaiting review; no decision-view work runs here.
+Independent audit is complete; no decision-view work runs here.
 **Purpose:** Produce compact temporal runtime intelligence and select only relevant intelligence for the current Tutor context.  
 **Expected output:** Card materialized state, budget/ranking rules, relevant-intelligence selector.  
 **Likely areas:** `/services/intelligence/card`, `/services/tutor/context`.  
 **Verification:** Card stays within configured budget; resolved patterns excluded; current behavior can override historical recommendation; relevant patterns remain advisory rather than mandatory; no full profile dump. Historical strategy selection must not itself create confirming Evidence.  
 
 ## TASK-025 — Derived mastery/confidence views
-**Status:** DONE
+**Status:** REVIEW
 **Dependencies:** TASK-021, TASK-024  
 **Recovery state:** A versioned deterministic policy now persists categorical
 learning-status, independence, retention, and strategy-effectiveness views
 from validated Evidence plus current State/Pattern context. Views retain source
-IDs/explanations and policy lineage; independent review is complete. No TASK-026
-reprocessing orchestration is included. REC-18 correction ensures one latest
-completed Evidence interpretation per raw Candidate observation is counted.
+IDs/explanations and policy lineage; REC-18 ensures one latest completed
+Evidence interpretation per raw Candidate observation is counted. Awaiting
+independent review; no TASK-026 reprocessing orchestration is included.
 **Purpose:** Provide categorical parent/tutor decision views over Evidence without turning scores into source truth.  
 **Expected output:** configurable derived views such as Strong/Developing/Needs revisit + evidence confidence.  
 **Likely areas:** `/services/intelligence/decisions`.  

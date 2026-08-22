@@ -2,9 +2,8 @@
 
 ## Current goal
 
-Review the corrected TASK-024 runtime Card selector and TASK-026 versioned
-Intelligence reprocessing. Do not start real-Lina calibration or product
-expansion.
+Review TASK-025 categorical Decision Views and TASK-026 versioned Intelligence
+reprocessing. Do not start real-Lina calibration or product expansion.
 
 ## Current reality
 
@@ -128,7 +127,7 @@ expansion.
   IDs and policy/schema metadata remain internal runtime provenance. It creates
   no Evidence, State, Pattern, or Card database row. REC-20 ensures exact
   applicable Pattern scope outranks broader ACTIVE scope while Current State
-  remains first. It is `REVIEW`, not a Phase 3 or Gate B pass.
+  remains first. It is `DONE`, not a Phase 3 or Gate B pass.
 - TASK-025 now derives versioned categorical Decision Views from validated
   Evidence, with active Current State and ACTIVE/STABLE concept Pattern context.
   It persists scoped learning-status, independence, retention, and
@@ -138,7 +137,7 @@ expansion.
   or Candidate Event alone can create a view. REC-18 corrected Evidence
   version semantics: only the latest completed interpretation of each raw
   Candidate observation counts, while older versions remain historical. It is
-  `DONE`, not a Phase 3 or Gate B pass.
+  `REVIEW`, not a Phase 3 or Gate B pass.
 - TASK-026 now provides bounded, DB-job-backed reprocessing for selected
   CLOSED sessions by student/subject/session IDs or date range. Each durable
   reprocess run records its exact Evidence interpretation and downstream policy
@@ -176,7 +175,7 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 and TASK-027 onward remain blocked; TASK-024 and TASK-026 await
+- TASK-015 and TASK-027 onward remain blocked; TASK-025 and TASK-026 await
   independent review and the applicable gate. The Production Engine Acceptance Gate has
   not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
