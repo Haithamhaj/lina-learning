@@ -416,14 +416,16 @@ audit is complete; no TASK-026 reprocessing orchestration is included.
 ## TASK-026 — Intelligence reprocessing pipeline
 **Status:** REVIEW
 **Dependencies:** TASK-021, TASK-023, TASK-024, TASK-025
-**Recovery state:** A bounded, job-backed reprocess run now records explicit
+**Recovery state:** A bounded, job-backed reprocess run records explicit
 session/date scope, Evidence interpretation identity, downstream policy
-versions, durable per-session results, and an activation record only after a
-selected closed session succeeds. Audit finding: activation is currently
-session-granular, but runtime State/Pattern selection is not authority-gated;
-a multi-session partial failure can expose mixed old/new derived intelligence.
-It preserves raw history and prior derived rows; the Card remains on-demand.
-It remains under review.
+versions, and durable per-session results. Rebuilt Evidence stays staged until
+every selected session succeeds; one final DB transaction then updates the
+entire scope's authority and derives its State, Pattern, and Decision outputs.
+Partial failure leaves every selected session on the prior coherent authority;
+retry reuses completed session Evidence. The activation audit retains prior and
+new per-session authority, timestamp, and version identity. Raw history and
+prior derived rows remain preserved; the Card remains on-demand. It remains
+under review.
 **Purpose:** Rebuild derived Events/Evidence/Patterns/Card from preserved raw history after rubric/prompt/policy improvements.  
 **Expected output:** versioned rebuild job with date/session scope and audit trail.  
 **Likely areas:** `/services/intelligence/reprocess`, `/workers`.  

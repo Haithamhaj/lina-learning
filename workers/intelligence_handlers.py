@@ -18,6 +18,7 @@ from services.platform.db.models import Job, LearningSession
 from services.platform.db.models import IntelligenceReprocessRun
 from services.intelligence.reprocess import (
     INTELLIGENCE_REPROCESS_JOB,
+    activate_reprocess_scope,
     process_intelligence_reprocess_session,
     record_reprocess_session_failure,
 )
@@ -112,18 +113,46 @@ def register_intelligence_handlers(
                             error=error,
                         )
                     )
-        with session_factory.begin() as session:
-            reprocess_run = session.get(IntelligenceReprocessRun, reprocess_run_id, with_for_update=True)
-            assert reprocess_run is not None
-            from datetime import UTC, datetime
-            reprocess_run.result = {"completed_sessions": results, "failed_sessions": failures}
-            reprocess_run.status = "COMPLETED" if not failures else "PARTIAL_FAILED"
-            reprocess_run.completed_at = datetime.now(UTC)
-            reprocess_run.error = failures[0]["error"] if failures else None
-            if failures:
-                reprocess_run.failed_at = datetime.now(UTC)
         if failures:
+            with session_factory.begin() as session:
+                reprocess_run = session.get(IntelligenceReprocessRun, reprocess_run_id, with_for_update=True)
+                assert reprocess_run is not None
+                from datetime import UTC, datetime
+                reprocess_run.result = {"completed_sessions": results, "failed_sessions": failures}
+                reprocess_run.status = "PARTIAL_FAILED"
+                reprocess_run.completed_at = datetime.now(UTC)
+                reprocess_run.error = failures[0]["error"]
+                reprocess_run.failed_at = datetime.now(UTC)
             raise RuntimeError("Intelligence reprocess has failed sessions; retry will resume only those sessions.")
-        return {"reprocess_run_id": raw_run_id, "completed_sessions": results, "failed_sessions": failures}
+        try:
+            with session_factory.begin() as session:
+                reprocess_run = session.get(IntelligenceReprocessRun, reprocess_run_id, with_for_update=True)
+                assert reprocess_run is not None
+                activation = activate_reprocess_scope(session, reprocess_run_id=reprocess_run_id)
+                from datetime import UTC, datetime
+                reprocess_run.result = {
+                    "completed_sessions": results,
+                    "failed_sessions": [],
+                    "activation": activation,
+                }
+                reprocess_run.status = "COMPLETED"
+                reprocess_run.completed_at = datetime.now(UTC)
+                reprocess_run.error = None
+                reprocess_run.failed_at = None
+        except Exception as error:
+            with session_factory.begin() as session:
+                reprocess_run = session.get(IntelligenceReprocessRun, reprocess_run_id, with_for_update=True)
+                assert reprocess_run is not None
+                from datetime import UTC, datetime
+                reprocess_run.status = "FAILED"
+                reprocess_run.error = f"{type(error).__name__}: {error}"[:1000]
+                reprocess_run.failed_at = datetime.now(UTC)
+            raise
+        return {
+            "reprocess_run_id": raw_run_id,
+            "completed_sessions": results,
+            "failed_sessions": [],
+            "activation": activation,
+        }
 
     registry.register(INTELLIGENCE_REPROCESS_JOB, handle_reprocess)

@@ -149,12 +149,9 @@ def process_intelligence_reprocess_session(
     session_id: UUID,
     gateway: object,
 ) -> dict[str, object]:
-    """Rebuild one closed session and activate it only after all local outputs succeed."""
+    """Stage one closed session's Evidence interpretation for scope-level activation."""
 
     from services.intelligence.consolidation import consolidate_closed_session
-    from services.intelligence.current_state import apply_processing_run_current_state
-    from services.intelligence.decisions import DecisionViewPolicy, apply_processing_run_decision_views
-    from services.intelligence.patterns import PatternPolicy, apply_processing_run_patterns
 
     reprocess_run = session.get(IntelligenceReprocessRun, reprocess_run_id, with_for_update=True)
     learning_session = session.get(LearningSession, session_id, with_for_update=True)
@@ -193,51 +190,11 @@ def process_intelligence_reprocess_session(
             model=evidence_versions.get("model") if isinstance(evidence_versions.get("model"), str) else None,
         ),
     )
-    observed_at = learning_session.closed_at or learning_session.last_activity_at
-    states = apply_processing_run_current_state(
-        session,
-        processing_run_id=outcome.processing_run.id,
-        now=observed_at,
-        policy_version=str(versions["current_state_policy_version"]),
-    )
-    patterns = apply_processing_run_patterns(
-        session,
-        processing_run_id=outcome.processing_run.id,
-        now=datetime.now(UTC),
-        policy=PatternPolicy(version=str(versions["pattern_policy_version"])),
-    )
-    decisions = apply_processing_run_decision_views(
-        session,
-        processing_run_id=outcome.processing_run.id,
-        policy=DecisionViewPolicy(version=str(versions["decision_policy_version"])),
-    )
-    authority = session.execute(
-        select(IntelligenceSessionAuthority)
-        .where(
-            IntelligenceSessionAuthority.student_id == reprocess_run.student_id,
-            IntelligenceSessionAuthority.session_id == learning_session.id,
-        )
-        .with_for_update()
-    ).scalar_one_or_none()
-    if authority is None:
-        authority = IntelligenceSessionAuthority(
-            student_id=reprocess_run.student_id,
-            session_id=learning_session.id,
-            reprocess_run_id=reprocess_run.id,
-            evidence_processing_run_id=outcome.processing_run.id,
-        )
-        session.add(authority)
-    else:
-        authority.reprocess_run_id = reprocess_run.id
-        authority.evidence_processing_run_id = outcome.processing_run.id
-        authority.activated_at = datetime.now(UTC)
     result = {
         "session_id": str(learning_session.id),
         "processing_run_id": str(outcome.processing_run.id),
         "event_count": outcome.event_count,
-        "current_state_count": len(states),
-        "pattern_count": len(patterns),
-        "decision_view_count": len(decisions),
+        "staged": True,
     }
     item.evidence_processing_run_id = outcome.processing_run.id
     item.status = "COMPLETED"
@@ -246,6 +203,133 @@ def process_intelligence_reprocess_session(
     item.error = None
     session.flush()
     return result
+
+
+def activate_reprocess_scope(
+    session: Session,
+    *,
+    reprocess_run_id: UUID,
+) -> dict[str, object]:
+    """Atomically make a fully staged reprocess scope authoritative.
+
+    Evidence is rebuilt per session, but State, Pattern, and Decision derivation is
+    deliberately deferred until every selected session has completed.  This keeps
+    all runtime-visible intelligence on one coherent authority generation.
+    """
+
+    from services.intelligence.current_state import apply_processing_run_current_state
+    from services.intelligence.decisions import DecisionViewPolicy, apply_processing_run_decision_views
+    from services.intelligence.patterns import PatternPolicy, apply_processing_run_patterns
+
+    reprocess_run = session.get(IntelligenceReprocessRun, reprocess_run_id, with_for_update=True)
+    if reprocess_run is None:
+        raise LookupError(f"Reprocess run {reprocess_run_id!r} does not exist.")
+    existing_result = reprocess_run.result if isinstance(reprocess_run.result, dict) else {}
+    existing_activation = existing_result.get("activation")
+    if isinstance(existing_activation, dict) and existing_activation.get("status") == "COMPLETED":
+        return existing_activation
+
+    raw_session_ids = reprocess_run.scope.get("session_ids", []) if isinstance(reprocess_run.scope, dict) else []
+    selected_session_ids = tuple(UUID(str(value)) for value in raw_session_ids)
+    if not selected_session_ids:
+        raise ValueError("Reprocess activation requires a non-empty selected session scope.")
+    items = list(
+        session.execute(
+            select(IntelligenceReprocessSession)
+            .where(
+                IntelligenceReprocessSession.reprocess_run_id == reprocess_run.id,
+                IntelligenceReprocessSession.session_id.in_(selected_session_ids),
+            )
+            .with_for_update()
+        ).scalars()
+    )
+    items_by_session = {item.session_id: item for item in items}
+    if set(items_by_session) != set(selected_session_ids) or any(
+        item.status != "COMPLETED" or item.evidence_processing_run_id is None
+        for item in items_by_session.values()
+    ):
+        raise ValueError("Reprocess scope cannot activate until every selected session has completed.")
+
+    versions = reprocess_run.version_set
+    existing_authorities = {
+        authority.session_id: authority
+        for authority in session.execute(
+            select(IntelligenceSessionAuthority)
+            .where(
+                IntelligenceSessionAuthority.student_id == reprocess_run.student_id,
+                IntelligenceSessionAuthority.session_id.in_(selected_session_ids),
+            )
+            .with_for_update()
+        ).scalars()
+    }
+    activated_at = datetime.now(UTC)
+    previous_authority_by_session: dict[str, dict[str, str | None]] = {}
+    new_evidence_runs_by_session: dict[str, str] = {}
+    for session_id in selected_session_ids:
+        previous = existing_authorities.get(session_id)
+        previous_authority_by_session[str(session_id)] = {
+            "reprocess_run_id": str(previous.reprocess_run_id) if previous is not None else None,
+            "evidence_processing_run_id": str(previous.evidence_processing_run_id) if previous is not None else None,
+        }
+        item = items_by_session[session_id]
+        assert item.evidence_processing_run_id is not None
+        new_evidence_runs_by_session[str(session_id)] = str(item.evidence_processing_run_id)
+        if previous is None:
+            session.add(
+                IntelligenceSessionAuthority(
+                    student_id=reprocess_run.student_id,
+                    session_id=session_id,
+                    reprocess_run_id=reprocess_run.id,
+                    evidence_processing_run_id=item.evidence_processing_run_id,
+                    activated_at=activated_at,
+                )
+            )
+        else:
+            previous.reprocess_run_id = reprocess_run.id
+            previous.evidence_processing_run_id = item.evidence_processing_run_id
+            previous.activated_at = activated_at
+    session.flush()
+
+    state_count = pattern_count = decision_view_count = 0
+    for session_id in selected_session_ids:
+        item = items_by_session[session_id]
+        assert item.evidence_processing_run_id is not None
+        learning_session = session.get(LearningSession, session_id)
+        if learning_session is None:
+            raise LookupError(f"Selected session {session_id!r} no longer exists.")
+        states = apply_processing_run_current_state(
+            session,
+            processing_run_id=item.evidence_processing_run_id,
+            now=learning_session.closed_at or learning_session.last_activity_at,
+            policy_version=str(versions["current_state_policy_version"]),
+        )
+        patterns = apply_processing_run_patterns(
+            session,
+            processing_run_id=item.evidence_processing_run_id,
+            now=activated_at,
+            policy=PatternPolicy(version=str(versions["pattern_policy_version"])),
+        )
+        decisions = apply_processing_run_decision_views(
+            session,
+            processing_run_id=item.evidence_processing_run_id,
+            policy=DecisionViewPolicy(version=str(versions["decision_policy_version"])),
+        )
+        state_count += len(states)
+        pattern_count += len(patterns)
+        decision_view_count += len(decisions)
+
+    return {
+        "status": "COMPLETED",
+        "reprocess_run_id": str(reprocess_run.id),
+        "selected_session_ids": [str(session_id) for session_id in selected_session_ids],
+        "previous_authority_by_session": previous_authority_by_session,
+        "new_evidence_processing_runs_by_session": new_evidence_runs_by_session,
+        "activated_at": activated_at.isoformat(),
+        "version_identity": versions,
+        "current_state_count": state_count,
+        "pattern_count": pattern_count,
+        "decision_view_count": decision_view_count,
+    }
 
 
 def record_reprocess_session_failure(

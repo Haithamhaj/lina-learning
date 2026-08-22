@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import json
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -14,9 +15,11 @@ from services.intelligence.reprocess import (
     EvidenceVersionSelection,
     IntelligenceReprocessRequest,
     INTELLIGENCE_REPROCESS_JOB,
+    activate_reprocess_scope,
     enqueue_intelligence_reprocess,
     preview_intelligence_reprocess,
 )
+from services.intelligence.card import build_learner_intelligence_card
 from services.intelligence.current_state import CurrentStatePolicyError
 from services.intelligence.consolidation import EvidenceContractError
 from services.intelligence.decisions import DecisionViewPolicyError
@@ -26,9 +29,12 @@ from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
     CandidateEvent,
     CurrentLearningState,
+    DecisionView,
     IntelligenceReprocessRun,
+    IntelligenceReprocessSession,
     IntelligenceProcessingRun,
     IntelligenceSessionAuthority,
+    LearnerPattern,
     LearnerIntelligenceCard,
     LearningEvidence,
     LearningMessage,
@@ -318,3 +324,243 @@ def test_unsupported_downstream_policy_is_rejected_before_reprocess(
         with pytest.raises(error):
             enqueue_intelligence_reprocess(session, request=request)
         assert session.query(IntelligenceReprocessRun).count() == 0
+
+
+def test_partial_multi_session_reprocess_keeps_the_previous_scope_authority(
+    factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with factory.begin() as session:
+        first = _closed_session(session, closed_at=datetime(2025, 1, 10, tzinfo=UTC))
+        student = session.get(Student, first.student_id)
+        assert student is not None
+        second = _closed_session(session, closed_at=datetime(2025, 1, 11, tzinfo=UTC), student=student)
+        third = _closed_session(session, closed_at=datetime(2025, 1, 12, tzinfo=UTC), student=student)
+        old_reprocess = IntelligenceReprocessRun(
+            student_id=student.id,
+            idempotency_key="old-scope-authority",
+            scope={"session_ids": [str(first.id), str(second.id), str(third.id)]},
+            version_set={},
+            status="COMPLETED",
+        )
+        session.add(old_reprocess)
+        session.flush()
+        old_runs: dict[object, IntelligenceProcessingRun] = {}
+        for learning_session in (first, second, third):
+            old_run = IntelligenceProcessingRun(
+                student_id=student.id,
+                rubric_version="evidence-rubric-v1",
+                policy_version="session-consolidation-policy-v1",
+                status="COMPLETED",
+                scope={"session_id": str(learning_session.id)},
+            )
+            session.add(old_run)
+            session.flush()
+            old_runs[learning_session.id] = old_run
+            session.add(
+                IntelligenceSessionAuthority(
+                    student_id=student.id,
+                    session_id=learning_session.id,
+                    reprocess_run_id=old_reprocess.id,
+                    evidence_processing_run_id=old_run.id,
+                )
+            )
+        old_state = CurrentLearningState(
+            student_id=student.id,
+            processing_run_id=old_runs[first.id].id,
+            subject="MATH",
+            concept_ref="fractions",
+            state_type="active_difficulty",
+            detail="Fractions currently needs support.",
+            status="ACTIVE",
+            policy_version="current-state-policy-v1",
+            evidence_refs=[],
+            detected_at=first.closed_at,
+            updated_at=first.closed_at,
+        )
+        session.add(old_state)
+        raw_candidate_signals = {
+            candidate.id: candidate.signal
+            for candidate in session.query(CandidateEvent).filter(
+                CandidateEvent.session_id.in_((first.id, second.id, third.id))
+            )
+        }
+        raw_messages = {
+            message.id: message.content
+            for message in session.query(LearningMessage).filter(
+                LearningMessage.session_id.in_((first.id, second.id, third.id))
+            )
+        }
+        queued = enqueue_intelligence_reprocess(
+            session,
+            request=IntelligenceReprocessRequest(
+                student_id=student.id,
+                subject="MATH",
+                session_ids=(first.id, second.id, third.id),
+                evidence=_evidence_identity(model="fixture-evidence-v2"),
+            ),
+        )
+
+    calls = 0
+
+    class Provider:
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            nonlocal calls
+            del route
+            calls += 1
+            if calls == 2:
+                raise RuntimeError("fixture session failure")
+            source_input = payload["input"]
+            assert isinstance(source_input, str)
+            model_input = json.loads(source_input)
+            candidate = model_input["candidates"][0]
+            source = model_input["relevant_excerpts"][0]
+            return ModelResult(output={
+                "version": "session-evidence-v1",
+                "events": [{
+                    "candidate_event_id": candidate["id"],
+                    "source_message_ids": [source["id"]],
+                    "subject": "MATH",
+                    "concept_ref": "fractions",
+                    "event_type": "independent_success",
+                    "event_summary": "Student independently solved a fractions task.",
+                    "school_or_extended": "school",
+                    "dimensions": {
+                        "understanding": "demonstrated", "independence": "independent",
+                        "reasoning_demonstration": "well_supported", "transfer": "not_tested",
+                        "self_correction": "not_observed", "retention": "not_tested",
+                        "strategy_effectiveness": "not_evaluable", "persistence": "not_observed",
+                        "confidence_calibration": "not_observed",
+                    },
+                    "relationship": "improvement",
+                }],
+            })
+
+    registry = JobHandlerRegistry()
+    register_intelligence_handlers(
+        registry,
+        session_factory=factory,
+        evidence_gateway_factory=lambda worker_session: ModelGateway(
+            worker_session,
+            routes={ModelTask.SESSION_EVIDENCE: ModelRoute("fixture", "fixture-evidence-v2")},
+            providers={"fixture": Provider()},
+        ),
+    )
+    assert run_once(factory, registry, worker_id="atomic-authority-worker") == "PENDING"
+
+    with factory() as session:
+        run = session.get(IntelligenceReprocessRun, queued.reprocess_run.id)
+        authorities = {
+            authority.session_id: authority.evidence_processing_run_id
+            for authority in session.query(IntelligenceSessionAuthority).filter_by(student_id=student.id)
+        }
+        items = {
+            item.session_id: item.status
+            for item in session.query(IntelligenceReprocessSession).filter_by(reprocess_run_id=queued.reprocess_run.id)
+        }
+        card = build_learner_intelligence_card(
+            session,
+            student_id=student.id,
+            subject="MATH",
+            question="Can you help with fractions?",
+        )
+        assert session.query(LearnerPattern).count() == 0
+        assert session.query(DecisionView).count() == 0
+
+    assert run is not None and run.status == "PARTIAL_FAILED"
+    assert calls == 3
+    assert items == {first.id: "COMPLETED", second.id: "FAILED", third.id: "COMPLETED"}
+    assert authorities == {session_id: processing_run.id for session_id, processing_run in old_runs.items()}
+    assert [entry.source_id for entry in card.entries] == [old_state.id]
+
+    from services.intelligence import current_state as current_state_service
+
+    original_apply = current_state_service.apply_processing_run_current_state
+
+    def fail_activation(*args: object, **kwargs: object) -> object:
+        del args, kwargs
+        raise RuntimeError("fixture activation failure")
+
+    monkeypatch.setattr(current_state_service, "apply_processing_run_current_state", fail_activation)
+    assert run_once(
+        factory,
+        registry,
+        worker_id="atomic-authority-worker",
+        now=datetime(2030, 1, 1, tzinfo=UTC),
+    ) == "PENDING"
+    with factory() as session:
+        failed_activation = session.get(IntelligenceReprocessRun, queued.reprocess_run.id)
+        authorities_after_rollback = {
+            authority.session_id: authority.evidence_processing_run_id
+            for authority in session.query(IntelligenceSessionAuthority).filter_by(student_id=student.id)
+        }
+        state_after_rollback = session.get(CurrentLearningState, old_state.id)
+    assert failed_activation is not None and failed_activation.status == "FAILED"
+    assert authorities_after_rollback == {session_id: processing_run.id for session_id, processing_run in old_runs.items()}
+    assert state_after_rollback is not None and state_after_rollback.status == "ACTIVE"
+
+    monkeypatch.setattr(current_state_service, "apply_processing_run_current_state", original_apply)
+    assert run_once(
+        factory,
+        registry,
+        worker_id="atomic-authority-worker",
+        now=datetime(2031, 1, 1, tzinfo=UTC),
+    ) == "COMPLETED"
+    with factory() as session:
+        completed = session.get(IntelligenceReprocessRun, queued.reprocess_run.id)
+        authorities_after_activation = {
+            authority.session_id: authority.evidence_processing_run_id
+            for authority in session.query(IntelligenceSessionAuthority).filter_by(student_id=student.id)
+        }
+        state_after_activation = session.get(CurrentLearningState, old_state.id)
+        card_after_activation = build_learner_intelligence_card(
+            session,
+            student_id=student.id,
+            subject="MATH",
+            question="Can you help with fractions?",
+        )
+        decision_count = session.query(DecisionView).count()
+        assert completed is not None
+        activation = completed.result["activation"] if completed.result is not None else None
+        assert isinstance(activation, dict)
+        activation_repeat = activate_reprocess_scope(session, reprocess_run_id=completed.id)
+        decision_count_after_repeat = session.query(DecisionView).count()
+        raw_candidate_signals_after = {
+            candidate.id: candidate.signal
+            for candidate in session.query(CandidateEvent).filter(
+                CandidateEvent.session_id.in_((first.id, second.id, third.id))
+            )
+        }
+        raw_messages_after = {
+            message.id: message.content
+            for message in session.query(LearningMessage).filter(
+                LearningMessage.session_id.in_((first.id, second.id, third.id))
+            )
+        }
+        historical_old_runs = session.query(IntelligenceProcessingRun).filter(
+            IntelligenceProcessingRun.id.in_([run.id for run in old_runs.values()])
+        ).count()
+
+    assert calls == 4  # A/C Evidence is reused after B's retry and activation retry.
+    assert completed.status == "COMPLETED"
+    assert set(authorities_after_activation) == {first.id, second.id, third.id}
+    assert all(authorities_after_activation[session_id] != old_runs[session_id].id for session_id in old_runs)
+    assert state_after_activation is not None and state_after_activation.status == "RESOLVED"
+    assert not card_after_activation.entries
+    assert decision_count > 0
+    assert decision_count_after_repeat == decision_count
+    assert raw_candidate_signals_after == raw_candidate_signals
+    assert raw_messages_after == raw_messages
+    assert historical_old_runs == 3
+    assert activation["previous_authority_by_session"] == {
+        str(session_id): {
+            "reprocess_run_id": str(old_reprocess.id),
+            "evidence_processing_run_id": str(old_runs[session_id].id),
+        }
+        for session_id in (first.id, second.id, third.id)
+    }
+    assert activation["new_evidence_processing_runs_by_session"] == {
+        str(session_id): str(authorities_after_activation[session_id])
+        for session_id in (first.id, second.id, third.id)
+    }
+    assert activation_repeat == activation

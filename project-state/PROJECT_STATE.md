@@ -2,7 +2,7 @@
 
 ## Current goal
 
-Resolve TASK-026 authority activation semantics before any production
+Review the TASK-026 atomic scope-authority correction before any production
 acceptance. Do not start real-Lina calibration or product expansion.
 
 ## Current reality
@@ -140,14 +140,15 @@ acceptance. Do not start real-Lina calibration or product expansion.
   `DONE`, not a Phase 3 or Gate B pass.
 - TASK-026 now provides bounded, DB-job-backed reprocessing for selected
   CLOSED sessions by student/subject/session IDs or date range. Each durable
-  reprocess run records its exact Evidence interpretation and downstream policy
-  versions, keeps per-session result/error state, and activates a session's
-  Evidence processing run only after that session finishes successfully. Audit
-  finding: this session-granular activation can produce mixed old/new State or
-  Pattern runtime inputs after a multi-session partial failure because those
-  selectors are not authority-gated. Raw messages/Candidates and historical
-  derived rows remain preserved; no Card is materialized. It is `REVIEW`, not
-  a Phase 3 or Gate B pass.
+  run records its exact Evidence interpretation and downstream policy versions,
+  keeps per-session staged Evidence result/error state, and atomically activates
+  the complete selected scope only after every item succeeds. State, Pattern,
+  and Decision derivation occurs in that same final transaction, so staged rows
+  never become runtime-visible; partial failure preserves the complete prior
+  authority and retries reuse completed session work. Activation audit records
+  prior/new per-session authority, timestamp, and version identity. Raw
+  messages/Candidates and historical derived rows remain preserved; no Card is
+  materialized. It is `REVIEW`, not a Phase 3 or Gate B pass.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -178,8 +179,8 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 and TASK-027 onward remain blocked; TASK-026 requires an explicit
-  safe authority-activation correction before independent acceptance. The
+- TASK-015 and TASK-027 onward remain blocked; TASK-026 requires independent
+  review of the atomic authority-activation correction before acceptance. The
   Production Engine Acceptance Gate has
   not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
