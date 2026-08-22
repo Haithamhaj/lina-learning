@@ -430,7 +430,7 @@ history and prior derived rows remain preserved; the Card remains on-demand.
 Independent composed acceptance verification is complete: a bounded Math
 journey reached later Tutor context with source lineage, current behavior
 overriding historical support, safe failure handling, and authority replacement.
-Gate B is `REVIEW`, not `PASS`; TASK-027+ remains blocked pending Product Owner
+Gate B is `PASSED`; TASK-027+ remains blocked pending independent REC-20
 approval.
 **Purpose:** Rebuild derived Events/Evidence/Patterns/Card from preserved raw history after rubric/prompt/policy improvements.  
 **Expected output:** versioned rebuild job with date/session scope and audit trail.  
@@ -442,11 +442,27 @@ A meaningful Math session must create auditable Evidence and relevant intelligen
 
 ---
 
+## REC-20 — Parent–Student Authorization
+**Status:** REVIEW
+**Gate B:** PASSED
+**Purpose:** Require a verified Parent to reach a Student only through a local
+Parent `User` and an explicit durable Parent/Student relationship.
+**Completion note:** The existing `parent_student_relationships` table is now
+enforced through one reusable application authorization boundary and a minimal
+identity-summary proof route. Bootstrap linking is server-side only; no
+browser-supplied Student ID can create or bypass access. Independent approval
+is still required before Parent visibility work begins.
+**Verification:** Isolated PostgreSQL contracts prove linked access, cross-parent
+isolation, duplicate-link prevention, non-enumerating denial, and Student-path
+isolation. No Parent dashboard or learning intelligence is exposed here.
+
+---
+
 # Phase 4 — Parent Basic Visibility & Control
 
 ## TASK-027 — Parent Overview and Math insight views
 **Status:** BLOCKED  
-**Dependencies:** Phase 3 Exit Gate  
+**Dependencies:** Phase 3 Exit Gate, REC-20 independent approval
 **Purpose:** Let Parent understand current focus, important changes, learning state, and useful insights without surveillance-style activity counts.  
 **Expected output:** Overview + Math views using categorical decision views and evidence-linked insights.  
 **Likely areas:** `/apps/web`, `/apps/api`, `/services/intelligence`.  

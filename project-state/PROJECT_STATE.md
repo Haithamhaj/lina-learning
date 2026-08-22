@@ -2,9 +2,9 @@
 
 ## Current goal
 
-Gate B production acceptance is `REVIEW` after independent composed verification
-of TASK-026. Do not treat it as `PASS`, start real-Lina calibration, or begin
-product expansion without Product Owner approval.
+Gate B production acceptance is `PASSED` after independent composed verification
+of TASK-026. REC-20 Parent–Student Authorization is `REVIEW`; do not begin
+Parent visibility work until it receives independent approval.
 
 ## Current reality
 
@@ -154,7 +154,11 @@ product expansion without Product Owner approval.
   composed Math journey verifies raw message → same-call Candidate → close/job
   → one Evidence call → source-linked Evidence/State/Decision → bounded later
   Tutor context, with staged reprocessing preserving old runtime authority
-  until atomic replacement. TASK-026 is `DONE`; Gate B is `REVIEW`, not `PASS`.
+  until atomic replacement. TASK-026 is `DONE`; Gate B is `PASSED`.
+- REC-20 adds a durable, explicit Parent/Student relationship boundary. A
+  verified Clerk Parent must resolve to the matching local Parent `User` and an
+  explicit link before the minimal Student identity summary is returned. It is
+  `REVIEW`; no Parent dashboard, learning intelligence, or linking UX exists.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -185,24 +189,23 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 and TASK-027 onward remain blocked. Gate B is in independent review
-  and has not passed; Product Owner approval remains required before Phase 4.
+- TASK-015 remains blocked. TASK-027 onward remains blocked until REC-20
+  receives independent approval, despite Gate B having passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
   database/workflow remains a deferred local-development improvement.
 - Real AWS/S3 staging verification remains deferred and non-blocking; do not
   request credentials or remove the existing S3 implementation.
-- The following remain frozen until the Production Engine Acceptance Gate
-  passes: Lina Validation UI beyond the existing surface; Science; Voice/STT;
-  production Vision/handwriting/drawing; Learning Canvas; Interactive Artifact
-  Engine; advanced motion/gamification; Grade-transition production work; and
-  Phase 4 and later work.
+- The following remain frozen until the applicable later gates pass: Lina
+  Validation UI beyond the existing surface; Science; Voice/STT; production
+  Vision/handwriting/drawing; Learning Canvas; Interactive Artifact Engine;
+  advanced motion/gamification; Grade-transition production work; and Phase 4
+  work pending REC-20 independent approval.
 
 ## Next recommended action
 
-Review the Gate B acceptance evidence and decide whether to approve the gate.
-Do not start calibration or later work without explicit authorization and the
-applicable gate.
+Independently review REC-20 Parent–Student Authorization before unblocking
+TASK-027. Do not start Parent visibility work without that approval.
 
 ## Critical references
 

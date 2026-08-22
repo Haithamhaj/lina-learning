@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from apps.api.routes.auth import router as auth_router
 from apps.api.routes.content import router as content_router
 from apps.api.routes.demo import router as demo_router
+from apps.api.routes.parent import router as parent_router
 from apps.api.routes.student import router as student_router
 from services.platform.config import get_settings
 
@@ -26,6 +27,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(content_router)
 app.include_router(demo_router)
+app.include_router(parent_router)
 app.include_router(student_router)
 
 
