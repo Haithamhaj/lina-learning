@@ -19,6 +19,7 @@ CandidateEventType = Literal[
     "explanation_attempt",
     "transfer_attempt",
     "retention_check",
+    "strategy_applied",
     "strategy_outcome",
     "support_change",
     "open_loop_created",

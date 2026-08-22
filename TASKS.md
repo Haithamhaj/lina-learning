@@ -305,13 +305,14 @@ primary call; no new Tutor runtime authority or second model call is introduced.
 **Verification:** Representative scenarios show grounding, strategy changes, no endless answer withholding, correct consumption of `SafetyDecision`, no prompt-only safety bypass, and complete usage logs.  
 
 ## TASK-019 — Candidate Event metadata contract
-**Status:** DONE
+**Status:** REVIEW
 **Dependencies:** TASK-018  
 **Recovery state:** The primary Tutor call now returns a versioned, structured
 student-facing text plus hidden Candidate Event metadata envelope. Valid
 source-linked candidates persist without creating Events, Evidence, state, or
-patterns; absent/malformed metadata never blocks the Tutor response. Independent
-review is complete; TASK-020 is now under review.
+patterns; absent/malformed metadata never blocks the Tutor response. The v1
+contract now distinguishes `strategy_applied` from `strategy_outcome`; it
+awaits independent review.
 **Purpose:** Let the same Tutor call flag meaningful candidate events without writing stable learner conclusions.  
 **Expected output:** small hidden structured metadata schema and persistence/buffer hook.  
 **Likely areas:** `/services/tutor`, `/packages/schemas`, `/prompts/tutor`.  

@@ -82,7 +82,9 @@ calibration or product expansion.
   metadata; deterministic validation persists only source-linked candidates.
   Absent/malformed metadata is recorded on the Tutor message without blocking
   the response. No Learning Event, Evidence, state, pattern, or learner label
-  is created. TASK-019 is `DONE`, not a Phase 2 Exit Gate or Gate B pass.
+  is created. `strategy_applied` is distinct from `strategy_outcome`, which
+  still requires an observable Student outcome. TASK-019 is `REVIEW`, not a
+  Phase 2 Exit Gate or Gate B pass.
 - TASK-020 adds a centrally configured, versioned inactivity-plus-grace
   lifecycle. Student return before closure refreshes the same OPEN session;
   after the full window, a row-locked close atomically records one deferred
