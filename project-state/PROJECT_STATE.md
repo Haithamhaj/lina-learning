@@ -112,7 +112,10 @@ calibration or product expansion.
   recency weighting, counter-evidence, and recurrence cycles. Scope starts at
   concept and can broaden only through diverse Math evidence; no Card,
   mastery/confidence view, or global/cross-subject pattern is created. It is
-  `DONE`, not a Phase 3 or Gate B pass.
+  `REVIEW`, not a Phase 3 or Gate B pass. REC-19 corrects counter-evidence
+  handling: a validated specific misconception improvement challenges only
+  that exact normalized key, and promoted scopes retain contributing support
+  and counter Evidence lineage for the same deterministic lifecycle.
 - REC-16 is approved: Context and Subject scopes are recomputed from current
   qualifying concept Evidence, so resolved
   concepts no longer sustain them and one-concept recurrence cannot reactivate
@@ -171,8 +174,8 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 and TASK-027 onward remain blocked; TASK-026 awaits independent
-  review and the applicable gate. The Production Engine Acceptance Gate has
+- TASK-015 and TASK-027 onward remain blocked; TASK-023 and TASK-026 await
+  independent review and the applicable gate. The Production Engine Acceptance Gate has
   not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test

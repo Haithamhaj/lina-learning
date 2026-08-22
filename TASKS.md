@@ -370,14 +370,16 @@ TASK-024 is now under review.
 **Verification:** one strong event may update current state; resolved/expired state leaves current runtime; historical source remains.  
 
 ## TASK-023 — Deterministic Pattern engine and scope lifecycle
-**Status:** DONE
+**Status:** REVIEW
 **Dependencies:** TASK-021  
 **Recovery state:** Completed TASK-021 Evidence now drives a versioned,
 deterministic Math Pattern engine with normalized taxonomy/identity, evidence
 links, lifecycle, scope promotion, counter-evidence, and recurrence handling.
-REC-16 is approved: scope/generalization is recomputed from current supporting
-concepts. TASK-024 now consumes those derived rows; no decision-view work runs
-here.
+Specific misconception improvement Evidence now challenges only its matching
+normalized Pattern key. Context/subject recomputation includes support and
+counter Evidence relationships with queryable lineage, while promotion still
+requires current qualifying support diversity. Awaiting review; no
+decision-view work runs here.
 **Purpose:** Implement frequency/recency/context-diversity/counter-evidence governed Pattern lifecycle and scope without free LLM strength judgment.  
 **Expected output:** candidate/active/stable/weakening/resolved/superseded transitions, pattern-evidence links, a normalized `pattern_type` + `pattern_key` registry/taxonomy, and a historical recurrence lookup hook.  
 **Likely areas:** `/services/intelligence/patterns`.  

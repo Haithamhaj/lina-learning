@@ -681,6 +681,51 @@ def test_resolved_concept_support_recomputes_broad_scope_without_touching_other_
         assert broad.status == "WEAKENING"
 
 
+def test_recent_comparable_counter_evidence_resolves_broader_scope_and_preserves_lineage(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student = _student(session)
+        context = "math_word_problems"
+        for day, concept in ((1, "equivalent_fractions"), (8, "decimal_place_value"), (15, "ratio_reasoning")):
+            apply_evidence_to_patterns(
+                session,
+                evidence_id=_scope_support(
+                    session,
+                    student=student,
+                    concept=concept,
+                    context=context,
+                    task=f"support:{concept}",
+                    occurred_at=datetime(2026, 7, day, 12, tzinfo=UTC),
+                ).id,
+                now=datetime(2026, 7, 20, 13, tzinfo=UTC),
+            )
+        broader = _scope_pattern(session, scope_type="context")
+        assert broader.status == "STABLE"
+
+        for day, concept in ((20, "equivalent_fractions"), (22, "decimal_place_value")):
+            counter = _evidence(
+                session,
+                student=student,
+                concept=concept,
+                dimensions=_independent(),
+                relationship="improvement",
+                context_ref=context,
+                task_ref=f"independent:{concept}",
+                created_at=datetime(2026, 8, day, 12, tzinfo=UTC),
+            )
+            apply_evidence_to_patterns(
+                session,
+                evidence_id=counter.id,
+                now=datetime(2026, 8, 22, 13, tzinfo=UTC),
+            )
+
+        assert broader.status == "RESOLVED"
+        links = session.query(PatternEvidence).filter_by(pattern_id=broader.id).all()
+        assert {link.relationship for link in links} == {"supports", "improvement"}
+        assert broader.counter_count == 2
+
+
 def test_one_concept_recurrence_does_not_reactivate_resolved_subject_scope(factory: sessionmaker[Session]) -> None:
     with factory.begin() as session:
         student = _student(session)

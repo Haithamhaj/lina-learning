@@ -448,7 +448,7 @@ def _broaden_supported_scope(
     policy: PatternPolicy,
     now: datetime,
 ) -> list[LearnerPattern]:
-    source_rows = _matching_support_rows(
+    source_rows = _matching_contribution_rows(
         session,
         student_id=item.learning_session.student_id,
         policy_version=policy.version,
@@ -458,7 +458,13 @@ def _broaden_supported_scope(
     current_source_rows = [
         row
         for row in source_rows
-        if row[5].status not in {"RESOLVED", "SUPERSEDED", "WEAKENING"}
+        if row[5].status != "SUPERSEDED"
+    ]
+    promotable_support_rows = [
+        row
+        for row in current_source_rows
+        if row[5].status not in {"RESOLVED", "WEAKENING"}
+        and row[0].relationship in {"supports", "retention_failure"}
     ]
     grouped: dict[
         str,
@@ -469,6 +475,15 @@ def _broaden_supported_scope(
         payload = candidate.payload if isinstance(candidate.payload, dict) else {}
         context_ref = _normalized_token(payload.get("context_ref"), fallback="math_practice")
         grouped.setdefault(context_ref, []).append(row)
+    promotable_by_context: dict[
+        str,
+        list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent, IntelligenceProcessingRun, LearnerPattern]],
+    ] = {}
+    for row in promotable_support_rows:
+        candidate = row[3]
+        payload = candidate.payload if isinstance(candidate.payload, dict) else {}
+        context_ref = _normalized_token(payload.get("context_ref"), fallback="math_practice")
+        promotable_by_context.setdefault(context_ref, []).append(row)
     result: list[LearnerPattern] = []
     existing_context_patterns = _existing_scope_patterns(
         session,
@@ -485,7 +500,7 @@ def _broaden_supported_scope(
     }
     for context_ref in set(grouped).union(existing_context_by_ref):
         rows = grouped.get(context_ref, [])
-        qualifies = _distinct_concept_count(rows) >= policy.scope_concept_count
+        qualifies = _distinct_concept_count(promotable_by_context.get(context_ref, [])) >= policy.scope_concept_count
         broader = existing_context_by_ref.get(context_ref)
         if qualifies:
             scope = {"scope_type": "context", "subject": "MATH", "context_ref": context_ref}
@@ -497,6 +512,7 @@ def _broaden_supported_scope(
                 scope=scope,
                 policy=policy,
             )
+        if broader is not None:
             for link, evidence, event, candidate, run, source_pattern in rows:
                 source_item = _EvidenceContext(
                     evidence=evidence,
@@ -508,9 +524,10 @@ def _broaden_supported_scope(
                     task_ref=_normalized_token((candidate.payload or {}).get("task_ref"), fallback=evidence.source_ref),
                     context_ref=context_ref,
                 )
-                _link_evidence(session, pattern=broader, item=source_item, role="supports", policy=policy)
+                _link_evidence(session, pattern=broader, item=source_item, role=link.relationship, policy=policy)
         if broader is not None:
             _recompute_scope_pattern(
+                session,
                 broader,
                 rows=rows,
                 qualifies=qualifies,
@@ -521,7 +538,7 @@ def _broaden_supported_scope(
 
     qualifying_contexts = {
         context
-        for context, rows in grouped.items()
+        for context, rows in promotable_by_context.items()
         if _distinct_concept_count(rows) >= policy.scope_concept_count
     }
     subject_rows = [row for rows in grouped.values() for row in rows]
@@ -538,11 +555,13 @@ def _broaden_supported_scope(
     if subject_qualifies:
         scope = {"scope_type": "subject", "subject": "MATH"}
         subject = _upsert_pattern(session, item=item, pattern_type=pattern_type, pattern_key=pattern_key, scope=scope, policy=policy)
+    if subject is not None:
         for link, evidence, event, candidate, run, source_pattern in subject_rows:
             source_item = _EvidenceContext(evidence, event, candidate, item.learning_session, run, link.observed_at, evidence.source_ref, "math_practice")
-            _link_evidence(session, pattern=subject, item=source_item, role="supports", policy=policy)
+            _link_evidence(session, pattern=subject, item=source_item, role=link.relationship, policy=policy)
     if subject is not None:
         _recompute_scope_pattern(
+            session,
             subject,
             rows=subject_rows,
             qualifies=subject_qualifies,
@@ -555,7 +574,7 @@ def _broaden_supported_scope(
     return result
 
 
-def _matching_support_rows(
+def _matching_contribution_rows(
     session: Session,
     *,
     student_id: UUID,
@@ -577,7 +596,6 @@ def _matching_support_rows(
                 LearnerPattern.pattern_type == pattern_type,
                 LearnerPattern.pattern_key == pattern_key,
                 LearnerPattern.scope["scope_type"].astext == "concept",
-                PatternEvidence.relationship == "supports",
                 PatternEvidence.cycle_number == LearnerPattern.cycle_number,
             )
         ).all()
@@ -613,6 +631,7 @@ def _distinct_concept_count(
 
 
 def _recompute_scope_pattern(
+    session: Session,
     pattern: LearnerPattern,
     *,
     rows: list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent, IntelligenceProcessingRun, LearnerPattern]],
@@ -620,25 +639,15 @@ def _recompute_scope_pattern(
     now: datetime,
     policy: PatternPolicy,
 ) -> None:
-    support_links = [(link, evidence) for link, evidence, _, _, _, _ in rows]
-    pattern.support_count = len(support_links)
-    if support_links:
-        pattern.last_supported_at = max(link.observed_at for link, _ in support_links)
+    _recompute_pattern(session, pattern=pattern, now=now, policy=policy)
     if not qualifies:
         if pattern.status == "RESOLVED":
             return
-        if support_links:
+        if rows:
             pattern.status = "WEAKENING"
         else:
             pattern.status = "RESOLVED"
             pattern.resolved_at = now
-        return
-    if len(support_links) >= policy.stable_support_count and _is_stable(support_links, policy=policy):
-        pattern.status = "STABLE"
-    elif len(support_links) >= policy.active_support_count:
-        pattern.status = "ACTIVE"
-    else:
-        pattern.status = "CANDIDATE"
 
 
 def _scope_key(scope: dict[str, str]) -> str:
