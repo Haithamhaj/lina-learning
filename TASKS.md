@@ -529,7 +529,7 @@ internal-data exposure in Student responses; `git diff --check`.
 
 ## REC-24.1 — Lina Visual Calibration Pass
 **Status:** DONE
-**Dependencies:** REC-24
+**Dependencies:** REC-24.1
 **Purpose:** Polish the Student Math validation surface for Lina before early
 real-use calibration without changing any product/runtime capability.
 **Implementation checkpoint:** `813afd27850c86780d1ada070565b4972d1f7d57`
