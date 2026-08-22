@@ -253,26 +253,36 @@ def test_failed_new_semantic_identity_preserves_prior_semantics_and_structural_r
 def test_bounded_batches_pass_only_compact_prior_semantic_context(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
+    root_batch = {
+        "schema_version": SEMANTIC_SCHEMA_VERSION,
+        "items": [_item("unit-1", "UNIT", ["root", "unit"])],
+        "unclassified_structural_item_keys": [],
+    }
     first_batch = {
         "schema_version": SEMANTIC_SCHEMA_VERSION,
         "items": [
-            _item("unit-1", "UNIT", ["root", "unit"]),
             _item("lesson-1", "LESSON", ["lesson-1"], "unit-1"),
             _item("place-value", "CONCEPT", ["concept-1"], "lesson-1"),
             _item("place-value-objective", "OBJECTIVE", ["objective"], "place-value"),
             _item("place-value-definition", "DEFINITION", ["definition"], "place-value"),
             _item("place-value-example", "EXAMPLE", ["example"], "place-value"),
+            _item("place-value-exercise", "EXERCISE", ["exercise"], "lesson-1"),
+            _item("place-value-vocabulary", "VOCABULARY", ["vocabulary"], "place-value"),
         ],
         "unclassified_structural_item_keys": [],
     }
     second_batch = {
         "schema_version": SEMANTIC_SCHEMA_VERSION,
         "items": [
-            _item("place-value-exercise", "EXERCISE", ["exercise"], "lesson-1"),
-            _item("place-value-vocabulary", "VOCABULARY", ["vocabulary"], "place-value"),
             _item("place-value-figure", "FIGURE", ["figure"], "lesson-1"),
             _item("place-value-table", "TABLE", ["table"], "lesson-1"),
             _item("place-value-formula", "FORMULA", ["formula"], "lesson-1"),
+        ],
+        "unclassified_structural_item_keys": [],
+    }
+    final_batch = {
+        "schema_version": SEMANTIC_SCHEMA_VERSION,
+        "items": [
             _item("lesson-2", "LESSON", ["lesson-2"], "unit-1"),
             _item("decimal-concept", "CONCEPT", ["concept-2"], "lesson-2"),
         ],
@@ -282,7 +292,7 @@ def test_bounded_batches_pass_only_compact_prior_semantic_context(
     class SequenceProvider:
         def __init__(self) -> None:
             self.payloads: list[dict[str, object]] = []
-            self.responses = [first_batch, second_batch]
+            self.responses = [root_batch, first_batch, second_batch, final_batch]
 
         def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
             del route
@@ -305,12 +315,17 @@ def test_bounded_batches_pass_only_compact_prior_semantic_context(
             max_structural_items_per_batch=7,
         )
 
-    first_input = json.loads(provider.payloads[0]["input"])
-    second_input = json.loads(provider.payloads[1]["input"])
+    root_input = json.loads(provider.payloads[0]["input"])
+    first_input = json.loads(provider.payloads[1]["input"])
+    second_input = json.loads(provider.payloads[2]["input"])
+    final_input = json.loads(provider.payloads[3]["input"])
     assert run.status == "COMPLETED"
+    assert len(root_input["batch"]["structural_items"]) == 2
     assert len(first_input["batch"]["structural_items"]) == 7
-    assert len(second_input["batch"]["structural_items"]) == 7
-    assert first_input["known_semantic_context"] == []
+    assert len(second_input["batch"]["structural_items"]) == 3
+    assert len(final_input["batch"]["structural_items"]) == 2
+    assert root_input["known_semantic_context"] == []
+    assert {item["semantic_key"] for item in first_input["known_semantic_context"]} == {"unit-1"}
     assert {item["semantic_key"] for item in second_input["known_semantic_context"]} == {
         "unit-1", "lesson-1", "place-value"
     }

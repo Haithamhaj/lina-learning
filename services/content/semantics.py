@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Iterable
 from uuid import NAMESPACE_URL, uuid5
@@ -34,9 +35,9 @@ from .semantic_contract import (
 )
 
 
-SEMANTIC_PROMPT_VERSION = "grade5-math-semantics-prompt-v3"
-SEMANTIC_SETTINGS_VERSION = "bounded-structural-batches-v1"
-DEFAULT_MAX_STRUCTURAL_ITEMS_PER_BATCH = 40
+SEMANTIC_PROMPT_VERSION = "grade5-math-semantics-prompt-v4"
+SEMANTIC_SETTINGS_VERSION = "hierarchy-aware-coherent-batches-v2"
+DEFAULT_MAX_STRUCTURAL_ITEMS_PER_BATCH = 24
 
 _SHARED_INSTRUCTIONS = """You identify educational meaning in a Grade 5 Math workbook.
 Use only the supplied normalized structural items and known semantic context.
@@ -46,17 +47,32 @@ unclassified_structural_item_keys. Each item must use exactly one of UNIT,
 LESSON, CONCEPT, OBJECTIVE, DEFINITION, EXPLANATION, EXAMPLE, EXERCISE,
 VOCABULARY, FIGURE, TABLE, or FORMULA. Use structural_item_keys only from the
 explicit batch allowed_structural_item_keys list; identifiers not in that list
-are invalid. Every structural item in this batch must be either linked to one or more semantic items or listed in
-unclassified_structural_item_keys. Do not invent source references, pages, or
-semantic parents. Educational classification is required only where the source
-supports it; decorative or irrelevant items may remain unclassified. When a
+are invalid. Every emitted semantic item MUST contain at least one
+allowed_structural_item_key from its current batch. known_semantic_context and
+continuation_context are reference-only, never source evidence: do not cite
+their structural items. Do not re-emit an existing Unit, Lesson, or Concept
+merely to preserve hierarchy. A new item under known context should reference
+parent_semantic_key while citing its own current-batch structural source. Every
+structural item in this batch must be either linked to one or more semantic
+items or listed in unclassified_structural_item_keys. Do not invent source
+references, pages, or semantic parents. Educational classification is required
+only where the source supports it; decorative or irrelevant items may remain unclassified. When a
 source presents a module/document identity and a coherent instructional or
 practice section, represent those as UNIT and LESSON rather than leaving that
 curriculum grouping unclassified. Put the Lesson under its Unit. When an
 instruction states what the learner should demonstrate, capture that goal as
 an OBJECTIVE as well as any related exercise. When a relevant structural
 picture, table, or formula supports a concept or exercise, emit its FIGURE,
-TABLE, or FORMULA reference instead of leaving it unclassified."""
+TABLE, or FORMULA reference instead of leaving it unclassified. Keep titles,
+descriptions, and metadata compact; omit unnecessary optional detail."""
+
+
+@dataclass(frozen=True)
+class SemanticBatchPlan:
+    """One deterministic source-only semantic batch and non-citable context."""
+
+    structural_items: tuple[DocumentStructuralItem, ...]
+    continuation_parent_items: tuple[DocumentStructuralItem, ...] = ()
 
 
 def extract_educational_semantics(
@@ -72,8 +88,8 @@ def extract_educational_semantics(
 ) -> ContentSemanticProcessingRun:
     """Create a validated semantic derivation without mutating structural truth.
 
-    Input is deterministic reading-order slices. Later slices receive only a
-    compact Unit/Lesson/Concept key list, not the full workbook or raw history.
+    Input is deterministically planned in reading order. Later batches receive
+    only compact Unit/Lesson/Concept references, never raw history.
     """
 
     if document.grade_level != 5 or document.subject.upper() != "MATH":
@@ -114,7 +130,7 @@ def extract_educational_semantics(
             model=route.model,
             settings_version=settings_version,
             settings_metadata={
-                "batching": "reading-order-slices",
+                "batching": "hierarchy-aware-coherent-batches",
                 "max_structural_items_per_batch": max_structural_items_per_batch,
                 "source_contract": "document-structural-items-v1",
             },
@@ -144,7 +160,10 @@ def extract_educational_semantics(
     all_items: list[SemanticExtractionItem] = []
     known_parent_keys: set[str] = set()
     try:
-        for batch_index, batch in enumerate(_batches(structural_items, max_structural_items_per_batch)):
+        for batch_index, plan in enumerate(
+            _plan_semantic_batches(structural_items, max_items=max_structural_items_per_batch)
+        ):
+            batch = list(plan.structural_items)
             output = _extract_batch(
                 gateway,
                 semantic_run=run,
@@ -153,6 +172,7 @@ def extract_educational_semantics(
                 batch_index=batch_index,
                 parent_key_by_id=parent_key_by_id,
                 known_items=[item for item in all_items if item.semantic_type in {"UNIT", "LESSON", "CONCEPT"}],
+                continuation_parent_items=plan.continuation_parent_items,
             )
             validate_semantic_output(
                 output,
@@ -186,11 +206,96 @@ def extract_educational_semantics(
     return run
 
 
-def _batches(
-    structural_items: list[DocumentStructuralItem], max_items: int
-) -> Iterable[list[DocumentStructuralItem]]:
-    for start in range(0, len(structural_items), max_items):
-        yield structural_items[start : start + max_items]
+def _plan_semantic_batches(
+    structural_items: list[DocumentStructuralItem], *, max_items: int
+) -> list[SemanticBatchPlan]:
+    """Plan disjoint, reading-order batches without splitting fitting subtrees.
+
+    The document wrapper is an individual item. Its direct children become the
+    outermost planning units, so a synthetic body node cannot make the whole
+    workbook one batch. Nested groups appear only in an outer planning unit,
+    never in overlapping parent/child units.
+    """
+
+    if max_items < 1:
+        raise ValueError("max_items must be positive.")
+
+    ordered = sorted(structural_items, key=lambda item: (item.reading_order, item.item_key))
+    by_id = {item.id: item for item in ordered}
+    children_by_parent: dict[object, list[DocumentStructuralItem]] = {}
+    for item in ordered:
+        children_by_parent.setdefault(item.parent_id, []).append(item)
+    for children in children_by_parent.values():
+        children.sort(key=lambda item: (item.reading_order, item.item_key))
+
+    wrapper_ids = {item.id for item in ordered if item.parent_id is None}
+    positions = {item.id: index for index, item in enumerate(ordered)}
+    assigned: set[object] = set()
+    units: list[list[DocumentStructuralItem]] = []
+
+    def subtree(root: DocumentStructuralItem) -> list[DocumentStructuralItem]:
+        result = [root]
+        for child in children_by_parent.get(root.id, []):
+            result.extend(subtree(child))
+        return result
+
+    for item in ordered:
+        if item.id in assigned:
+            continue
+        if item.parent_id in wrapper_ids:
+            candidate = sorted(subtree(item), key=lambda node: (node.reading_order, node.item_key))
+            start = positions[candidate[0].id]
+            contiguous = [positions[node.id] for node in candidate] == list(
+                range(start, start + len(candidate))
+            )
+            unit = candidate if contiguous else [item]
+        else:
+            unit = [item]
+        units.append(unit)
+        assigned.update(node.id for node in unit)
+
+    plans: list[SemanticBatchPlan] = []
+    current: list[DocumentStructuralItem] = []
+
+    def flush_current() -> None:
+        nonlocal current
+        if current:
+            plans.append(SemanticBatchPlan(structural_items=tuple(current)))
+            current = []
+
+    def continuation_parents(
+        chunk: list[DocumentStructuralItem], unit: list[DocumentStructuralItem]
+    ) -> tuple[DocumentStructuralItem, ...]:
+        chunk_ids = {item.id for item in chunk}
+        unit_ids = {item.id for item in unit}
+        parents: list[DocumentStructuralItem] = []
+        parent_id = chunk[0].parent_id
+        while parent_id in by_id:
+            parent = by_id[parent_id]
+            if parent.id in unit_ids and parent.id not in chunk_ids:
+                parents.append(parent)
+            parent_id = parent.parent_id
+        return tuple(reversed(parents))
+
+    for unit in units:
+        if len(unit) <= max_items:
+            if current and len(current) + len(unit) > max_items:
+                flush_current()
+            current.extend(unit)
+            continue
+
+        flush_current()
+        for start in range(0, len(unit), max_items):
+            chunk = unit[start : start + max_items]
+            plans.append(
+                SemanticBatchPlan(
+                    structural_items=tuple(chunk),
+                    continuation_parent_items=continuation_parents(chunk, unit) if start else (),
+                )
+            )
+
+    flush_current()
+    return plans
 
 
 def _extract_batch(
@@ -202,7 +307,9 @@ def _extract_batch(
     batch_index: int,
     parent_key_by_id: dict[object, str],
     known_items: list[SemanticExtractionItem],
+    continuation_parent_items: Iterable[DocumentStructuralItem] = (),
 ):
+    continuation_items = list(continuation_parent_items)
     payload = {
         "instructions": _SHARED_INSTRUCTIONS,
         "input": json.dumps(
@@ -221,6 +328,16 @@ def _extract_batch(
                         for item in batch
                     ],
                 },
+                "continuation_context": {
+                    "reference_only": True,
+                    "non_citable": True,
+                    "parent_structural_items": [
+                        _structural_context_item(item, parent_key_by_id.get(item.parent_id))
+                        for item in continuation_items
+                    ],
+                }
+                if continuation_items
+                else None,
                 "known_semantic_context": [
                     {
                         "semantic_key": item.semantic_key,

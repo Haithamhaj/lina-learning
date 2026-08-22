@@ -132,18 +132,6 @@ def _semantic_run(
     if existing is not None:
         return existing
     gateway = create_curriculum_semantics_gateway(session)
-    output = _extract_batch(
-        gateway,
-        document=document,
-        batch=items,
-        batch_index=0,
-        parent_key_by_id={item.id: item.item_key for item in items},
-        known_items=[],
-    )
-    validate_semantic_output(
-        output, available_structural_item_keys={item.item_key for item in items}
-    )
-    _validate_semantic_coverage(items, output.items)
     route = gateway.route_for(ModelTask.CURRICULUM_SEMANTICS)
     run = create_semantic_processing_run(
         session,
@@ -157,6 +145,19 @@ def _semantic_run(
         settings_version=SEMANTIC_SETTINGS_VERSION,
         settings_metadata={"pages": sorted(GOLDEN_PAGES)},
     )
+    output = _extract_batch(
+        gateway,
+        semantic_run=run,
+        document=document,
+        batch=items,
+        batch_index=0,
+        parent_key_by_id={item.id: item.item_key for item in items},
+        known_items=[],
+    )
+    validate_semantic_output(
+        output, available_structural_item_keys={item.item_key for item in items}
+    )
+    _validate_semantic_coverage(items, output.items)
     create_semantic_items(
         session,
         document_id=document.id,

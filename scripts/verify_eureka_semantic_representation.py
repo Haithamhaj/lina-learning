@@ -19,11 +19,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
-from services.content.semantic_contract import SemanticContractError, SemanticExtractionOutput, validate_semantic_output
-from services.content.semantics import _extract_batch, _validate_semantic_coverage
+from services.content.repository import create_semantic_processing_run
+from services.content.semantic_contract import (
+    SEMANTIC_SCHEMA_VERSION,
+    SemanticContractError,
+    SemanticExtractionOutput,
+    validate_semantic_output,
+)
+from services.content.semantics import SEMANTIC_PROMPT_VERSION, _extract_batch, _validate_semantic_coverage
 from services.model_gateway.factory import create_curriculum_semantics_gateway
 from services.platform.db.connection import normalize_database_url
-from services.platform.db.models import ContentDocument, ContentProcessingRun, DocumentStructuralItem
+from services.platform.db.models import ContentDocument, ContentProcessingRun, DocumentStructuralItem, ModelTask
 
 
 DEFAULT_PDF_NAME = "EM_G5_M1_StudentWorkbook.pdf"
@@ -47,9 +53,23 @@ def main() -> None:
         with Session(engine) as session:
             document, structural_run, items = _load_golden_region(session, filename=args.filename)
             gateway = create_curriculum_semantics_gateway(session)
+            route = gateway.route_for(ModelTask.CURRICULUM_SEMANTICS)
+            semantic_run = create_semantic_processing_run(
+                session,
+                document_id=document.id,
+                structural_processing_run_id=structural_run.id,
+                semantic_schema_version=SEMANTIC_SCHEMA_VERSION,
+                prompt_version=SEMANTIC_PROMPT_VERSION,
+                model_route_version=f"{route.provider}:{route.model}",
+                provider=route.provider,
+                model=route.model,
+                settings_version="eureka-pages-1-2-verifier-v2",
+                settings_metadata={"pages": sorted(GOLDEN_PAGES), "disposable": True},
+            )
             parent_key_by_id = {item.id: item.item_key for item in items}
             output = _extract_batch(
                 gateway,
+                semantic_run=semantic_run,
                 document=document,
                 batch=items,
                 batch_index=0,
@@ -68,7 +88,7 @@ def main() -> None:
             )
             _validate_semantic_coverage(items, output.items)
             _assert_eureka_golden(output, items)
-            session.commit()
+            session.rollback()
             print(
                 "Eureka semantic golden: PASS "
                 f"pages={sorted(GOLDEN_PAGES)} structural_items={len(items)} "

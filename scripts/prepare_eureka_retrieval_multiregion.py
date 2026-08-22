@@ -114,6 +114,22 @@ def _semantic_run(
         return existing
 
     gateway = create_curriculum_semantics_gateway(session)
+    route = gateway.route_for(ModelTask.CURRICULUM_SEMANTICS)
+    run = create_semantic_processing_run(
+        session,
+        document_id=document.id,
+        structural_processing_run_id=structural_run.id,
+        semantic_schema_version="educational-semantics-v1",
+        prompt_version="task014-eureka-multiregion-v1",
+        model_route_version=f"{route.provider}:{route.model}",
+        provider=route.provider,
+        model=route.model,
+        settings_version=SETTINGS_VERSION,
+        settings_metadata={
+            "pages": list(REGION_PAGES),
+            "max_items": MAX_ITEMS_PER_REGION,
+        },
+    )
     all_items: list[SemanticExtractionItem] = []
     sources_by_key: dict[str, DocumentStructuralItem] = {}
     for batch_index, page in enumerate(REGION_PAGES):
@@ -138,6 +154,7 @@ def _semantic_run(
         print(f"Extracting Eureka region page={page} structural_items={len(region)}")
         output = _extract_batch(
             gateway,
+            semantic_run=run,
             document=document,
             batch=region,
             batch_index=batch_index,
@@ -150,22 +167,6 @@ def _semantic_run(
         all_items.extend(_namespace(item, page) for item in output.items)
         sources_by_key.update({item.item_key: item for item in region})
 
-    route = gateway.route_for(ModelTask.CURRICULUM_SEMANTICS)
-    run = create_semantic_processing_run(
-        session,
-        document_id=document.id,
-        structural_processing_run_id=structural_run.id,
-        semantic_schema_version="educational-semantics-v1",
-        prompt_version="task014-eureka-multiregion-v1",
-        model_route_version=f"{route.provider}:{route.model}",
-        provider=route.provider,
-        model=route.model,
-        settings_version=SETTINGS_VERSION,
-        settings_metadata={
-            "pages": list(REGION_PAGES),
-            "max_items": MAX_ITEMS_PER_REGION,
-        },
-    )
     create_semantic_items(
         session,
         document_id=document.id,
