@@ -400,14 +400,14 @@ Independent audit is complete; no decision-view work runs here.
 **Verification:** Card stays within configured budget; resolved patterns excluded; current behavior can override historical recommendation; relevant patterns remain advisory rather than mandatory; no full profile dump. Historical strategy selection must not itself create confirming Evidence.  
 
 ## TASK-025 — Derived mastery/confidence views
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** TASK-021, TASK-024  
 **Recovery state:** A versioned deterministic policy now persists categorical
 learning-status, independence, retention, and strategy-effectiveness views
 from validated Evidence plus current State/Pattern context. Views retain source
 IDs/explanations and policy lineage; REC-18 ensures one latest completed
-Evidence interpretation per raw Candidate observation is counted. Awaiting
-independent review; no TASK-026 reprocessing orchestration is included.
+Evidence interpretation per raw Candidate observation is counted. Independent
+audit is complete; no TASK-026 reprocessing orchestration is included.
 **Purpose:** Provide categorical parent/tutor decision views over Evidence without turning scores into source truth.  
 **Expected output:** configurable derived views such as Strong/Developing/Needs revisit + evidence confidence.  
 **Likely areas:** `/services/intelligence/decisions`.  
@@ -419,8 +419,11 @@ independent review; no TASK-026 reprocessing orchestration is included.
 **Recovery state:** A bounded, job-backed reprocess run now records explicit
 session/date scope, Evidence interpretation identity, downstream policy
 versions, durable per-session results, and an activation record only after a
-selected closed session succeeds. It preserves raw history and prior derived
-rows; the Card remains on-demand. It awaits independent review.
+selected closed session succeeds. Audit finding: activation is currently
+session-granular, but runtime State/Pattern selection is not authority-gated;
+a multi-session partial failure can expose mixed old/new derived intelligence.
+It preserves raw history and prior derived rows; the Card remains on-demand.
+It remains under review.
 **Purpose:** Rebuild derived Events/Evidence/Patterns/Card from preserved raw history after rubric/prompt/policy improvements.  
 **Expected output:** versioned rebuild job with date/session scope and audit trail.  
 **Likely areas:** `/services/intelligence/reprocess`, `/workers`.  

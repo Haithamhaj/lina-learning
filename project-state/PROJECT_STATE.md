@@ -2,8 +2,8 @@
 
 ## Current goal
 
-Review TASK-025 categorical Decision Views and TASK-026 versioned Intelligence
-reprocessing. Do not start real-Lina calibration or product expansion.
+Resolve TASK-026 authority activation semantics before any production
+acceptance. Do not start real-Lina calibration or product expansion.
 
 ## Current reality
 
@@ -137,14 +137,17 @@ reprocessing. Do not start real-Lina calibration or product expansion.
   or Candidate Event alone can create a view. REC-18 corrected Evidence
   version semantics: only the latest completed interpretation of each raw
   Candidate observation counts, while older versions remain historical. It is
-  `REVIEW`, not a Phase 3 or Gate B pass.
+  `DONE`, not a Phase 3 or Gate B pass.
 - TASK-026 now provides bounded, DB-job-backed reprocessing for selected
   CLOSED sessions by student/subject/session IDs or date range. Each durable
   reprocess run records its exact Evidence interpretation and downstream policy
   versions, keeps per-session result/error state, and activates a session's
-  Evidence processing run only after that session finishes successfully. Raw
-  messages/Candidates and historical derived rows remain preserved; no Card is
-  materialized. It is `REVIEW`, not a Phase 3 or Gate B pass.
+  Evidence processing run only after that session finishes successfully. Audit
+  finding: this session-granular activation can produce mixed old/new State or
+  Pattern runtime inputs after a multi-session partial failure because those
+  selectors are not authority-gated. Raw messages/Candidates and historical
+  derived rows remain preserved; no Card is materialized. It is `REVIEW`, not
+  a Phase 3 or Gate B pass.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -175,8 +178,9 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 and TASK-027 onward remain blocked; TASK-025 and TASK-026 await
-  independent review and the applicable gate. The Production Engine Acceptance Gate has
+- TASK-015 and TASK-027 onward remain blocked; TASK-026 requires an explicit
+  safe authority-activation correction before independent acceptance. The
+  Production Engine Acceptance Gate has
   not passed.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
