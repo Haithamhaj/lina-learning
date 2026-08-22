@@ -143,12 +143,14 @@ acceptance. Do not start real-Lina calibration or product expansion.
   run records its exact Evidence interpretation and downstream policy versions,
   keeps per-session staged Evidence result/error state, and atomically activates
   the complete selected scope only after every item succeeds. State, Pattern,
-  and Decision derivation occurs in that same final transaction, so staged rows
-  never become runtime-visible; partial failure preserves the complete prior
-  authority and retries reuse completed session work. Activation audit records
-  prior/new per-session authority, timestamp, and version identity. Raw
-  messages/Candidates and historical derived rows remain preserved; no Card is
-  materialized. It is `REVIEW`, not a Phase 3 or Gate B pass.
+  and Decision are rebuilt in that same transaction from one authoritative
+  Evidence interpretation per raw Candidate. Superseded State rows and
+  PatternEvidence links remain auditable but cannot influence runtime; partial
+  failure preserves the complete prior authority and retries reuse completed
+  session work. Activation audit records prior/new per-session authority,
+  timestamp, and version identity. Raw messages/Candidates and historical
+  derived rows remain preserved; no Card is materialized. It is `REVIEW`, not a
+  Phase 3 or Gate B pass.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 

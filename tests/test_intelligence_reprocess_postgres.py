@@ -20,10 +20,10 @@ from services.intelligence.reprocess import (
     preview_intelligence_reprocess,
 )
 from services.intelligence.card import build_learner_intelligence_card
-from services.intelligence.current_state import CurrentStatePolicyError
+from services.intelligence.current_state import CurrentStatePolicyError, apply_evidence_to_current_state
 from services.intelligence.consolidation import EvidenceContractError
 from services.intelligence.decisions import DecisionViewPolicyError
-from services.intelligence.patterns import PatternPolicyError
+from services.intelligence.patterns import PatternPolicyError, apply_evidence_to_patterns
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
@@ -37,6 +37,7 @@ from services.platform.db.models import (
     LearnerPattern,
     LearnerIntelligenceCard,
     LearningEvidence,
+    LearningEvent,
     LearningMessage,
     LearningSession,
     ModelTask,
@@ -98,6 +99,16 @@ def _closed_session(session: Session, *, closed_at: datetime, student: Student |
 
 def _evidence_identity(*, model: str = "fixture-evidence") -> EvidenceVersionSelection:
     return EvidenceVersionSelection(provider="fixture", model=model)
+
+
+def _support_dimensions() -> dict[str, str]:
+    return {
+        "understanding": "partial", "independence": "substantial_support",
+        "reasoning_demonstration": "not_observed", "transfer": "not_tested",
+        "self_correction": "not_observed", "retention": "not_tested",
+        "strategy_effectiveness": "not_evaluable", "persistence": "not_observed",
+        "confidence_calibration": "not_observed",
+    }
 
 
 def test_bounded_preview_and_same_version_request_are_idempotent(factory: sessionmaker[Session]) -> None:
@@ -475,13 +486,13 @@ def test_partial_multi_session_reprocess_keeps_the_previous_scope_authority(
 
     from services.intelligence import current_state as current_state_service
 
-    original_apply = current_state_service.apply_processing_run_current_state
+    original_apply = current_state_service.rebuild_authoritative_current_states
 
     def fail_activation(*args: object, **kwargs: object) -> object:
         del args, kwargs
         raise RuntimeError("fixture activation failure")
 
-    monkeypatch.setattr(current_state_service, "apply_processing_run_current_state", fail_activation)
+    monkeypatch.setattr(current_state_service, "rebuild_authoritative_current_states", fail_activation)
     assert run_once(
         factory,
         registry,
@@ -499,7 +510,7 @@ def test_partial_multi_session_reprocess_keeps_the_previous_scope_authority(
     assert authorities_after_rollback == {session_id: processing_run.id for session_id, processing_run in old_runs.items()}
     assert state_after_rollback is not None and state_after_rollback.status == "ACTIVE"
 
-    monkeypatch.setattr(current_state_service, "apply_processing_run_current_state", original_apply)
+    monkeypatch.setattr(current_state_service, "rebuild_authoritative_current_states", original_apply)
     assert run_once(
         factory,
         registry,
@@ -545,7 +556,7 @@ def test_partial_multi_session_reprocess_keeps_the_previous_scope_authority(
     assert completed.status == "COMPLETED"
     assert set(authorities_after_activation) == {first.id, second.id, third.id}
     assert all(authorities_after_activation[session_id] != old_runs[session_id].id for session_id in old_runs)
-    assert state_after_activation is not None and state_after_activation.status == "RESOLVED"
+    assert state_after_activation is not None and state_after_activation.status == "SUPERSEDED"
     assert not card_after_activation.entries
     assert decision_count > 0
     assert decision_count_after_repeat == decision_count
@@ -564,3 +575,136 @@ def test_partial_multi_session_reprocess_keeps_the_previous_scope_authority(
         for session_id in (first.id, second.id, third.id)
     }
     assert activation_repeat == activation
+
+
+def test_reprocess_no_event_supersedes_old_state_and_pattern_contributions(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        learning_session = _closed_session(session, closed_at=datetime(2025, 1, 10, tzinfo=UTC))
+        student = session.get(Student, learning_session.student_id)
+        candidate = session.query(CandidateEvent).filter_by(session_id=learning_session.id).one()
+        assert student is not None
+        old_reprocess = IntelligenceReprocessRun(
+            student_id=student.id,
+            idempotency_key="old-authority-no-event",
+            scope={"session_ids": [str(learning_session.id)]},
+            version_set={},
+            status="COMPLETED",
+        )
+        old_run = IntelligenceProcessingRun(
+            student_id=student.id,
+            rubric_version="evidence-rubric-v1",
+            policy_version="session-consolidation-policy-v1",
+            status="COMPLETED",
+            scope={
+                "session_id": str(learning_session.id),
+                "consolidation_schema_version": "session-evidence-v1",
+                "prompt_version": "session-evidence-prompt-v1",
+                "provider": "fixture",
+                "model": "fixture-evidence",
+            },
+        )
+        session.add_all((old_reprocess, old_run))
+        session.flush()
+        old_event = LearningEvent(
+            processing_run_id=old_run.id,
+            session_id=learning_session.id,
+            candidate_event_id=candidate.id,
+            subject="MATH",
+            concept_ref="fractions",
+            event_type="misconception_signal",
+            description="Old interpretation reported a fractions misconception.",
+            source_message_id=candidate.message_id,
+        )
+        session.add(old_event)
+        session.flush()
+        old_evidence = LearningEvidence(
+            event_id=old_event.id,
+            concept_ref="fractions",
+            dimensions=_support_dimensions(),
+            relationship="supports",
+            source_ref=f"fixture:{old_event.id}",
+        )
+        session.add(old_evidence)
+        session.flush()
+        apply_evidence_to_current_state(session, evidence_id=old_evidence.id, now=learning_session.closed_at)
+        apply_evidence_to_patterns(session, evidence_id=old_evidence.id, now=learning_session.closed_at)
+        session.add(
+            DecisionView(
+                student_id=student.id,
+                processing_run_id=old_run.id,
+                subject="MATH",
+                concept_ref="fractions",
+                view_type="learning_status",
+                conclusion="NEEDS_REVISIT",
+                confidence="MEDIUM",
+                explanation="Old interpretation required a misconception revisit.",
+                evidence_ids=[str(old_evidence.id)],
+                state_ids=[],
+                pattern_ids=[],
+                source_versions={},
+                mastery="DEVELOPING",
+                evidence_confidence="MEDIUM",
+                policy_version="decision-view-policy-v1",
+            )
+        )
+        session.add(
+            IntelligenceSessionAuthority(
+                student_id=student.id,
+                session_id=learning_session.id,
+                reprocess_run_id=old_reprocess.id,
+                evidence_processing_run_id=old_run.id,
+            )
+        )
+        queued = enqueue_intelligence_reprocess(
+            session,
+            request=IntelligenceReprocessRequest(
+                student_id=student.id,
+                session_ids=(learning_session.id,),
+                evidence=_evidence_identity(model="fixture-evidence-v2"),
+            ),
+        )
+
+    class Provider:
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            del route, payload
+            return ModelResult(output={"version": "session-evidence-v1", "events": []})
+
+    registry = JobHandlerRegistry()
+    register_intelligence_handlers(
+        registry,
+        session_factory=factory,
+        evidence_gateway_factory=lambda worker_session: ModelGateway(
+            worker_session,
+            routes={ModelTask.SESSION_EVIDENCE: ModelRoute("fixture", "fixture-evidence-v2")},
+            providers={"fixture": Provider()},
+        ),
+    )
+    assert run_once(factory, registry, worker_id="authoritative-rebuild-worker") == "COMPLETED"
+
+    with factory() as session:
+        authority = session.query(IntelligenceSessionAuthority).one()
+        active_misconceptions = session.query(CurrentLearningState).filter_by(
+            student_id=student.id,
+            state_type="active_misconception",
+            status="ACTIVE",
+        ).count()
+        patterns = session.query(LearnerPattern).filter_by(student_id=student.id).all()
+        historical_state = session.query(CurrentLearningState).filter_by(
+            student_id=student.id,
+            state_type="active_misconception",
+        ).one()
+        replacement_view = session.query(DecisionView).filter_by(
+            student_id=student.id,
+            processing_run_id=authority.evidence_processing_run_id,
+            subject="MATH",
+            concept_ref="fractions",
+            view_type="learning_status",
+        ).one_or_none()
+
+    assert authority.evidence_processing_run_id != old_run.id
+    assert active_misconceptions == 0
+    assert {pattern.status for pattern in patterns} == {"RESOLVED"}
+    assert historical_state.status != "ACTIVE"
+    assert replacement_view is not None and replacement_view.evidence_ids == []

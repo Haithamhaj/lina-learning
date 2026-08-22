@@ -165,6 +165,85 @@ def apply_processing_run_decision_views(
     return result
 
 
+def rebuild_authoritative_decision_views(
+    session: Session,
+    *,
+    student_id: UUID,
+    processing_run_id: UUID,
+    policy: DecisionViewPolicy | None = None,
+    now: datetime | None = None,
+) -> list[DecisionView]:
+    """Write one current Decision interpretation for every affected known scope."""
+
+    from services.intelligence.authority import authoritative_evidence_ids
+
+    run = session.get(IntelligenceProcessingRun, processing_run_id)
+    if run is None or run.student_id != student_id:
+        raise LookupError("Decision rebuild requires a processing run owned by the Student.")
+    effective_policy = policy or DecisionViewPolicy()
+    require_supported_decision_view_policy(effective_policy.version)
+    scopes = {
+        (subject, concept_ref)
+        for subject, concept_ref in session.execute(
+            select(DecisionView.subject, DecisionView.concept_ref).where(
+                DecisionView.student_id == student_id,
+                DecisionView.policy_version == effective_policy.version,
+            )
+        ).all()
+    }
+    scopes.update(
+        (subject, concept_ref)
+        for subject, concept_ref in session.execute(
+            select(CurrentLearningState.subject, CurrentLearningState.concept_ref).where(
+                CurrentLearningState.student_id == student_id,
+                CurrentLearningState.concept_ref.is_not(None),
+            )
+        ).all()
+        if concept_ref is not None
+    )
+    for pattern in session.execute(
+        select(LearnerPattern).where(
+            LearnerPattern.student_id == student_id,
+            LearnerPattern.policy_version == PATTERN_POLICY_VERSION,
+        )
+    ).scalars():
+        scope = pattern.scope if isinstance(pattern.scope, dict) else {}
+        subject = scope.get("subject")
+        concept_ref = scope.get("concept_ref")
+        if isinstance(subject, str) and isinstance(concept_ref, str):
+            scopes.add((subject, concept_ref))
+    evidence_ids = authoritative_evidence_ids(session, student_id=student_id)
+    if evidence_ids:
+        scopes.update(
+            (subject, concept_ref)
+            for subject, concept_ref in session.execute(
+                select(LearningEvent.subject, LearningEvidence.concept_ref)
+                .join(LearningEvidence, LearningEvidence.event_id == LearningEvent.id)
+                .where(
+                    LearningEvidence.id.in_(evidence_ids),
+                    LearningEvidence.concept_ref.is_not(None),
+                )
+                .distinct()
+            ).all()
+            if concept_ref is not None
+        )
+    result: list[DecisionView] = []
+    for subject, concept_ref in sorted(scopes):
+        result.extend(
+            derive_decision_views(
+                session,
+                student_id=student_id,
+                processing_run_id=processing_run_id,
+                subject=subject,
+                concept_ref=concept_ref,
+                policy=effective_policy,
+                now=now,
+            )
+        )
+    session.flush()
+    return result
+
+
 def _evidence_items(
     session: Session,
     *,

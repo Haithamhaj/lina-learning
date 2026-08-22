@@ -144,6 +144,73 @@ def apply_processing_run_patterns(
     return result
 
 
+def rebuild_authoritative_patterns(
+    session: Session,
+    *,
+    student_id: UUID,
+    now: datetime,
+    policy: PatternPolicy | None = None,
+) -> list[LearnerPattern]:
+    """Recompute current Pattern lifecycle from one Evidence version per Candidate.
+
+    PatternEvidence links are immutable audit records.  Authority filtering at
+    recomputation time prevents superseded interpretations from contributing to
+    counts, lifecycle, or broader-scope promotion.
+    """
+
+    from services.intelligence.authority import authoritative_evidence_ids
+
+    effective_policy = _effective_policy(policy)
+    evidence_ids = authoritative_evidence_ids(session, student_id=student_id)
+    rebuilt: list[LearnerPattern] = []
+    for evidence_id in evidence_ids:
+        for pattern in apply_evidence_to_patterns(
+            session,
+            evidence_id=evidence_id,
+            now=now,
+            policy=effective_policy,
+        ):
+            if pattern not in rebuilt:
+                rebuilt.append(pattern)
+
+    all_patterns = list(
+        session.execute(
+            select(LearnerPattern).where(
+                LearnerPattern.student_id == student_id,
+                LearnerPattern.policy_version == effective_policy.version,
+            )
+        ).scalars()
+    )
+    for pattern in all_patterns:
+        if pattern.scope.get("scope_type") == "concept":
+            _recompute_pattern(session, pattern=pattern, now=now, policy=effective_policy)
+        if pattern not in rebuilt:
+            rebuilt.append(pattern)
+
+    identities = {(pattern.pattern_type, pattern.pattern_key) for pattern in all_patterns}
+    for pattern_type, pattern_key in identities:
+        source = _any_pattern_source(
+            session,
+            student_id=student_id,
+            policy_version=effective_policy.version,
+            pattern_type=pattern_type,
+            pattern_key=pattern_key,
+        )
+        if source is not None:
+            for pattern in _broaden_supported_scope(
+                session,
+                item=source,
+                pattern_type=pattern_type,
+                pattern_key=pattern_key,
+                policy=effective_policy,
+                now=now,
+            ):
+                if pattern not in rebuilt:
+                    rebuilt.append(pattern)
+    session.flush()
+    return rebuilt
+
+
 def _effective_policy(policy: PatternPolicy | None) -> PatternPolicy:
     if policy is not None:
         require_supported_pattern_policy(policy.version)
@@ -376,7 +443,10 @@ def _recompute_pattern(session: Session, *, pattern: LearnerPattern, now: dateti
     if counter_links:
         pattern.last_challenged_at = max(link.observed_at for link, _ in counter_links)
 
-    if (
+    if not rows:
+        pattern.status = "RESOLVED"
+        pattern.resolved_at = now
+    elif (
         len(counter_links) >= policy.resolution_counter_count
         and counter_score >= max(policy.weakening_counter_score, support_score * policy.resolution_score_multiplier)
     ):
@@ -395,6 +465,11 @@ def _recompute_pattern(session: Session, *, pattern: LearnerPattern, now: dateti
 
 
 def _cycle_links(session: Session, *, pattern: LearnerPattern) -> list[tuple[PatternEvidence, LearningEvidence]]:
+    from services.intelligence.authority import authoritative_evidence_ids
+
+    evidence_ids = authoritative_evidence_ids(session, student_id=pattern.student_id)
+    if not evidence_ids:
+        return []
     rows = session.execute(
         select(PatternEvidence, LearningEvidence)
         .join(LearningEvidence, PatternEvidence.evidence_id == LearningEvidence.id)
@@ -402,6 +477,7 @@ def _cycle_links(session: Session, *, pattern: LearnerPattern) -> list[tuple[Pat
             PatternEvidence.pattern_id == pattern.id,
             PatternEvidence.policy_version == pattern.policy_version,
             PatternEvidence.cycle_number == pattern.cycle_number,
+            PatternEvidence.evidence_id.in_(evidence_ids),
         )
     ).all()
     return list(rows)
@@ -586,6 +662,11 @@ def _matching_contribution_rows(
     pattern_type: str,
     pattern_key: str,
 ) -> list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent, IntelligenceProcessingRun, LearnerPattern]]:
+    from services.intelligence.authority import authoritative_evidence_ids
+
+    evidence_ids = authoritative_evidence_ids(session, student_id=student_id)
+    if not evidence_ids:
+        return []
     return list(
         session.execute(
             select(PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent, IntelligenceProcessingRun, LearnerPattern)
@@ -601,8 +682,49 @@ def _matching_contribution_rows(
                 LearnerPattern.pattern_key == pattern_key,
                 LearnerPattern.scope["scope_type"].astext == "concept",
                 PatternEvidence.cycle_number == LearnerPattern.cycle_number,
+                PatternEvidence.evidence_id.in_(evidence_ids),
             )
         ).all()
+    )
+
+
+def _any_pattern_source(
+    session: Session,
+    *,
+    student_id: UUID,
+    policy_version: str,
+    pattern_type: str,
+    pattern_key: str,
+) -> _EvidenceContext | None:
+    row = session.execute(
+        select(LearningEvidence, LearningEvent, CandidateEvent, LearningSession, IntelligenceProcessingRun, PatternEvidence)
+        .join(LearningEvent, LearningEvidence.event_id == LearningEvent.id)
+        .join(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
+        .join(LearningSession, LearningEvent.session_id == LearningSession.id)
+        .join(IntelligenceProcessingRun, LearningEvent.processing_run_id == IntelligenceProcessingRun.id)
+        .join(PatternEvidence, PatternEvidence.evidence_id == LearningEvidence.id)
+        .join(LearnerPattern, PatternEvidence.pattern_id == LearnerPattern.id)
+        .where(
+            LearnerPattern.student_id == student_id,
+            LearnerPattern.policy_version == policy_version,
+            LearnerPattern.pattern_type == pattern_type,
+            LearnerPattern.pattern_key == pattern_key,
+        )
+        .order_by(PatternEvidence.observed_at, PatternEvidence.id)
+    ).first()
+    if row is None:
+        return None
+    evidence, event, candidate, learning_session, run, link = row
+    payload = candidate.payload if isinstance(candidate.payload, dict) else {}
+    return _EvidenceContext(
+        evidence=evidence,
+        event=event,
+        candidate=candidate,
+        learning_session=learning_session,
+        run=run,
+        observed_at=link.observed_at,
+        task_ref=_normalized_token(payload.get("task_ref"), fallback=evidence.source_ref),
+        context_ref=_normalized_token(payload.get("context_ref"), fallback="math_practice"),
     )
 
 

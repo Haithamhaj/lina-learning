@@ -42,6 +42,7 @@ def apply_evidence_to_current_state(
     evidence_id: UUID,
     now: datetime | None = None,
     policy_version: str | None = None,
+    force_derivation: bool = False,
 ) -> list[CurrentLearningState]:
     """Apply one validated Evidence item without creating Patterns or decision views."""
 
@@ -50,7 +51,7 @@ def apply_evidence_to_current_state(
     effective_now = now or datetime.now(UTC)
     evidence, event, learning_session, run = _load_validated_evidence(session, evidence_id=evidence_id)
     existing = _states_for_evidence(session, evidence_id=evidence.id, policy_version=policy_version)
-    if existing:
+    if existing and not force_derivation:
         return existing
 
     dimensions = evidence.dimensions
@@ -110,6 +111,61 @@ def apply_evidence_to_current_state(
             touched.append(state)
     session.flush()
     return touched
+
+
+def rebuild_authoritative_current_states(
+    session: Session,
+    *,
+    student_id: UUID,
+    now: datetime,
+    policy_version: str | None = None,
+) -> list[CurrentLearningState]:
+    """Replace runtime State with a fresh derivation of authoritative Evidence.
+
+    Existing rows are retained as historical output, but no longer remain active
+    merely because a replacement interpretation emitted no counter-Evidence.
+    """
+
+    from services.intelligence.authority import authoritative_evidence_ids
+
+    policy_version = policy_version or CURRENT_STATE_POLICY_VERSION
+    _require_supported_policy(policy_version)
+    for state in session.execute(
+        select(CurrentLearningState).where(
+            CurrentLearningState.student_id == student_id,
+            CurrentLearningState.policy_version == policy_version,
+            CurrentLearningState.status.in_(("ACTIVE", "RESOLVING")),
+        )
+    ).scalars():
+        state.status = "SUPERSEDED"
+        state.resolved_at = now
+        state.updated_at = now
+
+    evidence_ids = authoritative_evidence_ids(session, student_id=student_id)
+    if not evidence_ids:
+        session.flush()
+        return []
+    ordered_evidence = session.execute(
+        select(LearningEvidence.id, LearningSession, CandidateEvent)
+        .join(LearningEvent, LearningEvidence.event_id == LearningEvent.id)
+        .join(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
+        .join(LearningSession, LearningEvent.session_id == LearningSession.id)
+        .where(LearningEvidence.id.in_(evidence_ids))
+        .order_by(CandidateEvent.created_at, LearningEvent.id)
+    ).all()
+    rebuilt: list[CurrentLearningState] = []
+    for evidence_id, learning_session, candidate in ordered_evidence:
+        for state in apply_evidence_to_current_state(
+            session,
+            evidence_id=evidence_id,
+            now=learning_session.closed_at or candidate.created_at or now,
+            policy_version=policy_version,
+            force_derivation=True,
+        ):
+            if state not in rebuilt:
+                rebuilt.append(state)
+    session.flush()
+    return rebuilt
 
 
 def apply_processing_run_current_state(

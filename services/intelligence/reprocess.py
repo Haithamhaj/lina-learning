@@ -217,9 +217,9 @@ def activate_reprocess_scope(
     all runtime-visible intelligence on one coherent authority generation.
     """
 
-    from services.intelligence.current_state import apply_processing_run_current_state
-    from services.intelligence.decisions import DecisionViewPolicy, apply_processing_run_decision_views
-    from services.intelligence.patterns import PatternPolicy, apply_processing_run_patterns
+    from services.intelligence.current_state import rebuild_authoritative_current_states
+    from services.intelligence.decisions import DecisionViewPolicy, rebuild_authoritative_decision_views
+    from services.intelligence.patterns import PatternPolicy, rebuild_authoritative_patterns
 
     reprocess_run = session.get(IntelligenceReprocessRun, reprocess_run_id, with_for_update=True)
     if reprocess_run is None:
@@ -290,33 +290,27 @@ def activate_reprocess_scope(
             previous.activated_at = activated_at
     session.flush()
 
-    state_count = pattern_count = decision_view_count = 0
-    for session_id in selected_session_ids:
-        item = items_by_session[session_id]
-        assert item.evidence_processing_run_id is not None
-        learning_session = session.get(LearningSession, session_id)
-        if learning_session is None:
-            raise LookupError(f"Selected session {session_id!r} no longer exists.")
-        states = apply_processing_run_current_state(
-            session,
-            processing_run_id=item.evidence_processing_run_id,
-            now=learning_session.closed_at or learning_session.last_activity_at,
-            policy_version=str(versions["current_state_policy_version"]),
-        )
-        patterns = apply_processing_run_patterns(
-            session,
-            processing_run_id=item.evidence_processing_run_id,
-            now=activated_at,
-            policy=PatternPolicy(version=str(versions["pattern_policy_version"])),
-        )
-        decisions = apply_processing_run_decision_views(
-            session,
-            processing_run_id=item.evidence_processing_run_id,
-            policy=DecisionViewPolicy(version=str(versions["decision_policy_version"])),
-        )
-        state_count += len(states)
-        pattern_count += len(patterns)
-        decision_view_count += len(decisions)
+    states = rebuild_authoritative_current_states(
+        session,
+        student_id=reprocess_run.student_id,
+        now=activated_at,
+        policy_version=str(versions["current_state_policy_version"]),
+    )
+    patterns = rebuild_authoritative_patterns(
+        session,
+        student_id=reprocess_run.student_id,
+        now=activated_at,
+        policy=PatternPolicy(version=str(versions["pattern_policy_version"])),
+    )
+    first_item = items_by_session[selected_session_ids[0]]
+    assert first_item.evidence_processing_run_id is not None
+    decisions = rebuild_authoritative_decision_views(
+        session,
+        student_id=reprocess_run.student_id,
+        processing_run_id=first_item.evidence_processing_run_id,
+        policy=DecisionViewPolicy(version=str(versions["decision_policy_version"])),
+        now=activated_at,
+    )
 
     return {
         "status": "COMPLETED",
@@ -326,9 +320,9 @@ def activate_reprocess_scope(
         "new_evidence_processing_runs_by_session": new_evidence_runs_by_session,
         "activated_at": activated_at.isoformat(),
         "version_identity": versions,
-        "current_state_count": state_count,
-        "pattern_count": pattern_count,
-        "decision_view_count": decision_view_count,
+        "current_state_count": len(states),
+        "pattern_count": len(patterns),
+        "decision_view_count": len(decisions),
     }
 
 

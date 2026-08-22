@@ -420,12 +420,14 @@ audit is complete; no TASK-026 reprocessing orchestration is included.
 session/date scope, Evidence interpretation identity, downstream policy
 versions, and durable per-session results. Rebuilt Evidence stays staged until
 every selected session succeeds; one final DB transaction then updates the
-entire scope's authority and derives its State, Pattern, and Decision outputs.
-Partial failure leaves every selected session on the prior coherent authority;
-retry reuses completed session Evidence. The activation audit retains prior and
-new per-session authority, timestamp, and version identity. Raw history and
-prior derived rows remain preserved; the Card remains on-demand. It remains
-under review.
+entire scope's authority and rebuilds State, Pattern, and Decision outputs from
+one authoritative Evidence interpretation per raw Candidate. Superseded State
+rows and PatternEvidence links remain auditable but cannot influence current
+runtime. Partial failure leaves every selected session on the prior coherent
+authority; retry reuses completed session Evidence. The activation audit retains
+prior and new per-session authority, timestamp, and version identity. Raw
+history and prior derived rows remain preserved; the Card remains on-demand. It
+remains under review.
 **Purpose:** Rebuild derived Events/Evidence/Patterns/Card from preserved raw history after rubric/prompt/policy improvements.  
 **Expected output:** versioned rebuild job with date/session scope and audit trail.  
 **Likely areas:** `/services/intelligence/reprocess`, `/workers`.  

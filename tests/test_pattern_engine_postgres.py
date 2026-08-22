@@ -16,11 +16,14 @@ from services.intelligence.patterns import (
     PatternPolicyError,
     apply_evidence_to_patterns,
     apply_processing_run_patterns,
+    rebuild_authoritative_patterns,
 )
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
     CandidateEvent,
     IntelligenceProcessingRun,
+    IntelligenceReprocessRun,
+    IntelligenceSessionAuthority,
     LearnerIntelligenceCard,
     LearnerPattern,
     LearningEvidence,
@@ -821,3 +824,181 @@ def test_same_identity_and_retry_reject_an_uncompiled_policy_label(factory: sess
         assert {pattern.policy_version for pattern in session.query(LearnerPattern)} == {PATTERN_POLICY_VERSION}
         assert session.query(LearnerIntelligenceCard).count() == 0
         assert session.query(DecisionView).count() == 0
+
+
+def test_authority_replacement_excludes_old_pattern_evidence_and_collapses_context_scope(
+    factory: sessionmaker[Session],
+) -> None:
+    """A replaced Candidate interpretation is historical, not a second support."""
+
+    with factory.begin() as session:
+        student = _student(session)
+        occurred_at = datetime(2026, 8, 1, tzinfo=UTC)
+        evidence = [
+            _scope_support(
+                session,
+                student=student,
+                concept=concept,
+                context="fraction_word_problems",
+                task=f"task:{concept}",
+                occurred_at=occurred_at + timedelta(days=index * 4),
+            )
+            for index, concept in enumerate(("equivalent_fractions", "fraction_comparison", "fraction_addition"))
+        ]
+        for item in evidence:
+            apply_evidence_to_patterns(session, evidence_id=item.id, now=occurred_at + timedelta(days=20))
+        context = _scope_pattern(session, scope_type="context")
+        initial_context_status = context.status
+        old_runs = [
+            session.get(IntelligenceProcessingRun, session.get(LearningEvent, item.event_id).processing_run_id)
+            for item in evidence
+        ]
+        sessions = [session.get(LearningSession, session.get(LearningEvent, item.event_id).session_id) for item in evidence]
+        assert all(old_runs) and all(sessions)
+        old_reprocess = IntelligenceReprocessRun(
+            student_id=student.id,
+            idempotency_key="pattern-authority-old",
+            scope={"session_ids": [str(item.id) for item in sessions]},
+            version_set={},
+            status="COMPLETED",
+        )
+        replacement_reprocess = IntelligenceReprocessRun(
+            student_id=student.id,
+            idempotency_key="pattern-authority-replacement",
+            scope={"session_ids": [str(sessions[-1].id)]},
+            version_set={},
+            status="COMPLETED",
+        )
+        session.add_all((old_reprocess, replacement_reprocess))
+        session.flush()
+        for learning_session, old_run in zip(sessions, old_runs, strict=True):
+            assert learning_session is not None and old_run is not None
+            session.add(
+                IntelligenceSessionAuthority(
+                    student_id=student.id,
+                    session_id=learning_session.id,
+                    reprocess_run_id=old_reprocess.id,
+                    evidence_processing_run_id=old_run.id,
+                )
+            )
+        replacement_run = IntelligenceProcessingRun(
+            student_id=student.id,
+            rubric_version="evidence-rubric-v1",
+            policy_version="session-consolidation-policy-v1",
+            status="COMPLETED",
+            scope={
+                "session_id": str(sessions[-1].id),
+                "consolidation_schema_version": "session-evidence-v1",
+                "prompt_version": "fixture-v2",
+                "provider": "fixture",
+                "model": "fixture-v2",
+            },
+        )
+        session.add(replacement_run)
+        session.flush()
+        replaced_authority = session.query(IntelligenceSessionAuthority).filter_by(session_id=sessions[-1].id).one()
+        replaced_authority.reprocess_run_id = replacement_reprocess.id
+        replaced_authority.evidence_processing_run_id = replacement_run.id
+
+        rebuilt = rebuild_authoritative_patterns(
+            session,
+            student_id=student.id,
+            now=occurred_at + timedelta(days=21),
+        )
+        context_after = _scope_pattern(session, scope_type="context")
+        concept_patterns = [
+            pattern
+            for pattern in rebuilt
+            if pattern.scope.get("scope_type") == "concept" and pattern.pattern_type == "support_need"
+        ]
+
+        assert initial_context_status in {"CANDIDATE", "ACTIVE", "STABLE"}
+        assert context_after.status in {"WEAKENING", "RESOLVED"}
+        assert sum(pattern.support_count for pattern in concept_patterns) == 2
+        assert session.query(PatternEvidence).count() >= 3
+
+
+def test_replaced_candidate_evidence_counts_once_while_both_pattern_links_remain_auditable(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student = _student(session)
+        old_evidence = _evidence(session, student=student, dimensions=_support())
+        old_event = session.get(LearningEvent, old_evidence.event_id)
+        assert old_event is not None
+        old_run = session.get(IntelligenceProcessingRun, old_event.processing_run_id)
+        candidate = session.get(CandidateEvent, old_event.candidate_event_id)
+        learning_session = session.get(LearningSession, old_event.session_id)
+        assert old_run is not None and candidate is not None and learning_session is not None
+        apply_evidence_to_patterns(session, evidence_id=old_evidence.id)
+        old_reprocess = IntelligenceReprocessRun(
+            student_id=student.id,
+            idempotency_key="replacement-count-old",
+            scope={"session_ids": [str(learning_session.id)]},
+            version_set={},
+            status="COMPLETED",
+        )
+        replacement_reprocess = IntelligenceReprocessRun(
+            student_id=student.id,
+            idempotency_key="replacement-count-new",
+            scope={"session_ids": [str(learning_session.id)]},
+            version_set={},
+            status="COMPLETED",
+        )
+        session.add_all((old_reprocess, replacement_reprocess))
+        session.flush()
+        session.add(
+            IntelligenceSessionAuthority(
+                student_id=student.id,
+                session_id=learning_session.id,
+                reprocess_run_id=old_reprocess.id,
+                evidence_processing_run_id=old_run.id,
+            )
+        )
+        replacement_run = IntelligenceProcessingRun(
+            student_id=student.id,
+            rubric_version="evidence-rubric-v1",
+            policy_version="session-consolidation-policy-v1",
+            status="COMPLETED",
+            scope={
+                "session_id": str(learning_session.id),
+                "consolidation_schema_version": "session-evidence-v1",
+                "prompt_version": "fixture-v2",
+                "provider": "fixture",
+                "model": "fixture-v2",
+            },
+        )
+        session.add(replacement_run)
+        session.flush()
+        replacement_event = LearningEvent(
+            processing_run_id=replacement_run.id,
+            session_id=learning_session.id,
+            candidate_event_id=candidate.id,
+            subject="MATH",
+            concept_ref="equivalent_fractions",
+            event_type="learning_attempt",
+            description="Replacement interpretation contradicts the old support signal.",
+            source_message_id=None,
+        )
+        session.add(replacement_event)
+        session.flush()
+        replacement_evidence = LearningEvidence(
+            event_id=replacement_event.id,
+            concept_ref="equivalent_fractions",
+            dimensions=_independent(),
+            relationship="improvement",
+            source_ref=f"fixture:{replacement_event.id}",
+        )
+        session.add(replacement_evidence)
+        session.flush()
+        authority = session.query(IntelligenceSessionAuthority).one()
+        authority.reprocess_run_id = replacement_reprocess.id
+        authority.evidence_processing_run_id = replacement_run.id
+
+        rebuild_authoritative_patterns(session, student_id=student.id, now=datetime(2026, 8, 23, tzinfo=UTC))
+        pattern = _concept_pattern(session)
+
+        assert pattern.support_count == 0
+        assert pattern.counter_count == 1
+        assert pattern.status == "WEAKENING"
+        assert session.query(PatternEvidence).filter_by(pattern_id=pattern.id).count() == 2
