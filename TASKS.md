@@ -509,7 +509,7 @@ protection, sanitization, deterministic ordering, and GET non-mutation.
 ---
 
 ## REC-24 — Lina Validation Experience
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** REC-23 independent approval
 **Purpose:** Provide the smallest child-safe Grade 5 Math surface for validating
 the existing authenticated Student session, real Tutor/SSE runtime, retrieval
@@ -523,14 +523,19 @@ or learning-engine behavior is included.
 **Verification:** Focused Student/session/Tutor/readiness contracts; disposable
 PostgreSQL full suite; web typecheck and configured production build; no
 internal-data exposure in Student responses; `git diff --check`.
+**Independent approval:** Approved by Product Owner on 2026-08-22.
 
 ---
 
-## REC-25 — REC-24 Independent Approval
-**Status:** BLOCKED
-**Dependencies:** REC-24 implementation and independent approval
-**Purpose:** Record the independent review decision before any expansion beyond
-the bounded Lina validation surface.
+## REC-25 — Early Lina Calibration
+**Status:** READY
+**Dependencies:** REC-24
+**Purpose:** Run early real-Lina Grade 5 Math sessions against the approved
+REC-24 validation surface and real curriculum content, inspect Tutor behavior,
+retrieval, Evidence, Current State, Patterns, Decision Views, and cross-session
+personalization, then calibrate only what observed usage justifies.
+**Boundary:** This is calibration only. It does not authorize Science, Voice,
+Vision, Canvas, Parent Dashboard expansion, or other frozen work.
 
 ---
 

@@ -3,9 +3,8 @@
 ## Current goal
 
 REC-23 Parent Content Status Read API is `DONE` after independent approval.
-REC-24 Lina Validation Experience is authorized and `REVIEW`; it is limited to
-the Student Grade 5 Math validation surface. REC-25 remains `BLOCKED` pending
-independent REC-24 approval.
+REC-24 Lina Validation Experience is `DONE` after independent approval.
+REC-25 Early Lina Calibration is `READY`; no calibration has started.
 
 ## Current reality
 
@@ -176,12 +175,12 @@ independent REC-24 approval.
   Parent/Student link is verified. No content text, storage keys, processing
   metadata, learning intelligence, dashboard, mutation, or background work is
   exposed.
-- REC-23 has received independent approval. REC-24 now adds only the bounded
+- REC-23 has received independent approval. REC-24 added only the bounded
   Student Math validation surface: a child-safe ready-content gate, the existing
   authenticated session and real SSE Tutor path, and no child-facing runtime or
-  learning-intelligence metadata. Its implementation is under review.
-- No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
-  is currently authorized.
+  learning-intelligence metadata. It is `DONE` after independent approval.
+- REC-25 Early Lina Calibration is `READY`, but no real-Lina session or
+  calibration work has started. It does not authorize later product expansion.
 
 ## Active decisions
 
@@ -210,9 +209,8 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 remains blocked. REC-25 remains blocked until independent REC-24
-  approval; Parent visibility and all later expansion remain out of scope for
-  the current bounded validation task.
+- TASK-015 remains blocked. Parent visibility and all later expansion remain
+  out of scope for REC-25 Early Lina Calibration.
 - The disposable PostgreSQL runner needs local Docker or a CI-managed pgvector
   service; it fails closed rather than falling back to the development database.
 - Real AWS/S3 staging verification remains deferred and non-blocking; do not
@@ -221,12 +219,12 @@ Real Lina decision gates.
   Voice/STT; production
   Vision/handwriting/drawing; Learning Canvas; Interactive Artifact Engine;
   advanced motion/gamification; Grade-transition production work; and Phase 4
-  work pending REC-24 independent approval.
+  Parent Dashboard work pending its applicable later authorization.
 
 ## Next recommended action
 
-Complete REC-24 verification, then obtain independent REC-24 approval before
-unblocking REC-25 or any later product expansion.
+Await a scoped REC-25 Early Lina Calibration execution request; do not begin
+calibration or any later product expansion without that request.
 
 ## Critical references
 
