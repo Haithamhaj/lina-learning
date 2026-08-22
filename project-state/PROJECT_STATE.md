@@ -4,6 +4,8 @@
 
 REC-23 Parent Content Status Read API is `DONE` after independent approval.
 REC-24 Lina Validation Experience is `DONE` after independent approval.
+REC-24.1 Lina Visual Calibration Pass is `DONE` after independent approval
+(implementation checkpoint `813afd27850c86780d1ada070565b4972d1f7d57`).
 REC-25 Early Lina Calibration is `READY`; no calibration has started.
 
 ## Current reality
@@ -179,6 +181,9 @@ REC-25 Early Lina Calibration is `READY`; no calibration has started.
   Student Math validation surface: a child-safe ready-content gate, the existing
   authenticated session and real SSE Tutor path, and no child-facing runtime or
   learning-intelligence metadata. It is `DONE` after independent approval.
+- REC-24.1 independently approved the visual-only calibration pass at
+  `813afd27850c86780d1ada070565b4972d1f7d57`; no product/runtime behavior was
+  changed.
 - REC-25 Early Lina Calibration is `READY`, but no real-Lina session or
   calibration work has started. It does not authorize later product expansion.
 
