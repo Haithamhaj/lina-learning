@@ -3,9 +3,10 @@
 ## Current goal
 
 Gate B production acceptance is `PASSED` after independent composed verification
-of TASK-026. REC-20 Parent–Student Authorization is `DONE`; REC-21 Disposable
-PostgreSQL Test Environment is `REVIEW`. Do not begin Parent visibility work
-until REC-21 receives independent approval.
+of TASK-026. REC-20 Parent–Student Authorization and REC-21 Disposable
+PostgreSQL Test Environment are `DONE`; REC-22 AI Execution Lineage is
+`REVIEW`. Do not begin Parent visibility work until REC-22 receives independent
+approval.
 
 ## Current reality
 
@@ -164,6 +165,12 @@ until REC-21 receives independent approval.
   runner requires the exact test database name and an explicit test flag before
   migrations or PostgreSQL fixtures can run, applies the complete Alembic
   history, and removes its named container/volume after the full suite.
+- REC-22 extends that existing AI execution ledger with identifier-only lineage
+  for Tutor turns, same-call Candidate Events, Session Evidence processing,
+  semantic extraction, content-index embeddings, and runtime retrieval
+  embeddings. Attempts retain their provider/model/usage outcome and can share
+  an explicit logical operation identifier; no prompts, responses, raw vectors,
+  trace backend, or Parent UI was added.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 

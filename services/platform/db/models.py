@@ -128,11 +128,14 @@ class Job(Base):
 
 
 class AIExecution(Base):
-    """Immutable operational record for one Model Gateway request."""
+    """Immutable operational record for one Model Gateway request and its safe lineage."""
 
     __tablename__ = "ai_executions"
     __table_args__ = (
         Index("ix_ai_executions_task_created", "task", "created_at"),
+        Index("ix_ai_executions_student_created", "student_id", "created_at"),
+        Index("ix_ai_executions_session_created", "learning_session_id", "created_at"),
+        Index("ix_ai_executions_operation", "operation_id"),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -151,6 +154,41 @@ class AIExecution(Base):
     estimated_cost_usd: Mapped[float | None] = mapped_column(nullable=True)
     success: Mapped[bool] = mapped_column(Boolean, nullable=False)
     failure_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # ``operation_id`` groups attempts for one application-owned logical action.
+    # It deliberately stores identifiers only, never prompt, response, or vector data.
+    operation_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    operation_type: Mapped[str | None] = mapped_column(String(64))
+    parent_execution_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("ai_executions.id", ondelete="SET NULL"),
+    )
+    student_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="SET NULL")
+    )
+    learning_session_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("learning_sessions.id", ondelete="SET NULL")
+    )
+    source_message_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("learning_messages.id", ondelete="SET NULL")
+    )
+    intelligence_processing_run_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("intelligence_processing_runs.id", ondelete="SET NULL"),
+    )
+    document_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("content_documents.id", ondelete="SET NULL")
+    )
+    semantic_processing_run_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("content_semantic_processing_runs.id", ondelete="SET NULL"),
+    )
+    content_index_run_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("content_index_runs.id", ondelete="SET NULL"),
+    )
+    source_candidate_event_ids: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default="[]"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -497,6 +535,9 @@ class LearningMessage(Base):
     role: Mapped[str] = mapped_column(String(16), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     payload: Mapped[dict[str, object]] = mapped_column("metadata", JSONB, nullable=False, default=dict, server_default="{}")
+    ai_execution_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("ai_executions.id", ondelete="SET NULL")
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
@@ -510,6 +551,9 @@ class CandidateEvent(Base):
     concept_ref: Mapped[str | None] = mapped_column(String(128))
     signal: Mapped[str] = mapped_column(String(128), nullable=False)
     payload: Mapped[dict[str, object]] = mapped_column("metadata", JSONB, nullable=False, default=dict, server_default="{}")
+    ai_execution_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("ai_executions.id", ondelete="SET NULL")
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 

@@ -5,11 +5,12 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from typing import Iterable
+from uuid import NAMESPACE_URL, uuid5
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from services.model_gateway.gateway import ModelGateway
+from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
 from services.platform.db.models import (
     ContentDocument,
     ContentProcessingRun,
@@ -146,6 +147,7 @@ def extract_educational_semantics(
         for batch_index, batch in enumerate(_batches(structural_items, max_structural_items_per_batch)):
             output = _extract_batch(
                 gateway,
+                semantic_run=run,
                 document=locked_document,
                 batch=batch,
                 batch_index=batch_index,
@@ -194,6 +196,7 @@ def _batches(
 def _extract_batch(
     gateway: ModelGateway,
     *,
+    semantic_run: ContentSemanticProcessingRun,
     document: ContentDocument,
     batch: list[DocumentStructuralItem],
     batch_index: int,
@@ -239,7 +242,18 @@ def _extract_batch(
         ),
         "max_output_tokens": 3000,
     }
-    result = gateway.execute(ModelTask.CURRICULUM_SEMANTICS, payload)
+    result = gateway.execute(
+        ModelTask.CURRICULUM_SEMANTICS,
+        payload,
+        lineage=AIExecutionLineage(
+            operation="curriculum_semantic_extraction",
+            operation_id=uuid5(
+                NAMESPACE_URL, f"semantic-processing-run:{semantic_run.id}"
+            ),
+            document_id=document.id,
+            semantic_processing_run_id=semantic_run.id,
+        ),
+    )
     response_text = result.output.get("text")
     if not isinstance(response_text, str):
         raise SemanticContractError("Semantic model output did not contain text.")

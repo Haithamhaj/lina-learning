@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from uuid import NAMESPACE_URL, uuid5
 
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.orm import Session
 
-from services.model_gateway.gateway import ModelGateway
+from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
 from services.platform.db.models import ContentDocument, ContentIndexRun, ContentSemanticItem, ContentSemanticItemSource, ContentSemanticProcessingRun, DocumentStructuralItem, IndexedContentBlock, IndexedContentBlockSource, ModelTask
 
 BLOCK_SCHEMA_VERSION = "semantic-structural-blocks-v2"
@@ -51,7 +52,17 @@ def build_content_index(session: Session, *, document: ContentDocument, semantic
             for part_index, (part, part_sources) in enumerate(refined_sources):
                 candidates.append((item, part_sources, part, part_index, metadata))
         if not candidates: raise ValueError("Semantic run produced no indexable content blocks.")
-        result = gateway.execute(ModelTask.EMBEDDING, {"input": [candidate[2] for candidate in candidates], "dimensions": 1536})
+        result = gateway.execute(
+            ModelTask.EMBEDDING,
+            {"input": [candidate[2] for candidate in candidates], "dimensions": 1536},
+            lineage=AIExecutionLineage(
+                operation="content_index_embedding",
+                operation_id=uuid5(NAMESPACE_URL, f"content-index-run:{run.id}"),
+                document_id=document.id,
+                semantic_processing_run_id=semantic_run.id,
+                content_index_run_id=run.id,
+            ),
+        )
         vectors = result.output.get("embeddings")
         if not isinstance(vectors, list) or len(vectors) != len(candidates) or any(not isinstance(vector, list) or len(vector) != 1536 for vector in vectors): raise ValueError("Embedding provider returned unexpected vector dimensions.")
         for (item, item_sources, content, part_index, metadata), vector in zip(candidates, vectors, strict=True):

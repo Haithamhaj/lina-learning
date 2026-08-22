@@ -430,7 +430,7 @@ history and prior derived rows remain preserved; the Card remains on-demand.
 Independent composed acceptance verification is complete: a bounded Math
 journey reached later Tutor context with source lineage, current behavior
 overriding historical support, safe failure handling, and authority replacement.
-Gate B is `PASSED`; TASK-027+ remains blocked pending independent REC-20
+Gate B is `PASSED`; TASK-027+ remains blocked pending independent REC-22
 approval.
 **Purpose:** Rebuild derived Events/Evidence/Patterns/Card from preserved raw history after rubric/prompt/policy improvements.  
 **Expected output:** versioned rebuild job with date/session scope and audit trail.  
@@ -459,7 +459,7 @@ isolation. No Parent dashboard or learning intelligence is exposed here.
 ---
 
 ## REC-21 — Disposable PostgreSQL Test Environment
-**Status:** REVIEW
+**Status:** DONE
 **Purpose:** Run the full Python suite against one migration-first, disposable
 pgvector PostgreSQL database without development-data dependence.
 **Completion note:** Canonical npm commands create a named local pgvector
@@ -472,11 +472,29 @@ disposable database; the test guard rejects any non-canonical database URL.
 
 ---
 
+## REC-22 — AI Execution Lineage
+**Status:** REVIEW
+**Purpose:** Extend the existing Model Gateway ledger with compact,
+identifier-only lineage for Tutor, Session Evidence, semantic extraction, and
+embedding operations.
+**Completion note:** Each gateway attempt now records its logical operation,
+provider/model/usage outcome, and only safe domain identifiers. Tutor results
+and same-call Candidate Events point to their execution; processing and index
+runs are linked from their executions. Read-only helpers remain scoped by
+Student or known application-owned run type. No prompt, response, raw vector,
+trace backend, or dashboard was added.
+**Verification:** Disposable PostgreSQL contracts cover operation attempts,
+Tutor/Candidate, Session Evidence, semantic, index, and runtime-retrieval
+lineage; cross-Student helper isolation is included. Independent approval is
+required before Parent visibility work begins.
+
+---
+
 # Phase 4 — Parent Basic Visibility & Control
 
 ## TASK-027 — Parent Overview and Math insight views
 **Status:** BLOCKED  
-**Dependencies:** Phase 3 Exit Gate, REC-21 independent approval
+**Dependencies:** Phase 3 Exit Gate, REC-22 independent approval
 **Purpose:** Let Parent understand current focus, important changes, learning state, and useful insights without surveillance-style activity counts.  
 **Expected output:** Overview + Math views using categorical decision views and evidence-linked insights.  
 **Likely areas:** `/apps/web`, `/apps/api`, `/services/intelligence`.  

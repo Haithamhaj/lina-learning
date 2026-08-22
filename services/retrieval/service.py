@@ -9,7 +9,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from services.model_gateway.gateway import ModelGateway
+from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
 from services.platform.db.models import (
     ContentDocument,
     ContentIndexRun,
@@ -137,7 +137,7 @@ class RetrievalService:
         if index_run_id is None:
             return RetrievalContext(UUID(int=0), [], RetrievalDebug((), (), ()))
         semantic_types = _semantic_type_hints(question)
-        query_embedding = self._query_embedding(question)
+        query_embedding = self._query_embedding(question, student_id=student_id)
         lexical_ids = self._lexical_candidate_ids(
             index_run_id=index_run_id,
             question=question,
@@ -287,11 +287,16 @@ class RetrievalService:
             ).scalars()
         )
 
-    def _query_embedding(self, question: str) -> list[float] | None:
+    def _query_embedding(self, question: str, *, student_id: UUID) -> list[float] | None:
         if self._embedding_gateway is None:
             return None
         result = self._embedding_gateway.execute(
-            ModelTask.EMBEDDING, {"input": [question], "dimensions": 1536}
+            ModelTask.EMBEDDING,
+            {"input": [question], "dimensions": 1536},
+            lineage=AIExecutionLineage(
+                operation="runtime_retrieval_embedding",
+                student_id=student_id,
+            ),
         )
         embeddings = result.output.get("embeddings")
         if (

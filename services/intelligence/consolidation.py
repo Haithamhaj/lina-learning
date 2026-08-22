@@ -6,13 +6,13 @@ import json
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any, Literal
-from uuid import UUID
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from services.model_gateway.gateway import ModelGateway
+from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
 from services.platform.db.models import (
     CandidateEvent,
     IntelligenceProcessingRun,
@@ -252,6 +252,16 @@ def consolidate_closed_session(
                 learning_session=learning_session,
                 candidates=candidates,
                 messages=messages,
+            ),
+            lineage=AIExecutionLineage(
+                operation="session_evidence_consolidation",
+                operation_id=uuid5(
+                    NAMESPACE_URL, f"intelligence-processing-run:{run.id}"
+                ),
+                student_id=learning_session.student_id,
+                learning_session_id=learning_session.id,
+                intelligence_processing_run_id=run.id,
+                source_candidate_event_ids=tuple(candidate.id for candidate in candidates),
             ),
         )
         envelope = _parse_and_validate_output(

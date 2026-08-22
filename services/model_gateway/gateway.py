@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from time import perf_counter
 from collections.abc import Iterator
 from typing import Mapping, Protocol
+from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
 
@@ -32,6 +33,29 @@ class ModelResult:
     cache_write_tokens: int | None = None
     output_tokens: int | None = None
     estimated_cost_usd: float | None = None
+    execution_id: UUID | None = None
+    operation_id: UUID | None = None
+
+
+@dataclass(frozen=True)
+class AIExecutionLineage:
+    """Identifier-only context supplied by the application operation owner.
+
+    The gateway persists this compact boundary alongside the existing operational
+    ledger, but never stores prompt, response, message text, or embedding values.
+    """
+
+    operation: str
+    operation_id: UUID | None = None
+    parent_execution_id: UUID | None = None
+    student_id: UUID | None = None
+    learning_session_id: UUID | None = None
+    source_message_id: UUID | None = None
+    intelligence_processing_run_id: UUID | None = None
+    document_id: UUID | None = None
+    semantic_processing_run_id: UUID | None = None
+    content_index_run_id: UUID | None = None
+    source_candidate_event_ids: tuple[UUID, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -114,7 +138,13 @@ class ModelGateway:
             raise ValueError(f"No model route is configured for task {task.value!r}.")
         return route
 
-    def execute(self, task: ModelTask, payload: dict[str, object]) -> ModelResult:
+    def execute(
+        self,
+        task: ModelTask,
+        payload: dict[str, object],
+        *,
+        lineage: AIExecutionLineage | None = None,
+    ) -> ModelResult:
         """Call the selected adapter and always record its operational outcome."""
 
         route = self.route_for(task)
@@ -126,13 +156,14 @@ class ModelGateway:
         try:
             result = provider.execute(route, payload)
         except Exception as error:
-            self._record(task, route, started, success=False, failure_code=type(error).__name__)
+            self._record(task, route, started, lineage=lineage, success=False, failure_code=type(error).__name__)
             raise
 
-        self._record(
+        execution = self._record(
             task,
             route,
             started,
+            lineage=lineage,
             success=True,
             input_tokens=result.input_tokens,
             cached_input_tokens=result.cached_input_tokens,
@@ -140,9 +171,15 @@ class ModelGateway:
             output_tokens=result.output_tokens,
             estimated_cost_usd=result.estimated_cost_usd,
         )
-        return result
+        return replace(result, execution_id=execution.id, operation_id=execution.operation_id)
 
-    def stream(self, task: ModelTask, payload: dict[str, object]) -> Iterator[ModelStreamEvent]:
+    def stream(
+        self,
+        task: ModelTask,
+        payload: dict[str, object],
+        *,
+        lineage: AIExecutionLineage | None = None,
+    ) -> Iterator[ModelStreamEvent]:
         """Stream one task call and record it exactly once on completion or failure."""
 
         route = self.route_for(task)
@@ -162,10 +199,11 @@ class ModelGateway:
                     continue
                 if isinstance(event, StreamComplete):
                     completed = True
-                    self._record(
+                    execution = self._record(
                         task,
                         route,
                         started,
+                        lineage=lineage,
                         success=True,
                         input_tokens=event.result.input_tokens,
                         cached_input_tokens=event.result.cached_input_tokens,
@@ -173,13 +211,19 @@ class ModelGateway:
                         output_tokens=event.result.output_tokens,
                         estimated_cost_usd=event.result.estimated_cost_usd,
                     )
-                    yield event
+                    yield StreamComplete(
+                        replace(
+                            event.result,
+                            execution_id=execution.id,
+                            operation_id=execution.operation_id,
+                        )
+                    )
                     return
                 raise ValueError("Streaming provider returned an invalid event.")
             raise ValueError("Streaming provider ended without a final result.")
         except Exception as error:
             if not completed:
-                self._record(task, route, started, success=False, failure_code=type(error).__name__)
+                self._record(task, route, started, lineage=lineage, success=False, failure_code=type(error).__name__)
             raise
 
     def _record(
@@ -188,6 +232,7 @@ class ModelGateway:
         route: ModelRoute,
         started: float,
         *,
+        lineage: AIExecutionLineage | None,
         success: bool,
         input_tokens: int | None = None,
         cached_input_tokens: int | None = None,
@@ -195,9 +240,9 @@ class ModelGateway:
         output_tokens: int | None = None,
         estimated_cost_usd: float | None = None,
         failure_code: str | None = None,
-    ) -> None:
-        self._session.add(
-            AIExecution(
+    ) -> AIExecution:
+        selected_lineage = lineage or AIExecutionLineage(operation=task.value)
+        execution = AIExecution(
                 task=task.value,
                 provider=route.provider,
                 model=route.model,
@@ -209,6 +254,18 @@ class ModelGateway:
                 estimated_cost_usd=estimated_cost_usd,
                 success=success,
                 failure_code=failure_code,
+                operation_id=selected_lineage.operation_id or uuid4(),
+                operation_type=selected_lineage.operation,
+                parent_execution_id=selected_lineage.parent_execution_id,
+                student_id=selected_lineage.student_id,
+                learning_session_id=selected_lineage.learning_session_id,
+                source_message_id=selected_lineage.source_message_id,
+                intelligence_processing_run_id=selected_lineage.intelligence_processing_run_id,
+                document_id=selected_lineage.document_id,
+                semantic_processing_run_id=selected_lineage.semantic_processing_run_id,
+                content_index_run_id=selected_lineage.content_index_run_id,
+                source_candidate_event_ids=[str(identifier) for identifier in selected_lineage.source_candidate_event_ids],
             )
-        )
+        self._session.add(execution)
         self._session.flush()
+        return execution

@@ -11,8 +11,9 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
+from services.model_gateway.lineage import derived_objects_for_execution, execution_for_tutor_message
 from services.platform.db.connection import normalize_database_url
-from services.platform.db.models import CandidateEvent, LearningEvidence, LearningEvent, LearningMessage, LearningSession, ModelTask, Student, User
+from services.platform.db.models import AIExecution, CandidateEvent, LearningEvidence, LearningEvent, LearningMessage, LearningSession, ModelTask, Student, User
 from services.platform.safety import SafetyAction, SafetyDecision
 from services.retrieval.service import RetrievedBlock
 from services.tutor.context import SessionContextMessage, TutorContext, TutorContextDebug
@@ -127,6 +128,15 @@ def test_same_call_candidate_persists_raw_source_and_never_creates_derived_intel
         assert candidate.payload["source_message_ids"] == [str(source.id)]
         assert candidate.payload["model_route"] == {"provider": "fixture", "model": "fixture-tutor"}
         assert tutor_message.payload["candidate_metadata_status"] == "persisted"
+        execution = session.query(AIExecution).one()
+        assert execution.student_id == student.id
+        assert execution.learning_session_id == learning_session.id
+        assert execution.source_message_id == source.id
+        assert tutor_message.ai_execution_id == execution.id
+        assert candidate.ai_execution_id == execution.id
+        assert execution_for_tutor_message(session, student_id=student.id, tutor_message_id=tutor_message.id) == execution
+        assert execution_for_tutor_message(session, student_id=uuid4(), tutor_message_id=tutor_message.id) is None
+        assert derived_objects_for_execution(session, execution=execution).candidate_event_ids == (candidate.id,)
         assert learning_session.last_activity_at > initial_activity
         assert session.query(LearningEvent).count() == 0
         assert session.query(LearningEvidence).count() == 0

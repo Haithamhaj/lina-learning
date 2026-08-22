@@ -17,6 +17,7 @@ from services.intelligence.consolidation import (
     consolidate_closed_session,
 )
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute
+from services.model_gateway.lineage import derived_objects_for_execution, executions_for_processing_run, executions_for_student
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
     CandidateEvent,
@@ -277,6 +278,15 @@ def test_closed_session_uses_one_source_grounded_model_call_and_never_creates_la
             "fixture-evidence",
             True,
         )
+        assert execution.student_id == learning_session.student_id
+        assert execution.learning_session_id == learning_session.id
+        assert execution.intelligence_processing_run_id == outcome.processing_run.id
+        assert execution.source_candidate_event_ids == [str(candidate.id)]
+        assert executions_for_student(session, student_id=learning_session.student_id) == [execution]
+        assert executions_for_processing_run(session, processing_run_id=outcome.processing_run.id, kind="intelligence", student_id=learning_session.student_id) == [execution]
+        derived = derived_objects_for_execution(session, execution=execution)
+        assert derived.learning_event_ids == (event.id,)
+        assert derived.learning_evidence_ids == (evidence.id,)
         assert session.query(CurrentLearningState).count() == 0
         assert session.query(LearnerPattern).count() == 0
         assert session.query(LearnerIntelligenceCard).count() == 0

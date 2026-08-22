@@ -11,8 +11,9 @@ from services.content.repository import create_content_document, create_processi
 from services.content.semantic_contract import SemanticExtractionItem
 from services.content.structural_contract import NormalizedStructuralItem
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StaticModelProvider
+from services.model_gateway.lineage import derived_objects_for_execution, executions_for_processing_run
 from services.platform.db.connection import normalize_database_url
-from services.platform.db.models import ContentIndexRun, ContentSemanticItem, IndexedContentBlock, IndexedContentBlockSource, ModelTask, Student, User
+from services.platform.db.models import AIExecution, ContentIndexRun, ContentSemanticItem, IndexedContentBlock, IndexedContentBlockSource, ModelTask, Student, User
 
 
 def test_task013_index_contract_is_available() -> None:
@@ -55,6 +56,10 @@ def test_index_persists_metadata_lineage_and_db_queries(factory):
         doc,sem=_setup(session); run=build_content_index(session,document=doc,semantic_run=sem,gateway=_gateway(session)); block=session.query(IndexedContentBlock).one()
         source=session.query(IndexedContentBlockSource).one(); lexical=lexical_candidates(session,index_run_id=run.id,query="decimal place",grade_level=5,subject="MATH",concept_key="place-value")
         vector=vector_candidates(session,index_run_id=run.id,embedding=[0.01]*1536,grade_level=5,subject="MATH",concept_key="place-value")
+        execution=session.query(AIExecution).filter_by(content_index_run_id=run.id).one()
+        assert execution.operation_type == "content_index_embedding"
+        assert executions_for_processing_run(session, processing_run_id=run.id, kind="content_index") == [execution]
+        assert derived_objects_for_execution(session, execution=execution).indexed_block_ids == (block.id,)
     assert run.status=="COMPLETED" and len(block.embedding)==1536
     assert block.grade_level==5 and block.subject=="MATH" and block.concept_key=="place-value"
     assert source.block_id==block.id and source.page_number==2 and source.source_ref=="fixture#page=2"

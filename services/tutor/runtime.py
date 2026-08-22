@@ -11,7 +11,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from services.model_gateway.factory import create_tutor_gateway
-from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
+from services.model_gateway.gateway import AIExecutionLineage, ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
 from services.platform.config import get_settings
 from services.platform.db.models import CandidateEvent, LearningMessage, LearningSession, ModelTask
 from services.platform.safety import SafetyPolicyService
@@ -208,7 +208,16 @@ class TutorRuntime:
             safety=safety,
             candidate_source_message_id=student_message.id,
         )
-        model_stream = self._gateway.stream(ModelTask.TUTOR, payload)
+        model_stream = self._gateway.stream(
+            ModelTask.TUTOR,
+            payload,
+            lineage=AIExecutionLineage(
+                operation="tutor_turn",
+                student_id=learning_session.student_id,
+                learning_session_id=learning_session.id,
+                source_message_id=student_message.id,
+            ),
+        )
         text_parts: list[str] = []
         result: ModelResult | None = None
         completed = False
@@ -247,6 +256,7 @@ class TutorRuntime:
                 strategy,
                 candidate_metadata_status=candidate_metadata_status,
                 candidate_metadata_error=candidate_metadata_error,
+                ai_execution_id=result.execution_id if result is not None else None,
             )
         yield turn
 
@@ -291,6 +301,7 @@ class TutorRuntime:
                         "observed_student_outcome": candidate.observed_student_outcome,
                         "model_route": {"provider": route.provider, "model": route.model},
                     },
+                    ai_execution_id=result.execution_id,
                 )
             )
         self._session.flush()
@@ -307,6 +318,7 @@ class TutorRuntime:
         *,
         candidate_metadata_status: str,
         candidate_metadata_error: str | None = None,
+        ai_execution_id: UUID | None = None,
     ) -> TutorTurn:
         sources = _source_metadata(context)
         intelligence = [item.text for item in context.intelligence] if context else []
@@ -321,6 +333,7 @@ class TutorRuntime:
                 role="tutor",
                 content=text,
                 payload=payload,
+                ai_execution_id=ai_execution_id,
                 created_at=datetime.now(UTC),
             )
         )

@@ -27,7 +27,7 @@ def postgres_session_factory() -> sessionmaker[Session]:
         connection.execute(
             text(
                 "TRUNCATE indexed_content_block_sources, indexed_content_blocks, content_index_runs, content_semantic_item_sources, content_semantic_items, content_semantic_processing_runs, document_structural_items, content_blocks, curriculum_nodes, "
-                "content_processing_runs, content_documents"
+                "content_processing_runs, content_documents CASCADE"
             )
         )
     factory = sessionmaker(engine, expire_on_commit=False)

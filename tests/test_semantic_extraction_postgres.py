@@ -19,9 +19,11 @@ from services.content.semantic_contract import SEMANTIC_SCHEMA_VERSION
 from services.content.semantics import extract_educational_semantics
 from services.content.structural_contract import NormalizedStructuralItem
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StaticModelProvider
+from services.model_gateway.lineage import derived_objects_for_execution, executions_for_processing_run
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
     ContentDocument,
+    AIExecution,
     ContentSemanticItem,
     ContentSemanticItemSource,
     ContentSemanticProcessingRun,
@@ -183,6 +185,11 @@ def test_semantic_extraction_persists_educational_tree_and_exact_structural_line
         )
         items = session.query(ContentSemanticItem).filter_by(semantic_processing_run_id=semantic_run.id).all()
         sources = session.query(ContentSemanticItemSource).all()
+        execution = session.query(AIExecution).filter_by(semantic_processing_run_id=semantic_run.id).one()
+        assert execution.document_id == document.id
+        assert execution.operation_type == "curriculum_semantic_extraction"
+        assert executions_for_processing_run(session, processing_run_id=semantic_run.id, kind="semantic") == [execution]
+        assert set(derived_objects_for_execution(session, execution=execution).semantic_item_ids) == {item.id for item in items}
 
     by_key = {item.semantic_key: item for item in items}
     assert semantic_run.status == "COMPLETED"

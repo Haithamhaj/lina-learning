@@ -21,8 +21,9 @@ from services.content.repository import (
 from services.content.semantic_contract import SemanticExtractionItem
 from services.content.structural_contract import NormalizedStructuralItem
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute
+from services.model_gateway.lineage import executions_for_student
 from services.platform.db.connection import normalize_database_url
-from services.platform.db.models import ModelTask, Student, User
+from services.platform.db.models import AIExecution, ModelTask, Student, User
 from services.retrieval.service import (
     CurrentFocus,
     RetrievalService,
@@ -307,6 +308,11 @@ def test_retrieval_filters_focus_fuses_expands_and_preserves_exact_provenance(
             block_limit=4,
             character_budget=4000,
         )
+        execution = session.query(AIExecution).filter_by(operation_type="runtime_retrieval_embedding").one()
+        assert execution.student_id == student.id
+        assert executions_for_student(session, student_id=student.id) == [execution]
+        assert execution.content_index_run_id is None
+        assert execution.semantic_processing_run_id is None
 
     assert result.index_run_id == index_run.id
     assert result.debug.lexical_block_ids and result.debug.vector_block_ids
