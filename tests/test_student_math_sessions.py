@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from uuid import UUID
 
@@ -12,7 +13,17 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from services.platform.auth import AuthenticatedPrincipal, UserRole, get_current_principal
 from services.platform.db.connection import normalize_database_url
-from services.platform.db.models import AIExecution, LearningMessage, LearningSession, Student, User
+from services.platform.db.models import (
+    AIExecution,
+    ContentDocument,
+    ContentIndexRun,
+    ContentProcessingRun,
+    ContentSemanticProcessingRun,
+    LearningMessage,
+    LearningSession,
+    Student,
+    User,
+)
 from services.platform.db.session import get_session
 from services.platform.config import Settings
 
@@ -48,6 +59,55 @@ def _student(session: Session, subject: str) -> Student:
     return student
 
 
+def _ready_grade_five_math_content(session: Session, student: Student) -> None:
+    document = ContentDocument(
+        student_id=student.id,
+        grade_level=5,
+        subject="MATH",
+        original_storage_key="private/content/math.pdf",
+        original_checksum=UUID(int=student.id.int ^ 1).hex * 2,
+        filename="math.pdf",
+        content_type="application/pdf",
+    )
+    session.add(document)
+    session.flush()
+    structural = ContentProcessingRun(
+        document_id=document.id,
+        kind="STRUCTURAL",
+        processor_version="fixture-structural",
+        processor_settings_version="fixture",
+        status="COMPLETED",
+    )
+    session.add(structural)
+    session.flush()
+    semantic = ContentSemanticProcessingRun(
+        document_id=document.id,
+        structural_processing_run_id=structural.id,
+        semantic_schema_version="fixture-schema",
+        prompt_version="fixture-prompt",
+        model_route_version="fixture:model",
+        provider="fixture",
+        model="fixture",
+        settings_version="fixture",
+        status="COMPLETED",
+    )
+    session.add(semantic)
+    session.flush()
+    session.add(
+        ContentIndexRun(
+            document_id=document.id,
+            structural_processing_run_id=structural.id,
+            semantic_processing_run_id=semantic.id,
+            block_schema_version="fixture-blocks",
+            embedding_route_version="fixture:embedding",
+            embedding_dimensions=1536,
+            settings_version="fixture",
+            status="COMPLETED",
+        )
+    )
+    session.flush()
+
+
 def _client(
     postgres_session_factory: sessionmaker[Session],
     *,
@@ -80,6 +140,7 @@ def test_authenticated_student_starts_and_resumes_one_open_math_session(
 ) -> None:
     with postgres_session_factory.begin() as session:
         student = _student(session, "student-one")
+        _ready_grade_five_math_content(session, student)
 
     client = _client(postgres_session_factory, subject="student-one")
     try:
@@ -97,7 +158,7 @@ def test_authenticated_student_starts_and_resumes_one_open_math_session(
         assert session.query(LearningSession).filter_by(student_id=student.id).count() == 1
 
 
-def test_first_authenticated_student_visit_creates_only_their_owned_profile(
+def test_first_authenticated_student_visit_creates_only_their_owned_profile_when_math_is_unavailable(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
     client = _client(postgres_session_factory, subject="first-student")
@@ -107,19 +168,84 @@ def test_first_authenticated_student_visit_creates_only_their_owned_profile(
         _clear_overrides()
 
     assert response.status_code == 200
+    assert response.json() == {"ready": False}
     with postgres_session_factory() as session:
         user = session.query(User).filter_by(
             identity_provider="clerk", external_subject="first-student"
         ).one()
         student = session.query(Student).filter_by(user_id=user.id).one()
-        assert session.get(LearningSession, UUID(response.json()["id"])).student_id == student.id
+        assert session.query(LearningSession).filter_by(student_id=student.id).count() == 0
+
+
+def test_student_without_ready_grade_five_math_content_receives_only_a_safe_unavailable_entry(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Catches a Student session being opened before its Math book is ready."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-one")
+
+    client = _client(postgres_session_factory, subject="student-one")
+    try:
+        response = client.post("/api/v1/student/math/session")
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert response.json() == {"ready": False}
+    with postgres_session_factory() as session:
+        assert session.query(LearningSession).filter_by(student_id=student.id).count() == 0
+
+
+def test_unready_math_session_cannot_bypass_the_entry_gate_to_call_tutor(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Catches a stale or direct session invoking Tutor without ready Math content."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-one")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+        executions_before = session.query(AIExecution).filter_by(task="tutor").count()
+
+    from services.tutor import runtime as tutor_runtime
+
+    monkeypatch.setattr(
+        tutor_runtime,
+        "get_settings",
+        lambda: Settings(_env_file=None, model_provider="mock"),
+    )
+    client = _client(postgres_session_factory, subject="student-one")
+    try:
+        raw_message = client.post(
+            f"/api/v1/student/math/session/{session_id}/messages",
+            json={"content": "I tried one half."},
+        )
+        response = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": "Explain equivalent fractions."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert raw_message.status_code == 409
+    assert raw_message.json() == {"detail": "Math is getting ready."}
+    assert response.status_code == 409
+    assert response.json() == {"detail": "Math is getting ready."}
+    with postgres_session_factory() as session:
+        assert session.query(LearningMessage).filter_by(session_id=session_id).count() == 0
+        assert session.query(AIExecution).filter_by(task="tutor").count() == executions_before
 
 
 def test_authenticated_student_messages_are_persisted_in_order_and_restored_after_refresh(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
     with postgres_session_factory.begin() as session:
-        _student(session, "student-one")
+        student = _student(session, "student-one")
+        _ready_grade_five_math_content(session, student)
 
     client = _client(postgres_session_factory, subject="student-one")
     try:
@@ -174,7 +300,8 @@ def test_student_session_path_has_no_automatic_close_side_effect(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
     with postgres_session_factory.begin() as session:
-        _student(session, "student-one")
+        student = _student(session, "student-one")
+        _ready_grade_five_math_content(session, student)
 
     client = _client(postgres_session_factory, subject="student-one")
     try:
@@ -199,7 +326,8 @@ def test_authenticated_student_tutor_turn_uses_the_real_sse_path_and_persists_re
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     with postgres_session_factory.begin() as session:
-        _student(session, "student-one")
+        student = _student(session, "student-one")
+        _ready_grade_five_math_content(session, student)
         executions_before = session.query(AIExecution).filter_by(task="tutor").count()
 
     client = _client(postgres_session_factory, subject="student-one")
@@ -225,6 +353,8 @@ def test_authenticated_student_tutor_turn_uses_the_real_sse_path_and_persists_re
     assert "event: delta" in response.text
     assert "event: turn" in response.text
     assert "candidate" not in response.text
+    final_event = response.text.split("event: turn\ndata: ", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
+    assert json.loads(final_event) == {"text": "Let’s work on this step by step. Explain equivalent fractions."}
     with postgres_session_factory() as session:
         messages = session.query(LearningMessage).filter_by(session_id=UUID(session_id)).order_by(LearningMessage.created_at, LearningMessage.id).all()
         assert [message.role for message in messages] == ["student", "tutor"]
@@ -237,7 +367,8 @@ def test_parent_redirect_stream_never_calls_the_tutor_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     with postgres_session_factory.begin() as session:
-        _student(session, "student-one")
+        student = _student(session, "student-one")
+        _ready_grade_five_math_content(session, student)
         executions_before = session.query(AIExecution).filter_by(task="tutor").count()
 
     client = _client(postgres_session_factory, subject="student-one")

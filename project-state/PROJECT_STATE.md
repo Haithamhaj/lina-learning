@@ -2,11 +2,10 @@
 
 ## Current goal
 
-Gate B production acceptance is `PASSED` after independent composed verification
-of TASK-026. REC-20 Parent–Student Authorization, REC-21 Disposable PostgreSQL
-Test Environment, and REC-22 AI Execution Lineage are `DONE`; REC-23 Parent
-Content Status Read API is `REVIEW`. Do not begin Parent visibility work until
-REC-23 receives independent approval.
+REC-23 Parent Content Status Read API is `DONE` after independent approval.
+REC-24 Lina Validation Experience is authorized and `REVIEW`; it is limited to
+the Student Grade 5 Math validation surface. REC-25 remains `BLOCKED` pending
+independent REC-24 approval.
 
 ## Current reality
 
@@ -177,6 +176,10 @@ REC-23 receives independent approval.
   Parent/Student link is verified. No content text, storage keys, processing
   metadata, learning intelligence, dashboard, mutation, or background work is
   exposed.
+- REC-23 has received independent approval. REC-24 now adds only the bounded
+  Student Math validation surface: a child-safe ready-content gate, the existing
+  authenticated session and real SSE Tutor path, and no child-facing runtime or
+  learning-intelligence metadata. Its implementation is under review.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -207,22 +210,23 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 remains blocked. TASK-027 onward remains blocked until REC-23
-  receives independent approval, despite Gate B having passed.
+- TASK-015 remains blocked. REC-25 remains blocked until independent REC-24
+  approval; Parent visibility and all later expansion remain out of scope for
+  the current bounded validation task.
 - The disposable PostgreSQL runner needs local Docker or a CI-managed pgvector
   service; it fails closed rather than falling back to the development database.
 - Real AWS/S3 staging verification remains deferred and non-blocking; do not
   request credentials or remove the existing S3 implementation.
-- The following remain frozen until the applicable later gates pass: Lina
-  Validation UI beyond the existing surface; Science; Voice/STT; production
+- The following remain frozen until the applicable later gates pass: Science;
+  Voice/STT; production
   Vision/handwriting/drawing; Learning Canvas; Interactive Artifact Engine;
   advanced motion/gamification; Grade-transition production work; and Phase 4
-  work pending REC-23 independent approval.
+  work pending REC-24 independent approval.
 
 ## Next recommended action
 
-Independently review REC-23 Parent Content Status Read API before
-unblocking TASK-027. Do not start Parent visibility work without that approval.
+Complete REC-24 verification, then obtain independent REC-24 approval before
+unblocking REC-25 or any later product expansion.
 
 ## Critical references
 

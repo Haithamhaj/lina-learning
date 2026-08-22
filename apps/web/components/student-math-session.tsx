@@ -20,6 +20,10 @@ type MathSession = {
   messages: Message[];
 };
 
+type MathUnavailable = {
+  ready: false;
+};
+
 type TutorTurn = {
   text: string;
 };
@@ -33,8 +37,9 @@ export function StudentMathSession() {
   const { getToken, isLoaded } = useAuth();
   const [learningSession, setLearningSession] = useState<MathSession | null>(null);
   const [draft, setDraft] = useState("");
-  const [state, setState] = useState<"loading" | "ready" | "sending" | "error">("loading");
+  const [state, setState] = useState<"loading" | "unavailable" | "ready" | "sending" | "error">("loading");
   const [error, setError] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -47,9 +52,16 @@ export function StudentMathSession() {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!response.ok) throw await errorFrom(response);
-        const next = (await response.json()) as MathSession;
+        const next = (await response.json()) as MathSession | MathUnavailable;
         if (!cancelled) {
+          if ("ready" in next) {
+            setLearningSession(null);
+            setError("");
+            setState("unavailable");
+            return;
+          }
           setLearningSession(next);
+          setError("");
           setState("ready");
         }
       } catch (reason) {
@@ -63,7 +75,7 @@ export function StudentMathSession() {
     return () => {
       cancelled = true;
     };
-  }, [getToken, isLoaded]);
+  }, [getToken, isLoaded, loadAttempt]);
 
   const send = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -130,8 +142,22 @@ export function StudentMathSession() {
   if (state === "loading") {
     return <p className="rounded-2xl bg-white p-5 text-sm text-slate-600">Opening your Math session…</p>;
   }
+  if (state === "unavailable") {
+    return (
+      <section aria-label="Math is getting ready" className="rounded-3xl bg-white p-6 text-center shadow-sm">
+        <h2 className="font-display text-2xl text-ink">Math is getting ready.</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">Ask a grown-up to finish setting up your book.</p>
+        <Button className="mt-5" type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</Button>
+      </section>
+    );
+  }
   if (state === "error" && !learningSession) {
-    return <p className="rounded-2xl bg-white p-5 text-sm text-red-700" role="alert">{error}</p>;
+    return (
+      <section className="rounded-2xl bg-white p-5 text-sm text-red-700" role="alert">
+        <p>{error}</p>
+        <Button className="mt-4" type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</Button>
+      </section>
+    );
   }
 
   return (
@@ -143,7 +169,7 @@ export function StudentMathSession() {
       <div className="grid max-h-80 gap-3 overflow-y-auto rounded-2xl bg-[#f5f7fb] p-4" aria-live="polite">
         {learningSession?.messages.length ? learningSession.messages.map((message) => (
           <p className="rounded-xl bg-white px-3 py-2 text-sm text-slate-700" key={message.id}>
-            <span className="font-semibold text-ink">{message.role === "tutor" ? "Lina: " : "You: "}</span>{message.content || "…"}
+            <span className="font-semibold text-ink">{message.role === "tutor" ? "Tutor: " : "You: "}</span>{message.content || "…"}
           </p>
         )) : <p className="text-sm text-slate-600">What Math idea would you like to work on?</p>}
       </div>
@@ -159,11 +185,11 @@ export function StudentMathSession() {
           disabled={state === "sending"}
         />
         <Button type="submit" disabled={!draft.trim() || state === "sending"}>
-          {state === "sending" ? "Lina is thinking…" : "Send"}
+          {state === "sending" ? "Tutor is thinking…" : "Send"}
         </Button>
       </form>
-      {error ? <p className="text-sm text-red-700" role="alert">{error}</p> : null}
-      <p className="text-xs text-slate-500">Lina replies as she works through the next step with you.</p>
+      {error ? <div className="flex flex-wrap items-center gap-3 text-sm text-red-700" role="alert"><span>{error}</span><Button type="button" variant="secondary" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Reload chat</Button></div> : null}
+      <p className="text-xs text-slate-500">Tutor will help you work through the next step.</p>
     </section>
   );
 }

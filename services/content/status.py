@@ -49,6 +49,27 @@ class ParentContentStatus(BaseModel):
     documents: list[ParentContentDocumentStatus]
 
 
+def has_ready_grade_subject_content(
+    session: Session,
+    *,
+    student_id: UUID,
+    grade_level: int,
+    subject: str,
+) -> bool:
+    """Return whether the Student has any current ready document in the requested scope."""
+
+    documents = session.execute(
+        select(ContentDocument)
+        .where(
+            ContentDocument.student_id == student_id,
+            ContentDocument.grade_level == grade_level,
+            ContentDocument.subject == subject,
+        )
+        .order_by(ContentDocument.created_at, ContentDocument.id)
+    ).scalars()
+    return any(_status_for_document(session, document=document).status == "READY" for document in documents)
+
+
 def parent_content_status_for_student(
     session: Session, *, student_id: UUID
 ) -> ParentContentStatus:

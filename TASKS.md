@@ -491,7 +491,7 @@ required before Parent visibility work begins.
 ---
 
 ## REC-23 — Parent Content Status Read API
-**Status:** REVIEW
+**Status:** DONE
 **Purpose:** Give an explicitly linked Parent a compact, read-only view of
 which Student content documents exist and whether their current retrieval
 pipeline is uploaded, processing, ready, or failed.
@@ -504,7 +504,33 @@ compact stage states, and sanitized failure codes/messages.
 **Verification:** Isolated PostgreSQL tests cover authorization isolation, no
 content, every pipeline stage, current-lineage replacement, stale-index
 protection, sanitization, deterministic ordering, and GET non-mutation.
-Independent approval is required before Parent visibility work begins.
+**Independent approval:** Approved by Product Owner on 2026-08-22.
+
+---
+
+## REC-24 — Lina Validation Experience
+**Status:** REVIEW
+**Dependencies:** REC-23 independent approval
+**Purpose:** Provide the smallest child-safe Grade 5 Math surface for validating
+the existing authenticated Student session, real Tutor/SSE runtime, retrieval
+grounding, session lifecycle, and invisible personalization behavior.
+**Scope:** Student-only `/student` Math entry; child-safe readiness gate; existing
+session/resume and streamed Tutor path; correct Tutor labeling; basic
+loading/error/retry behavior. The Student response surface must not expose
+Evidence, Patterns, model/provider data, source IDs, debug context, or safety
+internals. No Science, Voice, Vision, Parent dashboard, Canvas, gamification,
+or learning-engine behavior is included.
+**Verification:** Focused Student/session/Tutor/readiness contracts; disposable
+PostgreSQL full suite; web typecheck and configured production build; no
+internal-data exposure in Student responses; `git diff --check`.
+
+---
+
+## REC-25 — REC-24 Independent Approval
+**Status:** BLOCKED
+**Dependencies:** REC-24 implementation and independent approval
+**Purpose:** Record the independent review decision before any expansion beyond
+the bounded Lina validation surface.
 
 ---
 
@@ -512,7 +538,7 @@ Independent approval is required before Parent visibility work begins.
 
 ## TASK-027 — Parent Overview and Math insight views
 **Status:** BLOCKED  
-**Dependencies:** Phase 3 Exit Gate, REC-23 independent approval
+**Dependencies:** Phase 3 Exit Gate, explicit authorization after REC-24 review
 **Purpose:** Let Parent understand current focus, important changes, learning state, and useful insights without surveillance-style activity counts.  
 **Expected output:** Overview + Math views using categorical decision views and evidence-linked insights.  
 **Likely areas:** `/apps/web`, `/apps/api`, `/services/intelligence`.  

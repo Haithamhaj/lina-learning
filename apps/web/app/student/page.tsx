@@ -12,9 +12,9 @@ export default function StudentPage() {
       <main className="min-h-screen bg-[#f5f7fb] px-5 py-8 text-ink sm:px-8 lg:px-12">
         <div className="mx-auto flex max-w-6xl flex-col gap-10">
           <SurfaceHeader
-            eyebrow="Student learning space"
-            title="A calm place to keep learning."
-            description="Ask questions, work through ideas, and keep the focus on learning rather than analytics."
+            eyebrow="Math with Tutor"
+            title="Let’s work it out together."
+            description="Ask a question, share an answer, or show what you tried."
           />
           <StudentMathSession />
         </div>
