@@ -2,8 +2,9 @@
 
 ## Current goal
 
-Review the TASK-026 atomic scope-authority correction before any production
-acceptance. Do not start real-Lina calibration or product expansion.
+Gate B production acceptance is `REVIEW` after independent composed verification
+of TASK-026. Do not treat it as `PASS`, start real-Lina calibration, or begin
+product expansion without Product Owner approval.
 
 ## Current reality
 
@@ -149,8 +150,11 @@ acceptance. Do not start real-Lina calibration or product expansion.
   failure preserves the complete prior authority and retries reuse completed
   session work. Activation audit records prior/new per-session authority,
   timestamp, and version identity. Raw messages/Candidates and historical
-  derived rows remain preserved; no Card is materialized. It is `REVIEW`, not a
-  Phase 3 or Gate B pass.
+  derived rows remain preserved; no Card is materialized. A new deterministic
+  composed Math journey verifies raw message → same-call Candidate → close/job
+  → one Evidence call → source-linked Evidence/State/Decision → bounded later
+  Tutor context, with staged reprocessing preserving old runtime authority
+  until atomic replacement. TASK-026 is `DONE`; Gate B is `REVIEW`, not `PASS`.
 - No real-Lina calibration, Phase 1/2/3 exit claim, or later product expansion
   is currently authorized.
 
@@ -181,10 +185,8 @@ Real Lina decision gates.
 
 ## Active risks
 
-- TASK-015 and TASK-027 onward remain blocked; TASK-026 requires independent
-  review of the atomic authority-activation correction before acceptance. The
-  Production Engine Acceptance Gate has
-  not passed.
+- TASK-015 and TASK-027 onward remain blocked. Gate B is in independent review
+  and has not passed; Product Owner approval remains required before Phase 4.
 - The temporary local PostgreSQL instance is appropriate for the sandbox demo
   but not for destructive integration tests. A disposable PostgreSQL test
   database/workflow remains a deferred local-development improvement.
@@ -198,9 +200,9 @@ Real Lina decision gates.
 
 ## Next recommended action
 
-Review TASK-026 bounded reprocessing, version authority, chronology handling,
-failure/retry reporting, and historical preservation. Do not start calibration
-or later work without explicit authorization and the applicable gate.
+Review the Gate B acceptance evidence and decide whether to approve the gate.
+Do not start calibration or later work without explicit authorization and the
+applicable gate.
 
 ## Critical references
 

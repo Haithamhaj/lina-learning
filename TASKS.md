@@ -414,7 +414,7 @@ audit is complete; no TASK-026 reprocessing orchestration is included.
 **Verification:** changing decision policy can recompute views without rewriting raw Events/Evidence.  
 
 ## TASK-026 — Intelligence reprocessing pipeline
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** TASK-021, TASK-023, TASK-024, TASK-025
 **Recovery state:** A bounded, job-backed reprocess run records explicit
 session/date scope, Evidence interpretation identity, downstream policy
@@ -426,8 +426,12 @@ rows and PatternEvidence links remain auditable but cannot influence current
 runtime. Partial failure leaves every selected session on the prior coherent
 authority; retry reuses completed session Evidence. The activation audit retains
 prior and new per-session authority, timestamp, and version identity. Raw
-history and prior derived rows remain preserved; the Card remains on-demand. It
-remains under review.
+history and prior derived rows remain preserved; the Card remains on-demand.
+Independent composed acceptance verification is complete: a bounded Math
+journey reached later Tutor context with source lineage, current behavior
+overriding historical support, safe failure handling, and authority replacement.
+Gate B is `REVIEW`, not `PASS`; TASK-027+ remains blocked pending Product Owner
+approval.
 **Purpose:** Rebuild derived Events/Evidence/Patterns/Card from preserved raw history after rubric/prompt/policy improvements.  
 **Expected output:** versioned rebuild job with date/session scope and audit trail.  
 **Likely areas:** `/services/intelligence/reprocess`, `/workers`.  
