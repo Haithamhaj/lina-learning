@@ -5,7 +5,11 @@
 **Status:** Approved project reference — living governing document  
 **Audience:** Product owner, ChatGPT, Codex, AI agents, developers, reviewers  
 **Primary use:** Governing source of truth for product intent, boundaries, architecture, learning behavior, and approved design decisions  
-**Not a replacement for:** `LEARNING_INTELLIGENCE_SPEC.md`, `IMPLEMENTATION_PLAN.md`, implementation prompts, or task files
+**Not a replacement for:** `LEARNING_PRODUCT_ROADMAP.md`, `LEARNING_INTELLIGENCE_SPEC.md`, `IMPLEMENTATION_PLAN.md`, implementation prompts, or task files
+
+`docs/LEARNING_PRODUCT_ROADMAP.md` owns approved product-evolution sequencing,
+future capability tracks, dependencies, and validation gates. This reference
+continues to own durable product principles and protected boundaries.
 
 ---
 
@@ -19,7 +23,7 @@
 
 Lina Personal Learning System is a personal, evidence-grounded learning environment designed first for Lina, beginning with **Grade 5 Mathematics and Science**.
 
-It is not intended to reproduce school digitally, act as a homework-answering chatbot, or operate as a conventional LMS. The system uses Lina's current school books and school context to understand **what she is expected to learn**, while remaining free to change **how a concept is explained** whenever another representation would help her understand it better.
+It is not intended to reproduce school digitally, act as a homework-answering chatbot, or operate as a conventional LMS. The current Student question drives the interaction. Books, school materials, trusted references, and later captured pages are optional grounding sources that improve alignment and context; the Tutor remains usable without them.
 
 The system combines:
 
@@ -70,7 +74,7 @@ The initial product scope includes:
 - Science.
 - Parent/Admin control panel.
 - School-book ingestion and structured understanding.
-- Current school focus detection and correction.
+- Question-driven optional grounding from available learning sources.
 - Conversational tutor.
 - Homework assistance.
 - Free exploration outside the curriculum.
@@ -178,12 +182,11 @@ The Parent/Admin controls the learning environment and can inspect how the syste
 The Parent/Admin should be able to:
 
 - upload books,
-- upload school plans,
+- upload school plans and other reference material,
 - assign books to a Grade,
 - activate the next Grade by uploading/activating its books,
 - inspect content processing status,
 - reprocess a book,
-- correct current school focus when necessary,
 - view Math and Science learning state,
 - inspect important evidence,
 - inspect patterns and recent changes,
@@ -220,9 +223,10 @@ Withholding an answer is **not** itself an educational objective.
 
 If Lina remains genuinely stuck after a reasonable attempt, the tutor should teach the solution clearly, explain why it works, and then check understanding through a new application.
 
-## 5.2 Book = Curriculum Anchor, Not Teaching Authority
+## 5.2 Books and References = Grounding Sources, Not Teaching Authority
 
-The book is important because it provides:
+An available book is a strong persistent curriculum anchor. Books, school
+materials, trusted references, and later captured pages can provide:
 
 - current Grade scope,
 - topics,
@@ -232,7 +236,8 @@ The book is important because it provides:
 - school examples,
 - exercises Lina is likely to encounter.
 
-The book does not own the teaching method.
+No grounding source authorizes, restricts, or owns the teaching method. The
+Tutor may answer from model knowledge when no useful source is available.
 
 The tutor may use:
 
@@ -248,13 +253,17 @@ The tutor may use:
 
 The tutor must not reduce RAG to "retrieve page and paraphrase it."
 
-## 5.3 School-Led Main Path, Mastery-Driven Micro-Detours
+## 5.3 Question-Driven Learning, Reference-Grounded When Useful
 
-The school/book context defines the main path.
+Lina's current question or learning need is authoritative. School, book, and
+reference context can improve terminology, scope alignment, examples, and
+expected depth, but does not determine what Lina is allowed or required to
+study now.
 
-If Lina cannot understand a current topic because a prerequisite is missing, the tutor may briefly move backward, teach or refresh that prerequisite, verify enough understanding, and return to the current Grade lesson.
-
-The system must not create a parallel curriculum that gradually pulls Lina away from what she is currently studying.
+The Tutor may teach prerequisites or related ideas when useful and return to
+the current question naturally. Relevant recent conversational/topic context
+may help a low-information continuation, but relevance outranks recency and
+history.
 
 ## 5.4 No Formal Diagnostic by Default
 
@@ -495,9 +504,12 @@ Its role is to provide a structured intermediate document representation preserv
 
 Docling is not itself the curriculum model.
 
-## 7.3 Educational Semantic Layer
+## 7.3 Educational Semantic Layer — Optional Enrichment
 
-The project adds an educational semantic layer over the structured document representation.
+The project may add a rebuildable educational semantic layer over the
+structured document representation. It is optional enrichment for navigation,
+analysis, and source organization; it is not required for Tutor availability,
+basic retrieval, Candidate Events, Evidence, or Learner Intelligence.
 
 This layer identifies and normalizes concepts such as:
 
@@ -515,28 +527,28 @@ This layer identifies and normalizes concepts such as:
 - figures,
 - expected school scope.
 
-Concept identity only needs to be stable enough within the active Grade for the MVP. A universal concept graph across all future Grades is intentionally deferred.
+Curriculum taxonomy can provide useful optional metadata. Concept identity for
+Learning Intelligence primarily comes from the interaction: the question,
+conversation, current page/image when available, retrieved references when
+useful, and model understanding. A universal concept graph remains deferred.
 
 ## 7.4 Content Pipeline
 
 ```text
-Original File
+Learning Source
     ↓
-Store original
+Preserve original + provenance
     ↓
-Docling structural parsing
+Structural extraction / normalization
     ↓
-Versioned DoclingDocument
+Retrieval-ready representation
     ↓
-Educational semantic extraction
+Hybrid search/index
+
+Optional:
+Structural representation
     ↓
-Curriculum model
-    ↓
-Structural retrieval units
-    ↓
-Search/indexing
-    ↓
-Ready
+Educational semantic enrichment
 ```
 
 ## 7.5 Figures, Images, and Formulas
@@ -556,23 +568,35 @@ Image description or other visual enrichment should be selective rather than aut
 
 ## 7.6 School Plans
 
-School plans are a separate content type from books.
-
-They can help determine:
-
-- week/date,
-- subject,
-- current unit,
-- current lesson/topic,
-- homework reference.
-
-They support current-school-focus detection but do not replace the book.
+School plans are supplementary references. They may reveal available
+subjects, topics, material, dates, or homework references, but they do not
+determine Lina's current learning position or steer the Tutor.
 
 ## 7.7 Student Uploads Are Not Automatically Curriculum Content
 
-A student-uploaded homework page, drawing, or photographed notebook page is an interaction artifact, not permanent curriculum content by default.
+A student-uploaded homework page, drawing, or photographed notebook page is
+an interaction artifact by default. Future captured-page handling may preserve
+it as a learning source: a current page has the highest context priority for
+that turn, and a historical page can be a learning-history reference. Vision
+implementation remains separately frozen.
 
-A Parent/Admin upload can explicitly classify a document as reusable school material when appropriate.
+## 7.8 Learning Sources and Trusted References
+
+Grounding priority is not teaching-method authority. Available sources may be
+used in this order when useful: current captured page/image; exact uploaded
+school material/book; historical student-captured pages; trusted aligned web
+references; trusted general educational references; and model general
+knowledge, which remains available.
+
+The future Trusted Educational Reference Pack requires Grade and Subject, and
+uses Country, School, Curriculum, Book, Publisher, and language when known.
+Parents are not required to find the exact book or approve each trusted source.
+The system may discover official/publisher sources first, then established
+educational institutions, then reputable academic or school sources; anonymous
+forums, low-trust blogs, SEO junk, and unclear-source content are excluded.
+Sources are classified as `EXACT_CURRICULUM`, `ALIGNED_CURRICULUM`, or
+`GENERAL_EDUCATION`. They may improve terminology, alignment, examples, and
+representational diversity, but their absence never blocks the Tutor.
 
 ---
 
@@ -582,19 +606,17 @@ A Parent/Admin upload can explicitly classify a document as reusable school mate
 
 Do not perform semantic search across every uploaded book for every question.
 
-Retrieval should narrow context before similarity search.
+Retrieval is optional grounding driven by the current Student question. It
+should narrow context before similarity search without requiring a curriculum
+position.
 
 Conceptual flow:
 
 ```text
-Current Grade
-   ↓
-Subject
-   ↓
-Current school focus / detected topic
-   ↓
-Lesson / concept candidates
-   ↓
+Current Student question
+    ↓
+Grade / Subject when known
+    ↓
 Metadata filtering
    ↓
 Lexical + vector retrieval
@@ -622,28 +644,17 @@ Retrieval should combine as appropriate:
 - metadata filters,
 - exact/lexical search,
 - vector similarity,
-- current school focus,
-- concept/lesson context.
+- relevant recent conversational/topic context as an advisory preference,
+- optional concept/lesson/type metadata when available.
 
 PostgreSQL + pgvector is sufficient for the initial architecture unless usage proves otherwise.
 
-## 8.4 Current School Focus
+## 8.4 Recent Conversational Context
 
-The current school focus can be inferred from multiple signals:
-
-- school plan,
-- homework,
-- uploaded pages,
-- Lina's own statement,
-- tutor questions,
-- recent interactions,
-- Parent/Admin correction.
-
-The system may ask Lina naturally what she is currently studying when confidence is low or signals conflict.
-
-The Parent/Admin can correct the current topic.
-
-The system should not silently change the main learning path based on weak inference.
+Recent conversational/topic context may help follow-up turns such as
+"continue," "again," or "I don't understand." It is advisory only: a
+substantive current question must outrank stale context. School plans and
+curriculum position are references, not retrieval or teaching authority.
 
 ## 8.5 Retrieval Is Grounding, Not Teaching Style
 
@@ -693,17 +704,13 @@ Historical patterns are priors, not commands.
 ## 9.3 Normal Runtime Path
 
 ```text
-Student input
+Student question
     ↓
-Thread / mode / subject resolution
+SafetyDecision
     ↓
-Current Grade + school focus
+Optional question-driven grounding
     ↓
 Relevant learner intelligence selection
-    ↓
-Relevant retrieval context
-    ↓
-Teaching decision
     ↓
 ONE primary Tutor model call
     ↓
@@ -1257,7 +1264,7 @@ Recommended areas:
 
 ## 17.1 Overview
 
-- Current school focus.
+- Relevant recent learning context when it helps the current question.
 - What is going well.
 - What currently needs attention.
 - Important recent changes.
@@ -1806,12 +1813,18 @@ The following rules should be treated as protected design constraints unless the
 | Math + Science first | Approved |
 | Book = Curriculum Anchor | Approved |
 | Book teaching method is mandatory | Rejected |
-| School-led path + prerequisite micro-detours | Approved |
+| School-led path as product authority | Superseded — Roadmap Option A |
+| Question-driven learning with useful prerequisite micro-detours | Approved |
 | Formal prerequisite diagnostic on every new topic | Rejected |
-| Current school focus discovered from multiple signals | Approved |
-| Tutor may ask Lina what she is studying | Approved |
-| Parent can correct current topic | Approved |
-| Extended learning stored separately from school path | Approved |
+| Current School Focus as authority | Superseded — Roadmap Option A |
+| Relevant recent conversational/topic context | Approved — relevance first |
+| Tutor always available without a book or ready content | Approved |
+| Question-driven optional RAG | Approved |
+| Semantic enrichment required before index/Tutor | Superseded — Roadmap Option A |
+| Semantic enrichment as optional rebuildable layer | Approved |
+| Interaction-derived concept identity for Learning Intelligence | Approved |
+| Multi-source Learning Source model | Approved |
+| Trusted Educational Reference pilot | Approved future capability |
 | Universal cross-grade concept graph | Deferred / not required |
 | Grade transition by Parent/Admin activation of next Grade books | Approved |
 | Compact transition card to next Grade | Approved |
@@ -1949,20 +1962,18 @@ Misclassification should be observable and correctable without changing the core
 
 The project should not attempt to complete every planned feature before Lina uses it.
 
-The first meaningful decision gate is a real Math vertical slice.
+The first meaningful decision gate is a real Math vertical slice. A real book
+and trusted references are valuable grounding-validation inputs, not permission
+for Lina to enter the Tutor.
 
 ## 27.1 Vertical Slice
 
 ```text
-Parent uploads a real Grade 5 Math book
+Lina asks/answers through the Tutor, with or without a source
         ↓
-Docling processes it
+Safety applies
         ↓
-Educational semantics extracted
-        ↓
-Retrieval works on real questions
-        ↓
-Lina asks/answers through the Tutor
+Optional question-driven grounding improves the answer when available
         ↓
 Tutor adapts explanation
         ↓
@@ -1979,7 +1990,10 @@ Parent can inspect what happened
 Next session uses relevant intelligence
 ```
 
-At least one interactive artifact path should also be proven in the vertical slice when it provides real learning value.
+The validation loop must prove both `no book → Tutor still works` and
+`content available → optional grounding improves the answer`. At least one
+interactive artifact path should also be proven when it provides real learning
+value.
 
 ## 27.2 Review Method
 
@@ -2029,9 +2043,17 @@ If the answer is no in a core area, fix the core loop before adding breadth.
 
 # 28. Relationship to Other Project Documents
 
-This document defines **what the project is and the approved governing direction**.
+This document defines **what the project is and the durable governing direction**.
 
-The following documents refine execution without overriding this reference unless an explicit approved decision changes it.
+The following documents refine execution. Approved product-evolution sequencing,
+future capability tracks, dependencies, and validation gates are recorded in
+`LEARNING_PRODUCT_ROADMAP.md`.
+
+## `LEARNING_PRODUCT_ROADMAP.md`
+
+Defines approved product-evolution decisions, capability tracks, dependencies,
+and validation gates. A Roadmap item is not executable until it is promoted to
+`TASKS.md` with a concrete scope.
 
 ## `CHILD_SAFETY_POLICY.md`
 
@@ -2104,7 +2126,11 @@ Contains ordered implementation tasks for Codex/AI agents.
 
 The project should remain simple in use and modular in construction.
 
-The active Grade and books define the school context. Docling and the educational semantic layer turn those books into retrievable curriculum context. The Tutor teaches using a stable identity and adaptive teaching strategy. Lina may communicate through text, voice, handwriting, drawings, and images. The Tutor may respond through conversation, annotations, clean visual reconstructions, and interactive HTML/SVG learning artifacts.
+The current Student question drives the interaction. Available books and other
+trusted learning sources provide optional grounding; Docling structural
+representation and hybrid retrieval preserve useful provenance, while
+educational semantics remain optional enrichment. The Tutor teaches using a
+stable identity and adaptive teaching strategy.
 
 The system does not treat the Tutor model's impression as learner truth. Raw interactions are preserved, meaningful events are extracted, evidence is consolidated, temporal patterns evolve under explicit rules, and a compact Learner Intelligence Card provides relevant memory without loading years of history into each prompt.
 
@@ -2112,7 +2138,10 @@ Mastery and confidence are views over this evidence, not permanent source data.
 
 The Parent/Admin controls content and Grade activation, sees important insights and evidence, and can audit how conclusions were formed. AI usage remains task-routed, observable, replaceable, and reprocessable.
 
-The implementation starts with a modular monolith and a real Math vertical slice. The product expands only after Lina's real use demonstrates that the core loop is educationally useful, technically traceable, and operationally affordable.
+The implementation starts with a modular monolith and a real Math vertical
+slice. The core loop must work with zero content and improve with useful
+grounding. The product expands only after Lina's real use demonstrates that it
+is educationally useful, technically traceable, and operationally affordable.
 
 ---
 

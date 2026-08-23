@@ -17,11 +17,9 @@ Read in this order when relevant:
 7. `project-state/PROJECT_STATE.md` — current operational reality and next action.
 8. `TASKS.md` — actual executable work queue.
 
-### Approved supersession rule
+### Roadmap coordination
 
-`docs/LEARNING_PRODUCT_ROADMAP.md` records product-evolution decisions explicitly approved on 2026-08-23. Its Sections 3, 4, 12, and 13 identify decisions and assumptions that supersede older contradictory statements pending the LR-A01 governing-document reconciliation.
-
-When an older governing document directly contradicts one of those explicitly listed approved decisions, do **not** implement the obsolete assumption. Follow the Roadmap only for that explicit conflict and keep LR-A01 as the required reconciliation step. For any other document conflict, stop and surface the conflict rather than silently choosing a new product direction.
+The Roadmap records approved product-evolution decisions, sequencing, dependencies, and validation gates. It does not make work executable: an item must be promoted to `TASKS.md` with a concrete scope and status. If governing documents conflict, stop and surface the conflict rather than silently choosing a product direction.
 
 ## Execution Rules
 

@@ -221,7 +221,10 @@ Blocked until the structural and retrieval contracts are verified.
 **Verification:** Reprocess creates a new derived run without replacing original; status/failure is visible.  
 
 ### Phase 1 Exit Gate
-A real Grade 5 Math book must reach `READY`, and a retrieval golden set must demonstrate that representative questions retrieve the intended material before Phase 2.
+**Historical gate, superseded as a Tutor permission gate by Roadmap Track A.**
+A real Grade 5 Math book and retrieval golden set remain useful grounding
+validation. They no longer authorize Student Tutor availability, which must work
+with zero content and optional retrieval.
 
 ---
 
@@ -319,7 +322,10 @@ awaits independent review.
 **Verification:** Normal chat does not produce unnecessary candidates; meaningful attempts do; schema contract tests pass.  
 
 ### Phase 2 Exit Gate
-Lina can use text-based Grade 5 Math Tutor grounded in her book; Tutor runtime and Candidate Event metadata are inspectable and cost-logged.
+**Historical gate, superseded as a content-readiness dependency by Roadmap Track
+A.** Lina can use a text-based Grade 5 Math Tutor with zero content or optional
+grounding; Tutor runtime and Candidate Event metadata remain inspectable and
+cost-logged.
 
 Before Phase 3 becomes eligible, complete an **Early Lina Calibration Checkpoint**: run one or more natural Grade 5 Math sessions with Lina and inspect the transcript, retrieval trace, Tutor behavior, safety routing, and Candidate Events. Record brief findings in project state. This is an early calibration checkpoint, **not** the Mandatory Real Lina Decision Gate after Phase 4 and does not authorize later feature expansion.
 
@@ -537,15 +543,102 @@ real-use calibration without changing any product/runtime capability.
 
 ---
 
-## REC-25 — Early Lina Calibration
+# Roadmap Track A — Core Simplification (2026-08-23)
+
+Track A implements the Product Owner-approved Option A correction in
+`docs/LEARNING_PRODUCT_ROADMAP.md`. It preserves the hybrid retrieval and
+Learning Intelligence architecture while removing content/semantic readiness as
+permission to learn. Track B remains a future Roadmap reference after Track A
+and Real Lina calibration; it is not READY work here.
+
+## REC-26 — Governing Decision Correction
+**Roadmap:** LR-A01
+**Status:** DONE
+**Dependencies:** None
+**Purpose:** Reconcile active governing documents with Roadmap Option A without
+changing runtime code, schema, prompts, tests, or historical implementation
+evidence.
+**Verification:** Governing contradiction searches show no active book/semantic
+Tutor gate or Current School Focus authority; Roadmap is discoverable; this
+Track has LR-A02 as its only next READY item; REC-25 is blocked.
+
+## REC-27 — Tutor Always Available
+**Roadmap:** LR-A02
 **Status:** READY
-**Dependencies:** REC-24.1
+**Dependencies:** REC-26
+**Purpose:** Remove Student-facing content readiness as permission to open a
+Math session or call the Tutor while preserving auth, ownership, SafetyDecision,
+SSE, persistence, and empty-retrieval behavior.
+**Verification:** A zero-book Student can enter Tutor and receive a safe model
+answer with empty retrieval; existing protected runtime boundaries remain intact.
+
+## REC-28 — Decouple Index Identity from Mandatory Semantics
+**Roadmap:** LR-A03
+**Status:** BLOCKED
+**Dependencies:** REC-27
+**Purpose:** Make index identity support a completed structural run without a
+mandatory semantic run, preserving provenance and migration safety.
+
+## REC-29 — Structural-First Index Builder
+**Roadmap:** LR-A04
+**Status:** BLOCKED
+**Dependencies:** REC-28
+**Purpose:** Build retrieval-ready structural blocks from completed structural
+content without blind fixed-token-first chunking.
+
+## REC-30 — Semantic Retrieval Behavior Advisory
+**Roadmap:** LR-A05
+**Status:** BLOCKED
+**Dependencies:** REC-29
+**Purpose:** Retain semantic metadata as optional ranking/navigation enrichment
+without making it a core retrieval-candidate eligibility requirement.
+
+## REC-31 — Source Processing Lifecycle
+**Roadmap:** LR-A06
+**Status:** BLOCKED
+**Dependencies:** REC-29
+**Purpose:** Connect preserved source → structural processing → retrieval-ready
+index through existing job boundaries; semantic enrichment remains independent.
+
+## REC-32 — Parent Content-Status Decoupling
+**Roadmap:** LR-A07
+**Status:** BLOCKED
+**Dependencies:** REC-28, REC-31
+**Purpose:** Present structural/index readiness separately from optional
+semantic-enrichment outcome without expanding Parent scope.
+
+## REC-33 — Deprecate School-Focus Authority Residue
+**Roadmap:** LR-A08
+**Status:** BLOCKED
+**Dependencies:** REC-27, REC-30
+**Purpose:** Remove school-position authority while retaining relevant recent
+conversational/topic continuity.
+
+## REC-34 — Simplification Acceptance Suite
+**Roadmap:** LR-A09
+**Status:** BLOCKED
+**Dependencies:** REC-27, REC-28, REC-29, REC-30, REC-31, REC-32, REC-33
+**Purpose:** Verify zero-book availability, structural grounding, semantic
+failure tolerance, empty-match Tutor behavior, and relevance-first intelligence.
+
+## REC-35 — Real Lina Calibration Resumes
+**Roadmap:** LR-A10
+**Status:** BLOCKED
+**Dependencies:** REC-34
+**Purpose:** Resume bounded Real Lina calibration after Track A acceptance; this
+does not authorize Track B or frozen future capability work.
+
+---
+
+## REC-25 — Early Lina Calibration
+**Status:** BLOCKED
+**Dependencies:** REC-24.1, REC-34
 **Purpose:** Run early real-Lina Grade 5 Math sessions against the approved
-REC-24 validation surface and real curriculum content, inspect Tutor behavior,
+REC-24 validation surface and optional available grounding, inspect Tutor behavior,
 retrieval, Evidence, Current State, Patterns, Decision Views, and cross-session
 personalization, then calibrate only what observed usage justifies.
 **Boundary:** This is calibration only. It does not authorize Science, Voice,
-Vision, Canvas, Parent Dashboard expansion, or other frozen work.
+Vision, Canvas, Parent Dashboard expansion, Track B, or other frozen work.
 
 ---
 

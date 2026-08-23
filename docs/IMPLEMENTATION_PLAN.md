@@ -5,7 +5,7 @@
 **Status:** Approved implementation direction  
 **Authority:** Governing execution map for architecture, sequencing, dependencies, decision gates, and implementation boundaries  
 **Audience:** Product owner, ChatGPT, Codex, AI agents, developers, reviewers  
-**Governing references:** `PROJECT_REFERENCE.md`, `LEARNING_INTELLIGENCE_SPEC.md`  
+**Governing references:** `PROJECT_REFERENCE.md`, `LEARNING_PRODUCT_ROADMAP.md`, `LEARNING_INTELLIGENCE_SPEC.md`
 **Required supporting policy before student-facing release:** `CHILD_SAFETY_POLICY.md`  
 **Execution queue:** `TASKS.md`  
 **Current operational state:** `project-state/PROJECT_STATE.md`
@@ -28,7 +28,9 @@ It exists to provide:
 - what must explicitly be delayed,
 - and the rules Codex/AI agents must preserve while implementing.
 
-This document does **not** replace `TASKS.md`.
+This document does **not** replace `TASKS.md`. `LEARNING_PRODUCT_ROADMAP.md`
+records approved product-evolution tracks, but Roadmap items are not executable
+until promoted into `TASKS.md`.
 
 > **`IMPLEMENTATION_PLAN.md` defines the execution architecture. `TASKS.md` defines the actual work queue.**
 
@@ -40,26 +42,24 @@ Codex should normally execute one scoped task or one tightly related task group 
 
 The first objective is not to build the entire product vision.
 
-The first objective is to prove one real end-to-end learning loop with Lina:
+The first objective is to prove one real end-to-end learning loop with Lina.
+Tutor availability does not depend on a book, completed processing, semantic
+enrichment, or a retrieval match:
 
 ```text
-Parent uploads Lina's real Grade 5 Math book
+Student can enter Tutor with zero content
         ↓
-System understands its structure
+Tutor answers safely from model knowledge
         ↓
-Lina asks or answers a Math question
+If structural/indexed sources exist, retrieval grounds the answer
         ↓
-Tutor retrieves the correct learning context
-        ↓
-Tutor teaches naturally
+Interaction produces Candidate Events, Evidence, and Intelligence
         ↓
 Meaningful learning events are captured
         ↓
 Session evidence is produced
         ↓
 Current state / patterns / intelligence are updated
-        ↓
-Parent can inspect what happened and why
         ↓
 Next session uses relevant learner intelligence
 ```
@@ -99,7 +99,15 @@ Controls:
 - safety and parent-learning-boundary principles,
 - implementation invariants.
 
-## 3.2 Learning Intelligence Truth
+## 3.2 Product-Evolution Roadmap
+
+`docs/LEARNING_PRODUCT_ROADMAP.md`
+
+Controls approved product-evolution sequencing, future capability tracks,
+dependencies, and validation gates. It does not authorize implementation until
+the relevant item is promoted to `TASKS.md`.
+
+## 3.3 Learning Intelligence Truth
 
 `docs/LEARNING_INTELLIGENCE_SPEC.md`
 
@@ -118,7 +126,7 @@ Controls:
 - reprocessing,
 - human audit.
 
-## 3.3 Child Safety Truth
+## 3.4 Child Safety Truth
 
 `docs/CHILD_SAFETY_POLICY.md`
 
@@ -131,13 +139,13 @@ Controls:
 
 This file must exist before Lina-facing production use.
 
-## 3.4 Execution Direction
+## 3.5 Execution Direction
 
 `docs/IMPLEMENTATION_PLAN.md`
 
 This file.
 
-## 3.5 Current Operational Reality
+## 3.6 Current Operational Reality
 
 `project-state/PROJECT_STATE.md`
 
@@ -681,12 +689,12 @@ Every uploaded book/document must preserve the original source.
 
 Derived artifacts are replaceable.
 
-## 12.2 Book Processing Pipeline
+## 12.2 Learning Source Processing Pipeline
 
 ```text
-Upload
+Learning Source
   ↓
-Store Original
+Preserve Original + Provenance
   ↓
 Create Processing Run
   ↓
@@ -694,19 +702,14 @@ Docling Structural Processing
   ↓
 Persist Versioned DoclingDocument / normalized representation
   ↓
-Educational Semantic Extraction
+Structural retrieval blocks/index
   ↓
-Curriculum Nodes
+Retrieval-ready
+
+Optional parallel/downstream enrichment:
+Structural representation
   ↓
-Structural Content Blocks
-  ↓
-Figures / Formulas / Provenance
-  ↓
-Embeddings + lexical index
-  ↓
-Validation
-  ↓
-READY
+Educational semantics
 ```
 
 ## 12.3 Docling Responsibility
@@ -724,7 +727,7 @@ Docling provides baseline document understanding:
 
 Docling does **not** own educational semantics.
 
-## 12.4 Educational Semantic Extraction
+## 12.4 Educational Semantic Extraction — Optional Enrichment
 
 The project layer maps structured document content into educational semantics such as:
 
@@ -740,7 +743,10 @@ The project layer maps structured document content into educational semantics su
 - prerequisite hint,
 - expected school scope.
 
-AI should reason over the structured representation whenever possible rather than repeatedly processing raw PDF pages.
+AI should reason over the structured representation whenever possible rather
+than repeatedly processing raw PDF pages. Semantic enrichment may improve
+metadata, navigation, and rebuildable analysis, but it is not required for
+basic index completion or Tutor availability.
 
 ## 12.5 Structural Chunking
 
@@ -781,38 +787,30 @@ Minimum automated validation should cover:
 
 ## 13.1 Retrieval Principle
 
-Retrieval is contextual, not global by default.
+Retrieval is optional, question-driven grounding; it is contextual, not global
+by default.
 
 Preferred narrowing sequence:
 
 ```text
-Active Grade
+Current Student question
    ↓
-Subject
+Grade / Subject when known
    ↓
-Current School Focus / Thread
-   ↓
-Lesson / Concept candidates
-   ↓
-Metadata filter
+Structural / metadata candidates
    ↓
 Lexical + Vector retrieval
    ↓
 Context ranking
 ```
 
-## 13.2 Current School Focus
+## 13.2 Recent Conversational Topic Context
 
-Current focus may be informed by:
-
-- school plan,
-- homework,
-- current book usage,
-- Lina's statement,
-- recent interactions,
-- Parent correction.
-
-It is a learning-state signal, not a retrieval-engine assumption.
+Recent conversational/topic context is advisory only and may help low-
+information follow-ups. The current question remains authoritative; school
+plans and curriculum position do not control retrieval or teaching. Semantic
+unit/lesson/concept/type metadata may improve ranking or navigation when
+available, but is not core candidate eligibility.
 
 ## 13.3 Retrieval Context Budget
 
@@ -845,13 +843,15 @@ Session / Thread Resolver
      ↓
 Learning Mode / Intent
      ↓
-Current Grade / Subject / Concept
+Current Grade / Subject when known
+    ↓
+SafetyDecision
+     ↓
+Optional question-driven grounding (may be empty)
      ↓
 Relevant Current State
      ↓
 Relevant Learner Intelligence
-     ↓
-Relevant Content Retrieval
      ↓
 Tutor Context Builder
      ↓
@@ -1300,6 +1300,10 @@ Initial task categories should include:
 - optional external verification
 - optional custom artifact generation
 
+`curriculum_semantics` is an occasional optional enrichment route, not a
+prerequisite that unlocks Tutor use. Trusted web discovery remains future
+Roadmap Track B, not Track A implementation work.
+
 ## 21.3 Routing Configuration
 
 Each task route may configure:
@@ -1557,9 +1561,14 @@ None beyond approved project references.
 
 ## Phase 1 — Grade 5 Math Content Foundation
 
+> **Historical phase record, superseded as a Tutor permission gate by Roadmap
+> Track A.** A real book and semantic readiness remain valuable grounding
+> validation, but neither is required for Student Tutor availability.
+
 ### Goal
 
-Prove that Lina's real Grade 5 Math book can be stored, structurally processed, semantically mapped, and reliably retrieved.
+Prove that a real Grade 5 Math book can be stored, structurally processed, and
+reliably retrieved. Educational semantics are optional enrichment.
 
 ### Scope
 
@@ -1568,7 +1577,7 @@ Prove that Lina's real Grade 5 Math book can be stored, structurally processed, 
 - Docling adapter,
 - versioned document processing,
 - normalized Docling representation,
-- educational semantic extraction,
+- optional educational semantic extraction,
 - curriculum nodes,
 - structural content blocks,
 - lexical/vector indexing,
@@ -1583,11 +1592,12 @@ Phase 0.
 
 ### Expected Output
 
-A real Grade 5 Math book reaches `READY` and relevant lesson content can be retrieved by known test questions.
+An available real Grade 5 Math book reaches retrieval-ready structural indexing
+and relevant content can be retrieved by known test questions.
 
 ### Exit Criteria
 
-- expected units/lessons are discoverable,
+- useful source regions are discoverable; optional units/lessons may be available,
 - test questions retrieve the intended sections/pages with acceptable reliability,
 - source provenance is preserved,
 - reprocessing from the original source works.
@@ -1602,6 +1612,10 @@ A real Grade 5 Math book reaches `READY` and relevant lesson content can be retr
 ---
 
 ## Phase 2 — Math Tutor Vertical Slice
+
+> **Historical sequencing note.** Roadmap Track A supersedes the Phase 1
+> dependency as a permission gate: the Tutor must work with zero content, and
+> grounding improves rather than authorizes the interaction.
 
 ### Goal
 
@@ -1627,15 +1641,17 @@ Make the system genuinely usable by Lina for text-based Grade 5 Math learning.
 
 ### Dependencies
 
-Phase 1.
+Roadmap Track A Tutor-availability and structural-index acceptance, plus the
+relevant runtime foundations.
 
 ### Expected Output
 
-Lina can ask about Grade 5 Math and receive grounded, age-appropriate, adaptive teaching responses.
+Lina can ask about Grade 5 Math and receive safe, adaptive teaching responses
+with optional grounding when useful sources are available.
 
 ### Exit Criteria
 
-- correct curriculum context used in representative cases,
+- zero-content Tutor availability is proven; correct curriculum context is used in representative grounded cases,
 - Tutor does not simply paraphrase the book,
 - Tutor can change explanation strategy,
 - Tutor does not endlessly withhold answers,
@@ -1722,7 +1738,7 @@ Allow the Parent/Admin to understand what the system is doing and control core l
 - learning-history essentials,
 - Content status/reprocessing,
 - AI usage/cost summary,
-- current school focus correction,
+- content/reference controls (not school-position correction),
 - parent learning-boundary settings UI,
 - Recent Redirects / Policy Audit visibility for `REDIRECT_TO_PARENT` events, kept separate from Learner Profile intelligence,
 - basic model-route settings where appropriate.
@@ -1760,8 +1776,8 @@ This is a mandatory product decision gate.
 
 ## 26.1 Required Real Inputs
 
-- Lina's real Grade 5 Math book,
-- real Math questions/homework where possible,
+- real Grade 5 Math questions/homework where possible, with a real book and/or
+  trusted references as valuable grounding-validation inputs when available,
 - repeated use across multiple sessions.
 
 ## 26.2 Review Questions
@@ -2100,16 +2116,17 @@ The first product loop is complete only when all of the following are true.
 
 ## Content
 
-- Lina's real Grade 5 Math book can be uploaded.
+- Lina can enter Tutor and receive a safe answer with zero content.
+- A real Grade 5 Math book can be uploaded when available.
 - Original source is preserved.
-- Docling processing succeeds.
-- Educational structure is available.
-- Relevant content can be reliably retrieved.
+- Structural processing and retrieval-ready indexing succeed for an available source.
+- Relevant content can be reliably retrieved when a useful source exists.
+- Educational semantic enrichment is optional and rebuildable.
 
 ## Student
 
 - Lina can enter Math and interact with the Tutor.
-- Tutor is grounded in the active Grade context.
+- Tutor uses optional question-driven grounding when available; empty retrieval does not block it.
 - Tutor can teach rather than merely answer.
 - Tutor can change strategy when she is stuck.
 
@@ -2148,22 +2165,16 @@ The first product loop is complete only when all of the following are true.
 This sequence is directional. `TASKS.md` must decompose it into small executable units.
 
 ```text
-1. Repository governance + local runtime foundation
-2. Database / migrations / storage / auth roles
-3. AI execution ledger + Model Gateway skeleton
-4. Content upload + original-source preservation
-5. Docling adapter + processing runs
-6. Grade 5 Math semantic extraction
-7. Math retrieval index + retrieval golden set
-8. Student Math shell + Tutor runtime
-9. Tutor ↔ retrieval integration + streaming
-10. Candidate Event contract
-11. Session lifecycle + consolidation
-12. Evidence + Current State
-13. Pattern engine + compact Intelligence Card
-14. Relevant-intelligence context selection
-15. Parent basic Evidence/Intelligence views
-16. Parent content/current-focus/model/cost controls
+1. Roadmap Track A governance correction
+2. Zero-book Tutor availability
+3. Structural-first indexing
+4. Optional semantic behavior
+5. Simplification acceptance suite
+6. Real Lina calibration
+7. Grade 5 Math Trusted Reference Pilot
+
+Historical implementation records above remain evidence of prior work; they do
+not authorize bypassing the active Track A order.
 
 STOP
 → Run Real Lina Decision Gate

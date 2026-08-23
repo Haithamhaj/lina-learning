@@ -30,8 +30,8 @@
 <body>
 <div class="wrap">
 <header>
-  <div><h1>Lina Personal Learning System</h1><p>Operating map for Codex/AI implementation. Current target: prove the Grade 5 Math learning loop before feature expansion.</p></div>
-  <div class="badge">APPROVED DIRECTION · START AT PHASE 0</div>
+  <div><h1>Lina Personal Learning System</h1><p>Operating map for Codex/AI implementation. Current target: Roadmap Track A simplifies the core loop so Tutor availability never depends on content readiness.</p></div>
+  <div class="badge">APPROVED DIRECTION · ROADMAP TRACK A</div>
 </header>
 
 <div class="toolbar" aria-label="Map layer filter">
@@ -52,7 +52,7 @@
 
   <article class="panel core" data-layer="runtime"><h2>🧠 Tutor Runtime</h2><div class="stack">
     <div class="node"><strong>Thread / Mode Resolver</strong><small>Learn · Homework · Explore · Quiz · Review. Internal only.</small></div>
-    <div class="node"><strong>Context Builder</strong><small>Current interaction + current state + relevant intelligence + curriculum context.</small></div>
+    <div class="node"><strong>Context Builder</strong><small>Current question + relevant intelligence + optional question-driven grounding.</small></div>
     <div class="node"><strong>Safety + Parent Boundaries</strong><small>Protected baseline, then Allow / Age-appropriate only / Redirect to parent.</small></div>
     <div class="node"><strong>One Primary Tutor Call</strong><small>Student response + hidden Candidate Event metadata.</small></div>
     <div class="node"><strong>Adaptive Teaching Strategy</strong><small>Current Lina outranks historical patterns. Never personalize away independence.</small></div>
@@ -60,7 +60,7 @@
 
   <article class="panel parent" data-layer="experience"><h2>👨‍👩‍👧 Parent / Admin</h2><div class="stack">
     <div class="node"><strong>Overview & Subject Views</strong><small>Insights first, source evidence on demand.</small></div>
-    <div class="node"><strong>Content Control</strong><small>Upload books, reprocess, correct school focus, activate next Grade.</small></div>
+    <div class="node"><strong>Content / Reference Control</strong><small>Upload sources, inspect processing, reprocess, activate next Grade.</small></div>
     <div class="node"><strong>Lina Profile / Audit</strong><small>Patterns, recent changes, current state, “why does the system think this?”</small></div>
     <div class="node"><strong>Settings</strong><small>Learning Boundaries · model routes · AI usage/cost.</small></div>
   </div></article>
@@ -70,8 +70,8 @@
 <h2>End-to-End Learning Loop</h2>
 <svg viewBox="0 0 1360 300" role="img" aria-label="Lina learning flow">
   <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#8d98aa"/></marker></defs>
-  <rect class="box student" x="18" y="82" width="150" height="82" rx="14"/><text x="93" y="112" text-anchor="middle">Lina Input</text><text class="sub" x="93" y="132" text-anchor="middle">text / transcript</text><text class="sub" x="93" y="148" text-anchor="middle">drawing / homework</text>
-  <rect class="box core" x="210" y="82" width="165" height="82" rx="14"/><text x="292" y="112" text-anchor="middle">Tutor Context</text><text class="sub" x="292" y="132" text-anchor="middle">state + patterns + RAG</text><text class="sub" x="292" y="148" text-anchor="middle">safety + boundaries</text>
+  <rect class="box student" x="18" y="82" width="150" height="82" rx="14"/><text x="93" y="112" text-anchor="middle">Student Question</text><text class="sub" x="93" y="132" text-anchor="middle">text now</text><text class="sub" x="93" y="148" text-anchor="middle">captured page later</text>
+  <rect class="box core" x="210" y="82" width="165" height="82" rx="14"/><text x="292" y="112" text-anchor="middle">Safety + Context</text><text class="sub" x="292" y="132" text-anchor="middle">optional grounding</text><text class="sub" x="292" y="148" text-anchor="middle">relevant intelligence</text>
   <rect class="box core" x="417" y="82" width="155" height="82" rx="14"/><text x="494" y="112" text-anchor="middle">Tutor Call</text><text class="sub" x="494" y="132" text-anchor="middle">teaching response</text><text class="sub" x="494" y="148" text-anchor="middle">+ candidate events</text>
   <rect class="box" x="614" y="82" width="158" height="82" rx="14"/><text x="693" y="112" text-anchor="middle">Session Close</text><text class="sub" x="693" y="132" text-anchor="middle">inactivity + grace</text><text class="sub" x="693" y="148" text-anchor="middle">enqueue consolidation</text>
   <rect class="box data" x="814" y="82" width="165" height="82" rx="14"/><text x="896" y="108" text-anchor="middle">Events + Evidence</text><text class="sub" x="896" y="130" text-anchor="middle">approved rubric</text><text class="sub" x="896" y="146" text-anchor="middle">source traceability</text>
@@ -84,11 +84,13 @@
 
 <section class="lanes">
   <article class="panel data lane" data-layer="content"><h2>📚 Content / RAG Pipeline</h2>
-    <div class="step"><div><b>Preserve original book</b><span>Original source and checksum remain durable.</span></div></div>
-    <div class="step"><div><b>Docling structural parse</b><span>Hierarchy, pages, figures, tables, formulas, provenance.</span></div></div>
-    <div class="step"><div><b>Educational semantics</b><span>Unit / Lesson / Concept / objective / example / exercise.</span></div></div>
-    <div class="step"><div><b>Structural retrieval units</b><span>Hierarchy first; token refinement only when needed.</span></div></div>
-    <div class="step"><div><b>Metadata + lexical + pgvector</b><span>Grade → Subject → Focus → Lesson/Concept → ranked context.</span></div></div>
+    <div class="step"><div><b>Learning Source</b><span>Book/material now; future trusted reference or captured page.</span></div></div>
+    <div class="step"><div><b>Preserve original + provenance</b><span>Source identity remains durable and rebuildable.</span></div></div>
+    <div class="step"><div><b>Docling structural normalization</b><span>Hierarchy, pages, figures, tables, formulas, provenance.</span></div></div>
+    <div class="step"><div><b>Retrieval-ready structural index</b><span>Hierarchy first; token refinement only when needed.</span></div></div>
+    <div class="step"><div><b>Lexical + pgvector + fusion</b><span>Question-driven retrieval, budgets, and exact provenance.</span></div></div>
+    <div class="step"><div><b>Optional semantic enrichment</b><span>Useful metadata/navigation; never a Tutor or basic-RAG gate.</span></div></div>
+    <div class="step"><div><b>Deferred sources</b><span>Trusted Educational References — Track B; Student-Captured Pages — Track C / Vision frozen.</span></div></div>
   </article>
   <article class="panel core lane" data-layer="intelligence"><h2>🧩 Intelligence Contract</h2>
     <div class="step"><div><b>Raw Interaction</b><span>Immutable source history; student originals remain originals.</span></div></div>
@@ -109,12 +111,10 @@
 <section class="panel" style="margin-top:16px">
   <h2>Implementation Sequence & Mandatory Gate</h2>
   <div class="timeline">
-    <div class="phase"><strong>Phase 0</strong><span>Repository, runtime, DB, roles, jobs, model gateway, safety config.</span></div>
-    <div class="phase"><strong>Phase 1</strong><span>Real Grade 5 Math book → Docling → semantics → retrieval.</span></div>
-    <div class="phase"><strong>Phase 2</strong><span>Text Math Tutor vertical slice + Candidate Events.</span></div>
-    <div class="phase"><strong>Phase 3</strong><span>Events → Evidence → State/Patterns → Card → reprocessing.</span></div>
-    <div class="phase"><strong>Phase 4</strong><span>Parent insight, audit, boundaries, cost/content visibility.</span></div>
-    <div class="phase gate"><strong>REAL LINA GATE</strong><span>Stop. Review real use. Continue / correct / do not expand.</span></div>
+    <div class="phase"><strong>Foundation</strong><span>Auth, storage, jobs, model gateway, safety, evidence infrastructure.</span></div>
+    <div class="phase"><strong>Track A</strong><span>Zero-book Tutor → structural-first index → advisory semantics → acceptance.</span></div>
+    <div class="phase gate"><strong>REAL LINA CALIBRATION</strong><span>After Track A acceptance: review real use. Continue / correct / do not expand.</span></div>
+    <div class="phase future"><strong>Track B</strong><span>Trusted Educational Reference pilot; future, not active.</span></div>
     <div class="phase future"><strong>Phase 5</strong><span>Voice + student images.</span></div>
     <div class="phase future"><strong>Phase 6</strong><span>Interactive artifacts.</span></div>
     <div class="phase future"><strong>Phase 7</strong><span>Science.</span></div>
@@ -129,7 +129,8 @@
     <div class="rule"><b>Evidence-first:</b> Mastery/confidence are derived views, not source truth.</div>
     <div class="rule"><b>Current Lina wins:</b> current behavior outranks historical personalization.</div>
     <div class="rule"><b>Raw source stays:</b> original books and student work are never replaced by AI interpretations.</div>
-    <div class="rule"><b>Book scope ≠ teaching method:</b> curriculum anchors what is learned, not how it must be taught.</div>
+    <div class="rule"><b>Grounding ≠ permission:</b> Tutor remains available without a book, source, semantic enrichment, or retrieval match.</div>
+    <div class="rule"><b>Question first:</b> recent context and available sources improve grounding but do not control what Lina may ask now.</div>
     <div class="rule"><b>Safety is layered:</b> protected baseline cannot be weakened by Parent settings.</div>
     <div class="rule"><b>Simple runtime:</b> normal Tutor path uses one primary model call; no chain-of-agents by default.</div>
     <div class="rule"><b>Rebuildable intelligence:</b> derived Events/Evidence/Patterns/Card are versioned and reprocessable.</div>
@@ -138,12 +139,13 @@
   <article class="panel files"><h2>Codex Source-of-Truth Map</h2>
     <code>AGENTS.md — agent rules and protected areas</code>
     <code>docs/PROJECT_REFERENCE.md — product & architecture truth</code>
+    <code>docs/LEARNING_PRODUCT_ROADMAP.md — approved capability tracks and gates</code>
     <code>docs/LEARNING_INTELLIGENCE_SPEC.md — measurement & intelligence truth</code>
     <code>docs/CHILD_SAFETY_POLICY.md — safety & parent boundaries</code>
     <code>docs/IMPLEMENTATION_PLAN.md — execution direction and gates</code>
     <code>project-state/PROJECT_STATE.md — current reality</code>
     <code>TASKS.md — actual work queue</code>
-    <p style="margin-top:12px">Start with <strong>TASK-001</strong>. Do not execute future-phase tasks simply because they are easy to scaffold.</p>
+    <p style="margin-top:12px">Execute only the next READY queue item: <strong>REC-27 / Roadmap LR-A02</strong>. Do not execute future tracks merely because they are easy to scaffold.</p>
   </article>
 </section>
 </div>
