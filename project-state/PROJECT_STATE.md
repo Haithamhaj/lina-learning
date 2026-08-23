@@ -8,8 +8,9 @@ index identity from mandatory semantics — and LR-A04 — structural-first inde
 builder — and LR-A05 — semantic retrieval behavior advisory — are complete.
 LR-A06 — source processing lifecycle — is complete. LR-A07 — Parent content-
 status decoupling — is complete. LR-A08 — school-focus authority cleanup — is
-complete. LR-A09 — simplification acceptance — is next.
-REC-25 has not started and remains blocked until LR-A09 acceptance.
+complete. LR-A09 — simplification acceptance — is complete. LR-A10 — Real Lina
+calibration resumes — is next. REC-25 has not started and remains blocked until
+REC-35 / explicit Product Owner resumption.
 
 ## Current reality
 
@@ -37,6 +38,10 @@ REC-25 has not started and remains blocked until LR-A09 acceptance.
   `current_focus_signal` and `current_school_focus` records remain auditable
   but have no runtime personalization authority. Recent persisted topic
   metadata remains optional context for ambiguous continuation turns.
+- Track A acceptance now proves the complete corrected path together: zero-book
+  Tutor availability, optional empty retrieval, source → structural → index
+  grounding, semantic-failure tolerance, relevance-first intelligence, and no
+  school-position authority.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -74,14 +79,16 @@ and Parent Dashboard expansion.
 
 ## Active risks
 
-- Track A remains incomplete; REC-25 and all future capability work remain
-  blocked until LR-A09 acceptance.
+- REC-35 real-Lina calibration is the only next Track A work. REC-25 remains
+  blocked until REC-35 / explicit Product Owner resumption; Track B and other
+  future capability work remain frozen.
 - PostgreSQL/pgvector and real AWS/S3 staging verification remain separate
   operational concerns; this governance correction does not change them.
 
 ## Next recommended action
 
-Execute `REC-34 — Simplification Acceptance Suite` (`Roadmap: LR-A09`) only.
+Execute `REC-35 — Real Lina Calibration Resumes` (`Roadmap: LR-A10`) only;
+do not resume REC-25 without explicit Product Owner direction.
 
 ## Critical references
 

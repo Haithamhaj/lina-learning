@@ -650,14 +650,20 @@ remains optional conversational continuity, with relevance before recency.
 
 ## REC-34 — Simplification Acceptance Suite
 **Roadmap:** LR-A09
-**Status:** READY
+**Status:** DONE
 **Dependencies:** REC-27, REC-28, REC-29, REC-30, REC-31, REC-32, REC-33
 **Purpose:** Verify zero-book availability, structural grounding, semantic
 failure tolerance, empty-match Tutor behavior, and relevance-first intelligence.
+**Completion note:** PostgreSQL acceptance coverage proves all eight Track A
+scenarios together: zero-content Tutor use, empty retrieval, structural-only
+grounding/provenance, optional semantic failure, relevant intelligence,
+stale-school-focus exclusion, recent-topic continuation, and no school-position
+authority. Protected Safety, one-primary-call, and Candidate → Evidence →
+State/Pattern boundaries remain covered by the focused and full suites.
 
 ## REC-35 — Real Lina Calibration Resumes
 **Roadmap:** LR-A10
-**Status:** BLOCKED
+**Status:** READY
 **Dependencies:** REC-34
 **Purpose:** Resume bounded Real Lina calibration after Track A acceptance; this
 does not authorize Track B or frozen future capability work.
