@@ -357,6 +357,8 @@ def test_retrieval_uses_explicit_semantic_content_type_request(factory) -> None:
             student_id=student.id,
             question="Show me an example.",
             focus=CurrentFocus(concept_key="place-value"),
+            limit=20,
+            character_budget=10_000,
         )
 
     assert any(block.semantic_type == "EXAMPLE" for block in blocks)

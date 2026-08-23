@@ -6,7 +6,8 @@ Roadmap Track A architecture simplification is active. LR-A01 governing
 decision correction, LR-A02 — Tutor always available, and LR-A03 — decouple
 index identity from mandatory semantics — and LR-A04 — structural-first index
 builder — and LR-A05 — semantic retrieval behavior advisory — are complete.
-LR-A06 — source processing lifecycle — is next.
+LR-A06 — source processing lifecycle — is complete. LR-A07 — Parent content-
+status decoupling — is next.
 REC-25 has not started and remains blocked until LR-A09 acceptance.
 
 ## Current reality
@@ -23,6 +24,10 @@ REC-25 has not started and remains blocked until LR-A09 acceptance.
 - Retrieval now keeps structural and semantic blocks eligible from the same
   lexical/vector candidate set. Semantic hints and recent focus only resolve
   equal RRF relevance; null metadata cannot exclude structural grounding.
+- A valid Parent upload now queues the existing structural processor; a
+  completed structural run queues the structural-first index builder through
+  the Model Gateway. The durable path is source → structural → retrieval index,
+  with semantic extraction outside the lifecycle.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -41,6 +46,8 @@ REC-25 has not started and remains blocked until LR-A09 acceptance.
 - Current School Focus has no product authority; relevant recent conversational
   context remains allowed with relevance before recency.
 - Semantic type is advisory retrieval metadata, not candidate eligibility.
+- Structural processing and structural indexing use deterministic, durable job
+  identities; a failed replacement index preserves a prior completed index.
 - Trusted Educational Reference Pack is approved future Roadmap Track B work,
   not current implementation.
 
@@ -62,7 +69,7 @@ and Parent Dashboard expansion.
 
 ## Next recommended action
 
-Execute `REC-31 — Source Processing Lifecycle` (`Roadmap: LR-A06`) only.
+Execute `REC-32 — Parent Content-Status Decoupling` (`Roadmap: LR-A07`) only.
 
 ## Critical references
 

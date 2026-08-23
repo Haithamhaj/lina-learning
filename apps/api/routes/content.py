@@ -8,13 +8,17 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from services.content.ingestion import ingest_source_document
+from services.content.processing import DOCLING_PROCESSOR_VERSION
 from services.platform.auth import AuthenticatedPrincipal, UserRole, require_role
 from services.platform.config import get_settings
 from services.platform.db.session import get_session
 from services.platform.db.models import ContentDocument, ContentProcessingRun
 from services.platform.jobs import enqueue_job
 from services.platform.storage import create_object_storage
-from workers.content_handlers import STRUCTURAL_PROCESSING_JOB
+from workers.content_handlers import (
+    STRUCTURAL_PROCESSING_JOB,
+    structural_processing_idempotency_key,
+)
 
 router = APIRouter(prefix="/api/v1/content", tags=["content"])
 
@@ -46,9 +50,25 @@ def upload_source_document(
             content_type=request.content_type,
             content=content,
         )
+        job = enqueue_job(
+            session,
+            job_type=STRUCTURAL_PROCESSING_JOB,
+            payload={
+                "document_id": str(document.id),
+                "processor_version": DOCLING_PROCESSOR_VERSION,
+            },
+            idempotency_key=structural_processing_idempotency_key(
+                document_id=document.id,
+                processor_version=DOCLING_PROCESSOR_VERSION,
+            ),
+        )
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
-    return {"document_id": str(document.id), "status": document.status}
+    return {
+        "document_id": str(document.id),
+        "status": document.status,
+        "structural_job_id": str(job.id),
+    }
 
 
 @router.get("/documents/{document_id}")
@@ -73,5 +93,13 @@ def request_reprocess(
     if session.get(ContentDocument, document_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source document not found.")
     version = f"docling-2.121.0-reprocess-{uuid4().hex[:8]}"
-    job = enqueue_job(session, job_type=STRUCTURAL_PROCESSING_JOB, payload={"document_id": str(document_id), "processor_version": version}, idempotency_key=f"content-reprocess:{document_id}:{version}")
+    job = enqueue_job(
+        session,
+        job_type=STRUCTURAL_PROCESSING_JOB,
+        payload={"document_id": str(document_id), "processor_version": version},
+        idempotency_key=structural_processing_idempotency_key(
+            document_id=document_id,
+            processor_version=version,
+        ),
+    )
     return {"job_id": str(job.id), "status": job.status, "processor_version": version}

@@ -615,14 +615,19 @@ semantic-backed expansion, context budgets, and exact provenance are unchanged.
 
 ## REC-31 — Source Processing Lifecycle
 **Roadmap:** LR-A06
-**Status:** READY
+**Status:** DONE
 **Dependencies:** REC-29
 **Purpose:** Connect preserved source → structural processing → retrieval-ready
 index through existing job boundaries; semantic enrichment remains independent.
+**Completion note:** Parent upload now durably queues one idempotent structural
+processing job. A completed structural run queues one idempotent structural-
+index job, which builds the existing structural-first lexical/pgvector index
+through the Model Gateway. Semantic extraction is not invoked; failures retain
+structural/index provenance and use the existing job retry path.
 
 ## REC-32 — Parent Content-Status Decoupling
 **Roadmap:** LR-A07
-**Status:** BLOCKED
+**Status:** READY
 **Dependencies:** REC-28, REC-31
 **Purpose:** Present structural/index readiness separately from optional
 semantic-enrichment outcome without expanding Parent scope.
