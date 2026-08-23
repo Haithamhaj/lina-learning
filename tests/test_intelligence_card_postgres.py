@@ -157,6 +157,27 @@ def test_card_includes_relevant_active_state_and_excludes_resolved_or_expired_st
     assert card.policy_version == INTELLIGENCE_CARD_POLICY_VERSION
 
 
+def test_historical_current_school_focus_never_enters_the_runtime_card(
+    factory: sessionmaker[Session],
+) -> None:
+    """Fail if an old active focus row regains runtime personalization authority."""
+
+    with factory.begin() as session:
+        student, _, run = _seed(session)
+        historical_focus = _state(
+            student,
+            run,
+            concept="fractions",
+            detail="Historical school focus: equivalent fractions.",
+            state_type="current_school_focus",
+        )
+        session.add(historical_focus)
+        card = _card(session, student, question="Can you explain equivalent fractions?")
+        assert session.get(CurrentLearningState, historical_focus.id) is historical_focus
+
+    assert card.entries == ()
+
+
 def test_card_selects_only_active_or_stable_patterns_and_ranks_narrow_scope_first(
     factory: sessionmaker[Session],
 ) -> None:

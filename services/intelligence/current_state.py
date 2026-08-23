@@ -23,7 +23,6 @@ SUPPORTED_CURRENT_STATE_POLICY_VERSIONS = frozenset({CURRENT_STATE_POLICY_VERSIO
 _SHORT_LIVED_STATE_WINDOWS = {
     "recent_strategy_success": timedelta(days=14),
     "recent_strategy_failure": timedelta(days=14),
-    "current_school_focus": timedelta(days=7),
     "important_recent_change": timedelta(days=14),
 }
 
@@ -300,8 +299,6 @@ def _state_proposals(*, event: LearningEvent, evidence: LearningEvidence) -> lis
         proposals.append(("recent_strategy_failure", "A teaching strategy did not improve the observed learning outcome."))
     if dimensions.get("retention") in {"retrieval_failed", "partial_retrieval"}:
         proposals.append(("current_retention_concern", "Recent validated evidence indicates this concept needs a retention revisit."))
-    if event.event_type == "current_focus_signal":
-        proposals.append(("current_school_focus", "Recent validated evidence identifies the current school learning focus."))
     if event.event_type == "support_change" and evidence.relationship == "improvement":
         proposals.append(("important_recent_change", "Recent validated evidence shows a meaningful change in support needs."))
     return proposals

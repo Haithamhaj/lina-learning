@@ -293,6 +293,28 @@ def test_retention_failure_creates_current_retention_concern(
         assert any(state.state_type == "current_retention_concern" for state in states)
 
 
+def test_historical_current_focus_evidence_preserves_audit_rows_without_new_state(
+    factory: sessionmaker[Session],
+) -> None:
+    """Fail if preserved historical focus data regains Current State authority."""
+
+    with factory.begin() as session:
+        evidence, _ = _validated_evidence(
+            session,
+            event_type="current_focus_signal",
+        )
+
+        states = apply_evidence_to_current_state(session, evidence_id=evidence.id)
+        candidate = session.query(CandidateEvent).filter_by(
+            event_type="current_focus_signal"
+        ).one()
+
+        assert states == []
+        assert session.get(CandidateEvent, candidate.id) is candidate
+        assert session.get(LearningEvent, evidence.event_id) is not None
+        assert session.get(LearningEvidence, evidence.id) is evidence
+
+
 @pytest.mark.parametrize(
     ("initial_type", "initial_event", "initial_dimensions", "resolution_event", "resolution_dimensions"),
     [

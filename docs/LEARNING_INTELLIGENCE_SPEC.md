@@ -235,11 +235,15 @@ The taxonomy is intentionally compact. New event types may be added without chan
 | `support_change` | Required support materially increases or decreases | Session consolidation |
 | `open_loop_created` | Important understanding remains unresolved | Session end |
 | `open_loop_resolved` | Previously open learning loop is resolved | Tutor/session |
-| `current_focus_signal` | Evidence of what Lina is currently studying | School plan, homework, Lina statement |
 | `extended_learning_event` | Meaningful learning outside the current school scope | Explore mode |
 | `artifact_interaction` | Interactive artifact action has educational meaning | Learning Artifact Engine |
 
 Event type alone never determines mastery or a learner pattern.
+
+> **Historical compatibility:** older persisted `current_focus_signal` rows
+> remain readable for audit and bounded reprocessing. New Tutor Candidate Event
+> output must not emit them: school position is not learner-intelligence
+> authority.
 
 ---
 
@@ -588,11 +592,23 @@ open_learning_loop
 recent_strategy_success
 recent_strategy_failure
 current_retention_concern
-current_school_focus
 important_recent_change
 ```
 
-## 11.2 Current State Lifecycle
+## 11.2 Recent Learning Context
+
+Recent Learning Context is conversational context, not Evidence-derived Current
+Learning State. It may use relevant recent messages or topic metadata to help
+an ambiguous continuation such as “Continue.”
+
+It does not represent where Lina is supposed to be in the curriculum, what she
+is required to study now, or what questions she is allowed to ask. The current
+question remains highest authority; relevance comes before recency.
+
+Historical `current_school_focus` Current State rows remain preserved for audit
+but are excluded from runtime Learner Intelligence Card selection.
+
+## 11.3 Current State Lifecycle
 
 Conceptual lifecycle:
 
@@ -608,7 +624,7 @@ resolved
 
 Some short-lived states may expire automatically when they are no longer relevant.
 
-## 11.3 Resolution Principle
+## 11.4 Resolution Principle
 
 Old current-state information must not remain in runtime merely because it was once true.
 

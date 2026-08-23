@@ -139,6 +139,32 @@ def test_context_keeps_current_question_bounds_history_and_uses_task014_retrieva
     assert context.character_count <= len(context.question) + 40 + 100 + 100
 
 
+def test_recent_persisted_topic_metadata_supports_an_ambiguous_continuation(
+    factory: sessionmaker[Session],
+) -> None:
+    retrieval = RecordingRetrieval()
+    with factory.begin() as session:
+        _, learning_session, _ = _seed(session)
+        session.add(
+            LearningMessage(
+                session_id=learning_session.id,
+                role="tutor",
+                content="Equivalent fractions name the same amount.",
+                payload={"concept_ref": "equivalent_fractions"},
+            )
+        )
+        context = TutorContextBuilder(
+            session,
+            retrieval_service=retrieval,  # type: ignore[arg-type]
+        ).build(
+            learning_session=learning_session,
+            question="Continue.",
+        )
+
+    assert context.focus == CurrentFocus(concept_key="equivalent_fractions")
+    assert retrieval.calls[0]["focus"] == CurrentFocus(concept_key="equivalent_fractions")
+
+
 def test_relevant_current_state_outranks_history_and_excludes_inactive_or_other_subject_intelligence(
     factory: sessionmaker[Session],
 ) -> None:

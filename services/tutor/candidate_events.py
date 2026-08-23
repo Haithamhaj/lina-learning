@@ -24,9 +24,11 @@ CandidateEventType = Literal[
     "support_change",
     "open_loop_created",
     "open_loop_resolved",
-    "current_focus_signal",
     "extended_learning_event",
 ]
+# Old persisted Candidate Events may retain this historical event type for
+# audit and bounded reprocessing, but new Tutor metadata must not emit it.
+HistoricalCandidateEventType = CandidateEventType | Literal["current_focus_signal"]
 
 
 class CandidateEventContractError(ValueError):

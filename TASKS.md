@@ -638,14 +638,19 @@ visible as independent enrichment detail and cannot override usable grounding.
 
 ## REC-33 — Deprecate School-Focus Authority Residue
 **Roadmap:** LR-A08
-**Status:** READY
+**Status:** DONE
 **Dependencies:** REC-27, REC-30
 **Purpose:** Remove school-position authority while retaining relevant recent
 conversational/topic continuity.
+**Completion note:** New Tutor Candidate Event metadata cannot emit
+`current_focus_signal`; historical rows remain readable for audit and bounded
+reprocessing. Current State no longer derives `current_school_focus`, and old
+rows are excluded from runtime Card selection. Recent persisted topic metadata
+remains optional conversational continuity, with relevance before recency.
 
 ## REC-34 — Simplification Acceptance Suite
 **Roadmap:** LR-A09
-**Status:** BLOCKED
+**Status:** READY
 **Dependencies:** REC-27, REC-28, REC-29, REC-30, REC-31, REC-32, REC-33
 **Purpose:** Verify zero-book availability, structural grounding, semantic
 failure tolerance, empty-match Tutor behavior, and relevance-first intelligence.

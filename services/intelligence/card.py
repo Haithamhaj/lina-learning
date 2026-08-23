@@ -175,6 +175,8 @@ def _state_candidates(
             CurrentLearningState.subject == subject,
             CurrentLearningState.status == "ACTIVE",
             CurrentLearningState.policy_version == CURRENT_STATE_POLICY_VERSION,
+            # Preserve deprecated rows for audit, but never grant them runtime authority.
+            CurrentLearningState.state_type != "current_school_focus",
             or_(CurrentLearningState.expires_at.is_(None), CurrentLearningState.expires_at > now),
         )
     ).scalars()

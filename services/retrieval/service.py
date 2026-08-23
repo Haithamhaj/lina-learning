@@ -21,6 +21,8 @@ from services.platform.db.models import (
 
 @dataclass(frozen=True)
 class CurrentFocus:
+    """Optional recent conversational topic context, never curriculum authority."""
+
     unit_key: str | None = None
     lesson_key: str | None = None
     concept_key: str | None = None

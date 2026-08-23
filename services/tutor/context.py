@@ -166,7 +166,7 @@ class TutorContextBuilder:
         return tuple(selected)
 
     def _session_focus(self, session_id: UUID) -> CurrentFocus | None:
-        """Use explicit persisted topic metadata when a prior turn supplied it."""
+        """Use recent persisted topic metadata only as conversational continuity."""
 
         messages = self._session.execute(
             select(LearningMessage)

@@ -22,7 +22,7 @@ from services.platform.db.models import (
     LearningSession,
     ModelTask,
 )
-from services.tutor.candidate_events import CandidateEventType
+from services.tutor.candidate_events import HistoricalCandidateEventType
 
 
 SESSION_EVIDENCE_SCHEMA_VERSION = "session-evidence-v1"
@@ -110,7 +110,7 @@ class ConsolidatedEvent(BaseModel):
     source_message_ids: list[UUID] = Field(min_length=1, max_length=4)
     subject: str = Field(min_length=1, max_length=32)
     concept_ref: str | None = Field(default=None, min_length=1, max_length=128)
-    event_type: CandidateEventType
+    event_type: HistoricalCandidateEventType
     event_summary: str = Field(min_length=1, max_length=800)
     school_or_extended: Literal["school", "extended"]
     transfer_context: Literal["not_tested", "near_identical", "meaningfully_changed"] = "not_tested"

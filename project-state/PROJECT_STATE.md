@@ -8,7 +8,7 @@ index identity from mandatory semantics — and LR-A04 — structural-first inde
 builder — and LR-A05 — semantic retrieval behavior advisory — are complete.
 LR-A06 — source processing lifecycle — is complete. LR-A07 — Parent content-
 status decoupling — is complete. LR-A08 — school-focus authority cleanup — is
-next.
+complete. LR-A09 — simplification acceptance — is next.
 REC-25 has not started and remains blocked until LR-A09 acceptance.
 
 ## Current reality
@@ -33,6 +33,10 @@ REC-25 has not started and remains blocked until LR-A09 acceptance.
   structural run plus a usable completed index. Semantic enrichment remains a
   separate visible stage; its absence or failure cannot make usable grounding
   globally unavailable.
+- New Tutor Candidate Events no longer produce school-focus signals; historical
+  `current_focus_signal` and `current_school_focus` records remain auditable
+  but have no runtime personalization authority. Recent persisted topic
+  metadata remains optional context for ambiguous continuation turns.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -48,8 +52,9 @@ REC-25 has not started and remains blocked until LR-A09 acceptance.
 - Educational semantics are optional rebuildable enrichment, not a Tutor,
   basic-RAG, or interaction-concept prerequisite.
 - Concept identity primarily comes from the learning interaction.
-- Current School Focus has no product authority; relevant recent conversational
-  context remains allowed with relevance before recency.
+- Current School Focus has no product authority or active Current State;
+  relevant recent conversational context remains allowed with relevance before
+  recency.
 - Semantic type is advisory retrieval metadata, not candidate eligibility.
 - Structural processing and structural indexing use deterministic, durable job
   identities; a failed replacement index preserves a prior completed index.
@@ -76,8 +81,7 @@ and Parent Dashboard expansion.
 
 ## Next recommended action
 
-Execute `REC-33 — Deprecate School-Focus Authority Residue` (`Roadmap: LR-A08`)
-only.
+Execute `REC-34 — Simplification Acceptance Suite` (`Roadmap: LR-A09`) only.
 
 ## Critical references
 
