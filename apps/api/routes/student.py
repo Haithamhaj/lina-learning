@@ -16,7 +16,6 @@ from sqlalchemy.orm import Session
 from services.platform.auth import AuthenticatedPrincipal, UserRole, require_role
 from services.platform.db.models import LearningMessage, LearningSession
 from services.platform.db.session import get_session
-from services.content.status import has_ready_grade_subject_content
 from services.tutor.student_sessions import (
     append_student_message,
     open_or_resume_math_session,
@@ -54,12 +53,6 @@ class StudentSessionResponse(BaseModel):
     messages: list[StudentMessageResponse]
 
 
-class StudentMathUnavailableResponse(BaseModel):
-    """Child-safe entry state with no processing or internal details."""
-
-    ready: bool = False
-
-
 def _response(session: Session, learning_session: LearningSession) -> StudentSessionResponse:
     return StudentSessionResponse(
         id=learning_session.id,
@@ -86,19 +79,12 @@ def _student_for_principal(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Student profile is unavailable.") from None
 
 
-@router.post("/math/session", response_model=StudentSessionResponse | StudentMathUnavailableResponse)
+@router.post("/math/session", response_model=StudentSessionResponse)
 def start_or_resume_math_session(
     principal: AuthenticatedPrincipal = Depends(require_role(UserRole.STUDENT)),
     session: Session = Depends(get_session),
-) -> StudentSessionResponse | StudentMathUnavailableResponse:
+) -> StudentSessionResponse:
     student = _student_for_principal(session, principal)
-    if not has_ready_grade_subject_content(
-        session,
-        student_id=student.id,
-        grade_level=5,
-        subject="MATH",
-    ):
-        return StudentMathUnavailableResponse()
     return _response(session, open_or_resume_math_session(session, student_id=student.id))
 
 
@@ -128,13 +114,6 @@ def post_math_message(
     )
     if learning_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Open Math session not found.")
-    if not has_ready_grade_subject_content(
-        session,
-        student_id=student.id,
-        grade_level=5,
-        subject="MATH",
-    ):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Math is getting ready.")
     content = request.content.strip()
     if not content:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Message content is required.")
@@ -156,13 +135,6 @@ def stream_math_tutor_turn(
     learning_session = owned_open_math_session(session, student_id=student.id, session_id=session_id)
     if learning_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Open Math session not found.")
-    if not has_ready_grade_subject_content(
-        session,
-        student_id=student.id,
-        grade_level=5,
-        subject="MATH",
-    ):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Math is getting ready.")
     content = request.content.strip()
     if not content:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Message content is required.")

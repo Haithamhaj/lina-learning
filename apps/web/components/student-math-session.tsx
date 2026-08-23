@@ -20,10 +20,6 @@ type MathSession = {
   messages: Message[];
 };
 
-type MathUnavailable = {
-  ready: false;
-};
-
 type TutorTurn = {
   text: string;
 };
@@ -60,7 +56,7 @@ export function StudentMathSession() {
   const { getToken, isLoaded } = useAuth();
   const [learningSession, setLearningSession] = useState<MathSession | null>(null);
   const [draft, setDraft] = useState("");
-  const [state, setState] = useState<"loading" | "unavailable" | "ready" | "sending" | "error">("loading");
+  const [state, setState] = useState<"loading" | "ready" | "sending" | "error">("loading");
   const [error, setError] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
 
@@ -75,14 +71,8 @@ export function StudentMathSession() {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!response.ok) throw await errorFrom(response);
-        const next = (await response.json()) as MathSession | MathUnavailable;
+        const next = (await response.json()) as MathSession;
         if (!cancelled) {
-          if ("ready" in next) {
-            setLearningSession(null);
-            setError("");
-            setState("unavailable");
-            return;
-          }
           setLearningSession(next);
           setError("");
           setState("ready");
@@ -164,19 +154,6 @@ export function StudentMathSession() {
 
   if (state === "loading") {
     return <p className="rounded-2xl bg-white p-5 text-sm text-slate-600">Opening your Math session…</p>;
-  }
-  if (state === "unavailable") {
-    return (
-      <section aria-label="Math is getting ready" className="relative overflow-hidden rounded-[2rem] border border-white/80 bg-white/90 p-7 text-center shadow-[0_18px_50px_-32px_rgba(69,46,113,0.55)] sm:p-10">
-        <MathMotifs />
-        <div className="relative mx-auto max-w-md">
-          <div aria-hidden="true" className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#ede5ff] text-2xl text-[#6a4ba2]">½</div>
-          <h2 className="mt-5 font-display text-3xl text-ink">Math is getting ready.</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">Ask a grown-up to finish setting up your book.</p>
-          <Button className="mt-6" type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</Button>
-        </div>
-      </section>
-    );
   }
   if (state === "error" && !learningSession) {
     return (

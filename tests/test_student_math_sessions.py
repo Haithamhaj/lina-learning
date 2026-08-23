@@ -135,12 +135,11 @@ def _clear_overrides() -> None:
     app.dependency_overrides.pop(get_current_principal, None)
 
 
-def test_authenticated_student_starts_and_resumes_one_open_math_session(
+def test_authenticated_student_with_zero_content_starts_and_resumes_one_open_math_session(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
     with postgres_session_factory.begin() as session:
         student = _student(session, "student-one")
-        _ready_grade_five_math_content(session, student)
 
     client = _client(postgres_session_factory, subject="student-one")
     try:
@@ -158,7 +157,7 @@ def test_authenticated_student_starts_and_resumes_one_open_math_session(
         assert session.query(LearningSession).filter_by(student_id=student.id).count() == 1
 
 
-def test_first_authenticated_student_visit_creates_only_their_owned_profile_when_math_is_unavailable(
+def test_first_authenticated_student_visit_creates_their_owned_math_session_with_zero_content(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
     client = _client(postgres_session_factory, subject="first-student")
@@ -168,40 +167,20 @@ def test_first_authenticated_student_visit_creates_only_their_owned_profile_when
         _clear_overrides()
 
     assert response.status_code == 200
-    assert response.json() == {"ready": False}
+    assert response.json()["subject"] == "MATH"
+    assert response.json()["status"] == "OPEN"
     with postgres_session_factory() as session:
         user = session.query(User).filter_by(
             identity_provider="clerk", external_subject="first-student"
         ).one()
         student = session.query(Student).filter_by(user_id=user.id).one()
-        assert session.query(LearningSession).filter_by(student_id=student.id).count() == 0
+        assert session.query(LearningSession).filter_by(student_id=student.id).count() == 1
 
 
-def test_student_without_ready_grade_five_math_content_receives_only_a_safe_unavailable_entry(
+def test_zero_content_math_session_accepts_a_persisted_student_message(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
-    """Catches a Student session being opened before its Math book is ready."""
-
-    with postgres_session_factory.begin() as session:
-        student = _student(session, "student-one")
-
-    client = _client(postgres_session_factory, subject="student-one")
-    try:
-        response = client.post("/api/v1/student/math/session")
-    finally:
-        _clear_overrides()
-
-    assert response.status_code == 200
-    assert response.json() == {"ready": False}
-    with postgres_session_factory() as session:
-        assert session.query(LearningSession).filter_by(student_id=student.id).count() == 0
-
-
-def test_unready_math_session_cannot_bypass_the_entry_gate_to_call_tutor(
-    postgres_session_factory: sessionmaker[Session],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Catches a stale or direct session invoking Tutor without ready Math content."""
+    """Catches content readiness blocking a Student-owned Math message."""
 
     with postgres_session_factory.begin() as session:
         student = _student(session, "student-one")
@@ -209,35 +188,20 @@ def test_unready_math_session_cannot_bypass_the_entry_gate_to_call_tutor(
         session.add(learning_session)
         session.flush()
         session_id = learning_session.id
-        executions_before = session.query(AIExecution).filter_by(task="tutor").count()
-
-    from services.tutor import runtime as tutor_runtime
-
-    monkeypatch.setattr(
-        tutor_runtime,
-        "get_settings",
-        lambda: Settings(_env_file=None, model_provider="mock"),
-    )
     client = _client(postgres_session_factory, subject="student-one")
     try:
         raw_message = client.post(
             f"/api/v1/student/math/session/{session_id}/messages",
             json={"content": "I tried one half."},
         )
-        response = client.post(
-            f"/api/v1/student/math/session/{session_id}/turn/stream",
-            json={"content": "Explain equivalent fractions."},
-        )
     finally:
         _clear_overrides()
 
-    assert raw_message.status_code == 409
-    assert raw_message.json() == {"detail": "Math is getting ready."}
-    assert response.status_code == 409
-    assert response.json() == {"detail": "Math is getting ready."}
+    assert raw_message.status_code == 200
+    assert raw_message.json()["content"] == "I tried one half."
     with postgres_session_factory() as session:
-        assert session.query(LearningMessage).filter_by(session_id=session_id).count() == 0
-        assert session.query(AIExecution).filter_by(task="tutor").count() == executions_before
+        messages = session.query(LearningMessage).filter_by(session_id=session_id).all()
+        assert [message.content for message in messages] == ["I tried one half."]
 
 
 def test_authenticated_student_messages_are_persisted_in_order_and_restored_after_refresh(
@@ -321,13 +285,12 @@ def test_student_session_path_has_no_automatic_close_side_effect(
         assert persisted.closed_at is None
 
 
-def test_authenticated_student_tutor_turn_uses_the_real_sse_path_and_persists_response(
+def test_zero_content_student_tutor_turn_uses_empty_retrieval_and_persists_response(
     postgres_session_factory: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     with postgres_session_factory.begin() as session:
         student = _student(session, "student-one")
-        _ready_grade_five_math_content(session, student)
         executions_before = session.query(AIExecution).filter_by(task="tutor").count()
 
     client = _client(postgres_session_factory, subject="student-one")
@@ -368,7 +331,6 @@ def test_parent_redirect_stream_never_calls_the_tutor_model(
 ) -> None:
     with postgres_session_factory.begin() as session:
         student = _student(session, "student-one")
-        _ready_grade_five_math_content(session, student)
         executions_before = session.query(AIExecution).filter_by(task="tutor").count()
 
     client = _client(postgres_session_factory, subject="student-one")

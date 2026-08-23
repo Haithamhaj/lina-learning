@@ -3,16 +3,17 @@
 ## Current goal
 
 Roadmap Track A architecture simplification is active. LR-A01 governing
-decision correction is complete; LR-A02 — Tutor always available — is next.
+decision correction and LR-A02 — Tutor always available — are complete.
+LR-A03 — decouple index identity from mandatory semantics — is next.
 REC-25 has not started and remains blocked until LR-A09 acceptance.
 
 ## Current reality
 
 - Product Owner-approved Option A is recorded in
   `docs/LEARNING_PRODUCT_ROADMAP.md`.
-- The existing Tutor runtime can tolerate empty retrieval, but the Student API
-  still blocks entry and Tutor calls on content readiness; LR-A02 addresses
-  only that availability boundary.
+- The Student API/UI now permit an authenticated Student to open/resume Math,
+  persist messages, and stream one safe Tutor response with zero content;
+  retrieval remains optional and returns empty context when no index exists.
 - The existing index builder and index-run identity still require a semantic
   run; Track A must decouple them before structural-first retrieval is claimed.
 - Hybrid retrieval remains reusable and protected: Docling structural
@@ -46,14 +47,15 @@ and Parent Dashboard expansion.
 
 ## Active risks
 
-- Track A implementation is not yet accepted; REC-25 and all future capability
-  work remain blocked.
+- Track A remains incomplete; REC-25 and all future capability work remain
+  blocked until LR-A09 acceptance.
 - PostgreSQL/pgvector and real AWS/S3 staging verification remain separate
   operational concerns; this governance correction does not change them.
 
 ## Next recommended action
 
-Execute `REC-27 — Tutor Always Available` (`Roadmap: LR-A02`) only.
+Execute `REC-28 — Decouple Index Identity from Mandatory Semantics`
+(`Roadmap: LR-A03`) only.
 
 ## Critical references
 

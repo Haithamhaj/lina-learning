@@ -564,17 +564,22 @@ Track has LR-A02 as its only next READY item; REC-25 is blocked.
 
 ## REC-27 — Tutor Always Available
 **Roadmap:** LR-A02
-**Status:** READY
+**Status:** DONE
 **Dependencies:** REC-26
 **Purpose:** Remove Student-facing content readiness as permission to open a
 Math session or call the Tutor while preserving auth, ownership, SafetyDecision,
 SSE, persistence, and empty-retrieval behavior.
 **Verification:** A zero-book Student can enter Tutor and receive a safe model
 answer with empty retrieval; existing protected runtime boundaries remain intact.
+**Completion note:** The Student API and Student Math surface no longer treat
+content readiness as a Tutor permission. Authenticated zero-content Students
+open/resume their owned Math session, can persist messages, and can complete a
+safe streamed Tutor turn with empty retrieval. Existing ownership and safety
+redirect behavior remain enforced.
 
 ## REC-28 — Decouple Index Identity from Mandatory Semantics
 **Roadmap:** LR-A03
-**Status:** BLOCKED
+**Status:** READY
 **Dependencies:** REC-27
 **Purpose:** Make index identity support a completed structural run without a
 mandatory semantic run, preserving provenance and migration safety.

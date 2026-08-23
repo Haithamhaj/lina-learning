@@ -266,7 +266,7 @@ def test_unknown_student_has_the_same_non_enumerating_denial_as_an_unlinked_stud
     assert response.json()["detail"] == "Student not found."
 
 
-def test_student_math_entry_still_derives_student_from_principal_when_content_is_unavailable(
+def test_student_math_entry_derives_student_from_principal_and_opens_math_with_zero_content(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
     client = _client(
@@ -280,7 +280,8 @@ def test_student_math_entry_still_derives_student_from_principal_when_content_is
         _clear_overrides()
 
     assert response.status_code == 200
-    assert response.json() == {"ready": False}
+    assert response.json()["subject"] == "MATH"
+    assert response.json()["status"] == "OPEN"
     assert parent_lookup.status_code == 403
     with postgres_session_factory() as session:
         student = session.query(Student).join(User).filter(User.external_subject == "lina").one()
