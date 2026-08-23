@@ -8,9 +8,11 @@ index identity from mandatory semantics — and LR-A04 — structural-first inde
 builder — and LR-A05 — semantic retrieval behavior advisory — are complete.
 LR-A06 — source processing lifecycle — is complete. LR-A07 — Parent content-
 status decoupling — is complete. LR-A08 — school-focus authority cleanup — is
-complete. LR-A09 — simplification acceptance — is complete. LR-A10 — Real Lina
-calibration resumes — is next. REC-25 has not started and remains blocked until
-REC-35 / explicit Product Owner resumption.
+complete. LR-A09 — simplification acceptance — is complete. REC-35 — Real Lina
+calibration — has begun and produced verified Tutor UX findings. REC-35.1 —
+Tutor Child Interaction Calibration Pass — is next. REC-25 has not started and
+remains blocked pending REC-35.1 completion/retest and explicit Product Owner
+continuation.
 
 ## Current reality
 
@@ -42,6 +44,8 @@ REC-35 / explicit Product Owner resumption.
   Tutor availability, optional empty retrieval, source → structural → index
   grounding, semantic-failure tolerance, relevance-first intelligence, and no
   school-position authority.
+- REC-35 bounded real-Lina/manual Product Owner calibration has begun and
+  produced verified Tutor UX findings for the approved REC-35.1 correction.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -79,16 +83,17 @@ and Parent Dashboard expansion.
 
 ## Active risks
 
-- REC-35 real-Lina calibration is the only next Track A work. REC-25 remains
-  blocked until REC-35 / explicit Product Owner resumption; Track B and other
-  future capability work remain frozen.
+- REC-35.1 is the only next Track A work. REC-25 remains blocked pending
+  REC-35.1 completion/retest and explicit Product Owner continuation; Track B
+  and other future capability work remain frozen.
 - PostgreSQL/pgvector and real AWS/S3 staging verification remain separate
   operational concerns; this governance correction does not change them.
 
 ## Next recommended action
 
-Execute `REC-35 — Real Lina Calibration Resumes` (`Roadmap: LR-A10`) only;
-do not resume REC-25 without explicit Product Owner direction.
+Execute `REC-35.1 — Tutor Child Interaction Calibration Pass` only; do not
+resume REC-25 without REC-35.1 completion/retest and explicit Product Owner
+continuation.
 
 ## Critical references
 

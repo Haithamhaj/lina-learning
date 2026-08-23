@@ -663,10 +663,31 @@ State/Pattern boundaries remain covered by the focused and full suites.
 
 ## REC-35 — Real Lina Calibration Resumes
 **Roadmap:** LR-A10
-**Status:** READY
+**Status:** DONE
 **Dependencies:** REC-34
 **Purpose:** Resume bounded Real Lina calibration after Track A acceptance; this
 does not authorize Track B or frozen future capability work.
+**Completion note:** Bounded real-Lina/manual Product Owner calibration resumed
+successfully after Track A and surfaced actionable Tutor-experience findings.
+REC-25 calibration remains blocked and is not complete.
+
+## REC-35.1 — Tutor Child Interaction Calibration Pass
+**Status:** READY
+**Dependencies:** REC-35
+**Purpose:** Implement only the Product Owner-approved findings from the first
+real Tutor calibration: age-appropriate concise Tutor interaction; an adaptive
+explain → interact/check teaching rhythm; changed representation when the
+Student remains confused; light, natural emojis; plain-text Grade-5 Math with
+no raw Markdown or LaTeX; 0–4 dynamic suggested actions; free-text input that
+remains available; action clicks through the existing Tutor turn path; and the
+rule that self-reported understanding or button selection is not mastery
+Evidence.
+**Protected behavior:** Preserve one primary Tutor model call; Safety before
+Tutor; optional grounding; Candidate → Evidence boundaries; failed-turn
+durability; the 800-token budget; and `response.incomplete` handling.
+**Explicit exclusions:** REC-25 execution; Track B; Science, Voice, Vision;
+Learning Canvas / Artifact Engine; Parent Dashboard expansion; RAG/index
+changes; DB migrations; and parked Prompt-v5/Eureka work.
 
 ---
 
