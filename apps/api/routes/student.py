@@ -16,9 +16,10 @@ from sqlalchemy.orm import Session
 from services.platform.auth import AuthenticatedPrincipal, UserRole, require_role
 from services.platform.db.models import LearningMessage, LearningSession
 from services.platform.db.session import get_session
-from services.tutor.candidate_events import normalize_suggested_actions
+from services.tutor.candidate_events import SuggestedAction, normalize_suggested_actions
 from services.tutor.student_sessions import (
     append_student_message,
+    latest_tutor_suggested_action,
     open_or_resume_math_session,
     ordered_messages,
     owned_open_math_session,
@@ -40,7 +41,7 @@ class StudentMessageResponse(BaseModel):
     role: str
     content: str
     created_at: datetime
-    suggested_actions: list[str] = Field(default_factory=list)
+    suggested_actions: list[SuggestedAction] = Field(default_factory=list)
 
     @classmethod
     def from_model(cls, message: LearningMessage) -> "StudentMessageResponse":
@@ -148,6 +149,15 @@ def stream_math_tutor_turn(
     content = request.content.strip()
     if not content:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Message content is required.")
+    selected_action = None
+    if request.suggested_action:
+        selected_action = latest_tutor_suggested_action(
+            session,
+            learning_session=learning_session,
+            label=content,
+        )
+        if selected_action is None:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Suggested action is no longer available.")
     bind = session.get_bind()
     student_id = student.id
 
@@ -164,13 +174,13 @@ def stream_math_tutor_turn(
             turn_stream = runtime.stream_turn(
                 learning_session=owned_session,
                 question=content,
-                is_suggested_action=request.suggested_action,
+                suggested_action_kind=selected_action.kind if selected_action is not None else None,
             )
             for event in turn_stream:
                 if isinstance(event, TutorTextDelta):
                     yield f"event: delta\ndata: {json.dumps({'text': event.text})}\n\n"
                 elif isinstance(event, TutorTurn):
-                    yield f"event: turn\ndata: {json.dumps({'text': event.text, 'suggested_actions': event.suggested_actions})}\n\n"
+                    yield f"event: turn\ndata: {json.dumps({'text': event.text, 'suggested_actions': [action.model_dump() for action in event.suggested_actions]})}\n\n"
             stream_session.commit()
         except GeneratorExit:
             if turn_stream is not None:

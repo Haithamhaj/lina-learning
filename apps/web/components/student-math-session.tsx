@@ -11,7 +11,12 @@ type Message = {
   role: string;
   content: string;
   created_at: string;
-  suggested_actions: string[];
+  suggested_actions: SuggestedAction[];
+};
+
+type SuggestedAction = {
+  label: string;
+  kind: "NAVIGATION" | "ANSWER_CHOICE";
 };
 
 type MathSession = {
@@ -23,7 +28,7 @@ type MathSession = {
 
 type TutorTurn = {
   text: string;
-  suggested_actions: string[];
+  suggested_actions: SuggestedAction[];
 };
 
 function ChatAvatar({ participant }: { participant: "Lina" | "Tutor" }) {
@@ -106,7 +111,7 @@ export function StudentMathSession() {
         ...current,
         messages: [...current.messages, { id: studentId, role: "student", content, created_at: now, suggested_actions: [] }, { id: tutorId, role: "tutor", content: "", created_at: now, suggested_actions: [] }],
       } : current);
-      setDraft("");
+      if (!suggestedAction) setDraft("");
       const response = await fetch(`${publicConfig.apiBaseUrl}/v1/student/math/session/${learningSession.id}/turn/stream`, {
         method: "POST",
         headers: {
@@ -171,9 +176,9 @@ export function StudentMathSession() {
     );
   }
 
-  const latestActionableTutorMessageId = [...(learningSession?.messages ?? [])]
+  const latestTutorMessage = [...(learningSession?.messages ?? [])]
     .reverse()
-    .find((message) => message.role === "tutor" && message.suggested_actions.length > 0)?.id;
+    .find((message) => message.role === "tutor");
 
   return (
     <section aria-label="Math learning session" className="relative overflow-hidden rounded-[2rem] border border-white/90 bg-white/95 p-4 shadow-[0_18px_60px_-34px_rgba(47,35,81,0.55)] sm:p-6">
@@ -200,16 +205,16 @@ export function StudentMathSession() {
                     <p className={`text-xs font-bold ${isTutor ? "text-[#418377]" : "text-[#eadfff]"}`}>{participant}</p>
                     {isThinking ? <p className="mt-1.5 flex items-center gap-2 text-sm"><span className="flex gap-1" aria-hidden="true"><span className="size-1.5 rounded-full bg-current opacity-60" /><span className="size-1.5 rounded-full bg-current opacity-80" /><span className="size-1.5 rounded-full bg-current" /></span>Tutor is thinking…</p> : <p dir="auto" className="mt-1.5 whitespace-pre-wrap text-sm leading-6">{message.content}</p>}
                   </div>
-                  {isTutor && message.id === latestActionableTutorMessageId ? <div className="mt-2 flex flex-wrap gap-2" aria-label="Tutor suggested actions">
+                  {isTutor && message.id === latestTutorMessage?.id && message.suggested_actions.length > 0 ? <div className="mt-2 flex flex-wrap gap-2" aria-label="Tutor suggested actions">
                     {message.suggested_actions.map((action) => <Button
                       className="h-auto min-h-10 rounded-full border border-[#b8ddd6] bg-white px-3 py-2 text-left text-sm text-[#245b55] hover:bg-[#e2f3ef]"
                       disabled={state === "sending"}
-                      key={action}
-                      onClick={() => void sendMessage(action, true)}
+                      key={`${action.kind}:${action.label}`}
+                      onClick={() => void sendMessage(action.label, true)}
                       type="button"
                       variant="secondary"
                     >
-                      <span dir="auto">{action}</span>
+                      <span dir="auto">{action.label}</span>
                     </Button>)}
                   </div> : null}
                 </div>

@@ -218,7 +218,7 @@ def test_openai_responses_provider_streams_student_text_from_a_structured_tutor_
             return iter(
                 [
                     b'data: {"type":"response.output_text.delta","delta":"{\\"text\\":\\"Try "}\n\n',
-                    b'data: {"type":"response.output_text.delta","delta":"one step.\\",\\"suggested_actions\\":[\\"Let me try \\u270d\\ufe0f\\"],\\"candidate_metadata\\":{\\"version\\":\\"candidate-event-v1\\",\\"candidates\\":[]}}"}\n\n',
+                    b'data: {"type":"response.output_text.delta","delta":"one step.\\",\\"suggested_actions\\":[{\\"label\\":\\"Let me try \\u270d\\ufe0f\\",\\"kind\\":\\"NAVIGATION\\"}],\\"candidate_metadata\\":{\\"version\\":\\"candidate-event-v1\\",\\"candidates\\":[]}}"}\n\n',
                     b'data: {"type":"response.completed","response":{"usage":{"input_tokens":5,"output_tokens":2}}}\n\n',
                 ]
             )
@@ -233,7 +233,7 @@ def test_openai_responses_provider_streams_student_text_from_a_structured_tutor_
             {
                 "instructions": "Teach calmly.",
                 "input": "Help with fractions.",
-                "response_schema": {"name": "tutor_turn_v2", "schema": {"type": "object"}},
+                "response_schema": {"name": "tutor_turn_v3", "schema": {"type": "object"}},
             },
         )
     )
@@ -241,12 +241,12 @@ def test_openai_responses_provider_streams_student_text_from_a_structured_tutor_
     request = captured["request"]
     body = json.loads(request.data.decode())
     assert body["text"]["format"] == {
-        "type": "json_schema", "name": "tutor_turn_v2", "schema": {"type": "object"}, "strict": True,
+        "type": "json_schema", "name": "tutor_turn_v3", "schema": {"type": "object"}, "strict": True,
     }
     assert [event.text for event in events if isinstance(event, StreamDelta)] == ["Try ", "one step."]
     assert events[-1].result.output == {
         "text": "Try one step.",
-        "suggested_actions": ["Let me try ✍️"],
+        "suggested_actions": [{"label": "Let me try ✍️", "kind": "NAVIGATION"}],
         "candidate_metadata": {"version": "candidate-event-v1", "candidates": []},
     }
 

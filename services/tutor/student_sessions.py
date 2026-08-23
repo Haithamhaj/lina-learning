@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.platform.db.models import LearningMessage, LearningSession, Student, User
+from services.tutor.candidate_events import SuggestedAction, normalize_suggested_actions
 from services.tutor.session_lifecycle import (
     SessionLifecyclePolicy,
     close_session_if_eligible,
@@ -132,6 +133,29 @@ def ordered_messages(session: Session, *, learning_session: LearningSession) -> 
             .where(LearningMessage.session_id == learning_session.id)
             .order_by(LearningMessage.created_at, LearningMessage.id)
         ).scalars()
+    )
+
+
+def latest_tutor_suggested_action(
+    session: Session,
+    *,
+    learning_session: LearningSession,
+    label: str,
+) -> SuggestedAction | None:
+    """Resolve an action claim solely from the latest persisted Tutor message."""
+
+    latest_tutor_message = session.execute(
+        select(LearningMessage)
+        .where(LearningMessage.session_id == learning_session.id, LearningMessage.role == "tutor")
+        .order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+    if latest_tutor_message is None:
+        return None
+    payload = latest_tutor_message.payload if isinstance(latest_tutor_message.payload, dict) else {}
+    return next(
+        (action for action in normalize_suggested_actions(payload.get("suggested_actions")) if action.label == label),
+        None,
     )
 
 

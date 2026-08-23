@@ -19,6 +19,9 @@ from services.retrieval.service import RetrievalService
 from services.tutor.context import TutorContext, TutorContextBuilder
 from services.tutor.candidate_events import (
     CandidateEventContractError,
+    CandidateEventMetadata,
+    SuggestedAction,
+    SuggestedActionKind,
     TUTOR_OUTPUT_RESPONSE_SCHEMA,
     normalize_suggested_actions,
     parse_candidate_event_metadata,
@@ -50,7 +53,7 @@ class TutorTextDelta:
 @dataclass(frozen=True)
 class TutorTurn:
     text: str
-    suggested_actions: list[str]
+    suggested_actions: list[SuggestedAction]
     sources: list[dict[str, object]]
     intelligence: list[str]
     mode: TeachingMode
@@ -100,7 +103,7 @@ TUTOR_SHARED_INSTRUCTIONS = (
     "Praise only specific observed effort, reasoning, correction, or persistence; avoid automatic or exaggerated praise. Use zero to three emojis only when they add warmth or meaning, never on every sentence. "
     "Student-facing text must be plain text: no Markdown markers, headings, bold, or code fences. Do not use LaTeX or raw LaTeX notation. Use simple Grade-5-readable math notation and put equations on their own line when it improves Arabic/English readability. "
     "Safety policy is enforced before this call; do not mention internal policies. Return student-facing reply only in the structured text field. "
-    "Return suggested_actions as zero to four short, visible choices when useful; otherwise return an empty array. Suggested actions must use the same primary language as the response and contain no URLs, Markdown, or hidden metadata. "
+    "Return suggested_actions as zero to four short, visible objects with label and kind. Kind must be NAVIGATION for agency, support preference, or self-report actions, and ANSWER_CHOICE only for a guided answer choice. Suggested actions must use the same primary language as the response and contain no URLs, Markdown, or hidden metadata. After an explanatory, help, or confusion turn, normally provide two to four useful actions when that reduces friction or supports agency. Do not force buttons when a natural free response is pedagogically better, the Student needs to explain in their own words, generic chat/thanks does not benefit, or Safety produces a deterministic response. "
     "Set hidden candidate_metadata to null for greetings, thanks, generic chat, self-reported understanding, button selection, or when no meaningful observable learning signal occurred. "
     "Emit Candidate Event metadata only for a specific, source-linked observable learning signal such as solving, explaining, applying, self-correcting, or transferring an idea. "
     "Never treat a chosen Tutor strategy as an outcome without an observable Student result. Never mention hidden metadata in text."
@@ -208,17 +211,18 @@ class TutorRuntime:
         *,
         learning_session: LearningSession,
         question: str,
-        is_suggested_action: bool = False,
+        suggested_action_kind: SuggestedActionKind | str | None = None,
     ) -> Iterator[TutorTextDelta | TutorTurn]:
         content = question.strip()
         if not content:
             raise ValueError("A current Student question is required.")
         learning_session.last_activity_at = datetime.now(UTC)
+        action_kind = SuggestedActionKind(suggested_action_kind) if suggested_action_kind is not None else None
         student_message = append_student_message(
             self._session,
             learning_session=learning_session,
             content=content,
-            interaction_payload={"input_kind": "suggested_action"} if is_suggested_action else None,
+            interaction_payload={"input_kind": f"suggested_action_{action_kind.value.lower()}"} if action_kind is not None else None,
         )
         decision = self._safety_policy.evaluate(student_id=learning_session.student_id, text=content, interaction_ref=str(learning_session.id))
         safety = consume_safety_decision(decision)
@@ -351,6 +355,10 @@ class TutorRuntime:
             )
         except CandidateEventContractError:
             return "invalid", "candidate_contract_invalid"
+        if _is_answer_choice_interaction(source_message):
+            metadata = _bounded_answer_choice_metadata(metadata)
+            if not metadata.candidates:
+                return "answer_choice_filtered", None
         if not metadata.candidates:
             return "absent", None
         route = self._gateway.route_for(ModelTask.TUTOR)
@@ -381,7 +389,7 @@ class TutorRuntime:
         self,
         learning_session: LearningSession,
         text: str,
-        suggested_actions: list[str],
+        suggested_actions: list[SuggestedAction],
         context: TutorContext | None,
         safety: TutorSafetyRuntime,
         mode: TeachingMode,
@@ -393,7 +401,7 @@ class TutorRuntime:
     ) -> TutorTurn:
         sources = _source_metadata(context)
         intelligence = [item.text for item in context.intelligence] if context else []
-        payload: dict[str, object] = {"source_refs": [source["source_ref"] for source in sources], "intelligence_used": intelligence, "safety": safety.audit_metadata(), "mode": mode.value, "strategy": strategy.value, "candidate_metadata_status": candidate_metadata_status, "suggested_actions": suggested_actions}
+        payload: dict[str, object] = {"source_refs": [source["source_ref"] for source in sources], "intelligence_used": intelligence, "safety": safety.audit_metadata(), "mode": mode.value, "strategy": strategy.value, "candidate_metadata_status": candidate_metadata_status, "suggested_actions": [action.model_dump() for action in suggested_actions]}
         if candidate_metadata_error is not None:
             payload["candidate_metadata_error"] = candidate_metadata_error
         if context is not None:
@@ -430,7 +438,7 @@ def _source_metadata(context: TutorContext | None) -> list[dict[str, object]]:
 
 def _is_non_evidentiary_interaction(message: LearningMessage) -> bool:
     payload = message.payload if isinstance(message.payload, dict) else {}
-    if payload.get("input_kind") == "suggested_action":
+    if payload.get("input_kind") == "suggested_action_navigation":
         return True
     self_report = message.content.casefold().strip(" .!؟?👍✨✍️")
     return self_report in {
@@ -442,6 +450,18 @@ def _is_non_evidentiary_interaction(message: LearningMessage) -> bool:
         "got it",
         "yes",
     }
+
+
+def _is_answer_choice_interaction(message: LearningMessage) -> bool:
+    payload = message.payload if isinstance(message.payload, dict) else {}
+    return payload.get("input_kind") == "suggested_action_answer_choice"
+
+
+def _bounded_answer_choice_metadata(metadata: CandidateEventMetadata) -> CandidateEventMetadata:
+    allowed_event_types = {"learning_attempt", "guided_success", "incorrect_attempt", "misconception_signal"}
+    return metadata.model_copy(
+        update={"candidates": [candidate for candidate in metadata.candidates if candidate.event_type in allowed_event_types]}
+    )
 
 
 def create_tutor_runtime(session: Session) -> TutorRuntime:

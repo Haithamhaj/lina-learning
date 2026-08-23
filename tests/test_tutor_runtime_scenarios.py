@@ -143,12 +143,20 @@ def test_current_independence_overrides_support_first_strategy() -> None:
     assert provider.payloads[0]["strategy"] == TeachingStrategy.INDEPENDENT_CHECK.value
 
 
-def test_completed_turn_preserves_only_four_trimmed_string_suggested_actions() -> None:
+def test_completed_turn_preserves_only_four_trimmed_typed_suggested_actions() -> None:
     """Catches a completed structured turn leaking malformed actions into persistence or the Student API."""
 
     runtime, _, _, session = _runtime(
         _decision(),
-        suggested_actions=[" خليني أجرب ✍️ ", "", 7, "candidate_metadata: {source_message_ids}", "مثال ثاني 🍕", "فهمت 👍", "اشرحها بطريقة ثانية"],
+        suggested_actions=[
+            {"label": " خليني أجرب ✍️ ", "kind": "NAVIGATION"},
+            {"label": "", "kind": "NAVIGATION"},
+            {"label": "candidate_metadata: {source_message_ids}", "kind": "NAVIGATION"},
+            {"label": "مثال ثاني 🍕", "kind": "NAVIGATION"},
+            {"label": "فهمت 👍", "kind": "NAVIGATION"},
+            {"label": "اشرحها بطريقة ثانية", "kind": "NAVIGATION"},
+            {"label": "2/4", "kind": "ANSWER_CHOICE"},
+        ],
     )
 
     events = list(runtime.stream_turn(
@@ -159,8 +167,13 @@ def test_completed_turn_preserves_only_four_trimmed_string_suggested_actions() -
     turn = events[-1]
     tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
     assert isinstance(turn, TutorTurn)
-    assert turn.suggested_actions == ["خليني أجرب ✍️", "مثال ثاني 🍕", "فهمت 👍", "اشرحها بطريقة ثانية"]
-    assert tutor_message.payload["suggested_actions"] == turn.suggested_actions
+    assert [action.model_dump() for action in turn.suggested_actions] == [
+        {"label": "خليني أجرب ✍️", "kind": "NAVIGATION"},
+        {"label": "مثال ثاني 🍕", "kind": "NAVIGATION"},
+        {"label": "فهمت 👍", "kind": "NAVIGATION"},
+        {"label": "اشرحها بطريقة ثانية", "kind": "NAVIGATION"},
+    ]
+    assert tutor_message.payload["suggested_actions"] == [action.model_dump() for action in turn.suggested_actions]
 
 
 @pytest.mark.parametrize("action", [SafetyAction.REDIRECT_TO_PARENT, SafetyAction.BLOCK])
@@ -276,15 +289,15 @@ def test_valid_same_call_candidate_metadata_is_persisted_with_raw_source_linkage
 
 
 @pytest.mark.parametrize(
-    ("question", "is_suggested_action"),
+    ("question", "suggested_action_kind"),
     [
-        ("I got it", False),
-        ("فهمت 👍", False),
-        ("Let me try ✍️", True),
+        ("I got it", None),
+        ("فهمت 👍", None),
+        ("Let me try ✍️", "NAVIGATION"),
     ],
 )
 def test_self_reports_and_suggested_action_clicks_never_persist_mastery_candidate_metadata(
-    question: str, is_suggested_action: bool,
+    question: str, suggested_action_kind: str | None,
 ) -> None:
     """Catches a self-report or action selection being promoted to Candidate/Evidence despite no observed work."""
 
@@ -302,13 +315,64 @@ def test_self_reports_and_suggested_action_clicks_never_persist_mastery_candidat
     list(runtime.stream_turn(
         learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
         question=question,
-        is_suggested_action=is_suggested_action,
+        suggested_action_kind=suggested_action_kind,
     ))
 
     tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
     assert provider.calls == 1
     assert not [row for row in session.rows if isinstance(row, CandidateEvent)]
     assert tutor_message.payload["candidate_metadata_status"] == "not_evidence"
+
+
+def test_answer_choice_can_persist_a_bounded_attempt_but_not_independent_success() -> None:
+    """Catches a guided choice becoming an independent/mastery claim while preserving its observable attempt value."""
+
+    session_holder: dict[str, _Session] = {}
+
+    def metadata(_: dict[str, object]) -> dict[str, object]:
+        return _candidate_for_current_message(
+            session_holder["session"],
+            event_type="learning_attempt",
+            signal="selected_equivalent_fraction_choice",
+        )
+
+    runtime, _, _, session = _runtime(_decision(), metadata)
+    session_holder["session"] = session
+    list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        question="2/4",
+        suggested_action_kind="ANSWER_CHOICE",
+    ))
+
+    candidate = next(row for row in session.rows if isinstance(row, CandidateEvent))
+    student_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "student")
+    assert candidate.event_type == "learning_attempt"
+    assert student_message.payload["input_kind"] == "suggested_action_answer_choice"
+
+
+def test_answer_choice_never_persists_independent_success_from_the_click_alone() -> None:
+    """Catches the model upgrading one button choice to independent evidence."""
+
+    session_holder: dict[str, _Session] = {}
+
+    def metadata(_: dict[str, object]) -> dict[str, object]:
+        return _candidate_for_current_message(
+            session_holder["session"],
+            event_type="independent_success",
+            signal="solved_independently",
+        )
+
+    runtime, _, _, session = _runtime(_decision(), metadata)
+    session_holder["session"] = session
+    list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        question="2/4",
+        suggested_action_kind="ANSWER_CHOICE",
+    ))
+
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    assert not [row for row in session.rows if isinstance(row, CandidateEvent)]
+    assert tutor_message.payload["candidate_metadata_status"] == "answer_choice_filtered"
 
 
 @pytest.mark.parametrize(

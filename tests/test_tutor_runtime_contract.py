@@ -44,13 +44,23 @@ def test_current_independence_does_not_force_historical_support_strategy() -> No
     assert select_teaching_strategy("I solved it myself: 4.5 × 10 = 45.") is TeachingStrategy.INDEPENDENT_CHECK
 
 
-def test_tutor_turn_v2_requires_bounded_suggested_actions_without_changing_candidate_metadata() -> None:
+def test_tutor_turn_v3_requires_bounded_typed_suggested_actions_without_changing_candidate_metadata() -> None:
     """Catches a structured-output upgrade that omits actions or rewrites Candidate metadata."""
 
-    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v2"
+    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v3"
     assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "candidate_metadata"]
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["suggested_actions"] == {
-        "type": "array", "maxItems": 4, "items": {"type": "string"},
+        "type": "array",
+        "maxItems": 4,
+        "items": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "label": {"type": "string"},
+                "kind": {"type": "string", "enum": ["NAVIGATION", "ANSWER_CHOICE"]},
+            },
+            "required": ["label", "kind"],
+        },
     }
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["candidate_metadata"]["anyOf"][0]["properties"]["version"]["enum"] == ["candidate-event-v1"]
 
@@ -88,6 +98,8 @@ def test_tutor_instructions_require_calibrated_child_interaction_without_changin
         "no markdown markers",
         "do not use latex",
         "suggested_actions",
+        "label and kind",
+        "normally provide two to four useful actions",
         "not proof of understanding or mastery",
         "source-linked observable learning signal",
     ):

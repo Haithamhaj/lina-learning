@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Any, Literal
 from uuid import UUID
 
@@ -9,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 
 
 CANDIDATE_EVENT_SCHEMA_VERSION = "candidate-event-v1"
-TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v2"
+TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v3"
 MAX_SUGGESTED_ACTIONS = 4
 CandidateEventType = Literal[
     "learning_attempt",
@@ -35,6 +36,20 @@ HistoricalCandidateEventType = CandidateEventType | Literal["current_focus_signa
 
 class CandidateEventContractError(ValueError):
     """The Tutor's hidden Candidate Event metadata is not safe to persist."""
+
+
+class SuggestedActionKind(str, Enum):
+    NAVIGATION = "NAVIGATION"
+    ANSWER_CHOICE = "ANSWER_CHOICE"
+
+
+class SuggestedAction(BaseModel):
+    """One explicit, server-persisted Student interaction option."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    label: str = Field(min_length=1, max_length=120)
+    kind: SuggestedActionKind
 
 
 class CandidateEventMetadataItem(BaseModel):
@@ -86,17 +101,18 @@ def parse_candidate_event_metadata(
     return metadata
 
 
-def normalize_suggested_actions(payload: object) -> list[str]:
+def normalize_suggested_actions(payload: object) -> list[SuggestedAction]:
     """Keep completed Tutor action choices small, visible, and safe to show to a Student."""
 
     if not isinstance(payload, list):
         return []
-    actions: list[str] = []
+    actions: list[SuggestedAction] = []
     for item in payload:
-        if not isinstance(item, str):
+        try:
+            action = SuggestedAction.model_validate(item)
+        except ValidationError:
             continue
-        action = item.strip()
-        if not action or _contains_action_markup_or_url(action):
+        if _contains_action_markup_or_url(action.label):
             continue
         actions.append(action)
         if len(actions) == MAX_SUGGESTED_ACTIONS:
@@ -130,7 +146,15 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
         "suggested_actions": {
             "type": "array",
             "maxItems": MAX_SUGGESTED_ACTIONS,
-            "items": {"type": "string"},
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "label": {"type": "string"},
+                    "kind": {"type": "string", "enum": [kind.value for kind in SuggestedActionKind]},
+                },
+                "required": ["label", "kind"],
+            },
         },
         "candidate_metadata": {
             "anyOf": [

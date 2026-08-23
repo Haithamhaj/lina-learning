@@ -47,10 +47,11 @@ def test_student_math_surface_keeps_only_latest_tutor_actions_active_and_input_e
     math_session = (workspace / "apps/web/components/student-math-session.tsx").read_text()
 
     assert "suggested_actions" in math_session
-    assert "latestActionableTutorMessageId" in math_session
+    assert "latestTutorMessage" in math_session
     assert "sendMessage" in math_session
     assert "suggested_action: suggestedAction" in math_session
-    assert "sendMessage(action, true)" in math_session
+    assert "sendMessage(action.label, true)" in math_session
+    assert "if (!suggestedAction) setDraft(\"\");" in math_session
     input_start = math_session.index('id="student-math-message"')
     input_end = math_session.index("/>", input_start)
     assert "disabled=" not in math_session[input_start:input_end]

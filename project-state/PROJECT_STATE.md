@@ -46,9 +46,12 @@ continuation.
   school-position authority.
 - REC-35 bounded real-Lina/manual Product Owner calibration has begun and
   produced verified Tutor UX findings for the approved REC-35.1 correction.
-- REC-35.1 implementation is verified through automated contracts, a fresh
-  PostgreSQL suite, web build, and a real-Luna diagnostic. Product Owner
-  browser retest remains pending; REC-25 has not resumed.
+- REC-35.1 review correction is verified: `tutor_turn_v3` persists typed
+  actions, validates clicks against only the latest Tutor message, separates
+  navigation from bounded answer-choice Candidate handling, and preserves the
+  Student draft. Automated contracts, a fresh PostgreSQL suite, web build, and
+  the real-Luna equivalent-fractions diagnostic passed. Product Owner browser
+  retest remains pending; REC-25 has not resumed.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.

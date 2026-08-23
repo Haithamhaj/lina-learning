@@ -473,7 +473,7 @@ def test_session_reload_exposes_persisted_tutor_actions_and_defaults_legacy_mess
         session.add_all([
             LearningMessage(
                 session_id=learning_session.id, role="tutor", content="جرّبي خطوة صغيرة.",
-                payload={"suggested_actions": ["خليني أجرب ✍️"]},
+                payload={"suggested_actions": [{"label": "خليني أجرب ✍️", "kind": "NAVIGATION"}]},
             ),
             LearningMessage(session_id=learning_session.id, role="tutor", content="رسالة قديمة.", payload={}),
         ])
@@ -490,7 +490,71 @@ def test_session_reload_exposes_persisted_tutor_actions_and_defaults_legacy_mess
     actions_by_content = {
         message["content"]: message["suggested_actions"] for message in response.json()["messages"]
     }
-    assert actions_by_content == {"جرّبي خطوة صغيرة.": ["خليني أجرب ✍️"], "رسالة قديمة.": []}
+    assert actions_by_content == {
+        "جرّبي خطوة صغيرة.": [{"label": "خليني أجرب ✍️", "kind": "NAVIGATION"}],
+        "رسالة قديمة.": [],
+    }
+
+
+def test_server_derives_action_kind_from_latest_tutor_actions_and_rejects_stale_or_forged_claims(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Catches browser-supplied action semantics bypassing the latest persisted Tutor action set."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-one")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session.add(
+            LearningMessage(
+                session_id=learning_session.id,
+                role="tutor",
+                content="Which fraction equals one half?",
+                payload={"suggested_actions": [{"label": "2/4", "kind": "ANSWER_CHOICE"}]},
+            )
+        )
+        session.flush()
+        session_id = learning_session.id
+
+    from services.tutor import runtime as tutor_runtime
+
+    monkeypatch.setattr(tutor_runtime, "get_settings", lambda: Settings(_env_file=None, model_provider="mock"))
+    client = _client(postgres_session_factory, subject="student-one")
+    try:
+        valid = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": "2/4", "suggested_action": True, "suggested_action_kind": "NAVIGATION"},
+        )
+    finally:
+        _clear_overrides()
+
+    assert valid.status_code == 200
+    with postgres_session_factory() as session:
+        student_message = session.query(LearningMessage).filter_by(session_id=session_id, role="student").one()
+        assert student_message.payload["input_kind"] == "suggested_action_answer_choice"
+
+    with postgres_session_factory.begin() as session:
+        session.add(
+            LearningMessage(
+                session_id=session_id,
+                role="tutor",
+                content="Tell me why you chose it.",
+                payload={"suggested_actions": []},
+            )
+        )
+
+    client = _client(postgres_session_factory, subject="student-one")
+    try:
+        stale = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": "2/4", "suggested_action": True, "suggested_action_kind": "ANSWER_CHOICE"},
+        )
+    finally:
+        _clear_overrides()
+
+    assert stale.status_code == 422
 
 
 def test_parent_redirect_stream_never_calls_the_tutor_model(
