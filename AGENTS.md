@@ -53,6 +53,10 @@ The following require Product Owner approval before changing their meaning:
 - Multimodal student input and separation of student originals from AI-derived annotations/reconstructions.
 - Child-safety baseline and Parent Learning Boundary semantics, including explicit runtime policy enforcement rather than prompt-only enforcement.
 - Strategy-effectiveness anti-self-confirmation: Tutor strategy selection/use is not confirming Evidence without an observable Lina outcome.
+- TeachingStrategy (support/intervention flow) and TeachingMethod (pedagogical representation) are distinct and must not be collapsed.
+- Teaching Methods remain a small, project-owned, versioned registry; they must not become a giant mutable Tutor persona or prompt.
+- Selecting a method is not Evidence of effectiveness. Any method identity used by Evidence must come from persisted, project-owned Tutor-turn state, never be invented by Evidence processing.
+- Historical method ranking belongs only to LR-D04B after sufficient Evidence and approval; do not introduce MCP, agents, or infrastructure for this problem without approval.
 - Modular Monolith architecture unless scaling evidence justifies a change.
 - Early Lina Calibration Checkpoint before Phase 3 and Real Lina Decision Gate after Phase 4, subject to the currently approved Roadmap sequencing corrections.
 

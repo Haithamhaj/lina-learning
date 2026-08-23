@@ -30,8 +30,8 @@
 <body>
 <div class="wrap">
 <header>
-  <div><h1>Lina Personal Learning System</h1><p>Operating map for Codex/AI implementation. Current target: Roadmap Track A simplifies the core loop so Tutor availability never depends on content readiness.</p></div>
-  <div class="badge">APPROVED DIRECTION · ROADMAP TRACK A</div>
+  <div><h1>Lina Personal Learning System</h1><p>Operating map for Codex/AI implementation. Current target: REC-35.2 establishes TeachingMethod observability without changing the one-call Tutor or Evidence architecture.</p></div>
+  <div class="badge">NEXT READY · REC-35.2 / LR-D04A</div>
 </header>
 
 <div class="toolbar" aria-label="Map layer filter">
@@ -51,11 +51,12 @@
   </div></article>
 
   <article class="panel core" data-layer="runtime"><h2>🧠 Tutor Runtime</h2><div class="stack">
-    <div class="node"><strong>Thread / Mode Resolver</strong><small>Learn · Homework · Explore · Quiz · Review. Internal only.</small></div>
+    <div class="node"><strong>Teaching Mode</strong><small>Learn · Homework · Explore · Quiz · Review. Internal only.</small></div>
     <div class="node"><strong>Context Builder</strong><small>Current question + relevant intelligence + optional question-driven grounding.</small></div>
     <div class="node"><strong>Safety + Parent Boundaries</strong><small>Protected baseline, then Allow / Age-appropriate only / Redirect to parent.</small></div>
-    <div class="node"><strong>One Primary Tutor Call</strong><small>Student response + hidden Candidate Event metadata.</small></div>
-    <div class="node"><strong>Adaptive Teaching Strategy</strong><small>Current Lina outranks historical patterns. Never personalize away independence.</small></div>
+    <div class="node"><strong>Teaching Strategy</strong><small>Support/intervention flow. Current Lina outranks history; never personalize away independence.</small></div>
+    <div class="node"><strong>Teaching Method Registry / eligibility</strong><small>Small project-owned, versioned eligible set; no MCP, agent, or extra call.</small></div>
+    <div class="node"><strong>One Primary Tutor Call</strong><small>Selected TeachingMethod identity + response + hidden Candidate Event metadata.</small></div>
   </div></article>
 
   <article class="panel parent" data-layer="experience"><h2>👨‍👩‍👧 Parent / Admin</h2><div class="stack">
@@ -70,15 +71,16 @@
 <h2>End-to-End Learning Loop</h2>
 <svg viewBox="0 0 1360 300" role="img" aria-label="Lina learning flow">
   <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#8d98aa"/></marker></defs>
-  <rect class="box student" x="18" y="82" width="150" height="82" rx="14"/><text x="93" y="112" text-anchor="middle">Student Question</text><text class="sub" x="93" y="132" text-anchor="middle">text now</text><text class="sub" x="93" y="148" text-anchor="middle">captured page later</text>
-  <rect class="box core" x="210" y="82" width="165" height="82" rx="14"/><text x="292" y="112" text-anchor="middle">Safety + Context</text><text class="sub" x="292" y="132" text-anchor="middle">optional grounding</text><text class="sub" x="292" y="148" text-anchor="middle">relevant intelligence</text>
-  <rect class="box core" x="417" y="82" width="155" height="82" rx="14"/><text x="494" y="112" text-anchor="middle">Tutor Call</text><text class="sub" x="494" y="132" text-anchor="middle">teaching response</text><text class="sub" x="494" y="148" text-anchor="middle">+ candidate events</text>
-  <rect class="box" x="614" y="82" width="158" height="82" rx="14"/><text x="693" y="112" text-anchor="middle">Session Close</text><text class="sub" x="693" y="132" text-anchor="middle">inactivity + grace</text><text class="sub" x="693" y="148" text-anchor="middle">enqueue consolidation</text>
-  <rect class="box data" x="814" y="82" width="165" height="82" rx="14"/><text x="896" y="108" text-anchor="middle">Events + Evidence</text><text class="sub" x="896" y="130" text-anchor="middle">approved rubric</text><text class="sub" x="896" y="146" text-anchor="middle">source traceability</text>
-  <rect class="box data" x="1021" y="82" width="145" height="82" rx="14"/><text x="1093" y="108" text-anchor="middle">State + Patterns</text><text class="sub" x="1093" y="130" text-anchor="middle">deterministic</text><text class="sub" x="1093" y="146" text-anchor="middle">recency / lifecycle</text>
-  <rect class="box parent" x="1208" y="82" width="134" height="82" rx="14"/><text x="1275" y="108" text-anchor="middle">Parent Insight</text><text class="sub" x="1275" y="130" text-anchor="middle">audit + control</text><text class="sub" x="1275" y="146" text-anchor="middle">next-session value</text>
-  <path class="arrow" d="M168 123H210"/><path class="arrow" d="M375 123H417"/><path class="arrow" d="M572 123H614"/><path class="arrow" d="M772 123H814"/><path class="arrow" d="M979 123H1021"/><path class="arrow" d="M1166 123H1208"/>
-  <path class="arrow" d="M1093 164 C1093 244, 305 244, 292 164"/><text class="sub" x="705" y="264" text-anchor="middle">Relevant current intelligence feeds later Tutor contexts — never full history by default</text>
+  <rect class="box student" x="18" y="82" width="130" height="82" rx="14"/><text x="83" y="112" text-anchor="middle">Student Question</text><text class="sub" x="83" y="132" text-anchor="middle">current behavior</text><text class="sub" x="83" y="148" text-anchor="middle">is authoritative</text>
+  <rect class="box core" x="168" y="82" width="150" height="82" rx="14"/><text x="243" y="112" text-anchor="middle">Safety + Context</text><text class="sub" x="243" y="132" text-anchor="middle">optional grounding</text><text class="sub" x="243" y="148" text-anchor="middle">relevant intelligence</text>
+  <rect class="box core" x="338" y="82" width="125" height="82" rx="14"/><text x="400" y="112" text-anchor="middle">Teaching Mode</text><text class="sub" x="400" y="132" text-anchor="middle">interaction mode</text><text class="sub" x="400" y="148" text-anchor="middle">not a label</text>
+  <rect class="box core" x="483" y="82" width="140" height="82" rx="14"/><text x="553" y="112" text-anchor="middle">Teaching Strategy</text><text class="sub" x="553" y="132" text-anchor="middle">support / flow</text><text class="sub" x="553" y="148" text-anchor="middle">not method</text>
+  <rect class="box core" x="643" y="82" width="170" height="82" rx="14"/><text x="728" y="108" text-anchor="middle">Method Registry</text><text class="sub" x="728" y="130" text-anchor="middle">small eligible set</text><text class="sub" x="728" y="146" text-anchor="middle">project-owned / versioned</text>
+  <rect class="box core" x="833" y="82" width="135" height="82" rx="14"/><text x="900" y="112" text-anchor="middle">ONE Tutor Call</text><text class="sub" x="900" y="132" text-anchor="middle">no agent chain</text><text class="sub" x="900" y="148" text-anchor="middle">no extra call</text>
+  <rect class="box" x="988" y="82" width="166" height="82" rx="14"/><text x="1071" y="108" text-anchor="middle">Method + Response</text><text class="sub" x="1071" y="130" text-anchor="middle">persisted method identity</text><text class="sub" x="1071" y="146" text-anchor="middle">+ Student response</text>
+  <rect class="box data" x="1174" y="82" width="168" height="82" rx="14"/><text x="1258" y="108" text-anchor="middle">Candidate / Evidence</text><text class="sub" x="1258" y="130" text-anchor="middle">observable outcome only</text><text class="sub" x="1258" y="146" text-anchor="middle">source-grounded lineage</text>
+  <path class="arrow" d="M148 123H168"/><path class="arrow" d="M318 123H338"/><path class="arrow" d="M463 123H483"/><path class="arrow" d="M623 123H643"/><path class="arrow" d="M813 123H833"/><path class="arrow" d="M968 123H988"/><path class="arrow" d="M1154 123H1174"/>
+  <path class="arrow" d="M1258 164 C1258 244, 243 244, 243 164"/><text class="sub" x="705" y="248" text-anchor="middle">method used → observable Lina outcome → strategy effectiveness → State / Patterns → future relevant personalization</text><text class="sub" x="705" y="266" text-anchor="middle">Historical method influence is evidence-dependent later work; current Lina behavior outranks history.</text>
 </svg>
 </section>
 
@@ -113,7 +115,8 @@
   <div class="timeline">
     <div class="phase"><strong>Foundation</strong><span>Auth, storage, jobs, model gateway, safety, evidence infrastructure.</span></div>
     <div class="phase"><strong>Track A</strong><span>Zero-book Tutor → structural-first index → advisory semantics → acceptance.</span></div>
-    <div class="phase gate"><strong>REAL LINA CALIBRATION</strong><span>After Track A acceptance: review real use. Continue / correct / do not expand.</span></div>
+    <div class="phase gate"><strong>REAL LINA CALIBRATION</strong><span>Product Owner browser acceptance completed REC-35.1.</span></div>
+    <div class="phase"><strong>REC-35.2</strong><span>Teaching Method Foundation / observability. LR-D04A only.</span></div>
     <div class="phase future"><strong>Track B</strong><span>Trusted Educational Reference pilot; future, not active.</span></div>
     <div class="phase future"><strong>Phase 5</strong><span>Voice + student images.</span></div>
     <div class="phase future"><strong>Phase 6</strong><span>Interactive artifacts.</span></div>
@@ -133,6 +136,7 @@
     <div class="rule"><b>Question first:</b> recent context and available sources improve grounding but do not control what Lina may ask now.</div>
     <div class="rule"><b>Safety is layered:</b> protected baseline cannot be weakened by Parent settings.</div>
     <div class="rule"><b>Simple runtime:</b> normal Tutor path uses one primary model call; no chain-of-agents by default.</div>
+    <div class="rule"><b>Method evidence:</b> method selection is not effectiveness evidence; only a later observable Lina outcome can be evaluated.</div>
     <div class="rule"><b>Rebuildable intelligence:</b> derived Events/Evidence/Patterns/Card are versioned and reprocessable.</div>
     <div class="rule"><b>No premature platform:</b> no microservices, graph infra, generic agent framework, or multi-family SaaS without proof.</div>
   </article>
@@ -145,7 +149,7 @@
     <code>docs/IMPLEMENTATION_PLAN.md — execution direction and gates</code>
     <code>project-state/PROJECT_STATE.md — current reality</code>
     <code>TASKS.md — actual work queue</code>
-    <p style="margin-top:12px">Execute only the next READY queue item: <strong>REC-27 / Roadmap LR-A02</strong>. Do not execute future tracks merely because they are easy to scaffold.</p>
+    <p style="margin-top:12px">Execute only the next READY queue item: <strong>REC-35.2 / Roadmap LR-D04A</strong>. Do not begin REC-25, LR-D04B, or frozen future capabilities.</p>
   </article>
 </section>
 </div>

@@ -672,7 +672,7 @@ successfully after Track A and surfaced actionable Tutor-experience findings.
 REC-25 calibration remains blocked and is not complete.
 
 ## REC-35.1 — Tutor Child Interaction Calibration Pass
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** REC-35
 **Purpose:** Implement only the Product Owner-approved findings from the first
 real Tutor calibration: age-appropriate concise Tutor interaction; an adaptive
@@ -688,14 +688,41 @@ durability; the 800-token budget; and `response.incomplete` handling.
 **Explicit exclusions:** REC-25 execution; Track B; Science, Voice, Vision;
 Learning Canvas / Artifact Engine; Parent Dashboard expansion; RAG/index
 changes; DB migrations; and parked Prompt-v5/Eureka work.
+**Completion note:** Product Owner browser acceptance at the current baseline
+closed this calibration pass. Accepted scope: age-appropriate conversational
+Tutor; explain → interact/check rhythm; changed representation when confused;
+plain-text Grade-5 Math without raw Markdown/LaTeX; typed suggested actions
+with free text retained; NAVIGATION vs ANSWER_CHOICE behavior; self-report or
+button choice is not mastery Evidence; and one primary Tutor call.
 **Verification note:** The review correction upgrades the response to
 `tutor_turn_v3` structured `{label, kind}` actions, validates action clicks
 against the latest persisted Tutor message, keeps NAVIGATION/self-reports
 non-evidentiary, and bounds ANSWER_CHOICE Candidates. Focused Tutor/provider/
 API/SSE/page-contract tests, Track A acceptance, the relevant PostgreSQL suite,
 web typecheck/build, and a real `gpt-5.6-luna` equivalent-fractions diagnostic
-passed. Product Owner browser retest is the remaining review gate. REC-25
-remains blocked pending that retest and explicit continuation.
+passed. Product Owner browser acceptance completed the remaining review gate.
+REC-25 remains blocked; the next approved task is REC-35.2.
+
+## REC-35.2 — Adaptive Teaching Method Foundation
+**Roadmap:** LR-D04A
+**Status:** READY
+**Dependencies:** REC-35.1
+**Purpose:** Implement TeachingMethod identity, an internal versioned registry,
+bounded eligible-method selection, and source-grounded method observability
+while preserving one primary Tutor call and the existing Candidate → Evidence
+architecture.
+**Required boundaries:** TeachingStrategy and TeachingMethod remain distinct;
+current behavior outranks history; a selected method is not Evidence; the
+selected method must persist as project-owned Tutor-turn metadata; and Session
+Evidence consolidation must receive bounded method, observable-outcome,
+concept/context, and audit-source lineage. Immediate representation switching
+after current confusion is contextual adaptation, not historical method
+ranking.
+**Explicit exclusions:** LR-D04B longitudinal method learning; REC-25; Track B;
+Science; Voice/STT; Vision; Learning Canvas; Interactive Artifact Engine;
+Parent Dashboard expansion; RAG/index changes; semantic Prompt-v5/Eureka work;
+new infrastructure; and any DB migration unless a blocker is discovered and
+separately approved.
 
 ---
 

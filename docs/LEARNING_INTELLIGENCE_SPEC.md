@@ -431,6 +431,10 @@ Examples of strategy identity:
 - drawing/model request,
 - change from symbolic to visual representation.
 
+For teaching-representation effectiveness, **TeachingMethod** is the canonical method identity. It is distinct from TeachingStrategy, which governs the support/intervention flow. The existing `strategy_applied` and `strategy_outcome` taxonomy remains compatible: the existing `strategy_key` lineage may carry the canonical TeachingMethod identifier where the established pattern contract requires it.
+
+That identity must be source-grounded in persisted project-owned Tutor-turn metadata, together with the bounded prior-turn/source lineage needed to connect the method to the later observable Student outcome. Session Evidence consolidation must not invent a method identity. An immediate same-session method change after current confusion is contextual adaptation; repeated method outcomes are the separate, evidence-dependent basis for any stable `strategy_effectiveness` pattern.
+
 ---
 
 ## 8.8 Persistence in Learning Interaction
@@ -1127,7 +1131,7 @@ Parent/Admin may inspect why the adaptation occurred.
 
 ---
 
-# 22. Teaching Strategy Intelligence
+# 22. Teaching Strategy and Method Intelligence
 
 Teaching strategies are tracked as contextual interventions.
 
@@ -1149,6 +1153,8 @@ Do not convert this into:
 > Lina is a visual learner.
 
 Strategy intelligence may weaken or resolve over time as Lina develops.
+
+TeachingMethod records the pedagogical representation used by that intervention; it is not a synonym for TeachingStrategy. Repeated source-grounded outcomes may create `strategy_effectiveness` patterns, but they must stay scoped to the supported concept/context, such as “Concrete representation has often helped when equivalent fractions were initially unclear.” They must never become a fixed learning-style label. Historical method influence on later eligibility/ranking is a later evidence-dependent capability, not an inference from a single current interaction.
 
 ---
 
@@ -1604,6 +1610,7 @@ These rules are non-negotiable unless explicitly changed by the project owner.
 23. **Full historical intelligence is not injected into normal Tutor context.**
 24. **Grade transition carries a compact intelligence card, not the previous Grade's full state.**
 25. **No irreversible AI judgment is allowed in the Learning Intelligence architecture.**
+26. **TeachingMethod selection/use is not evidence of effectiveness; an observable Student outcome and persisted project-owned method lineage are required.**
 
 ---
 

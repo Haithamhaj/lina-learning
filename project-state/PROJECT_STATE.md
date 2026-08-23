@@ -10,9 +10,9 @@ LR-A06 — source processing lifecycle — is complete. LR-A07 — Parent conten
 status decoupling — is complete. LR-A08 — school-focus authority cleanup — is
 complete. LR-A09 — simplification acceptance — is complete. REC-35 — Real Lina
 calibration — has begun and produced verified Tutor UX findings. REC-35.1 —
-Tutor Child Interaction Calibration Pass — is next. REC-25 has not started and
-remains blocked pending REC-35.1 completion/retest and explicit Product Owner
-continuation.
+Tutor Child Interaction Calibration Pass — is complete following Product Owner
+browser acceptance. REC-35.2 / LR-D04A — Adaptive Teaching Method Foundation —
+is the next approved READY task. REC-25 has not started and remains blocked.
 
 ## Current reality
 
@@ -51,7 +51,12 @@ continuation.
   navigation from bounded answer-choice Candidate handling, and preserves the
   Student draft. Automated contracts, a fresh PostgreSQL suite, web build, and
   the real-Luna equivalent-fractions diagnostic passed. Product Owner browser
-  retest remains pending; REC-25 has not resumed.
+  acceptance completed the review; REC-25 has not resumed.
+- TeachingMethod is now an explicit active architectural decision: it is
+  distinct from TeachingStrategy, selected from a small project-owned versioned
+  registry, and must persist through bounded method → observable-outcome
+  lineage before the existing Evidence pipeline can evaluate it. LR-D04B
+  historical method learning remains future, evidence-dependent work.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -77,6 +82,9 @@ continuation.
   completion.
 - Trusted Educational Reference Pack is approved future Roadmap Track B work,
   not current implementation.
+- Teaching Method Foundation is the next approved scope; immediate method
+  switching follows current behavior, while historical method ranking is not
+  authorized before sufficient Evidence.
 
 ## Protected areas
 
@@ -89,17 +97,18 @@ and Parent Dashboard expansion.
 
 ## Active risks
 
-- Product Owner browser retest is the remaining REC-35.1 review gate. REC-25
-  remains blocked pending that retest and explicit Product Owner continuation;
-  Track B and other future capability work remain frozen.
+- REC-35.2 must preserve the one-call Tutor path and source-grounded Evidence
+  lineage without introducing a new service, agent, MCP, or infrastructure.
+  REC-25 remains blocked; Track B and other future capability work remain
+  frozen.
 - PostgreSQL/pgvector and real AWS/S3 staging verification remain separate
   operational concerns; this governance correction does not change them.
 
 ## Next recommended action
 
-Perform Product Owner browser retest of `REC-35.1 — Tutor Child Interaction
-Calibration Pass`; do not resume REC-25 without that retest and explicit
-Product Owner continuation.
+Execute `REC-35.2 — Adaptive Teaching Method Foundation` only. Do not resume
+REC-25 or LR-D04B, and do not unfreeze Vision, Voice, Science, Learning Canvas,
+Interactive Artifacts, or Parent Dashboard expansion.
 
 ## Critical references
 

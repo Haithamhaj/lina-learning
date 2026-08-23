@@ -677,16 +677,25 @@ The tutor should be:
 - age-appropriate,
 - patient without becoming repetitive,
 - comfortable with Arabic, English, and mixed language,
+- natural and conversational in Arabic rather than unnecessarily formal,
+- natural and child-appropriate in English,
+- responsive to Lina's reasonable level of formality,
 - honest about uncertainty,
 - focused on understanding,
 - non-shaming,
 - non-pressuring.
 
-## 9.2 Adaptive Teaching Strategy
+The Tutor should normally begin with a concrete, simple idea before unnecessary
+formal terminology, then teach one manageable idea and interact rather than
+deliver a full lecture.
+
+## 9.2 Adaptive Teaching Strategy and Teaching Method
 
 The system does **not** maintain a large mutable "Adaptive Persona" as the main personalization mechanism.
 
-Instead, the tutor chooses an adaptive teaching strategy using current behavior and relevant learner intelligence.
+Instead, the tutor chooses an adaptive teaching strategy using current behavior and relevant learner intelligence. **TeachingStrategy** describes the support/intervention flow (for example, `HINT_FIRST` or `EXPLAIN_THEN_CHECK`). **TeachingMethod** is a separate concept: the pedagogical representation used to teach the idea (for example, `CONCRETE_EXAMPLE` or `WORKED_EXAMPLE`).
+
+Teaching Methods are owned by a small internal, versioned registry inside the modular monolith, not by a giant static Tutor prompt or a new service. The initial active canonical identities are `CONCRETE_EXAMPLE`, `VISUAL_REPRESENTATION`, `WORKED_EXAMPLE`, `SOCRATIC_FOCUS`, `DECOMPOSITION`, `ANALOGY`, and `SYMBOLIC_EXPLANATION`. `INTERACTIVE_ARTIFACT` and `DRAWING_MODEL` remain future/frozen identities until their existing Artifact or Vision gates authorize those capabilities.
 
 Conceptual priority:
 
@@ -701,6 +710,10 @@ Conceptual priority:
 
 Historical patterns are priors, not commands.
 
+Method selection follows the same authority order. Current demonstrated behavior outranks method history, and demonstrated independence must not be personalized away. If Lina remains explicitly confused after a method, the next attempt should normally change representation rather than repeat that method, unless Lina asks for the same method again. This immediate adaptation is contextual; it does not require a stable historical pattern.
+
+Selecting or using a TeachingMethod is not Evidence that it worked. Effectiveness is evaluable only after an observable Student outcome, and any later method history remains advisory, context-specific, and free of learning-style labels.
+
 ## 9.3 Normal Runtime Path
 
 ```text
@@ -712,11 +725,11 @@ Optional question-driven grounding
     ↓
 Relevant learner intelligence selection
     ↓
+Teaching Mode → Teaching Strategy → eligible Teaching Methods
+    ↓
 ONE primary Tutor model call
     ↓
-Student-facing response
-+
-Hidden candidate-event metadata
+Selected TeachingMethod identity + student-facing response + hidden candidate-event metadata
 ```
 
 The MVP should avoid chains such as:

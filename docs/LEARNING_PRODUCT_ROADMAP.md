@@ -2,7 +2,7 @@
 
 **Status:** Approved repository roadmap and product-evolution reference  
 **Approved direction:** Option A — Simplify the critical path, preserve the valuable learning-intelligence architecture  
-**Baseline reviewed:** `6bdd5dda7b795256cf2d51b15d123567758516f9`  
+**Baseline reviewed:** `67382c332b4cdc0d56f0f2a12774f40eea636dda`
 **Approved:** 2026-08-23
 
 ---
@@ -496,7 +496,8 @@ Possible judgment:
 | **LR-D01** | Real Evidence calibration | LR-A10 | Validate Candidate → Evidence behavior on real interactions |
 | **LR-D02** | Concept quality calibration | LR-D01 | Confirm interaction-derived concept labels are useful and stable enough for evidence grouping |
 | **LR-D03** | Card relevance calibration | LR-D01 | Confirm relevant personalization helps and irrelevant history stays out |
-| **LR-D04** | Strategy outcome learning | sufficient real evidence | Improve how prior successful/unsuccessful teaching strategies influence later Tutor behavior |
+| **LR-D04A** | Teaching Method Foundation & Observability | REC-35.1 completed / Product Owner browser acceptance | Separate TeachingStrategy from TeachingMethod; establish a versioned internal method registry, bounded per-turn eligibility, persisted selected-method lineage, immediate contextual method switching, and source-grounded method → Student-outcome observability. No historical method ranking or new learner-profile subsystem. |
+| **LR-D04B** | Method Outcome Learning | sufficient real Evidence produced through LR-D04A | Use repeated, contextual method outcomes to calibrate later method eligibility/ranking; include weakening/resolution and verify that personalization improves future learning. |
 | **LR-D05** | Retention/generalization views | sufficient longitudinal evidence | Validate whether existing derived views meaningfully help Parent/Tutor decisions |
 
 No new learner-profile subsystem should be introduced unless the current Evidence/State/Pattern/Card path proves insufficient.
@@ -712,20 +713,16 @@ On the next authorized map update, visually distinguish:
 
 | Track | Status | Current decision |
 |---|---|---|
-| Track A — Core Simplification | **APPROVED DIRECTION** | LR-A01 is the next promotion target |
+| Track A — Core Simplification | **COMPLETE / ACCEPTED** | LR-A01–LR-A10 are complete; its protected architecture remains governing |
 | Track B — Trusted Grade 5 Math References | **APPROVED FUTURE PILOT** | Do not build until Track A gate / promotion |
 | Track C — Student-Captured Pages | **APPROVED FUTURE BEHAVIOR / FROZEN** | Wait for Vision gate |
-| Track D — Personalization Calibration | **ACTIVE DESIGN / REAL DATA DEPENDENT** | Continue after corrected real-Lina flow |
+| Track D — Personalization Calibration | **ACTIVE / EVIDENCE-GOVERNED** | REC-35.2 implements LR-D04A; LR-D04B remains dependent on sufficient real Evidence |
 | Track E — Broader Expansion | **FROZEN** | Later gates only |
 
 ---
 
 # 17. Next Recommended Action
 
-Promote **LR-A01 — Governing decision correction** into the executable repository plan.
+Execute **REC-35.2 — Adaptive Teaching Method Foundation** as the next approved READY task. It implements LR-D04A only: project-owned method identity and observability while preserving one primary Tutor call and the existing Evidence architecture.
 
-The first implementation-facing work after LR-A01 should be the small, test-driven Track A architecture correction.
-
-Do not begin the Trusted Reference Builder implementation in the same Track A change.
-
-After Track A passes and the Tutor works naturally with zero content and with optional structural grounding, start the bounded **Grade 5 Math Trusted Reference Pilot** and judge its value from actual Tutor behavior before expanding it.
+Do not begin LR-D04B historical method learning, REC-25, Track B, or any frozen Artifact/Vision capability in the same change.

@@ -862,13 +862,17 @@ Stream Student Response
 Hidden Candidate Event Metadata
 ```
 
-## 14.2 Tutor Identity vs Teaching Strategy
+## 14.2 Tutor Identity vs Teaching Strategy and Method
 
 Tutor identity is stable.
 
 Teaching strategy adapts.
 
 Do not implement a self-rewriting persona system.
+
+TeachingStrategy governs support/intervention flow. TeachingMethod is a separate pedagogical representation selected from a small internal, project-owned, versioned Teaching Method Registry. The registry is not an MCP, agent, service, database table, or giant mutable prompt. It determines a small eligible method set for the current Tutor turn; the primary call receives that bounded set rather than a static catalog.
+
+REC-35.2 owns the exact implementation. It should use existing structured/JSONB boundaries where practical, persist the selected TeachingMethod identity with the Tutor turn, and preserve enough bounded source lineage for later Session Evidence consolidation to connect method used → observable Student outcome → relevant concept/context. Evidence must never invent the method identity. No new database migration is authorized unless a blocker is separately discovered and approved.
 
 ## 14.3 Teaching Priority
 
@@ -890,11 +894,37 @@ Generic teaching strategy
 
 Historical patterns are priors, not commands.
 
+The same priority governs method eligibility: current demonstrated behavior outranks historical method information, and history must not remove demonstrated independence. If current behavior shows that a method did not help, the next attempt should normally use a different method unless Lina explicitly requests the same one. This immediate switching is not longitudinal method learning.
+
 ## 14.4 Tutor Call Count
 
 The normal path should use one primary Tutor-model call per turn.
 
 Do not add a critic/evaluator/profile-agent chain around every response.
+
+The conceptual method path is:
+
+```text
+Current behavior
+    ↓
+Teaching Strategy
+    ↓
+Method Registry / eligibility
+    ↓
+Small eligible method set
+    ↓
+ONE Tutor call
+    ↓
+Selected TeachingMethod identity + response
+    ↓
+Persisted method lineage
+    ↓
+Later observable Student outcome
+    ↓
+Existing Candidate / Evidence pipeline
+```
+
+Selection or use alone is not method-effectiveness Evidence. Historical method ranking is explicitly deferred to LR-D04B, after sufficient real Evidence and validation.
 
 ## 14.5 Candidate Events
 
