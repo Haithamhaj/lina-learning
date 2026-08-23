@@ -33,6 +33,7 @@ from services.platform.safety import SafetyPolicyService
 from services.retrieval.service import RetrievalService
 from services.tutor.context import TutorContextBuilder
 from services.tutor.runtime import TutorRuntime
+from services.tutor.student_sessions import latest_tutor_suggested_action
 
 
 pytestmark = pytest.mark.skipif(
@@ -496,6 +497,36 @@ def test_session_reload_exposes_persisted_tutor_actions_and_defaults_legacy_mess
     }
 
 
+def test_latest_tutor_suggested_action_retains_the_exact_tutor_source_identity(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """ACT-01: action acceptance returns the persisted Tutor provenance, not only its label/kind."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-one")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        source_message = LearningMessage(
+            session_id=learning_session.id,
+            role="tutor",
+            content="6 stickers shared by 2 children: A) 2 B) 3 C) 4",
+            payload={"suggested_actions": [{"label": "B) 3", "kind": "ANSWER_CHOICE"}]},
+        )
+        session.add(source_message)
+        session.flush()
+
+        resolved = latest_tutor_suggested_action(
+            session,
+            learning_session=learning_session,
+            label="B) 3",
+        )
+
+    assert resolved is not None
+    assert resolved.action.model_dump() == {"label": "B) 3", "kind": "ANSWER_CHOICE"}
+    assert resolved.source_tutor_message_id == source_message.id
+
+
 def test_server_derives_action_kind_from_latest_tutor_actions_and_rejects_stale_or_forged_claims(
     postgres_session_factory: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,
@@ -507,14 +538,13 @@ def test_server_derives_action_kind_from_latest_tutor_actions_and_rejects_stale_
         learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
         session.add(learning_session)
         session.flush()
-        session.add(
-            LearningMessage(
-                session_id=learning_session.id,
-                role="tutor",
-                content="Which fraction equals one half?",
-                payload={"suggested_actions": [{"label": "2/4", "kind": "ANSWER_CHOICE"}]},
-            )
+        source_message = LearningMessage(
+            session_id=learning_session.id,
+            role="tutor",
+            content="Which fraction equals one half?",
+            payload={"suggested_actions": [{"label": "2/4", "kind": "ANSWER_CHOICE"}]},
         )
+        session.add(source_message)
         session.flush()
         session_id = learning_session.id
 
@@ -534,6 +564,7 @@ def test_server_derives_action_kind_from_latest_tutor_actions_and_rejects_stale_
     with postgres_session_factory() as session:
         student_message = session.query(LearningMessage).filter_by(session_id=session_id, role="student").one()
         assert student_message.payload["input_kind"] == "suggested_action_answer_choice"
+        assert student_message.payload["suggested_action_source_tutor_message_id"] == str(source_message.id)
 
     with postgres_session_factory.begin() as session:
         session.add(

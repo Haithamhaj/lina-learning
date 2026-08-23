@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -16,6 +17,14 @@ from services.tutor.session_lifecycle import (
     close_session_if_eligible,
     session_lifecycle_policy,
 )
+
+
+@dataclass(frozen=True)
+class ResolvedSuggestedAction:
+    """A server-validated action and the exact Tutor message that offered it."""
+
+    action: SuggestedAction
+    source_tutor_message_id: UUID
 
 
 def student_for_authenticated_subject(
@@ -142,7 +151,7 @@ def latest_tutor_suggested_action(
     *,
     learning_session: LearningSession,
     label: str,
-) -> SuggestedAction | None:
+) -> ResolvedSuggestedAction | None:
     """Resolve an action claim solely from the latest persisted Tutor message."""
 
     latest_tutor_message = session.execute(
@@ -154,10 +163,13 @@ def latest_tutor_suggested_action(
     if latest_tutor_message is None:
         return None
     payload = latest_tutor_message.payload if isinstance(latest_tutor_message.payload, dict) else {}
-    return next(
+    action = next(
         (action for action in normalize_suggested_actions(payload.get("suggested_actions")) if action.label == label),
         None,
     )
+    if action is None:
+        return None
+    return ResolvedSuggestedAction(action=action, source_tutor_message_id=latest_tutor_message.id)
 
 
 def latest_prior_tutor_teaching_method(

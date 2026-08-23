@@ -5,9 +5,9 @@
 Roadmap Track A architecture simplification is COMPLETE / ACCEPTED. REC-35.1 —
 Tutor Child Interaction Calibration Pass — is complete following Product Owner
 browser acceptance. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory
-Lina Stabilization Gate: CTX-01 is in VERIFICATION pending independent review;
-ACT-01 remains OPEN and unstarted. LR-D04B remains future/evidence-dependent
-and REC-25 remains BLOCKED.
+Lina Stabilization Gate: CTX-01 is CLOSED following independent review;
+ACT-01 is in VERIFICATION pending independent review. LR-D04B remains
+future/evidence-dependent and REC-25 remains BLOCKED.
 
 ## Current reality
 
@@ -56,12 +56,19 @@ and REC-25 remains BLOCKED.
   established the Lina Stabilization Issue Register v1: REC-35.2 cannot become
   DONE until its ordered gate is completed, beginning with CTX-01 recent
   conversation context integrity.
-- CTX-01 root cause was reproduced faithfully: oldest-first budget selection
+- CTX-01 is CLOSED after independent review of
+  `60fa36415a52100cfa4f86489bf763c335182708`: oldest-first budget selection
   retained an older long message and dropped the immediately preceding Tutor
   question. The minimal fix now selects the newest contiguous suffix within
   budget and returns it chronologically. Context and model-input regressions,
-  the focused Tutor suite, and the canonical disposable PostgreSQL suite pass;
-  CTX-01 remains VERIFICATION, not CLOSED.
+  the focused Tutor suite, and the canonical disposable PostgreSQL suite pass.
+- ACT-01 root cause is verified and its fix is in VERIFICATION: resolving an
+  accepted suggested action now retains its exact server-owned Tutor message
+  ID. Runtime verifies that source belongs to the active session and Tutor,
+  persists it on the raw Student action payload, and adds a bounded explicit
+  source block to the one Tutor call beside ordinary recent context. Candidate,
+  Evidence, teaching semantics, public API/SSE, and the browser contract are
+  unchanged.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -92,8 +99,8 @@ and REC-25 remains BLOCKED.
   historical method ranking remains unimplemented and unauthorized before
   sufficient Evidence.
 - The Stabilization Gate preserves 13 Product Owner-approved issues. CTX-01 is
-  first because a bounded-context omission produced a wrong answer-choice
-  response; ACT-01 depends on it. Browser/SSE, Candidate/Evidence,
+  closed; ACT-01 awaits independent review before OBS-01. Browser/SSE,
+  Candidate/Evidence,
   personalization, decision calibration, language, and Math-session scope work
   remain ordered behind it.
 
@@ -108,8 +115,9 @@ and Parent Dashboard expansion.
 
 ## Active risks
 
-- REC-35.2 stabilization is active: CTX-01 has an implemented, automated
-  verification pending independent review; ACT-01 remains blocked behind it.
+- REC-35.2 stabilization is active: CTX-01 is closed and ACT-01 has an
+  implemented, automated verification pending independent review. OBS-01 and
+  UI-01 remain unstarted.
   UI-01 is high-confidence but requires observability during verification;
   EVID-01 has an unknown HTTPError root cause; PERS-01 is blocked validation.
   REC-25, LR-D04B, Track B, and other future capability work remain frozen.
@@ -118,8 +126,8 @@ and Parent Dashboard expansion.
 
 ## Next recommended action
 
-Obtain independent review of CTX-01 verification only. Do not start ACT-01;
-do not begin LR-D04B or REC-25, and do not unfreeze Vision, Voice, Science
+Obtain independent review of ACT-01 verification only. Do not start OBS-01,
+UI-01, ACT-02, LR-D04B, or REC-25, and do not unfreeze Vision, Voice, Science
 production, Learning Canvas, Interactive Artifacts, or Parent Dashboard
 expansion.
 

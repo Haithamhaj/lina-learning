@@ -46,6 +46,9 @@ from services.tutor.teaching_methods import (
 )
 
 
+SUGGESTED_ACTION_SOURCE_CONTEXT_CHARACTERS = 4000
+
+
 @dataclass(frozen=True)
 class TutorTextDelta:
     text: str
@@ -124,6 +127,7 @@ def build_tutor_model_payload(
     session_messages: list[dict[str, str]] | None = None,
     candidate_source_message_id: UUID | None = None,
     prior_method: PriorTeachingMethodContext | None = None,
+    suggested_action_source: LearningMessage | None = None,
 ) -> dict[str, object]:
     """Build bounded model input from the project-owned Tutor context only."""
 
@@ -152,11 +156,18 @@ def build_tutor_model_payload(
         if prior_method is not None
         else ""
     )
+    suggested_action_source_context = (
+        "\n\nSelected suggested-action source:\n"
+        f"Tutor message ID: {suggested_action_source.id}\n"
+        f"Tutor message:\n{suggested_action_source.content[:SUGGESTED_ACTION_SOURCE_CONTEXT_CHARACTERS]}"
+        if suggested_action_source is not None
+        else ""
+    )
     return {
         "instructions": TUTOR_SHARED_INSTRUCTIONS,
         "input": (
             f"Student question:\n{question}\n\nSmall recent session window:\n{session_context}\n\n"
-            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}"
+            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}"
         ),
         "max_output_tokens": 800,
         "question": question,
@@ -183,17 +194,27 @@ class TutorRuntime:
         learning_session: LearningSession,
         question: str,
         suggested_action_kind: SuggestedActionKind | str | None = None,
+        suggested_action_source_tutor_message_id: UUID | None = None,
     ) -> Iterator[TutorTextDelta | TutorTurn]:
         content = question.strip()
         if not content:
             raise ValueError("A current Student question is required.")
         learning_session.last_activity_at = datetime.now(UTC)
         action_kind = SuggestedActionKind(suggested_action_kind) if suggested_action_kind is not None else None
+        suggested_action_source = self._suggested_action_source(
+            learning_session=learning_session,
+            source_tutor_message_id=suggested_action_source_tutor_message_id,
+        )
+        interaction_payload = None
+        if action_kind is not None:
+            interaction_payload = {"input_kind": f"suggested_action_{action_kind.value.lower()}"}
+            if suggested_action_source is not None:
+                interaction_payload["suggested_action_source_tutor_message_id"] = str(suggested_action_source.id)
         student_message = append_student_message(
             self._session,
             learning_session=learning_session,
             content=content,
-            interaction_payload={"input_kind": f"suggested_action_{action_kind.value.lower()}"} if action_kind is not None else None,
+            interaction_payload=interaction_payload,
         )
         decision = self._safety_policy.evaluate(student_id=learning_session.student_id, text=content, interaction_ref=str(learning_session.id))
         safety = consume_safety_decision(decision)
@@ -221,6 +242,7 @@ class TutorRuntime:
             safety=safety,
             candidate_source_message_id=student_message.id,
             prior_method=prior_method,
+            suggested_action_source=suggested_action_source,
         )
         model_stream = self._gateway.stream(
             ModelTask.TUTOR,
@@ -273,6 +295,23 @@ class TutorRuntime:
             prior_method=prior_method,
         )
         yield turn
+
+    def _suggested_action_source(
+        self,
+        *,
+        learning_session: LearningSession,
+        source_tutor_message_id: UUID | None,
+    ) -> LearningMessage | None:
+        if source_tutor_message_id is None:
+            return None
+        message = self._session.get(LearningMessage, source_tutor_message_id)
+        if (
+            not isinstance(message, LearningMessage)
+            or message.session_id != learning_session.id
+            or message.role != "tutor"
+        ):
+            raise ValueError("Suggested action source is unavailable for this learning session.")
+        return message
 
     def _persist_completed_turn(
         self,
@@ -441,8 +480,21 @@ def _payload_from_context(
     safety: TutorSafetyRuntime,
     candidate_source_message_id: UUID,
     prior_method: PriorTeachingMethodContext | None = None,
+    suggested_action_source: LearningMessage | None = None,
 ) -> dict[str, object]:
-    return build_tutor_model_payload(question=context.question, sources=[{"ref": block.source_ref, "text": block.text} for block in context.retrieval], intelligence=[item.text for item in context.intelligence], safety_directive=safety.tutor_directive, session_messages=[{"role": message.role, "content": message.content} for message in context.session_messages], candidate_source_message_id=candidate_source_message_id, prior_method=prior_method)
+    return build_tutor_model_payload(
+        question=context.question,
+        sources=[{"ref": block.source_ref, "text": block.text} for block in context.retrieval],
+        intelligence=[item.text for item in context.intelligence],
+        safety_directive=safety.tutor_directive,
+        session_messages=[
+            {"role": message.role, "content": message.content}
+            for message in context.session_messages
+        ],
+        candidate_source_message_id=candidate_source_message_id,
+        prior_method=prior_method,
+        suggested_action_source=suggested_action_source,
+    )
 
 
 @dataclass(frozen=True)

@@ -29,6 +29,16 @@ class _Session:
     def flush(self) -> None:
         return None
 
+    def get(self, entity: type[object], identifier: object) -> object | None:
+        return next(
+            (
+                row
+                for row in self.rows
+                if isinstance(row, entity) and getattr(row, "id", None) == identifier
+            ),
+            None,
+        )
+
 
 class _ContextBuilder:
     def __init__(self) -> None:
@@ -444,6 +454,72 @@ def test_completed_turn_preserves_only_four_trimmed_typed_suggested_actions() ->
     assert tutor_message.payload["suggested_actions"] == [action.model_dump() for action in turn.suggested_actions]
 
 
+@pytest.mark.parametrize(
+    ("question", "suggested_action_kind", "expected_input_kind"),
+    [
+        ("Show another example", "NAVIGATION", "suggested_action_navigation"),
+        ("B) 3", "ANSWER_CHOICE", "suggested_action_answer_choice"),
+    ],
+)
+def test_suggested_action_source_is_persisted_and_sent_to_the_one_tutor_call_outside_recent_context(
+    question: str,
+    suggested_action_kind: str,
+    expected_input_kind: str,
+) -> None:
+    """ACT-01: selected-action meaning must not rely on the bounded recent-message window."""
+
+    runtime, _, provider, session = _runtime(_decision())
+    learning_session = SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None)
+    source_message = LearningMessage(
+        session_id=learning_session.id,
+        role="tutor",
+        content="Question 1: 6 stickers are shared equally between 2 children. How many each? A) 2 B) 3 C) 4",
+        payload={"suggested_actions": [{"label": question, "kind": suggested_action_kind}]},
+        created_at=datetime.now(UTC) - timedelta(seconds=1),
+    )
+    session.add(source_message)
+
+    list(runtime.stream_turn(
+        learning_session=learning_session,
+        question=question,
+        suggested_action_kind=suggested_action_kind,
+        suggested_action_source_tutor_message_id=source_message.id,
+    ))
+
+    student_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "student")
+    model_input = str(provider.payloads[0]["input"])
+    assert provider.calls == 1
+    assert student_message.payload["input_kind"] == expected_input_kind
+    assert student_message.payload["suggested_action_source_tutor_message_id"] == str(source_message.id)
+    assert f"Student question:\n{question}" in model_input
+    assert source_message.content in model_input
+    assert str(source_message.id) in model_input
+
+
+def test_suggested_action_source_cannot_be_loaded_from_another_session() -> None:
+    runtime, context, provider, session = _runtime(_decision())
+    learning_session = SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None)
+    foreign_source = LearningMessage(
+        session_id=uuid4(),
+        role="tutor",
+        content="Foreign Tutor question.",
+        payload={"suggested_actions": [{"label": "B) 3", "kind": "ANSWER_CHOICE"}]},
+    )
+    session.add(foreign_source)
+
+    with pytest.raises(ValueError, match="source"):
+        list(runtime.stream_turn(
+            learning_session=learning_session,
+            question="B) 3",
+            suggested_action_kind="ANSWER_CHOICE",
+            suggested_action_source_tutor_message_id=foreign_source.id,
+        ))
+
+    assert context.calls == 0
+    assert provider.calls == 0
+    assert not [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "student"]
+
+
 @pytest.mark.parametrize("action", [SafetyAction.REDIRECT_TO_PARENT, SafetyAction.BLOCK])
 def test_redirect_and_protected_actions_persist_policy_response_without_a_model_call(action: SafetyAction) -> None:
     runtime, context, provider, session = _runtime(_decision(action, "Please talk with a trusted grown-up."))
@@ -586,9 +662,12 @@ def test_self_reports_and_suggested_action_clicks_never_persist_mastery_candidat
     ))
 
     tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    student_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "student")
     assert provider.calls == 1
     assert not [row for row in session.rows if isinstance(row, CandidateEvent)]
     assert tutor_message.payload["candidate_metadata_status"] == "not_evidence"
+    if suggested_action_kind is None:
+        assert "suggested_action_source_tutor_message_id" not in student_message.payload
 
 
 def test_answer_choice_can_persist_a_bounded_attempt_but_not_independent_success() -> None:

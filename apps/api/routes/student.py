@@ -174,7 +174,10 @@ def stream_math_tutor_turn(
             turn_stream = runtime.stream_turn(
                 learning_session=owned_session,
                 question=content,
-                suggested_action_kind=selected_action.kind if selected_action is not None else None,
+                suggested_action_kind=selected_action.action.kind if selected_action is not None else None,
+                suggested_action_source_tutor_message_id=(
+                    selected_action.source_tutor_message_id if selected_action is not None else None
+                ),
             )
             for event in turn_stream:
                 if isinstance(event, TutorTextDelta):

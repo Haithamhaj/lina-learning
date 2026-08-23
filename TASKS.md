@@ -751,8 +751,8 @@ closed, or used to start REC-25 or LR-D04B.
 
 | ID | Criticality | Status | Meaning / boundary | Dependency |
 |---|---:|---|---|---|
-| **CTX-01** — Recent Conversation Context Integrity | 5 | VERIFICATION | Root cause verified and minimal fix implemented: the bounded recent-conversation builder had accumulated messages oldest-first, allowing an older long message to displace the immediately preceding Tutor question. It now selects the newest coherent suffix that fits, then delivers it chronologically. Faithful PostgreSQL RED and model-input regressions prove that `B) 3` retains the preceding 6 ÷ 2 Tutor question. | Blocks answer correctness, ACT-01, reliable DEC-01/DEC-02 calibration, and trustworthy Candidate interpretation. |
-| **ACT-01** — Quick Action Source-Context Robustness | 5 | OPEN | An ANSWER_CHOICE is persisted as raw Student text, but Luna still needs the source Tutor question/action in surrounding context to know what it answers. | CTX-01 first. |
+| **CTX-01** — Recent Conversation Context Integrity | 5 | CLOSED | Independently reviewed at `60fa36415a52100cfa4f86489bf763c335182708`: the bounded recent-conversation builder selects the newest coherent suffix that fits, then delivers it chronologically. Faithful PostgreSQL and model-input regressions prove that `B) 3` retains the preceding 6 ÷ 2 Tutor question. | Unblocks ACT-01; preserves answer correctness, reliable DEC-01/DEC-02 calibration, and trustworthy Candidate interpretation. |
+| **ACT-01** — Quick Action Source-Context Robustness | 5 | VERIFICATION | Root cause verified and fix implemented: server-validated suggested actions retain their exact source Tutor message ID, persist it on the raw Student interaction, and supply a bounded explicit source block to the one Tutor call alongside ordinary context. | Independent ACT-01 review before OBS-01. |
 | **OBS-01** — Browser / SSE Lifecycle Observability | 4 | OPEN | Persisted server data cannot fully distinguish click → request → headers → first delta → terminal turn → EOF → client ready. | Required before confidently closing UI-01. |
 | **UI-01** — Terminal Tutor Turn Leaves UI Sending | 5 | OPEN / ROOT CAUSE HIGH-CONFIDENCE | The Student frontend stays `sending` until the response reader reaches EOF; a terminal `event: turn` visibly updates the response but does not itself make the UI ready. | OBS-01 should accompany verification; CTX-01 is independent but first because it affects correctness. |
 | **ACT-02** — NAVIGATION vs ANSWER_CHOICE Semantic Misuse | 4 | OPEN | Topic/branch selections can be emitted as ANSWER_CHOICE even though they are not observable learning attempts. | Address before relying on the Evidence pipeline. |
@@ -797,8 +797,8 @@ after difficulty; WORKED_EXAMPLE → CONCRETE_EXAMPLE → VISUAL_REPRESENTATION
 adaptation; zero-book Tutor availability; Safety before Tutor; and optional
 grounding.
 
-**Implemented scope:** investigate and fix **CTX-01 only**. Do not start
-ACT-01 in the same implementation commit. REC-25 remains BLOCKED,
+**Implemented scope:** investigate and fix **ACT-01 only**. Do not start
+OBS-01 or UI-01 in the same implementation commit. REC-25 remains BLOCKED,
 LR-D04B remains future/evidence-dependent, and Track B, Science production,
 Voice, Vision, Learning Canvas, Interactive Artifacts, and Parent Dashboard
 expansion remain frozen.
@@ -817,11 +817,24 @@ expansion remain frozen.
 - **GREEN:** both regressions pass; `tests/test_tutor_context_postgres.py`
   passes (6); the relevant Tutor suite passes (61); the canonical disposable
   PostgreSQL Python suite passes (417 passed, 5 skipped).
-- **Lifecycle:** CTX-01 is **VERIFICATION**, not CLOSED. Independent review
-  must still close it. ACT-01 remains OPEN and was not started.
+- **Lifecycle:** CTX-01 is **CLOSED** following independent review of
+  `60fa36415a52100cfa4f86489bf763c335182708`.
 
-**Next action:** obtain independent review of CTX-01 verification only; do not
-start ACT-01 until that review closes CTX-01.
+#### ACT-01 verification record
+
+- **RED:** the resolution contract returned only `SuggestedAction`, and the
+  Runtime did not accept a source Tutor message ID; the source-context and
+  cross-session regression tests failed before production changes.
+- **Implemented invariant:** a server-only `ResolvedSuggestedAction` carries
+  the typed action plus the exact latest Tutor message ID. Runtime revalidates
+  that exact ID as a Tutor `LearningMessage` in the active session, records it
+  in the raw Student payload, and adds a bounded source block to the one Tutor
+  call without changing Candidate or teaching semantics.
+- **Lifecycle:** ACT-01 is **VERIFICATION**, not CLOSED. Independent review is
+  required before starting OBS-01.
+
+**Next action:** obtain independent review of ACT-01 verification only; do not
+start OBS-01, UI-01, ACT-02, REC-25, or LR-D04B.
 
 ---
 
