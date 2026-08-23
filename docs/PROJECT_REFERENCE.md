@@ -693,9 +693,9 @@ deliver a full lecture.
 
 The system does **not** maintain a large mutable "Adaptive Persona" as the main personalization mechanism.
 
-Instead, the tutor chooses an adaptive teaching strategy using current behavior and relevant learner intelligence. **TeachingStrategy** describes the support/intervention flow (for example, `HINT_FIRST` or `EXPLAIN_THEN_CHECK`). **TeachingMethod** is a separate concept: the pedagogical representation used to teach the idea (for example, `CONCRETE_EXAMPLE` or `WORKED_EXAMPLE`).
+Instead, the normal primary Tutor call semantically chooses the turn-level teaching decisions from current behavior and relevant learner intelligence. **TeachingMode** describes the kind of learning interaction. **TeachingStrategy** describes the support/intervention flow (for example, `HINT_FIRST` or `EXPLAIN_THEN_CHECK`). **TeachingMethod** is a separate concept: the pedagogical representation used to teach the idea (for example, `CONCRETE_EXAMPLE` or `WORKED_EXAMPLE`). `prior_method_relation` records the semantic relationship of this turn to the immediately previous persisted Tutor method when relevant: `CONTINUATION`, `DID_NOT_HELP`, `HELPED`, `EXPLICIT_REPEAT_REQUEST`, or `NOT_RELEVANT`.
 
-Teaching Methods are owned by a small internal, versioned registry inside the modular monolith, not by a giant static Tutor prompt or a new service. The initial active canonical identities are `CONCRETE_EXAMPLE`, `VISUAL_REPRESENTATION`, `WORKED_EXAMPLE`, `SOCRATIC_FOCUS`, `DECOMPOSITION`, `ANALOGY`, and `SYMBOLIC_EXPLANATION`. `INTERACTIVE_ARTIFACT` and `DRAWING_MODEL` remain future/frozen identities until their existing Artifact or Vision gates authorize those capabilities.
+Teaching Methods are owned by a small internal, versioned registry inside the modular monolith, not by a giant static Tutor prompt or a new service. The initial active canonical identities are `CONCRETE_EXAMPLE`, `VISUAL_REPRESENTATION`, `WORKED_EXAMPLE`, `SOCRATIC_FOCUS`, `DECOMPOSITION`, `ANALOGY`, and `SYMBOLIC_EXPLANATION`. `INTERACTIVE_ARTIFACT` and `DRAWING_MODEL` remain future/frozen identities until their existing Artifact or Vision gates authorize those capabilities. With only seven active methods, the normal Tutor call may receive all compact active definitions; the registry validates canonical IDs and frozen status, not natural-language keyword rules.
 
 Conceptual priority:
 
@@ -708,11 +708,13 @@ Conceptual priority:
 6. Generic teaching policy
 ```
 
-Historical patterns are priors, not commands.
+Historical patterns are priors, not commands. Relevant personalization informs Luna but does not control the decision, and current demonstrated behavior must not be personalized away.
 
-Method selection follows the same authority order. Current demonstrated behavior outranks method history, and demonstrated independence must not be personalized away. If Lina remains explicitly confused after a method, the next attempt should normally change representation rather than repeat that method, unless Lina asks for the same method again. This immediate adaptation is contextual; it does not require a stable historical pattern.
+Luna makes the joint semantic Mode + Strategy + Method + prior-method-relation decision inside the same primary Tutor call. Runtime code supplies the current message, relevant context/personalization, prior persisted method, and compact taxonomies; it validates values, null combinations, safety, lineage, and structural consistency after the call. It must not infer those meanings from Arabic/English keyword or phrase lists, and no additional classifier/model call is authorized. For greetings, thanks, casual conversation, and other genuinely non-instructional turns, all four turn decisions may be null. If Luna determines `DID_NOT_HELP`, a same-method selection is structurally inconsistent unless the relation is `EXPLICIT_REPEAT_REQUEST`; exact enforcement belongs to the REC-35.2 correction implementation.
 
-Selecting or using a TeachingMethod is not Evidence that it worked. Effectiveness is evaluable only after an observable Student outcome, and any later method history remains advisory, context-specific, and free of learning-style labels.
+Turn decisions are routing/audit metadata, not learner memory. Selecting or using a TeachingMethod, or marking `HELPED`/`DID_NOT_HELP`, is not Evidence that it worked or failed. Effectiveness is evaluable only after an observable Student outcome through the existing Candidate → Evidence path, and any later method history remains advisory, context-specific, and free of learning-style labels.
+
+`NAVIGATION` and pure self-report action choices are not Evidence merely because they were selected. A bounded `ANSWER_CHOICE` may represent an observable guided attempt and may emit only the approved bounded Candidate Event types; it never becomes independent success or mastery merely from the click. The Tutor must not globally require hidden candidate metadata to be null for every button selection.
 
 ## 9.3 Normal Runtime Path
 
@@ -723,13 +725,13 @@ SafetyDecision
     ↓
 Optional question-driven grounding
     ↓
-Relevant learner intelligence selection
-    ↓
-Teaching Mode → Teaching Strategy → eligible Teaching Methods
+Relevant learner intelligence selection + prior persisted teaching decision + compact taxonomies / Method Registry
     ↓
 ONE primary Tutor model call
     ↓
-Selected TeachingMethod identity + student-facing response + hidden candidate-event metadata
+Semantic Mode + Strategy + Method + prior relation + student-facing response + hidden candidate-event metadata
+    ↓
+Deterministic validation / persistence
 ```
 
 The MVP should avoid chains such as:
@@ -826,7 +828,7 @@ The system may internally use a small number of teaching modes:
 - **QUIZ** — optional learner-requested checking.
 - **REVIEW** — retention or revisit of previously learned material.
 
-These modes need not be explicit buttons or labels visible to Lina unless useful.
+These modes need not be explicit buttons or labels visible to Lina unless useful. They are semantic turn decisions made by the primary Tutor call, not keyword classifications or learner labels; genuinely non-instructional turns may have no mode.
 
 Free exploration can create Extended Learning evidence, but it does not automatically replace or redirect the current school path.
 

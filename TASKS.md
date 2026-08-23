@@ -708,30 +708,30 @@ REC-25 remains blocked; the next approved task is REC-35.2.
 **Status:** REVIEW
 **Dependencies:** REC-35.1
 **Purpose:** Implement TeachingMethod identity, an internal versioned registry,
-bounded eligible-method selection, and source-grounded method observability
-while preserving one primary Tutor call and the existing Candidate → Evidence
-architecture.
+same-call semantic Mode / Strategy / Method / prior-method-relation decision,
+and source-grounded method observability while preserving one primary Tutor call
+and the existing Candidate → Evidence architecture.
 **Required boundaries:** TeachingStrategy and TeachingMethod remain distinct;
-current behavior outranks history; a selected method is not Evidence; the
-selected method must persist as project-owned Tutor-turn metadata; and Session
-Evidence consolidation must receive bounded method, observable-outcome,
-concept/context, and audit-source lineage. Immediate representation switching
-after current confusion is contextual adaptation, not historical method
-ranking.
+current behavior outranks history; semantic turn decisions belong to Luna in
+the one primary call while runtime validates canonical values/lineage; a
+selected method is not Evidence; the selected method must persist as
+project-owned Tutor-turn metadata; and Session Evidence consolidation must
+receive bounded method, observable-outcome, concept/context, and audit-source
+lineage. Immediate representation switching is contextual adaptation, not
+historical method ranking.
 **Explicit exclusions:** LR-D04B longitudinal method learning; REC-25; Track B;
 Science; Voice/STT; Vision; Learning Canvas; Interactive Artifact Engine;
 Parent Dashboard expansion; RAG/index changes; semantic Prompt-v5/Eureka work;
 new infrastructure; and any DB migration unless a blocker is discovered and
 separately approved.
-**Verification note:** Versioned active TeachingMethod registry, deterministic
-current-turn eligibility/switching, Tutor-turn persistence, server-grounded
-strategy-outcome lineage, and Session Evidence prompt v2 passed focused,
-PostgreSQL, and full-suite verification. One bounded real `gpt-5.6-luna`
-diagnostic persisted `CONCRETE_EXAMPLE` for an equivalent-fractions explanation,
-then excluded it after typed continued confusion and persisted
-`VISUAL_REPRESENTATION` for a number-line explanation. Student-visible output
-remained text and suggested actions only. Product Owner browser validation
-remains required; this task is not DONE.
+**Correction note:** Product Owner review identified a semantic-authority
+mismatch in the current implementation: keyword/deterministic natural-language
+routing currently chooses Mode, Strategy, Method eligibility, and confusion /
+representation meaning. The approved correction requires Luna to make the joint
+semantic Mode + Strategy + Method + prior-method-relation decision in the same
+primary Tutor call, followed by deterministic validation, persistence, and
+server-grounded Evidence lineage. Browser acceptance is paused until that code
+correction is implemented; this task remains REVIEW, not DONE.
 
 ---
 

@@ -55,6 +55,7 @@ The following require Product Owner approval before changing their meaning:
 - Strategy-effectiveness anti-self-confirmation: Tutor strategy selection/use is not confirming Evidence without an observable Lina outcome.
 - TeachingStrategy (support/intervention flow) and TeachingMethod (pedagogical representation) are distinct and must not be collapsed.
 - Teaching Methods remain a small, project-owned, versioned registry; they must not become a giant mutable Tutor persona or prompt.
+- In the same primary Tutor call, Luna semantically determines the turn-level TeachingMode, TeachingStrategy, TeachingMethod, and relevant prior-method relation. Runtime code validates canonical values, lineage, safety, persistence, and structural consistency; it must not replace semantic understanding with keyword or phrase routing.
 - Selecting a method is not Evidence of effectiveness. Any method identity used by Evidence must come from persisted, project-owned Tutor-turn state, never be invented by Evidence processing.
 - Historical method ranking belongs only to LR-D04B after sufficient Evidence and approval; do not introduce MCP, agents, or infrastructure for this problem without approval.
 - Modular Monolith architecture unless scaling evidence justifies a change.
@@ -66,7 +67,7 @@ The following require Product Owner approval before changing their meaning:
 - Normal Tutor turns target one primary Tutor call.
 - Tutor may emit hidden Candidate Event metadata; it does not directly write stable learner conclusions.
 - Session Evidence consolidation happens at session level, not as an extra evaluator call after every message.
-- AI handles semantic/cognitive work; deterministic code handles counts, recency, lifecycle, weights, effective policy routing, and state transitions where practical.
+- AI handles semantic/cognitive work, including the normal Tutor call's turn-level Mode, Strategy, Method, and prior-method-relation decision; deterministic code handles allowed-value validation, safety, counts, recency, lifecycle, weights, persistence, effective policy routing, and state transitions where practical. No extra classifier/model call is authorized for those Tutor decisions.
 - Safety/boundary enforcement must consume the explicit policy-engine decision contract; Tutor prompt text alone is not enforcement.
 - For teaching-strategy patterns, only observable Lina outcomes may confirm/challenge effectiveness; choosing the strategy because history recommended it is not Evidence.
 - Log task, provider, model, tokens/usage, latency, estimated cost, success/failure, and fallback.

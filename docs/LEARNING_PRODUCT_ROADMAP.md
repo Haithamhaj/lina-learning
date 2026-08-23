@@ -496,7 +496,7 @@ Possible judgment:
 | **LR-D01** | Real Evidence calibration | LR-A10 | Validate Candidate → Evidence behavior on real interactions |
 | **LR-D02** | Concept quality calibration | LR-D01 | Confirm interaction-derived concept labels are useful and stable enough for evidence grouping |
 | **LR-D03** | Card relevance calibration | LR-D01 | Confirm relevant personalization helps and irrelevant history stays out |
-| **LR-D04A** | Teaching Method Foundation & Observability | REC-35.1 completed / Product Owner browser acceptance | Separate TeachingStrategy from TeachingMethod; establish a versioned internal method registry, bounded per-turn eligibility, persisted selected-method lineage, immediate contextual method switching, and source-grounded method → Student-outcome observability. No historical method ranking or new learner-profile subsystem. |
+| **LR-D04A** | Teaching Method Foundation & Observability | REC-35.1 completed / Product Owner browser acceptance | Separate TeachingStrategy from TeachingMethod; establish a versioned internal method registry; have the same primary Tutor call semantically decide Mode, Strategy, Method, and prior-method relation from the current turn/context; validate and persist the selected-method lineage; and preserve source-grounded method → Student-outcome observability. The seven active compact methods may all be supplied to the call; no keyword selector, extra classifier call, historical method ranking, or new learner-profile subsystem. |
 | **LR-D04B** | Method Outcome Learning | sufficient real Evidence produced through LR-D04A | Use repeated, contextual method outcomes to calibrate later method eligibility/ranking; include weakening/resolution and verify that personalization improves future learning. |
 | **LR-D05** | Retention/generalization views | sufficient longitudinal evidence | Validate whether existing derived views meaningfully help Parent/Tutor decisions |
 
@@ -723,6 +723,6 @@ On the next authorized map update, visually distinguish:
 
 # 17. Next Recommended Action
 
-Execute **REC-35.2 — Adaptive Teaching Method Foundation** as the next approved READY task. It implements LR-D04A only: project-owned method identity and observability while preserving one primary Tutor call and the existing Evidence architecture.
+REC-35.2 remains in **REVIEW** pending its approved semantic-authority code correction: the same primary Tutor call must semantically decide Mode, Strategy, Method, and prior-method relation, followed by deterministic validation. Browser acceptance remains pending until that correction is implemented.
 
 Do not begin LR-D04B historical method learning, REC-25, Track B, or any frozen Artifact/Vision capability in the same change.

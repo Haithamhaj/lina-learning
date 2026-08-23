@@ -5,9 +5,9 @@
 Roadmap Track A architecture simplification is COMPLETE / ACCEPTED. REC-35.1 —
 Tutor Child Interaction Calibration Pass — is complete following Product Owner
 browser acceptance. REC-35.2 / LR-D04A — Adaptive Teaching Method Foundation —
-is implemented and in REVIEW pending Product Owner browser validation. LR-D04B
-remains future, evidence-dependent work. REC-25 has not started and remains
-blocked.
+is in REVIEW with a Product Owner-approved semantic-authority correction pending
+before browser validation. LR-D04B remains future, evidence-dependent work.
+REC-25 has not started and remains blocked.
 
 ## Current reality
 
@@ -47,11 +47,12 @@ blocked.
   Student draft. Automated contracts, a fresh PostgreSQL suite, web build, and
   the real-Luna equivalent-fractions diagnostic passed. Product Owner browser
   acceptance completed the review; REC-25 has not resumed.
-- Teaching Method Foundation is implemented: `tutor_turn_v4` persists a
-  validated selected method from the active versioned registry; current typed
-  confusion switches the next eligible representation without historical
-  ranking; and only server-grounded method → observable-outcome lineage can
-  reach Session Evidence prompt v2. Product Owner browser review remains.
+- Product Owner review found that the current Teaching Method Foundation uses
+  deterministic keyword routing as semantic authority. The approved correction
+  keeps one Tutor call but moves joint Mode + Strategy + Method +
+  prior-method-relation meaning to Luna; runtime remains the deterministic
+  validator/persistence/lineage authority. Browser review waits for that code
+  correction.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -77,8 +78,10 @@ blocked.
   completion.
 - Trusted Educational Reference Pack is approved future Roadmap Track B work,
   not current implementation.
-- Immediate method switching follows current behavior; historical method
-  ranking remains unimplemented and unauthorized before sufficient Evidence.
+- Relevant personalization advises Luna but does not control it; current Lina
+  behavior outranks history. Turn decisions are not learner memory, and
+  historical method ranking remains unimplemented and unauthorized before
+  sufficient Evidence.
 
 ## Protected areas
 
@@ -91,17 +94,17 @@ and Parent Dashboard expansion.
 
 ## Active risks
 
-- Product Owner browser validation must confirm the Teaching Method Foundation
-  UX; REC-25 remains blocked; LR-D04B, Track B, and other future capability
-  work remain frozen.
+- REC-35.2 needs the approved semantic-authority code correction before Product
+  Owner browser validation. REC-25 remains blocked; LR-D04B, Track B, and other
+  future capability work remain frozen.
 - PostgreSQL/pgvector and real AWS/S3 staging verification remain separate
   operational concerns; this governance correction does not change them.
 
 ## Next recommended action
 
-Run Product Owner browser validation for REC-35.2 only. Do not begin LR-D04B or
-resume REC-25, and do not unfreeze Vision, Voice, Science, Learning Canvas,
-Interactive Artifacts, or Parent Dashboard expansion.
+Implement only the approved REC-35.2 semantic-authority correction next; do not
+begin LR-D04B or resume REC-25, and do not unfreeze Vision, Voice, Science,
+Learning Canvas, Interactive Artifacts, or Parent Dashboard expansion.
 
 ## Critical references
 

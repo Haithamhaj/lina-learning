@@ -433,7 +433,7 @@ Examples of strategy identity:
 
 For teaching-representation effectiveness, **TeachingMethod** is the canonical method identity. It is distinct from TeachingStrategy, which governs the support/intervention flow. The existing `strategy_applied` and `strategy_outcome` taxonomy remains compatible: the existing `strategy_key` lineage may carry the canonical TeachingMethod identifier where the established pattern contract requires it.
 
-That identity must be source-grounded in persisted project-owned Tutor-turn metadata, together with the bounded prior-turn/source lineage needed to connect the method to the later observable Student outcome. Session Evidence consolidation must not invent a method identity. An immediate same-session method change after current confusion is contextual adaptation; repeated method outcomes are the separate, evidence-dependent basis for any stable `strategy_effectiveness` pattern.
+Mode, Strategy, Method, and prior-method-relation are turn-level semantic routing/audit metadata from the same primary Tutor call, not Candidate Events, Evidence, or learner memory. Runtime validates their canonical values and persisted source lineage but does not infer their natural-language meaning. That method identity must be source-grounded in persisted project-owned Tutor-turn metadata, together with the bounded prior-turn/source lineage needed to connect the method to the later observable Student outcome. Session Evidence consolidation must not invent a method identity. An immediate same-session method change after current confusion is contextual adaptation; repeated method outcomes are the separate, evidence-dependent basis for any stable `strategy_effectiveness` pattern.
 
 ---
 
@@ -1154,7 +1154,7 @@ Do not convert this into:
 
 Strategy intelligence may weaken or resolve over time as Lina develops.
 
-TeachingMethod records the pedagogical representation used by that intervention; it is not a synonym for TeachingStrategy. Repeated source-grounded outcomes may create `strategy_effectiveness` patterns, but they must stay scoped to the supported concept/context, such as “Concrete representation has often helped when equivalent fractions were initially unclear.” They must never become a fixed learning-style label. Historical method influence on later eligibility/ranking is a later evidence-dependent capability, not an inference from a single current interaction.
+TeachingMethod records the pedagogical representation used by that intervention; it is not a synonym for TeachingStrategy. The primary Tutor call's semantic method choice or prior-method relation is not outcome Evidence. Repeated source-grounded outcomes may create `strategy_effectiveness` patterns, but they must stay scoped to the supported concept/context, such as “Concrete representation has often helped when equivalent fractions were initially unclear.” They must never become a fixed learning-style label. Historical method influence on later ranking is a later evidence-dependent capability, not an inference from a single current interaction.
 
 ---
 

@@ -870,7 +870,7 @@ Teaching strategy adapts.
 
 Do not implement a self-rewriting persona system.
 
-TeachingStrategy governs support/intervention flow. TeachingMethod is a separate pedagogical representation selected from a small internal, project-owned, versioned Teaching Method Registry. The registry is not an MCP, agent, service, database table, or giant mutable prompt. It determines a small eligible method set for the current Tutor turn; the primary call receives that bounded set rather than a static catalog.
+TeachingMode governs the kind of learning interaction. TeachingStrategy governs support/intervention flow. TeachingMethod is a separate pedagogical representation. `prior_method_relation` is turn-level semantic routing/audit metadata for the relation to the immediately previous persisted Tutor method. The small internal, project-owned, versioned Teaching Method Registry owns canonical IDs, compact definitions, active/frozen status, and validation; it is not an MCP, agent, service, database table, giant mutable prompt, or natural-language keyword rules engine. With seven active methods, the primary call may receive all compact active definitions.
 
 REC-35.2 owns the exact implementation. It should use existing structured/JSONB boundaries where practical, persist the selected TeachingMethod identity with the Tutor turn, and preserve enough bounded source lineage for later Session Evidence consolidation to connect method used → observable Student outcome → relevant concept/context. Evidence must never invent the method identity. No new database migration is authorized unless a blocker is separately discovered and approved.
 
@@ -894,7 +894,7 @@ Generic teaching strategy
 
 Historical patterns are priors, not commands.
 
-The same priority governs method eligibility: current demonstrated behavior outranks historical method information, and history must not remove demonstrated independence. If current behavior shows that a method did not help, the next attempt should normally use a different method unless Lina explicitly requests the same one. This immediate switching is not longitudinal method learning.
+The same priority informs the primary Tutor call's semantic decision: current demonstrated behavior outranks historical method information, and history must not remove demonstrated independence. Luna jointly determines Mode, Strategy, Method, and prior-method relation from the current message, relevant context/personalization, prior persisted method, and compact taxonomies in that one call. Runtime validates allowed values, null combinations, frozen status, source lineage, and cross-field consistency; it must not use keyword/phrase lists to infer meanings or make a separate classification call. If Luna returns `DID_NOT_HELP`, selecting the same prior method is inconsistent unless the relation is `EXPLICIT_REPEAT_REQUEST`. This immediate switching is not longitudinal method learning.
 
 ## 14.4 Tutor Call Count
 
@@ -905,17 +905,13 @@ Do not add a critic/evaluator/profile-agent chain around every response.
 The conceptual method path is:
 
 ```text
-Current behavior
+Current Student message + relevant context/personalization + previous persisted teaching decision + compact taxonomies / Method Registry
     ↓
-Teaching Strategy
+ONE Luna semantic Tutor call
     ↓
-Method Registry / eligibility
+Mode + Strategy + Method + prior relation + Tutor response
     ↓
-Small eligible method set
-    ↓
-ONE Tutor call
-    ↓
-Selected TeachingMethod identity + response
+Deterministic validation / persistence
     ↓
 Persisted method lineage
     ↓
@@ -924,13 +920,15 @@ Later observable Student outcome
 Existing Candidate / Evidence pipeline
 ```
 
-Selection or use alone is not method-effectiveness Evidence. Historical method ranking is explicitly deferred to LR-D04B, after sufficient real Evidence and validation.
+Turn-level decisions are not learner memory, and selection or use alone is not method-effectiveness Evidence. Historical method ranking is explicitly deferred to LR-D04B, after sufficient real Evidence and validation.
 
 ## 14.5 Candidate Events
 
 The Tutor may return small hidden Candidate Event metadata in the same AI execution.
 
 Candidate Events must not directly become stable learner intelligence.
+
+`NAVIGATION` and pure self-report choices remain non-evidentiary merely because they were clicked. A bounded `ANSWER_CHOICE` can be an observable guided attempt and may emit only the approved bounded Candidate types; it never becomes independent success or mastery from the click alone. The Tutor prompt must not globally require `candidate_metadata = null` for every button selection.
 
 ---
 

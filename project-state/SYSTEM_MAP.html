@@ -30,8 +30,8 @@
 <body>
 <div class="wrap">
 <header>
-  <div><h1>Lina Personal Learning System</h1><p>Operating map for Codex/AI implementation. Current target: REC-35.2 establishes TeachingMethod observability without changing the one-call Tutor or Evidence architecture.</p></div>
-  <div class="badge">NEXT READY · REC-35.2 / LR-D04A</div>
+  <div><h1>Lina Personal Learning System</h1><p>Operating map for Codex/AI implementation. REC-35.2 remains in review: the next correction moves turn-level teaching semantics into the same one-call Tutor decision while preserving deterministic governance and Evidence architecture.</p></div>
+  <div class="badge">REVIEW · REC-35.2 / LR-D04A</div>
 </header>
 
 <div class="toolbar" aria-label="Map layer filter">
@@ -51,12 +51,11 @@
   </div></article>
 
   <article class="panel core" data-layer="runtime"><h2>🧠 Tutor Runtime</h2><div class="stack">
-    <div class="node"><strong>Teaching Mode</strong><small>Learn · Homework · Explore · Quiz · Review. Internal only.</small></div>
     <div class="node"><strong>Context Builder</strong><small>Current question + relevant intelligence + optional question-driven grounding.</small></div>
     <div class="node"><strong>Safety + Parent Boundaries</strong><small>Protected baseline, then Allow / Age-appropriate only / Redirect to parent.</small></div>
-    <div class="node"><strong>Teaching Strategy</strong><small>Support/intervention flow. Current Lina outranks history; never personalize away independence.</small></div>
-    <div class="node"><strong>Teaching Method Registry / eligibility</strong><small>Small project-owned, versioned eligible set; no MCP, agent, or extra call.</small></div>
-    <div class="node"><strong>One Primary Tutor Call</strong><small>Selected TeachingMethod identity + response + hidden Candidate Event metadata.</small></div>
+    <div class="node"><strong>Teaching Taxonomies + Registry</strong><small>Mode, Strategy, prior relation, and seven active Method definitions. Canonical IDs and frozen status only; no keyword routing.</small></div>
+    <div class="node"><strong>One Luna Semantic Tutor Call</strong><small>Understands current meaning; relevant personalization informs but never controls or overrides demonstrated independence.</small></div>
+    <div class="node"><strong>Deterministic Runtime Governance</strong><small>Validates values, nulls, lineage, safety, and persistence. Turn decisions are audit metadata, not learner memory.</small></div>
   </div></article>
 
   <article class="panel parent" data-layer="experience"><h2>👨‍👩‍👧 Parent / Admin</h2><div class="stack">
@@ -69,18 +68,16 @@
 
 <section class="flow" data-layer="runtime intelligence content experience">
 <h2>End-to-End Learning Loop</h2>
-<svg viewBox="0 0 1360 300" role="img" aria-label="Lina learning flow">
+<svg viewBox="0 0 1360 300" role="img" aria-label="Lina semantic Tutor decision flow">
   <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#8d98aa"/></marker></defs>
-  <rect class="box student" x="18" y="82" width="130" height="82" rx="14"/><text x="83" y="112" text-anchor="middle">Student Question</text><text class="sub" x="83" y="132" text-anchor="middle">current behavior</text><text class="sub" x="83" y="148" text-anchor="middle">is authoritative</text>
-  <rect class="box core" x="168" y="82" width="150" height="82" rx="14"/><text x="243" y="112" text-anchor="middle">Safety + Context</text><text class="sub" x="243" y="132" text-anchor="middle">optional grounding</text><text class="sub" x="243" y="148" text-anchor="middle">relevant intelligence</text>
-  <rect class="box core" x="338" y="82" width="125" height="82" rx="14"/><text x="400" y="112" text-anchor="middle">Teaching Mode</text><text class="sub" x="400" y="132" text-anchor="middle">interaction mode</text><text class="sub" x="400" y="148" text-anchor="middle">not a label</text>
-  <rect class="box core" x="483" y="82" width="140" height="82" rx="14"/><text x="553" y="112" text-anchor="middle">Teaching Strategy</text><text class="sub" x="553" y="132" text-anchor="middle">support / flow</text><text class="sub" x="553" y="148" text-anchor="middle">not method</text>
-  <rect class="box core" x="643" y="82" width="170" height="82" rx="14"/><text x="728" y="108" text-anchor="middle">Method Registry</text><text class="sub" x="728" y="130" text-anchor="middle">small eligible set</text><text class="sub" x="728" y="146" text-anchor="middle">project-owned / versioned</text>
-  <rect class="box core" x="833" y="82" width="135" height="82" rx="14"/><text x="900" y="112" text-anchor="middle">ONE Tutor Call</text><text class="sub" x="900" y="132" text-anchor="middle">no agent chain</text><text class="sub" x="900" y="148" text-anchor="middle">no extra call</text>
-  <rect class="box" x="988" y="82" width="166" height="82" rx="14"/><text x="1071" y="108" text-anchor="middle">Method + Response</text><text class="sub" x="1071" y="130" text-anchor="middle">persisted method identity</text><text class="sub" x="1071" y="146" text-anchor="middle">+ Student response</text>
-  <rect class="box data" x="1174" y="82" width="168" height="82" rx="14"/><text x="1258" y="108" text-anchor="middle">Candidate / Evidence</text><text class="sub" x="1258" y="130" text-anchor="middle">observable outcome only</text><text class="sub" x="1258" y="146" text-anchor="middle">source-grounded lineage</text>
-  <path class="arrow" d="M148 123H168"/><path class="arrow" d="M318 123H338"/><path class="arrow" d="M463 123H483"/><path class="arrow" d="M623 123H643"/><path class="arrow" d="M813 123H833"/><path class="arrow" d="M968 123H988"/><path class="arrow" d="M1154 123H1174"/>
-  <path class="arrow" d="M1258 164 C1258 244, 243 244, 243 164"/><text class="sub" x="705" y="248" text-anchor="middle">method used → observable Lina outcome → strategy effectiveness → State / Patterns → future relevant personalization</text><text class="sub" x="705" y="266" text-anchor="middle">Historical method influence is evidence-dependent later work; current Lina behavior outranks history.</text>
+  <rect class="box student" x="18" y="82" width="155" height="82" rx="14"/><text x="96" y="112" text-anchor="middle">Current Student Message</text><text class="sub" x="96" y="132" text-anchor="middle">current behavior</text><text class="sub" x="96" y="148" text-anchor="middle">is authoritative</text>
+  <rect class="box core" x="193" y="82" width="205" height="82" rx="14"/><text x="296" y="108" text-anchor="middle">Safety + Decision Inputs</text><text class="sub" x="296" y="130" text-anchor="middle">relevant context / personalization</text><text class="sub" x="296" y="146" text-anchor="middle">prior method + compact taxonomies</text>
+  <rect class="box core" x="418" y="82" width="190" height="82" rx="14"/><text x="513" y="108" text-anchor="middle">ONE Luna Semantic Call</text><text class="sub" x="513" y="130" text-anchor="middle">understands meaning</text><text class="sub" x="513" y="146" text-anchor="middle">no keyword router / extra call</text>
+  <rect class="box" x="628" y="82" width="205" height="82" rx="14"/><text x="731" y="108" text-anchor="middle">Turn Decision + Response</text><text class="sub" x="731" y="130" text-anchor="middle">Mode · Strategy · Method</text><text class="sub" x="731" y="146" text-anchor="middle">prior relation + Tutor response</text>
+  <rect class="box core" x="853" y="82" width="215" height="82" rx="14"/><text x="961" y="108" text-anchor="middle">Runtime Validation / Persistence</text><text class="sub" x="961" y="130" text-anchor="middle">canonical values, nulls, lineage, safety</text><text class="sub" x="961" y="146" text-anchor="middle">turn decisions are not learner memory</text>
+  <rect class="box data" x="1088" y="82" width="254" height="82" rx="14"/><text x="1215" y="108" text-anchor="middle">Student Outcome → Candidate / Evidence</text><text class="sub" x="1215" y="130" text-anchor="middle">observable outcome only</text><text class="sub" x="1215" y="146" text-anchor="middle">existing source-grounded path</text>
+  <path class="arrow" d="M173 123H193"/><path class="arrow" d="M398 123H418"/><path class="arrow" d="M608 123H628"/><path class="arrow" d="M833 123H853"/><path class="arrow" d="M1068 123H1088"/>
+  <path class="arrow" d="M1215 164 C1215 244, 296 244, 296 164"/><text class="sub" x="705" y="248" text-anchor="middle">personalization advises but does not control; current Lina behavior outranks history; method choice is not effectiveness Evidence</text><text class="sub" x="705" y="266" text-anchor="middle">Only observable outcomes can support later method effectiveness; historical influence is LR-D04B future work.</text>
 </svg>
 </section>
 
@@ -116,7 +113,7 @@
     <div class="phase"><strong>Foundation</strong><span>Auth, storage, jobs, model gateway, safety, evidence infrastructure.</span></div>
     <div class="phase"><strong>Track A</strong><span>Zero-book Tutor → structural-first index → advisory semantics → acceptance.</span></div>
     <div class="phase gate"><strong>REAL LINA CALIBRATION</strong><span>Product Owner browser acceptance completed REC-35.1.</span></div>
-    <div class="phase"><strong>REC-35.2</strong><span>Teaching Method Foundation / observability. LR-D04A only.</span></div>
+    <div class="phase"><strong>REC-35.2 REVIEW</strong><span>Semantic-authority correction pending before browser validation. LR-D04A only.</span></div>
     <div class="phase future"><strong>Track B</strong><span>Trusted Educational Reference pilot; future, not active.</span></div>
     <div class="phase future"><strong>Phase 5</strong><span>Voice + student images.</span></div>
     <div class="phase future"><strong>Phase 6</strong><span>Interactive artifacts.</span></div>
@@ -149,7 +146,7 @@
     <code>docs/IMPLEMENTATION_PLAN.md — execution direction and gates</code>
     <code>project-state/PROJECT_STATE.md — current reality</code>
     <code>TASKS.md — actual work queue</code>
-    <p style="margin-top:12px">Execute only the next READY queue item: <strong>REC-35.2 / Roadmap LR-D04A</strong>. Do not begin REC-25, LR-D04B, or frozen future capabilities.</p>
+    <p style="margin-top:12px">REC-35.2 remains in REVIEW pending its approved semantic-authority code correction. Do not begin REC-25, LR-D04B, or frozen future capabilities.</p>
   </article>
 </section>
 </div>
