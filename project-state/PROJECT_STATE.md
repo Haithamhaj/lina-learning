@@ -5,8 +5,8 @@
 Roadmap Track A architecture simplification is active. LR-A01 governing
 decision correction, LR-A02 — Tutor always available, and LR-A03 — decouple
 index identity from mandatory semantics — and LR-A04 — structural-first index
-builder — are complete. LR-A05 — semantic retrieval behavior advisory — is
-next.
+builder — and LR-A05 — semantic retrieval behavior advisory — are complete.
+LR-A06 — source processing lifecycle — is next.
 REC-25 has not started and remains blocked until LR-A09 acceptance.
 
 ## Current reality
@@ -20,6 +20,9 @@ REC-25 has not started and remains blocked until LR-A09 acceptance.
   blocks from a completed structural run without semantic enrichment, retaining
   exact source lineage and a nullable semantic execution lineage. The semantic-
   backed builder path remains available as optional enrichment.
+- Retrieval now keeps structural and semantic blocks eligible from the same
+  lexical/vector candidate set. Semantic hints and recent focus only resolve
+  equal RRF relevance; null metadata cannot exclude structural grounding.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -37,6 +40,7 @@ REC-25 has not started and remains blocked until LR-A09 acceptance.
 - Concept identity primarily comes from the learning interaction.
 - Current School Focus has no product authority; relevant recent conversational
   context remains allowed with relevance before recency.
+- Semantic type is advisory retrieval metadata, not candidate eligibility.
 - Trusted Educational Reference Pack is approved future Roadmap Track B work,
   not current implementation.
 
@@ -58,8 +62,7 @@ and Parent Dashboard expansion.
 
 ## Next recommended action
 
-Execute `REC-30 — Semantic Retrieval Behavior Advisory` (`Roadmap: LR-A05`)
-only.
+Execute `REC-31 — Source Processing Lifecycle` (`Roadmap: LR-A06`) only.
 
 ## Critical references
 

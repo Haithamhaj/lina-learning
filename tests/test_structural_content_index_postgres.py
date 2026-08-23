@@ -15,6 +15,7 @@ from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute
 from services.model_gateway.lineage import derived_objects_for_execution
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import AIExecution, ContentIndexRun, ContentSemanticProcessingRun, IndexedContentBlock, IndexedContentBlockSource, ModelTask, Student, User
+from services.retrieval.service import CurrentFocus, RetrievalService
 
 
 pytestmark = pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="PostgreSQL DATABASE_URL required")
@@ -224,3 +225,36 @@ def test_empty_structural_representation_fails_without_false_success(factory) ->
 
     assert run.status == "FAILED" and blocks == 0 and executions == 0
     assert document.status == "STRUCTURAL_READY"
+
+
+@pytest.mark.parametrize(
+    ("question", "source_ref"),
+    [
+        ("Show me a decimal example.", "structural#example"),
+        ("Give me a decimal practice problem.", "structural#exercise"),
+        ("Explain the decimal diagram.", "structural#figure"),
+        ("What decimal formula is this equation using?", "structural#formula"),
+    ],
+)
+def test_structural_retrieval_keeps_semantic_hint_questions_eligible(factory, question: str, source_ref: str) -> None:
+    with factory.begin() as session:
+        document, structural, _ = _setup_structural(
+            session,
+            items=[
+                _item("example", text_value="A decimal example shows place value.", source_ref="structural#example"),
+                _item("exercise", text_value="A decimal practice problem checks place value.", source_ref="structural#exercise"),
+                _item("figure", text_value="A decimal diagram shows each place value.", source_ref="structural#figure"),
+                _item("formula", text_value="A decimal formula and equation show place value.", source_ref="structural#formula"),
+            ],
+        )
+        build_content_index(session, document=document, structural_run=structural, gateway=_gateway(session))
+        blocks = RetrievalService(session, embedding_gateway=_gateway(session)).retrieve(
+            student_id=document.student_id,
+            question=question,
+            focus=CurrentFocus(concept_key="stale-focus"),
+            limit=4,
+            character_budget=800,
+        )
+
+    assert any(block.source_ref == source_ref for block in blocks)
+    assert all(block.semantic_type is None and block.matched for block in blocks)

@@ -604,14 +604,18 @@ character block limit; semantic-backed index behavior remains compatible.
 
 ## REC-30 — Semantic Retrieval Behavior Advisory
 **Roadmap:** LR-A05
-**Status:** READY
+**Status:** DONE
 **Dependencies:** REC-29
 **Purpose:** Retain semantic metadata as optional ranking/navigation enrichment
 without making it a core retrieval-candidate eligibility requirement.
+**Completion note:** Semantic-type hints and CurrentFocus now only prefer
+already-relevant lexical/vector candidates as deterministic RRF tie-breakers.
+Structural blocks with null semantic/focus metadata remain eligible, while
+semantic-backed expansion, context budgets, and exact provenance are unchanged.
 
 ## REC-31 — Source Processing Lifecycle
 **Roadmap:** LR-A06
-**Status:** BLOCKED
+**Status:** READY
 **Dependencies:** REC-29
 **Purpose:** Connect preserved source → structural processing → retrieval-ready
 index through existing job boundaries; semantic enrichment remains independent.

@@ -7,7 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, func, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from services.content.indexing import build_content_index
@@ -23,7 +23,7 @@ from services.content.structural_contract import NormalizedStructuralItem
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute
 from services.model_gateway.lineage import executions_for_student
 from services.platform.db.connection import normalize_database_url
-from services.platform.db.models import AIExecution, ModelTask, Student, User
+from services.platform.db.models import AIExecution, ContentSemanticItem, IndexedContentBlock, ModelTask, Student, User
 from services.retrieval.service import (
     CurrentFocus,
     RetrievalService,
@@ -45,6 +45,15 @@ def test_rank_fusion_deduplicates_and_prefers_agreement() -> None:
         "lexical-only",
         "vector-only",
     ]
+
+
+def test_rank_fusion_uses_metadata_preference_only_for_equal_question_rank() -> None:
+    assert reciprocal_rank_fusion(
+        ["semantic", "structural"],
+        ["structural", "semantic"],
+        preferred_ids={"semantic"},
+        offset=10,
+    ) == ["semantic", "structural"]
 
 
 pytestmark = pytest.mark.skipif(
@@ -350,7 +359,40 @@ def test_retrieval_uses_explicit_semantic_content_type_request(factory) -> None:
             focus=CurrentFocus(concept_key="place-value"),
         )
 
-    assert blocks and {block.semantic_type for block in blocks} == {"EXAMPLE"}
+    assert any(block.semantic_type == "EXAMPLE" for block in blocks)
+
+
+def test_semantic_hint_keeps_structural_alternatives_eligible(factory) -> None:
+    with factory.begin() as session:
+        student, index_run = _seed(session)
+        semantic_item = session.query(ContentSemanticItem).filter_by(semantic_type="EXAMPLE").one()
+        structural_alternative = IndexedContentBlock(
+            index_run_id=index_run.id,
+            document_id=semantic_item.document_id,
+            semantic_item_id=None,
+            block_key="structural-advisory:part-0",
+            block_type="STRUCTURAL",
+            semantic_type=None,
+            grade_level=5,
+            subject="MATH",
+            unit_key=None,
+            lesson_key=None,
+            concept_key=None,
+            text="An advisory example keeps a structural alternative eligible.",
+            embedding=[0.1, 0.1] + [0.0] * 1534,
+            search_vector=func.to_tsvector("english", "An advisory example keeps a structural alternative eligible."),
+            attributes={"structural_item_key": "structural-advisory"},
+        )
+        session.add(structural_alternative)
+        session.flush()
+        blocks = RetrievalService(session, embedding_gateway=_gateway(session)).retrieve(
+            student_id=student.id,
+            question="Show an advisory example.",
+            limit=10,
+        )
+
+    assert any(block.semantic_type == "EXAMPLE" for block in blocks)
+    assert any(block.semantic_type is None for block in blocks)
 
 
 def test_explicit_question_overrides_stale_current_focus_when_lexically_targeted(

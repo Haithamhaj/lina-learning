@@ -144,7 +144,6 @@ class RetrievalService:
             grade_level=grade_level,
             subject=subject,
             focus=None,
-            semantic_types=semantic_types,
             limit=candidate_limit,
         )
         vector_ids = self._vector_candidate_ids(
@@ -153,8 +152,12 @@ class RetrievalService:
             grade_level=grade_level,
             subject=subject,
             focus=None,
-            semantic_types=semantic_types,
             limit=candidate_limit,
+        )
+        semantic_preferred_ids = self._semantic_hint_preferred_ids(
+            index_run_id=index_run_id,
+            candidate_ids=set(lexical_ids).union(vector_ids),
+            semantic_types=semantic_types,
         )
         focused_ids: set[UUID] = set()
         if focus is not None:
@@ -165,7 +168,6 @@ class RetrievalService:
                     grade_level=grade_level,
                     subject=subject,
                     focus=focus,
-                    semantic_types=semantic_types,
                     limit=candidate_limit,
                 )
             )
@@ -176,12 +178,13 @@ class RetrievalService:
                     grade_level=grade_level,
                     subject=subject,
                     focus=focus,
-                    semantic_types=semantic_types,
                     limit=candidate_limit,
                 )
             )
         fused_ids = reciprocal_rank_fusion(
-            lexical_ids, vector_ids, preferred_ids=focused_ids
+            lexical_ids,
+            vector_ids,
+            preferred_ids=semantic_preferred_ids.union(focused_ids),
         )
         direct_blocks = self._blocks_by_rank(fused_ids)
         expanded_blocks = self._semantic_expansion(
@@ -226,7 +229,6 @@ class RetrievalService:
         grade_level: int,
         subject: str,
         focus: CurrentFocus | None,
-        semantic_types: tuple[str, ...],
     ):
         statement = select(IndexedContentBlock).where(
             IndexedContentBlock.index_run_id == index_run_id,
@@ -246,11 +248,27 @@ class RetrievalService:
                 statement = statement.where(
                     IndexedContentBlock.concept_key == focus.concept_key
                 )
-        if semantic_types:
-            statement = statement.where(
-                IndexedContentBlock.semantic_type.in_(semantic_types)
-            )
         return statement
+
+    def _semantic_hint_preferred_ids(
+        self,
+        *,
+        index_run_id: UUID,
+        candidate_ids: set[UUID],
+        semantic_types: tuple[str, ...],
+    ) -> set[UUID]:
+        """Prefer already-relevant enriched blocks without excluding structural ones."""
+        if not candidate_ids or not semantic_types:
+            return set()
+        return set(
+            self._session.execute(
+                select(IndexedContentBlock.id).where(
+                    IndexedContentBlock.index_run_id == index_run_id,
+                    IndexedContentBlock.id.in_(candidate_ids),
+                    IndexedContentBlock.semantic_type.in_(semantic_types),
+                )
+            ).scalars()
+        )
 
     def _lexical_candidate_ids(self, **filters: object) -> list[UUID]:
         question = str(filters.pop("question"))
@@ -413,7 +431,7 @@ class RetrievalService:
 
 
 def _semantic_type_hints(question: str) -> tuple[str, ...]:
-    """Use explicit user requests as metadata narrowing, never as a teaching decision."""
+    """Use explicit user requests as advisory metadata preferences."""
     words = set(re.findall(r"[a-z]+", question.casefold()))
     if words.intersection({"example", "examples"}):
         return ("EXAMPLE",)
