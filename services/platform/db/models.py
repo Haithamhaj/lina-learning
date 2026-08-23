@@ -451,17 +451,27 @@ class ContentBlock(Base):
 
 
 class ContentIndexRun(Base):
-    """Versioned retrieval-index derivation from approved semantic content."""
+    """Versioned retrieval-index derivation from structural content and optional semantics."""
 
     __tablename__ = "content_index_runs"
     __table_args__ = (
         UniqueConstraint("document_id", "semantic_processing_run_id", "block_schema_version", "embedding_route_version", "settings_version", name="uq_content_index_run_identity"),
+        Index(
+            "uq_content_index_run_structural_identity",
+            "document_id",
+            "structural_processing_run_id",
+            "block_schema_version",
+            "embedding_route_version",
+            "settings_version",
+            unique=True,
+            postgresql_where=text("semantic_processing_run_id IS NULL"),
+        ),
         Index("ix_content_index_runs_document_status", "document_id", "status"),
     )
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     document_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_documents.id", ondelete="CASCADE"), nullable=False)
     structural_processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_processing_runs.id", ondelete="CASCADE"), nullable=False)
-    semantic_processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_semantic_processing_runs.id", ondelete="CASCADE"), nullable=False)
+    semantic_processing_run_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("content_semantic_processing_runs.id", ondelete="CASCADE"), nullable=True)
     block_schema_version: Mapped[str] = mapped_column(String(128), nullable=False)
     embedding_route_version: Mapped[str] = mapped_column(String(255), nullable=False)
     embedding_dimensions: Mapped[int] = mapped_column(SmallInteger, nullable=False)

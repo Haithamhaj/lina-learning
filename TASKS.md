@@ -579,14 +579,20 @@ redirect behavior remain enforced.
 
 ## REC-28 — Decouple Index Identity from Mandatory Semantics
 **Roadmap:** LR-A03
-**Status:** READY
+**Status:** DONE
 **Dependencies:** REC-27
 **Purpose:** Make index identity support a completed structural run without a
 mandatory semantic run, preserving provenance and migration safety.
+**Completion note:** `ContentIndexRun` now permits an absent semantic run while
+retaining document and structural-run provenance. A partial PostgreSQL unique
+index prevents duplicate structural-only identities; the existing semantic-run
+unique constraint remains unchanged. Downgrade removes only structural-only
+derived index rows before restoring the historical NOT NULL contract; preserved
+structural sources support a later rebuild. No index-building behavior changed.
 
 ## REC-29 — Structural-First Index Builder
 **Roadmap:** LR-A04
-**Status:** BLOCKED
+**Status:** READY
 **Dependencies:** REC-28
 **Purpose:** Build retrieval-ready structural blocks from completed structural
 content without blind fixed-token-first chunking.

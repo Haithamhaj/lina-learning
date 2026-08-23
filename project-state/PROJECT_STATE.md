@@ -3,8 +3,9 @@
 ## Current goal
 
 Roadmap Track A architecture simplification is active. LR-A01 governing
-decision correction and LR-A02 — Tutor always available — are complete.
-LR-A03 — decouple index identity from mandatory semantics — is next.
+decision correction, LR-A02 — Tutor always available, and LR-A03 — decouple
+index identity from mandatory semantics — are complete. LR-A04 — structural-
+first index builder — is next.
 REC-25 has not started and remains blocked until LR-A09 acceptance.
 
 ## Current reality
@@ -14,8 +15,9 @@ REC-25 has not started and remains blocked until LR-A09 acceptance.
 - The Student API/UI now permit an authenticated Student to open/resume Math,
   persist messages, and stream one safe Tutor response with zero content;
   retrieval remains optional and returns empty context when no index exists.
-- The existing index builder and index-run identity still require a semantic
-  run; Track A must decouple them before structural-first retrieval is claimed.
+- Index identity now supports a structural-only derived run with explicit
+  duplicate prevention, but the existing index builder still requires semantic
+  content. REC-29 must add structural-first building before it is claimed.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -54,8 +56,7 @@ and Parent Dashboard expansion.
 
 ## Next recommended action
 
-Execute `REC-28 — Decouple Index Identity from Mandatory Semantics`
-(`Roadmap: LR-A03`) only.
+Execute `REC-29 — Structural-First Index Builder` (`Roadmap: LR-A04`) only.
 
 ## Critical references
 
