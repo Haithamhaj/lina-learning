@@ -4,10 +4,10 @@
 
 Roadmap Track A architecture simplification is COMPLETE / ACCEPTED. REC-35.1 —
 Tutor Child Interaction Calibration Pass — is complete following Product Owner
-browser acceptance. REC-35.2 / LR-D04A — Adaptive Teaching Method Foundation —
-is in REVIEW: its Product Owner-approved semantic-authority correction is
-implemented and awaits Product Owner browser validation. LR-D04B remains future, evidence-dependent work.
-REC-25 has not started and remains blocked.
+browser acceptance. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory
+Lina Stabilization Gate: CTX-01 is next, followed only by the approved
+dependency order in `TASKS.md`. LR-D04B remains future/evidence-dependent and
+REC-25 remains BLOCKED.
 
 ## Current reality
 
@@ -52,7 +52,10 @@ REC-25 has not started and remains blocked.
   one primary Tutor call. Runtime validates canonical values/cross-fields,
   safety, persistence, and server-grounded Candidate lineage; no phrase router
   selects the semantic axes. Focused contracts, a fresh PostgreSQL suite, and
-  a five-turn real-Luna diagnostic passed. Browser acceptance remains pending.
+  a five-turn real-Luna diagnostic passed. Product Owner browser testing then
+  established the Lina Stabilization Issue Register v1: REC-35.2 cannot become
+  DONE until its ordered gate is completed, beginning with CTX-01 recent
+  conversation context integrity.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -82,6 +85,11 @@ REC-25 has not started and remains blocked.
   behavior outranks history. Turn decisions are not learner memory, and
   historical method ranking remains unimplemented and unauthorized before
   sufficient Evidence.
+- The Stabilization Gate preserves 13 Product Owner-approved issues. CTX-01 is
+  first because a bounded-context omission produced a wrong answer-choice
+  response; ACT-01 depends on it. Browser/SSE, Candidate/Evidence,
+  personalization, decision calibration, language, and Math-session scope work
+  remain ordered behind it.
 
 ## Protected areas
 
@@ -94,16 +102,19 @@ and Parent Dashboard expansion.
 
 ## Active risks
 
-- REC-35.2 awaits Product Owner browser validation; REC-25 remains blocked;
+- REC-35.2 stabilization is active: CTX-01 is root-cause verified; UI-01 is
+  high-confidence but requires observability during verification; EVID-01 has
+  an unknown HTTPError root cause; PERS-01 is blocked validation. REC-25,
   LR-D04B, Track B, and other future capability work remain frozen.
 - PostgreSQL/pgvector and real AWS/S3 staging verification remain separate
   operational concerns; this governance correction does not change them.
 
 ## Next recommended action
 
-Obtain Product Owner browser validation for REC-35.2 only; do not begin LR-D04B
-or resume REC-25, and do not unfreeze Vision, Voice, Science, Learning Canvas,
-Interactive Artifacts, or Parent Dashboard expansion.
+Investigate and fix CTX-01 only. Do not start ACT-01 in the same implementation
+commit; do not begin LR-D04B or REC-25, and do not unfreeze Vision, Voice,
+Science production, Learning Canvas, Interactive Artifacts, or Parent
+Dashboard expansion.
 
 ## Critical references
 

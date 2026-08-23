@@ -735,7 +735,73 @@ focused contracts, the fresh PostgreSQL suite, and a bounded real-Luna
 five-turn diagnostic: a changed method after `DID_NOT_HELP`, `NOT_RELEVANT`
 for a topic switch, an immediate-method `EXPLICIT_REPEAT_REQUEST`, and all-null
 casual-turn metadata. Product Owner browser acceptance remains the outstanding
-review gate; this task remains REVIEW, not DONE.
+review gate; this task remains REVIEW, not DONE. The Product Owner-approved
+Lina Stabilization Gate below is now mandatory before this task can become
+DONE.
+
+### Lina Stabilization Gate — mandatory before REC-35.2 DONE
+
+**Status:** ACTIVE
+**Baseline:** `64a9a26f6c4bf7f9bfa7c8b544aae6ebfbdc7276`
+**Purpose:** Preserve the Product Owner-approved stabilization backlog from
+real browser testing. These issues must not be reordered, merged, silently
+closed, or used to start REC-25 or LR-D04B.
+
+#### Stabilization Issue Register v1
+
+| ID | Criticality | Status | Meaning / boundary | Dependency |
+|---|---:|---|---|---|
+| **CTX-01** — Recent Conversation Context Integrity | 5 | OPEN / ROOT CAUSE VERIFIED | The bounded recent-conversation builder can retain an older long message while dropping the immediately preceding Tutor question. In the manual division quiz this made `B) 3` semantically ambiguous to Luna. Fix context delivery, not Tutor intelligence or prompt semantics. | Blocks answer correctness, ACT-01, reliable DEC-01/DEC-02 calibration, and trustworthy Candidate interpretation. |
+| **ACT-01** — Quick Action Source-Context Robustness | 5 | OPEN | An ANSWER_CHOICE is persisted as raw Student text, but Luna still needs the source Tutor question/action in surrounding context to know what it answers. | CTX-01 first. |
+| **OBS-01** — Browser / SSE Lifecycle Observability | 4 | OPEN | Persisted server data cannot fully distinguish click → request → headers → first delta → terminal turn → EOF → client ready. | Required before confidently closing UI-01. |
+| **UI-01** — Terminal Tutor Turn Leaves UI Sending | 5 | OPEN / ROOT CAUSE HIGH-CONFIDENCE | The Student frontend stays `sending` until the response reader reaches EOF; a terminal `event: turn` visibly updates the response but does not itself make the UI ready. | OBS-01 should accompany verification; CTX-01 is independent but first because it affects correctness. |
+| **ACT-02** — NAVIGATION vs ANSWER_CHOICE Semantic Misuse | 4 | OPEN | Topic/branch selections can be emitted as ANSWER_CHOICE even though they are not observable learning attempts. | Address before relying on the Evidence pipeline. |
+| **CAND-01** — Confusion Is Not Automatically Misconception | 4 | OPEN | “I don't understand you” was emitted as `misconception_signal`; lack of understanding of an explanation does not establish a specific incorrect conceptual model. | Address before trusting successful Evidence consolidation. |
+| **CAND-02** — Candidate Classification Consistency | 3 | OPEN | Equivalent guided answer-choice behavior is inconsistently `guided_success` versus filtered. Preserve the bounded ANSWER_CHOICE / no-independent-mastery protection. | After context integrity; before personalization validation. |
+| **EVID-01** — Session Evidence Consolidation HTTPError | 5 | OPEN / ROOT CAUSE UNKNOWN | Three `session_evidence` model executions failed with HTTPError for the long manual session. Tutor turns and Candidate Events exist, but no LearningEvent, LearningEvidence, or IntelligenceSessionAuthority output exists. Diagnose the exact failure before proposing a fix. | Understand Candidate hygiene before trusting resulting Evidence. |
+| **PERS-01** — End-to-End Personalization Not Yet Verified | 5 | BLOCKED VALIDATION | Real browser sessions have not proved Interaction → Candidate → Evidence → State/Pattern → Learner Intelligence → relevant later-Tutor context. Observed manual turns used `intelligence_used = []`. | Blocked by EVID-01 and Evidence-quality stabilization. |
+| **DEC-01** — Mode / Strategy / Prior-Relation Calibration | 3 | OPEN | Voluntary practice can be HOMEWORK; one quiz can move among QUIZ / LEARN / REVIEW; continuations can be NOT_RELEVANT or all-null. Do not replace Luna semantics with deterministic keyword routing. | Re-evaluate after CTX-01. |
+| **DEC-02** — TeachingMethod Attribution Fidelity | 4 | OPEN | The selected TeachingMethod must truthfully describe the representation actually used. Incorrect identity would poison future LR-D04B method-outcome learning. | Re-evaluate after CTX-01; do not implement historical ranking. |
+| **LANG-01** — Language Continuity Drift | 3 | OPEN | Tutor returned to Arabic inside an explicitly English thread, including after an English request. | Re-test after context integrity before changing language policy. |
+| **SCOPE-01** — Science / Explore Inside Math Session | 3 | OPEN / PRODUCT POLICY DECISION REQUIRED LATER | A MATH session accepted a Science request and continued through Space/Mars. This is not automatically a Tutor-quality defect. | Resolve only with Product Owner approval: whether adjacent exploration remains in Math or transitions to a future subject context. |
+
+#### Approved dependency order
+
+1. **S1 — Conversation Integrity:** CTX-01, then ACT-01.
+2. **S2 — Browser Reliability:** OBS-01, then UI-01.
+3. **S3 — Short Manual Re-test:** re-test the stabilized path; re-evaluate
+   DEC-01, DEC-02, LANG-01, and CAND-02 before changing semantic calibration.
+4. **S4 — Evidence Hygiene:** ACT-02, CAND-01, then CAND-02 only if still
+   reproducible.
+5. **S5 — Evidence Pipeline:** EVID-01.
+6. **S6 — Personalization Validation:** PERS-01.
+7. **S7 — Teaching Calibration:** DEC-01, DEC-02, then LANG-01 only if each
+   remains reproducible.
+8. **S8 — Product Boundary:** SCOPE-01.
+
+#### Lifecycle and protected successful behavior
+
+Every item follows `OPEN → ROOT CAUSE VERIFIED → FIX IMPLEMENTED →
+VERIFICATION → CLOSED`. Automated tests alone never close an item: closing
+evidence must include the original behavior or a faithful reproduction. CTX-01
+must show that a short answer such as `B) 3` reaches Luna with its immediately
+preceding Tutor question; UI-01 must leave the browser interactive after a
+terminal Tutor turn without refresh; EVID-01 must produce the intended real
+eligible-session Evidence path.
+
+Protect one primary Tutor call; current Student behavior above history;
+multilingual capability; dynamic suggested actions; bounded ANSWER_CHOICE
+semantics with no mastery from a click alone; Candidate → Evidence authority
+separation; server-grounded TeachingMethod lineage; actual method switching
+after difficulty; WORKED_EXAMPLE → CONCRETE_EXAMPLE → VISUAL_REPRESENTATION
+adaptation; zero-book Tutor availability; Safety before Tutor; and optional
+grounding.
+
+**Next implementation task:** investigate and fix **CTX-01 only**. Do not
+start ACT-01 in the same implementation commit. REC-25 remains BLOCKED,
+LR-D04B remains future/evidence-dependent, and Track B, Science production,
+Voice, Vision, Learning Canvas, Interactive Artifacts, and Parent Dashboard
+expansion remain frozen.
 
 ---
 
