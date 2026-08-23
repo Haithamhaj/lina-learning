@@ -627,14 +627,18 @@ structural/index provenance and use the existing job retry path.
 
 ## REC-32 — Parent Content-Status Decoupling
 **Roadmap:** LR-A07
-**Status:** READY
+**Status:** DONE
 **Dependencies:** REC-28, REC-31
 **Purpose:** Present structural/index readiness separately from optional
 semantic-enrichment outcome without expanding Parent scope.
+**Completion note:** Parent content status now projects the grounding path from
+the current structural run and any usable completed index for that run. Both
+structural-only and semantic-backed indexes are READY; semantic status remains
+visible as independent enrichment detail and cannot override usable grounding.
 
 ## REC-33 — Deprecate School-Focus Authority Residue
 **Roadmap:** LR-A08
-**Status:** BLOCKED
+**Status:** READY
 **Dependencies:** REC-27, REC-30
 **Purpose:** Remove school-position authority while retaining relevant recent
 conversational/topic continuity.

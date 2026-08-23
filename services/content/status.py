@@ -107,15 +107,21 @@ def _status_for_document(
 
     semantic = _latest_semantic_run(session, document_id=document.id, structural_run_id=structural.id)
     semantic_status = _stage_status(semantic)
-    if semantic_status == "FAILED":
-        return _document_status(
-            document, structural_status, semantic_status, "PENDING", _failure("semantic")
-        )
-    if semantic_status != "READY":
-        return _document_status(document, structural_status, semantic_status, "PENDING", None)
-
-    index = _latest_index_run(session, document_id=document.id, semantic_run_id=semantic.id)
+    index = _usable_or_latest_index_run(
+        session,
+        document_id=document.id,
+        structural_run_id=structural.id,
+    )
     index_status = _stage_status(index)
+    if index_status == "READY":
+        return _document_status(
+            document,
+            structural_status,
+            semantic_status,
+            index_status,
+            None,
+            "READY",
+        )
     if index_status == "FAILED":
         return _document_status(
             document, structural_status, semantic_status, index_status, _failure("index")
@@ -179,18 +185,18 @@ def _latest_semantic_run(
     ).scalar_one_or_none()
 
 
-def _latest_index_run(
-    session: Session, *, document_id: UUID, semantic_run_id: UUID
+def _usable_or_latest_index_run(
+    session: Session, *, document_id: UUID, structural_run_id: UUID
 ) -> ContentIndexRun | None:
-    return session.execute(
+    runs = session.execute(
         select(ContentIndexRun)
         .where(
             ContentIndexRun.document_id == document_id,
-            ContentIndexRun.semantic_processing_run_id == semantic_run_id,
+            ContentIndexRun.structural_processing_run_id == structural_run_id,
         )
         .order_by(ContentIndexRun.created_at.desc(), ContentIndexRun.id.desc())
-        .limit(1)
-    ).scalar_one_or_none()
+    ).scalars().all()
+    return next((run for run in runs if _stage_status(run) == "READY"), None) or (runs[0] if runs else None)
 
 
 def _stage_status(run: object | None) -> StageStatus:

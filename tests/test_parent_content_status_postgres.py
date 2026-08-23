@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from services.platform.auth import AuthenticatedPrincipal, UserRole, get_current_principal
 from services.platform.auth.parent_student import grant_parent_student_access
+from services.content.status import has_ready_grade_subject_content
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
     ContentDocument,
@@ -124,11 +125,18 @@ def _semantic(session: Session, document: ContentDocument, structural: ContentPr
     return run
 
 
-def _index(session: Session, document: ContentDocument, structural: ContentProcessingRun, semantic: ContentSemanticProcessingRun, *, status: str = "COMPLETED") -> ContentIndexRun:
+def _index(
+    session: Session,
+    document: ContentDocument,
+    structural: ContentProcessingRun,
+    semantic: ContentSemanticProcessingRun | None,
+    *,
+    status: str = "COMPLETED",
+) -> ContentIndexRun:
     run = ContentIndexRun(
         document_id=document.id,
         structural_processing_run_id=structural.id,
-        semantic_processing_run_id=semantic.id,
+        semantic_processing_run_id=semantic.id if semantic is not None else None,
         block_schema_version=uuid4().hex,
         embedding_route_version="fixture:embedding",
         embedding_dimensions=1536,
@@ -193,6 +201,71 @@ def test_linked_parent_receives_compact_ready_document_status(postgres_session_f
     }]
 
 
+@pytest.mark.parametrize(
+    ("semantic_status", "expected_semantic_stage"),
+    [
+        (None, "PENDING"),
+        ("PROCESSING", "PROCESSING"),
+        ("FAILED", "FAILED"),
+    ],
+)
+def test_completed_structural_index_is_ready_without_semantic_enrichment(
+    postgres_session_factory: sessionmaker[Session],
+    semantic_status: str | None,
+    expected_semantic_stage: str,
+) -> None:
+    """Fail if semantic state is allowed to override usable grounding."""
+
+    with postgres_session_factory.begin() as session:
+        parent = _parent(session, "parent-a")
+        student = _student(session, "lina")
+        grant_parent_student_access(session, parent_user_id=parent.id, student_id=student.id)
+        document = _document(session, student)
+        structural = _structural(session, document)
+        if semantic_status is not None:
+            _semantic(session, document, structural, status=semantic_status)
+        _index(session, document, structural, None)
+        student_id = student.id
+
+    client = _client(
+        postgres_session_factory,
+        AuthenticatedPrincipal(subject="parent-a", role=UserRole.PARENT_ADMIN),
+    )
+    try:
+        response = _get(client, student_id)
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    item = response.json()["documents"][0]
+    assert item["status"] == "READY"
+    assert item["stages"] == {
+        "structural": "READY",
+        "semantic": expected_semantic_stage,
+        "index": "READY",
+    }
+    assert item["failure"] is None
+
+
+def test_ready_grade_subject_content_accepts_structural_only_index(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Fail if compatibility readiness again requires semantic enrichment."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "lina")
+        document = _document(session, student)
+        structural = _structural(session, document)
+        _index(session, document, structural, None)
+
+        assert has_ready_grade_subject_content(
+            session,
+            student_id=student.id,
+            grade_level=5,
+            subject="MATH",
+        ) is True
+
+
 def test_parent_content_status_denies_unlinked_and_unknown_students_identically(postgres_session_factory: sessionmaker[Session]) -> None:
     with postgres_session_factory.begin() as session:
         _parent(session, "parent-a")
@@ -240,7 +313,7 @@ def test_empty_content_is_a_valid_empty_list(postgres_session_factory: sessionma
         ("COMPLETED", None, None, "PROCESSING", {"structural": "READY", "semantic": "PENDING", "index": "PENDING"}, None),
         ("COMPLETED", "COMPLETED", None, "PROCESSING", {"structural": "READY", "semantic": "READY", "index": "PENDING"}, None),
         ("FAILED", None, None, "FAILED", {"structural": "FAILED", "semantic": "PENDING", "index": "PENDING"}, "structural"),
-        ("COMPLETED", "FAILED", None, "FAILED", {"structural": "READY", "semantic": "FAILED", "index": "PENDING"}, "semantic"),
+        ("COMPLETED", "FAILED", None, "PROCESSING", {"structural": "READY", "semantic": "FAILED", "index": "PENDING"}, None),
         ("COMPLETED", "COMPLETED", "FAILED", "FAILED", {"structural": "READY", "semantic": "READY", "index": "FAILED"}, "index"),
     ],
 )
@@ -266,7 +339,7 @@ def test_readiness_derives_current_pipeline_stage(postgres_session_factory: sess
     assert "private" not in str(item)
 
 
-def test_newer_semantic_success_supersedes_historical_failure_and_old_index_cannot_make_it_ready(postgres_session_factory: sessionmaker[Session]) -> None:
+def test_completed_index_for_current_structural_run_remains_ready_across_semantic_history(postgres_session_factory: sessionmaker[Session]) -> None:
     with postgres_session_factory.begin() as session:
         parent = _parent(session, "parent-a")
         student = _student(session, "lina")
@@ -282,8 +355,8 @@ def test_newer_semantic_success_supersedes_historical_failure_and_old_index_cann
     finally:
         _clear_overrides()
     item = response.json()["documents"][0]
-    assert item["status"] == "PROCESSING"
-    assert item["stages"] == {"structural": "READY", "semantic": "READY", "index": "PENDING"}
+    assert item["status"] == "READY"
+    assert item["stages"] == {"structural": "READY", "semantic": "READY", "index": "READY"}
     assert item["failure"] is None
     assert current.id != older.id
 

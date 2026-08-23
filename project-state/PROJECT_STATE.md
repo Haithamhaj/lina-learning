@@ -7,7 +7,8 @@ decision correction, LR-A02 — Tutor always available, and LR-A03 — decouple
 index identity from mandatory semantics — and LR-A04 — structural-first index
 builder — and LR-A05 — semantic retrieval behavior advisory — are complete.
 LR-A06 — source processing lifecycle — is complete. LR-A07 — Parent content-
-status decoupling — is next.
+status decoupling — is complete. LR-A08 — school-focus authority cleanup — is
+next.
 REC-25 has not started and remains blocked until LR-A09 acceptance.
 
 ## Current reality
@@ -28,6 +29,10 @@ REC-25 has not started and remains blocked until LR-A09 acceptance.
   completed structural run queues the structural-first index builder through
   the Model Gateway. The durable path is source → structural → retrieval index,
   with semantic extraction outside the lifecycle.
+- Parent content status now reports grounding readiness from the current
+  structural run plus a usable completed index. Semantic enrichment remains a
+  separate visible stage; its absence or failure cannot make usable grounding
+  globally unavailable.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -48,6 +53,8 @@ REC-25 has not started and remains blocked until LR-A09 acceptance.
 - Semantic type is advisory retrieval metadata, not candidate eligibility.
 - Structural processing and structural indexing use deterministic, durable job
   identities; a failed replacement index preserves a prior completed index.
+- Parent readiness describes grounding usability, not semantic-enrichment
+  completion.
 - Trusted Educational Reference Pack is approved future Roadmap Track B work,
   not current implementation.
 
@@ -69,7 +76,8 @@ and Parent Dashboard expansion.
 
 ## Next recommended action
 
-Execute `REC-32 — Parent Content-Status Decoupling` (`Roadmap: LR-A07`) only.
+Execute `REC-33 — Deprecate School-Focus Authority Residue` (`Roadmap: LR-A08`)
+only.
 
 ## Critical references
 
