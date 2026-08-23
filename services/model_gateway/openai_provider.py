@@ -118,6 +118,12 @@ class OpenAIResponsesProvider:
                     return
                 if event_type == "response.failed":
                     raise ValueError("OpenAI Responses API streaming request failed.")
+                if event_type == "response.incomplete":
+                    response_data = event.get("response")
+                    incomplete_details = response_data.get("incomplete_details") if isinstance(response_data, dict) else None
+                    reason = incomplete_details.get("reason") if isinstance(incomplete_details, dict) else None
+                    detail = f": {reason}" if isinstance(reason, str) and reason else ""
+                    raise ValueError(f"OpenAI Responses API incomplete{detail}.")
         raise ValueError("OpenAI Responses API stream ended without a completion event.")
 
 

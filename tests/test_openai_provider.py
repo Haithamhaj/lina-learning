@@ -5,6 +5,8 @@ from __future__ import annotations
 import importlib
 import json
 
+import pytest
+
 from services.model_gateway.factory import create_tutor_gateway
 from services.model_gateway.gateway import ModelResult, ModelRoute, StaticModelProvider, StreamComplete, StreamDelta
 from services.model_gateway.openai_provider import OpenAIResponsesProvider
@@ -24,7 +26,7 @@ def test_tutor_runtime_exposes_a_provider_neutral_model_payload() -> None:
         safety_directive="Use simple framing and avoid adult-level detail.",
     )
 
-    assert payload["max_output_tokens"] == 350
+    assert payload["max_output_tokens"] == 800
     assert payload["instructions"] == module.TUTOR_SHARED_INSTRUCTIONS
     assert "4.2 × 10" not in payload["instructions"]
     assert "Eureka#page=16" not in payload["instructions"]
@@ -169,6 +171,37 @@ def test_openai_responses_provider_forwards_real_sse_deltas_from_one_request() -
     assert [event.text for event in events if isinstance(event, StreamDelta)] == ["Try ", "this."]
     assert isinstance(events[-1], StreamComplete)
     assert events[-1].result.output == {"text": "Try this."}
+
+
+def test_openai_responses_provider_reports_the_reason_for_an_incomplete_stream() -> None:
+    """A terminal incomplete Response must not be mistaken for a transport EOF."""
+
+    class FakeResponse:
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def __iter__(self):
+            return iter(
+                [
+                    b'data: {"type":"response.output_text.delta","delta":"Try "}\n\n',
+                    b'data: {"type":"response.incomplete","response":{"incomplete_details":{"reason":"max_output_tokens"}}}\n\n',
+                ]
+            )
+
+    def send(request: object, *, timeout: float) -> FakeResponse:
+        del request, timeout
+        return FakeResponse()
+
+    with pytest.raises(ValueError, match="OpenAI Responses API incomplete: max_output_tokens"):
+        list(
+            OpenAIResponsesProvider(api_key="test-key", request_sender=send).stream(
+                ModelRoute(provider="openai", model="gpt-5.6-luna"),
+                {"instructions": "Teach calmly.", "input": "Help with fractions."},
+            )
+        )
 
 
 def test_openai_responses_provider_streams_student_text_from_a_structured_tutor_result() -> None:

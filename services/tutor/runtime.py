@@ -158,7 +158,7 @@ def build_tutor_model_payload(
             f"Student question:\n{question}\n\nSmall recent session window:\n{session_context}\n\n"
             f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}"
         ),
-        "max_output_tokens": 350,
+        "max_output_tokens": 800,
         "question": question,
         "sources": sources or [],
         "intelligence": intelligence or [],
