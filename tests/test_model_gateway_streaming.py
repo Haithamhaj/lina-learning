@@ -49,12 +49,26 @@ def test_streaming_gateway_forwards_provider_deltas_and_records_one_execution() 
     assert session.rows[0].task == ModelTask.TUTOR.value
 
 
-def test_structured_tutor_normalization_preserves_the_selected_teaching_method() -> None:
-    """Catches a valid model-selected method being dropped before Tutor runtime validation."""
+def test_structured_tutor_normalization_preserves_all_luna_semantic_decisions() -> None:
+    """Catches a valid v5 decision being dropped before Tutor runtime validation."""
 
     output = _normalize_output(
-        '{"text":"Use a fraction bar.","suggested_actions":[],"teaching_method_id":"VISUAL_REPRESENTATION","candidate_metadata":null}',
+        '{"text":"Use a fraction bar.","suggested_actions":[],"teaching_mode":"HOMEWORK","teaching_strategy":"HINT_FIRST","teaching_method_id":"VISUAL_REPRESENTATION","prior_method_relation":"CONTINUATION","candidate_metadata":null}',
         {"response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA},
     )
 
     assert output["teaching_method_id"] == "VISUAL_REPRESENTATION"
+    assert output["teaching_mode"] == "HOMEWORK"
+    assert output["teaching_strategy"] == "HINT_FIRST"
+    assert output["prior_method_relation"] == "CONTINUATION"
+
+
+def test_malformed_structured_tutor_fallback_does_not_invent_semantic_decisions() -> None:
+    output = _normalize_output(
+        "not JSON",
+        {"response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA},
+        fallback_text="Try one small step.",
+    )
+
+    assert output["text"] == "Try one small step."
+    assert not {"teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation"} & output.keys()

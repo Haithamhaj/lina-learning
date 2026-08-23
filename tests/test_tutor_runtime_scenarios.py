@@ -13,7 +13,8 @@ from services.platform.db.models import CandidateEvent, LearningMessage, ModelTa
 from services.platform.safety import SafetyAction, SafetyDecision
 from services.retrieval.service import RetrievedBlock
 from services.tutor.context import SessionContextMessage, TutorContext, TutorContextDebug
-from services.tutor.runtime import TeachingMode, TeachingStrategy, TutorRuntime, TutorTextDelta, TutorTurn
+from services.tutor.runtime import TutorRuntime, TutorTextDelta, TutorTurn
+from services.tutor.teaching_decisions import PriorMethodRelation, TeachingMode, TeachingStrategy
 
 
 class _Session:
@@ -65,6 +66,9 @@ class _Provider:
         candidate_metadata: object | None = None,
         suggested_actions: object | None = None,
         teaching_method_id: object | None = None,
+        teaching_mode: object | None = None,
+        teaching_strategy: object | None = None,
+        prior_method_relation: object | None = None,
     ) -> None:
         self.calls = 0
         self.payloads: list[dict[str, object]] = []
@@ -72,6 +76,9 @@ class _Provider:
         self.candidate_metadata = candidate_metadata
         self.suggested_actions = suggested_actions
         self.teaching_method_id = teaching_method_id
+        self.teaching_mode = teaching_mode
+        self.teaching_strategy = teaching_strategy
+        self.prior_method_relation = prior_method_relation
 
     def stream(self, route: ModelRoute, payload: dict[str, object]):
         del route
@@ -84,6 +91,9 @@ class _Provider:
             "text": self.text,
             "suggested_actions": self.suggested_actions or [],
             "teaching_method_id": self.teaching_method_id,
+            "teaching_mode": self.teaching_mode,
+            "teaching_strategy": self.teaching_strategy,
+            "prior_method_relation": self.prior_method_relation,
             "candidate_metadata": metadata,
         }
         if self.suggested_actions is not None:
@@ -102,6 +112,9 @@ def _runtime(
     candidate_metadata: object | None = None,
     suggested_actions: object | None = None,
     teaching_method_id: object | None = None,
+    teaching_mode: object | None = None,
+    teaching_strategy: object | None = None,
+    prior_method_relation: object | None = None,
 ) -> tuple[TutorRuntime, _ContextBuilder, _Provider, _Session]:
     session = _Session()
     context = _ContextBuilder()
@@ -109,58 +122,69 @@ def _runtime(
         candidate_metadata=candidate_metadata,
         suggested_actions=suggested_actions,
         teaching_method_id=teaching_method_id,
+        teaching_mode=teaching_mode,
+        teaching_strategy=teaching_strategy,
+        prior_method_relation=prior_method_relation,
     )
     gateway = ModelGateway(session, routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")}, providers={"fixture": provider})
     return TutorRuntime(session, context_builder=context, safety_policy=_Policy(decision), gateway=gateway), context, provider, session
 
 
-@pytest.mark.parametrize(
-    ("question", "mode", "strategy"),
-    [
-        ("Explain equivalent fractions.", TeachingMode.LEARN, TeachingStrategy.EXPLAIN_WITH_EXAMPLE),
-        ("Help with my homework worksheet without the answer yet.", TeachingMode.HOMEWORK, TeachingStrategy.HINT_FIRST),
-        ("I am stuck and do not understand fractions.", TeachingMode.LEARN, TeachingStrategy.EXPLAIN_THEN_CHECK),
-        ("I am curious about black holes outside our school topic.", TeachingMode.EXPLORE, TeachingStrategy.EXPLAIN_WITH_EXAMPLE),
-        ("Can we review decimals again?", TeachingMode.REVIEW, TeachingStrategy.EXPLAIN_WITH_EXAMPLE),
-        ("Quiz me on multiplying by 10.", TeachingMode.QUIZ, TeachingStrategy.EXPLAIN_WITH_EXAMPLE),
-        ("ساعدني في واجبي بدون الحل مباشرة.", TeachingMode.HOMEWORK, TeachingStrategy.HINT_FIRST),
-        ("Explain الكسور equivalent fractions.", TeachingMode.LEARN, TeachingStrategy.EXPLAIN_WITH_EXAMPLE),
-    ],
-)
-def test_tutor_golden_modes_and_languages_use_one_grounded_stream(
-    question: str, mode: TeachingMode, strategy: TeachingStrategy,
-) -> None:
-    runtime, context, provider, session = _runtime(_decision())
+def test_arbitrary_literal_message_persists_luna_semantic_decision_without_runtime_keyword_routing() -> None:
+    """An opaque message proves the fixture's model decision, rather than words, is authoritative."""
+
+    runtime, context, provider, session = _runtime(
+        _decision(),
+        teaching_mode="HOMEWORK",
+        teaching_strategy="HINT_FIRST",
+        teaching_method_id="SOCRATIC_FOCUS",
+        prior_method_relation="NOT_RELEVANT",
+    )
     learning_session = SimpleNamespace(id=uuid4(), student_id=uuid4(), last_activity_at=None)
 
-    events = list(runtime.stream_turn(learning_session=learning_session, question=question))
+    events = list(runtime.stream_turn(learning_session=learning_session, question="violet trapezoid lunar bicycle"))
 
     turn = events[-1]
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
     assert isinstance(turn, TutorTurn)
     assert any(isinstance(event, TutorTextDelta) for event in events)
-    assert turn.mode is mode
-    assert turn.strategy is strategy
+    assert turn.mode is TeachingMode.HOMEWORK
+    assert turn.strategy is TeachingStrategy.HINT_FIRST
+    assert tutor_message.payload["teaching_method_id"] == "SOCRATIC_FOCUS"
+    assert tutor_message.payload["prior_method_relation"] is None
+    assert tutor_message.payload["teaching_decision_status"] == "prior_method_relation_without_prior"
     assert turn.sources == [{"source_ref": "book#page=12", "page_number": 12, "block_type": "EXERCISE"}]
     assert context.calls == 1
     assert provider.calls == 1
     assert "Reply primarily in the language" in str(provider.payloads[0]["instructions"])
+    assert provider.payloads[0]["active_teaching_methods"] == [
+        "CONCRETE_EXAMPLE", "VISUAL_REPRESENTATION", "WORKED_EXAMPLE", "SOCRATIC_FOCUS",
+        "DECOMPOSITION", "ANALOGY", "SYMBOLIC_EXPLANATION",
+    ]
     assert len([row for row in session.rows if isinstance(row, LearningMessage)]) == 2
 
 
-def test_current_independence_overrides_support_first_strategy() -> None:
-    runtime, _, provider, _ = _runtime(_decision())
-    events = list(runtime.stream_turn(learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), last_activity_at=None), question="I solved it myself: 4.5 × 10 = 45."))
+def test_all_null_luna_decision_persists_no_fictional_teaching_classification() -> None:
+    runtime, _, provider, session = _runtime(_decision())
+    events = list(runtime.stream_turn(learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), last_activity_at=None), question="Thanks for being here."))
 
     assert isinstance(events[-1], TutorTurn)
-    assert events[-1].strategy is TeachingStrategy.INDEPENDENT_CHECK
-    assert provider.payloads[0]["strategy"] == TeachingStrategy.INDEPENDENT_CHECK.value
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    assert events[-1].mode is None
+    assert events[-1].strategy is None
+    assert tutor_message.payload["teaching_mode"] is None
+    assert tutor_message.payload["teaching_strategy"] is None
+    assert tutor_message.payload["teaching_method_id"] is None
+    assert tutor_message.payload["prior_method_relation"] is None
+    assert provider.calls == 1
 
 
-def test_instructional_turn_persists_only_an_eligible_server_validated_method() -> None:
-    """Catches a model-selected method being accepted without runtime eligibility validation."""
+def test_valid_luna_method_persists_without_runtime_method_preselection() -> None:
 
     runtime, _, provider, session = _runtime(
         _decision(),
+        teaching_mode="LEARN",
+        teaching_strategy="EXPLAIN_WITH_EXAMPLE",
         teaching_method_id="CONCRETE_EXAMPLE",
     )
 
@@ -171,18 +195,19 @@ def test_instructional_turn_persists_only_an_eligible_server_validated_method() 
 
     tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
     assert isinstance(events[-1], TutorTurn)
-    assert provider.payloads[0]["eligible_teaching_methods"]
+    assert "eligible_teaching_methods" not in provider.payloads[0]
     assert tutor_message.payload["teaching_method_id"] == "CONCRETE_EXAMPLE"
     assert tutor_message.payload["teaching_method_registry_version"] == "teaching-method-registry-v1"
     assert not hasattr(events[-1], "teaching_method_id")
 
 
-def test_ineligible_model_method_is_not_persisted_silently() -> None:
-    """Catches a Tutor response claiming a method that runtime did not offer."""
+def test_unknown_luna_method_is_not_persisted_silently() -> None:
 
     runtime, _, _, session = _runtime(
         _decision(),
-        teaching_method_id="SYMBOLIC_EXPLANATION",
+        teaching_mode="LEARN",
+        teaching_strategy="EXPLAIN_WITH_EXAMPLE",
+        teaching_method_id="NOT_A_METHOD",
     )
 
     list(runtime.stream_turn(
@@ -191,23 +216,22 @@ def test_ineligible_model_method_is_not_persisted_silently() -> None:
     ))
 
     tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
-    assert "teaching_method_id" not in tutor_message.payload
-    assert tutor_message.payload["teaching_method_status"] == "ineligible"
+    assert tutor_message.payload["teaching_method_id"] is None
+    assert tutor_message.payload["teaching_method_status"] == "invalid"
 
 
-def test_instructional_turn_without_a_selected_method_is_auditable() -> None:
-    """Catches a missing instructional method being indistinguishable from a non-teaching turn."""
+def test_mode_and_strategy_without_a_method_are_valid_and_auditable() -> None:
 
-    runtime, _, _, session = _runtime(_decision())
+    runtime, _, _, session = _runtime(_decision(), teaching_mode="LEARN", teaching_strategy="EXPLAIN_WITH_EXAMPLE")
 
     list(runtime.stream_turn(
         learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
         question="Explain equivalent fractions.",
     ))
 
-    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
-    assert "teaching_method_id" not in tutor_message.payload
-    assert tutor_message.payload["teaching_method_status"] == "missing"
+    tutor_message = [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor"][-1]
+    assert tutor_message.payload["teaching_method_id"] is None
+    assert tutor_message.payload["teaching_mode"] == "LEARN"
 
 
 def test_safety_redirect_persists_no_teaching_method() -> None:
@@ -223,14 +247,20 @@ def test_safety_redirect_persists_no_teaching_method() -> None:
         question="Can you help?",
     ))
 
-    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
-    assert "teaching_method_id" not in tutor_message.payload
+    tutor_message = [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor"][-1]
+    assert tutor_message.payload["teaching_mode"] is None
+    assert tutor_message.payload["teaching_strategy"] is None
+    assert tutor_message.payload["teaching_method_id"] is None
+    assert tutor_message.payload["prior_method_relation"] is None
 
 
-def test_confusion_excludes_the_latest_valid_persisted_method_from_the_next_turn() -> None:
-    """Catches a continued-confusion turn repeating the latest valid method."""
+def test_did_not_help_same_method_is_marked_inconsistent_without_erasing_valid_method_identity() -> None:
+    """Only Luna understands the natural message; runtime checks its declared relation."""
 
-    runtime, _, provider, session = _runtime(_decision(), teaching_method_id="CONCRETE_EXAMPLE")
+    runtime, _, provider, session = _runtime(
+        _decision(), teaching_mode="LEARN", teaching_strategy="EXPLAIN_THEN_CHECK",
+        teaching_method_id="SYMBOLIC_EXPLANATION", prior_method_relation="DID_NOT_HELP",
+    )
     learning_session = SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None)
     session.add(LearningMessage(
         session_id=learning_session.id,
@@ -243,15 +273,20 @@ def test_confusion_excludes_the_latest_valid_persisted_method_from_the_next_turn
         created_at=datetime.now(UTC) - timedelta(seconds=1),
     ))
 
-    list(runtime.stream_turn(learning_session=learning_session, question="لسه مش فاهمة"))
+    list(runtime.stream_turn(learning_session=learning_session, question="second response unrelated literal"))
 
-    assert "SYMBOLIC_EXPLANATION" not in provider.payloads[0]["eligible_teaching_methods"]
+    tutor_message = [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor"][-1]
+    assert tutor_message.payload["teaching_method_id"] == "SYMBOLIC_EXPLANATION"
+    assert tutor_message.payload["prior_method_relation"] is None
+    assert tutor_message.payload["teaching_decision_status"] == "prior_method_relation_inconsistent"
 
 
-def test_explicit_repeat_request_keeps_the_previous_method_eligible() -> None:
-    """Catches a direct request to see the same representation again being removed."""
+def test_explicit_repeat_request_same_method_is_accepted_from_luna() -> None:
 
-    runtime, _, provider, session = _runtime(_decision(), teaching_method_id="VISUAL_REPRESENTATION")
+    runtime, _, provider, session = _runtime(
+        _decision(), teaching_mode="LEARN", teaching_strategy="EXPLAIN_WITH_EXAMPLE",
+        teaching_method_id="VISUAL_REPRESENTATION", prior_method_relation="EXPLICIT_REPEAT_REQUEST",
+    )
     learning_session = SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None)
     session.add(LearningMessage(
         session_id=learning_session.id,
@@ -264,9 +299,27 @@ def test_explicit_repeat_request_keeps_the_previous_method_eligible() -> None:
         created_at=datetime.now(UTC) - timedelta(seconds=1),
     ))
 
-    list(runtime.stream_turn(learning_session=learning_session, question="لسه مش فاهمة، ورجيني بالرسم مرة ثانية"))
+    list(runtime.stream_turn(learning_session=learning_session, question="please reproduce that visual explanation"))
 
-    assert "VISUAL_REPRESENTATION" in provider.payloads[0]["eligible_teaching_methods"]
+    tutor_message = [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor"][-1]
+    assert tutor_message.payload["teaching_method_id"] == "VISUAL_REPRESENTATION"
+    assert tutor_message.payload["prior_method_relation"] == "EXPLICIT_REPEAT_REQUEST"
+
+
+def test_relation_without_a_valid_immediate_prior_method_is_not_persisted() -> None:
+    runtime, _, _, session = _runtime(
+        _decision(), teaching_mode="LEARN", teaching_strategy="EXPLAIN_WITH_EXAMPLE",
+        teaching_method_id="CONCRETE_EXAMPLE", prior_method_relation="HELPED",
+    )
+
+    list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        question="any non-keyword literal",
+    ))
+
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    assert tutor_message.payload["prior_method_relation"] is None
+    assert tutor_message.payload["teaching_decision_status"] == "prior_method_relation_without_prior"
 
 
 def test_strategy_outcome_receives_only_server_grounded_prior_method_lineage() -> None:

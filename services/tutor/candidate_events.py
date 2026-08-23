@@ -8,9 +8,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
+from services.tutor.teaching_decisions import PriorMethodRelation, TeachingMode, TeachingStrategy
+from services.tutor.teaching_methods import ACTIVE_TEACHING_METHODS
+
 
 CANDIDATE_EVENT_SCHEMA_VERSION = "candidate-event-v1"
-TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v4"
+TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v5"
 MAX_SUGGESTED_ACTIONS = 4
 CandidateEventType = Literal[
     "learning_attempt",
@@ -156,7 +159,10 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
                 "required": ["label", "kind"],
             },
         },
-        "teaching_method_id": {"type": ["string", "null"]},
+        "teaching_mode": {"type": ["string", "null"], "enum": [*(mode.value for mode in TeachingMode), None]},
+        "teaching_strategy": {"type": ["string", "null"], "enum": [*(strategy.value for strategy in TeachingStrategy), None]},
+        "teaching_method_id": {"type": ["string", "null"], "enum": [*(method.value for method in ACTIVE_TEACHING_METHODS), None]},
+        "prior_method_relation": {"type": ["string", "null"], "enum": [*(relation.value for relation in PriorMethodRelation), None]},
         "candidate_metadata": {
             "anyOf": [
                 {
@@ -197,7 +203,7 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
             ]
         },
     },
-    "required": ["text", "suggested_actions", "candidate_metadata", "teaching_method_id"],
+    "required": ["text", "suggested_actions", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "candidate_metadata"],
 }
 
 

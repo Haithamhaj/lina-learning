@@ -730,8 +730,12 @@ routing currently chooses Mode, Strategy, Method eligibility, and confusion /
 representation meaning. The approved correction requires Luna to make the joint
 semantic Mode + Strategy + Method + prior-method-relation decision in the same
 primary Tutor call, followed by deterministic validation, persistence, and
-server-grounded Evidence lineage. Browser acceptance is paused until that code
-correction is implemented; this task remains REVIEW, not DONE.
+server-grounded Evidence lineage. The correction is implemented and verified by
+focused contracts, the fresh PostgreSQL suite, and a bounded real-Luna
+five-turn diagnostic: a changed method after `DID_NOT_HELP`, `NOT_RELEVANT`
+for a topic switch, an immediate-method `EXPLICIT_REPEAT_REQUEST`, and all-null
+casual-turn metadata. Product Owner browser acceptance remains the outstanding
+review gate; this task remains REVIEW, not DONE.
 
 ---
 

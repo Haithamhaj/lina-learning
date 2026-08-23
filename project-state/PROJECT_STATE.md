@@ -5,8 +5,8 @@
 Roadmap Track A architecture simplification is COMPLETE / ACCEPTED. REC-35.1 —
 Tutor Child Interaction Calibration Pass — is complete following Product Owner
 browser acceptance. REC-35.2 / LR-D04A — Adaptive Teaching Method Foundation —
-is in REVIEW with a Product Owner-approved semantic-authority correction pending
-before browser validation. LR-D04B remains future, evidence-dependent work.
+is in REVIEW: its Product Owner-approved semantic-authority correction is
+implemented and awaits Product Owner browser validation. LR-D04B remains future, evidence-dependent work.
 REC-25 has not started and remains blocked.
 
 ## Current reality
@@ -47,12 +47,12 @@ REC-25 has not started and remains blocked.
   Student draft. Automated contracts, a fresh PostgreSQL suite, web build, and
   the real-Luna equivalent-fractions diagnostic passed. Product Owner browser
   acceptance completed the review; REC-25 has not resumed.
-- Product Owner review found that the current Teaching Method Foundation uses
-  deterministic keyword routing as semantic authority. The approved correction
-  keeps one Tutor call but moves joint Mode + Strategy + Method +
-  prior-method-relation meaning to Luna; runtime remains the deterministic
-  validator/persistence/lineage authority. Browser review waits for that code
-  correction.
+- REC-35.2 correction is implemented: `tutor_turn_v5` has Luna make the joint
+  nullable Mode, Strategy, Method, and prior-method-relation decision in the
+  one primary Tutor call. Runtime validates canonical values/cross-fields,
+  safety, persistence, and server-grounded Candidate lineage; no phrase router
+  selects the semantic axes. Focused contracts, a fresh PostgreSQL suite, and
+  a five-turn real-Luna diagnostic passed. Browser acceptance remains pending.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -94,17 +94,16 @@ and Parent Dashboard expansion.
 
 ## Active risks
 
-- REC-35.2 needs the approved semantic-authority code correction before Product
-  Owner browser validation. REC-25 remains blocked; LR-D04B, Track B, and other
-  future capability work remain frozen.
+- REC-35.2 awaits Product Owner browser validation; REC-25 remains blocked;
+  LR-D04B, Track B, and other future capability work remain frozen.
 - PostgreSQL/pgvector and real AWS/S3 staging verification remain separate
   operational concerns; this governance correction does not change them.
 
 ## Next recommended action
 
-Implement only the approved REC-35.2 semantic-authority correction next; do not
-begin LR-D04B or resume REC-25, and do not unfreeze Vision, Voice, Science,
-Learning Canvas, Interactive Artifacts, or Parent Dashboard expansion.
+Obtain Product Owner browser validation for REC-35.2 only; do not begin LR-D04B
+or resume REC-25, and do not unfreeze Vision, Voice, Science, Learning Canvas,
+Interactive Artifacts, or Parent Dashboard expansion.
 
 ## Critical references
 

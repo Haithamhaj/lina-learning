@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from enum import Enum
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -28,29 +27,23 @@ from services.tutor.candidate_events import (
 )
 from services.tutor.safety import TutorSafetyRuntime, consume_safety_decision
 from services.tutor.student_sessions import append_student_message, latest_prior_tutor_teaching_method
+from services.tutor.teaching_decisions import (
+    PRIOR_METHOD_RELATION_DEFINITIONS,
+    TEACHING_MODE_DEFINITIONS,
+    TEACHING_STRATEGY_DEFINITIONS,
+    PriorMethodRelation,
+    TeachingMode,
+    TeachingStrategy,
+    parse_enum,
+)
 from services.tutor.teaching_methods import (
+    ACTIVE_TEACHING_METHODS,
     TEACHING_METHOD_REGISTRY_VERSION,
     PriorTeachingMethodContext,
     TeachingMethod,
     is_supported_teaching_method,
-    select_eligible_teaching_methods,
     teaching_method_definitions,
 )
-
-
-class TeachingMode(str, Enum):
-    LEARN = "LEARN"
-    HOMEWORK = "HOMEWORK"
-    EXPLORE = "EXPLORE"
-    REVIEW = "REVIEW"
-    QUIZ = "QUIZ"
-
-
-class TeachingStrategy(str, Enum):
-    EXPLAIN_WITH_EXAMPLE = "EXPLAIN_WITH_EXAMPLE"
-    HINT_FIRST = "HINT_FIRST"
-    EXPLAIN_THEN_CHECK = "EXPLAIN_THEN_CHECK"
-    INDEPENDENT_CHECK = "INDEPENDENT_CHECK"
 
 
 @dataclass(frozen=True)
@@ -64,8 +57,8 @@ class TutorTurn:
     suggested_actions: list[SuggestedAction]
     sources: list[dict[str, object]]
     intelligence: list[str]
-    mode: TeachingMode
-    strategy: TeachingStrategy
+    mode: TeachingMode | None
+    strategy: TeachingStrategy | None
     safety: dict[str, str | int]
 
 
@@ -82,7 +75,10 @@ class LocalTutorProvider:
             output={
                 "text": f"Let’s work on this step by step. {payload['question']}",
                 "suggested_actions": [],
+                "teaching_mode": None,
+                "teaching_strategy": None,
                 "teaching_method_id": None,
+                "prior_method_relation": None,
                 "candidate_metadata": None,
             },
             input_tokens=20,
@@ -113,52 +109,10 @@ TUTOR_SHARED_INSTRUCTIONS = (
     "Student-facing text must be plain text: no Markdown markers, headings, bold, or code fences. Do not use LaTeX or raw LaTeX notation. Use simple Grade-5-readable math notation and put equations on their own line when it improves Arabic/English readability. "
     "Safety policy is enforced before this call; do not mention internal policies. Return student-facing reply only in the structured text field. "
     "Return suggested_actions as zero to four short, visible objects with label and kind. Kind must be NAVIGATION for agency, support preference, or self-report actions, and ANSWER_CHOICE only for a guided answer choice. Suggested actions must use the same primary language as the response and contain no URLs, Markdown, or hidden metadata. After an explanatory, help, or confusion turn, normally provide two to four useful actions when that reduces friction or supports agency. Do not force buttons when a natural free response is pedagogically better, the Student needs to explain in their own words, generic chat/thanks does not benefit, or Safety produces a deterministic response. "
-    "Set hidden candidate_metadata to null for greetings, thanks, generic chat, self-reported understanding, button selection, or when no meaningful observable learning signal occurred. "
+    "Set hidden candidate_metadata to null for greetings, thanks, generic chat, self-reported understanding, navigation/action selection alone, or when no meaningful observable learning signal occurred. A guided ANSWER_CHOICE may emit only an existing bounded attempt/correction/misconception type when its raw answer is meaningful; never emit independent success or mastery merely from a click. "
     "Emit Candidate Event metadata only for a specific, source-linked observable learning signal such as solving, explaining, applying, self-correcting, or transferring an idea. "
     "Never treat a chosen Tutor strategy as an outcome without an observable Student result. Never mention hidden metadata in text."
 )
-
-
-def infer_tutor_mode(question: str) -> TeachingMode:
-    normalized = question.lower()
-    if any(term in normalized for term in ("homework", "worksheet", "assignment", "واجبي", "الواجب")):
-        return TeachingMode.HOMEWORK
-    if any(term in normalized for term in ("quiz", "test me", "اختبرني")):
-        return TeachingMode.QUIZ
-    if any(term in normalized for term in ("review", "revise", "again", "راجع", "مراجعة")):
-        return TeachingMode.REVIEW
-    if any(
-        term in normalized
-        for term in (
-            "outside our school topic",
-            "outside the school topic",
-            "outside the lesson",
-            "not part of our lesson",
-            "outside class",
-            "خارج موضوع الدرس",
-            "خارج المنهج",
-            "خارج الدرس",
-        )
-    ):
-        return TeachingMode.EXPLORE
-    return TeachingMode.LEARN
-
-
-def select_teaching_strategy(question: str, *, mode: TeachingMode | None = None) -> TeachingStrategy:
-    normalized = question.lower()
-    if any(term in normalized for term in (
-        "stuck", "don't understand", "i don't understand", "still confused", "still not clear", "too hard",
-        "لا أفهم", "ما فهمت", "مش فاهمة", "مش واضحة", "لسه مش واضحة", "عالق",
-    )):
-        return TeachingStrategy.EXPLAIN_THEN_CHECK
-    if any(term in normalized for term in (
-        "i solved", "i got it", "i understand", "got it", "my answer is", "حللت", "أعتقد أنني",
-        "فهمت", "فهمت الآن", "تمام فهمت",
-    )):
-        return TeachingStrategy.INDEPENDENT_CHECK
-    if mode is TeachingMode.HOMEWORK:
-        return TeachingStrategy.HINT_FIRST
-    return TeachingStrategy.EXPLAIN_WITH_EXAMPLE
 
 
 def build_tutor_model_payload(
@@ -167,11 +121,8 @@ def build_tutor_model_payload(
     sources: list[dict[str, object]] | None = None,
     intelligence: list[str] | None = None,
     safety_directive: str | None = None,
-    mode: TeachingMode = TeachingMode.LEARN,
-    strategy: TeachingStrategy = TeachingStrategy.EXPLAIN_WITH_EXAMPLE,
     session_messages: list[dict[str, str]] | None = None,
     candidate_source_message_id: UUID | None = None,
-    eligible_teaching_methods: tuple[TeachingMethod, ...] = (),
     prior_method: PriorTeachingMethodContext | None = None,
 ) -> dict[str, object]:
     """Build bounded model input from the project-owned Tutor context only."""
@@ -190,14 +141,11 @@ def build_tutor_model_payload(
         if candidate_source_message_id is not None
         else ""
     )
-    method_definitions = teaching_method_definitions(eligible_teaching_methods)
-    eligible_method_context = (
-        "\n\nEligible TeachingMethods for this turn:\n"
-        + "\n".join(f"- {definition.method_id.value}: {definition.description}" for definition in method_definitions)
-        + "\nChoose at most one eligible TeachingMethod ID when you apply a pedagogical representation; otherwise return null. The choice itself is not evidence that it worked."
-        if method_definitions
-        else "\n\nNo TeachingMethod is eligible for this non-instructional turn; return teaching_method_id as null."
-    )
+    decision_context = "\n\nTeachingMode definitions:\n" + "\n".join(f"- {item.identifier}: {item.description}" for item in TEACHING_MODE_DEFINITIONS)
+    decision_context += "\n\nTeachingStrategy definitions:\n" + "\n".join(f"- {item.identifier}: {item.description}" for item in TEACHING_STRATEGY_DEFINITIONS)
+    decision_context += "\n\nActive TeachingMethod definitions:\n" + "\n".join(f"- {definition.method_id.value}: {definition.description}" for definition in teaching_method_definitions())
+    decision_context += "\n\nPriorMethodRelation definitions:\n" + "\n".join(f"- {item.identifier}: {item.description}" for item in PRIOR_METHOD_RELATION_DEFINITIONS)
+    decision_context += "\n\nChoose each semantic decision from the current conversation. All four decision fields may be null for a casual or non-instructional turn. A non-null TeachingMethod needs a non-null mode and strategy. A relation is only about the immediate previous persisted Tutor method. A different topic is not DID_NOT_HELP: use NOT_RELEVANT or null unless the Student actually judges that immediate prior representation. DID_NOT_HELP must not accompany the same method. Use EXPLICIT_REPEAT_REQUEST only when the selected method equals the immediate prior method; a request to return to an older, non-immediate representation is NOT_RELEVANT or null. The relation itself is never Candidate Evidence."
     prior_method_context = (
         f"\nPrevious Tutor TeachingMethod: {prior_method.teaching_method_id.value} "
         f"(registry {prior_method.registry_version})."
@@ -207,17 +155,14 @@ def build_tutor_model_payload(
     return {
         "instructions": TUTOR_SHARED_INSTRUCTIONS,
         "input": (
-            f"Teaching mode: {mode.value}\nTeaching strategy: {strategy.value}\n\n"
             f"Student question:\n{question}\n\nSmall recent session window:\n{session_context}\n\n"
-            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}{eligible_method_context}{prior_method_context}"
+            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}"
         ),
         "max_output_tokens": 800,
         "question": question,
         "sources": sources or [],
         "intelligence": intelligence or [],
-        "mode": mode.value,
-        "strategy": strategy.value,
-        "eligible_teaching_methods": [method.value for method in eligible_teaching_methods],
+        "active_teaching_methods": [method.value for method in ACTIVE_TEACHING_METHODS],
         "response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA,
         "candidate_source_message_id": str(candidate_source_message_id) if candidate_source_message_id is not None else None,
     }
@@ -252,8 +197,6 @@ class TutorRuntime:
         )
         decision = self._safety_policy.evaluate(student_id=learning_session.student_id, text=content, interaction_ref=str(learning_session.id))
         safety = consume_safety_decision(decision)
-        mode = infer_tutor_mode(content)
-        strategy = select_teaching_strategy(content, mode=mode)
         if not safety.continue_to_tutor:
             yield self._persist_turn(
                 learning_session,
@@ -261,8 +204,8 @@ class TutorRuntime:
                 [],
                 None,
                 safety,
-                mode,
-                strategy,
+                None,
+                None,
                 candidate_metadata_status="not_requested",
             )
             return
@@ -272,19 +215,11 @@ class TutorRuntime:
             learning_session=learning_session,
             before_message=student_message,
         )
-        eligible_teaching_methods = select_eligible_teaching_methods(
-            content,
-            strategy=strategy.value,
-            prior_method=prior_method,
-        )
         context = self._context_builder.build(learning_session=learning_session, question=content)
         payload = _payload_from_context(
             context,
-            mode=mode,
-            strategy=strategy,
             safety=safety,
             candidate_source_message_id=student_message.id,
-            eligible_teaching_methods=eligible_teaching_methods,
             prior_method=prior_method,
         )
         model_stream = self._gateway.stream(
@@ -321,9 +256,6 @@ class TutorRuntime:
                     result=result,
                     context=context,
                     safety=safety,
-                    mode=mode,
-                    strategy=strategy,
-                    eligible_teaching_methods=eligible_teaching_methods,
                     prior_method=prior_method,
                 )
             raise
@@ -338,9 +270,6 @@ class TutorRuntime:
             result=result,
             context=context,
             safety=safety,
-            mode=mode,
-            strategy=strategy,
-            eligible_teaching_methods=eligible_teaching_methods,
             prior_method=prior_method,
         )
         yield turn
@@ -353,14 +282,14 @@ class TutorRuntime:
         result: ModelResult,
         context: TutorContext,
         safety: TutorSafetyRuntime,
-        mode: TeachingMode,
-        strategy: TeachingStrategy,
-        eligible_teaching_methods: tuple[TeachingMethod, ...],
         prior_method: PriorTeachingMethodContext | None,
     ) -> TutorTurn:
-        selected_method, method_status = _selected_teaching_method(
-            result.output.get("teaching_method_id"),
-            eligible_methods=eligible_teaching_methods,
+        teaching_decision = _validate_teaching_decision(
+            mode_value=result.output.get("teaching_mode"),
+            strategy_value=result.output.get("teaching_strategy"),
+            method_value=result.output.get("teaching_method_id"),
+            relation_value=result.output.get("prior_method_relation"),
+            prior_method=prior_method,
         )
         candidate_metadata_status, candidate_metadata_error = self._persist_candidates(
             learning_session=learning_session,
@@ -374,10 +303,12 @@ class TutorRuntime:
             normalize_suggested_actions(result.output.get("suggested_actions")),
             context,
             safety,
-            mode,
-            strategy,
-            selected_method=selected_method,
-            method_status=method_status,
+            teaching_decision.mode,
+            teaching_decision.strategy,
+            selected_method=teaching_decision.method,
+            prior_method_relation=teaching_decision.relation,
+            method_status=teaching_decision.method_status,
+            decision_status=teaching_decision.status,
             candidate_metadata_status=candidate_metadata_status,
             candidate_metadata_error=candidate_metadata_error,
             ai_execution_id=result.execution_id,
@@ -456,22 +387,34 @@ class TutorRuntime:
         suggested_actions: list[SuggestedAction],
         context: TutorContext | None,
         safety: TutorSafetyRuntime,
-        mode: TeachingMode,
-        strategy: TeachingStrategy,
+        mode: TeachingMode | None,
+        strategy: TeachingStrategy | None,
         *,
         candidate_metadata_status: str,
         selected_method: TeachingMethod | None = None,
+        prior_method_relation: PriorMethodRelation | None = None,
         method_status: str = "not_selected",
+        decision_status: str = "valid",
         candidate_metadata_error: str | None = None,
         ai_execution_id: UUID | None = None,
     ) -> TutorTurn:
         sources = _source_metadata(context)
         intelligence = [item.text for item in context.intelligence] if context else []
-        payload: dict[str, object] = {"source_refs": [source["source_ref"] for source in sources], "intelligence_used": intelligence, "safety": safety.audit_metadata(), "mode": mode.value, "strategy": strategy.value, "candidate_metadata_status": candidate_metadata_status, "suggested_actions": [action.model_dump() for action in suggested_actions]}
+        payload: dict[str, object] = {
+            "source_refs": [source["source_ref"] for source in sources],
+            "intelligence_used": intelligence,
+            "safety": safety.audit_metadata(),
+            "teaching_mode": mode.value if mode is not None else None,
+            "teaching_strategy": strategy.value if strategy is not None else None,
+            "teaching_method_id": selected_method.value if selected_method is not None else None,
+            "prior_method_relation": prior_method_relation.value if prior_method_relation is not None else None,
+            "teaching_decision_status": decision_status,
+            "candidate_metadata_status": candidate_metadata_status,
+            "suggested_actions": [action.model_dump() for action in suggested_actions],
+        }
         if selected_method is not None:
-            payload["teaching_method_id"] = selected_method.value
             payload["teaching_method_registry_version"] = TEACHING_METHOD_REGISTRY_VERSION
-        elif method_status != "not_selected":
+        if method_status != "not_selected":
             payload["teaching_method_status"] = method_status
         if candidate_metadata_error is not None:
             payload["candidate_metadata_error"] = candidate_metadata_error
@@ -495,32 +438,61 @@ class TutorRuntime:
 def _payload_from_context(
     context: TutorContext,
     *,
-    mode: TeachingMode,
-    strategy: TeachingStrategy,
     safety: TutorSafetyRuntime,
     candidate_source_message_id: UUID,
-    eligible_teaching_methods: tuple[TeachingMethod, ...] = (),
     prior_method: PriorTeachingMethodContext | None = None,
 ) -> dict[str, object]:
-    return build_tutor_model_payload(question=context.question, sources=[{"ref": block.source_ref, "text": block.text} for block in context.retrieval], intelligence=[item.text for item in context.intelligence], safety_directive=safety.tutor_directive, mode=mode, strategy=strategy, session_messages=[{"role": message.role, "content": message.content} for message in context.session_messages], candidate_source_message_id=candidate_source_message_id, eligible_teaching_methods=eligible_teaching_methods, prior_method=prior_method)
+    return build_tutor_model_payload(question=context.question, sources=[{"ref": block.source_ref, "text": block.text} for block in context.retrieval], intelligence=[item.text for item in context.intelligence], safety_directive=safety.tutor_directive, session_messages=[{"role": message.role, "content": message.content} for message in context.session_messages], candidate_source_message_id=candidate_source_message_id, prior_method=prior_method)
 
 
-def _selected_teaching_method(
-    value: object,
+@dataclass(frozen=True)
+class _ValidatedTeachingDecision:
+    mode: TeachingMode | None
+    strategy: TeachingStrategy | None
+    method: TeachingMethod | None
+    relation: PriorMethodRelation | None
+    method_status: str
+    status: str
+
+
+def _validate_teaching_decision(
     *,
-    eligible_methods: tuple[TeachingMethod, ...],
-) -> tuple[TeachingMethod | None, str]:
-    if value is None:
-        return None, "missing" if eligible_methods else "not_selected"
-    method = is_supported_teaching_method(
-        value,
-        registry_version=TEACHING_METHOD_REGISTRY_VERSION,
-    )
-    if method is None:
-        return None, "invalid"
-    if method not in eligible_methods:
-        return None, "ineligible"
-    return method, "selected"
+    mode_value: object,
+    strategy_value: object,
+    method_value: object,
+    relation_value: object,
+    prior_method: PriorTeachingMethodContext | None,
+) -> _ValidatedTeachingDecision:
+    """Validate Luna's canonical values without inferring their meaning from words."""
+
+    mode = parse_enum(mode_value, TeachingMode)
+    strategy = parse_enum(strategy_value, TeachingStrategy)
+    relation = parse_enum(relation_value, PriorMethodRelation)
+    method = is_supported_teaching_method(method_value, registry_version=TEACHING_METHOD_REGISTRY_VERSION)
+    status = "valid"
+    method_status = "selected" if method is not None else "not_selected"
+    if mode_value is not None and mode is None:
+        status = "invalid_mode"
+    elif strategy_value is not None and strategy is None:
+        status = "invalid_strategy"
+    elif method_value is not None and method is None:
+        method_status = "invalid"
+        status = "invalid_method"
+    elif relation_value is not None and relation is None:
+        status = "invalid_prior_method_relation"
+    elif method is not None and (mode is None or strategy is None):
+        status = "instructional_context_missing"
+    if relation is not None:
+        if prior_method is None:
+            relation = None
+            status = "prior_method_relation_without_prior"
+        elif relation is PriorMethodRelation.DID_NOT_HELP and method == prior_method.teaching_method_id:
+            relation = None
+            status = "prior_method_relation_inconsistent"
+        elif relation is PriorMethodRelation.EXPLICIT_REPEAT_REQUEST and method != prior_method.teaching_method_id:
+            relation = None
+            status = "prior_method_relation_inconsistent"
+    return _ValidatedTeachingDecision(mode, strategy, method, relation, method_status, status)
 
 
 def _source_metadata(context: TutorContext | None) -> list[dict[str, object]]:

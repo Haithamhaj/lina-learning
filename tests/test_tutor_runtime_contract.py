@@ -7,51 +7,21 @@ import pytest
 from services.tutor.candidate_events import TUTOR_OUTPUT_JSON_SCHEMA, TUTOR_OUTPUT_RESPONSE_SCHEMA
 from services.tutor.runtime import (
     TUTOR_SHARED_INSTRUCTIONS,
-    TeachingMode,
-    TeachingStrategy,
     build_tutor_model_payload,
-    infer_tutor_mode,
-    select_teaching_strategy,
 )
+from services.tutor.teaching_decisions import PriorMethodRelation, TeachingMode, TeachingStrategy
+from services.tutor.teaching_methods import ACTIVE_TEACHING_METHODS
 
 
-@pytest.mark.parametrize(
-    ("question", "expected"),
-    [
-        ("Explain equivalent fractions.", TeachingMode.LEARN),
-        ("Why do equivalent fractions have the same value?", TeachingMode.LEARN),
-        ("كيف تعمل الكسور المتكافئة؟", TeachingMode.LEARN),
-        ("Help me with my homework worksheet, but do not tell me the answer yet.", TeachingMode.HOMEWORK),
-        ("I am curious about black holes outside our school topic.", TeachingMode.EXPLORE),
-        ("Can we review decimals again?", TeachingMode.REVIEW),
-        ("Quiz me on multiplying by 10.", TeachingMode.QUIZ),
-        ("ساعدني في واجبي بدون الحل مباشرة.", TeachingMode.HOMEWORK),
-        ("اختبرني في الكسور.", TeachingMode.QUIZ),
-    ],
-)
-def test_mode_inference_selects_a_runtime_mode_from_the_current_message(
-    question: str,
-    expected: TeachingMode,
-) -> None:
-    assert infer_tutor_mode(question) is expected
-
-
-def test_genuinely_stuck_message_requires_explanation_then_a_new_check() -> None:
-    assert select_teaching_strategy("I am genuinely stuck and do not understand this.") is TeachingStrategy.EXPLAIN_THEN_CHECK
-
-
-def test_current_independence_does_not_force_historical_support_strategy() -> None:
-    assert select_teaching_strategy("I solved it myself: 4.5 × 10 = 45.") is TeachingStrategy.INDEPENDENT_CHECK
-
-
-def test_tutor_turn_v4_requires_a_nullable_method_without_changing_candidate_metadata() -> None:
+def test_tutor_turn_v5_requires_nullable_luna_owned_decisions_without_changing_candidate_metadata() -> None:
     """Catches a structured-output upgrade that omits actions or rewrites Candidate metadata."""
 
-    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v4"
-    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "candidate_metadata", "teaching_method_id"]
-    assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_method_id"] == {
-        "type": ["string", "null"],
-    }
+    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v5"
+    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "candidate_metadata"]
+    assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_mode"] == {"type": ["string", "null"], "enum": [*(mode.value for mode in TeachingMode), None]}
+    assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_strategy"] == {"type": ["string", "null"], "enum": [*(strategy.value for strategy in TeachingStrategy), None]}
+    assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_method_id"] == {"type": ["string", "null"], "enum": [*(method.value for method in ACTIVE_TEACHING_METHODS), None]}
+    assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["prior_method_relation"] == {"type": ["string", "null"], "enum": [*(relation.value for relation in PriorMethodRelation), None]}
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["suggested_actions"] == {
         "type": "array",
         "maxItems": 4,
@@ -68,25 +38,25 @@ def test_tutor_turn_v4_requires_a_nullable_method_without_changing_candidate_met
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["candidate_metadata"]["anyOf"][0]["properties"]["version"]["enum"] == ["candidate-event-v1"]
 
 
-@pytest.mark.parametrize(
-    ("message", "expected"),
-    [
-        ("فهمت", TeachingStrategy.INDEPENDENT_CHECK),
-        ("تمام فهمت", TeachingStrategy.INDEPENDENT_CHECK),
-        ("I understand", TeachingStrategy.INDEPENDENT_CHECK),
-        ("Got it", TeachingStrategy.INDEPENDENT_CHECK),
-        ("مش فاهمة", TeachingStrategy.EXPLAIN_THEN_CHECK),
-        ("لسه مش واضحة", TeachingStrategy.EXPLAIN_THEN_CHECK),
-        ("I don't understand", TeachingStrategy.EXPLAIN_THEN_CHECK),
-        ("Still not clear", TeachingStrategy.EXPLAIN_THEN_CHECK),
-    ],
-)
-def test_bilingual_interaction_intents_select_existing_teaching_strategies(
-    message: str, expected: TeachingStrategy,
-) -> None:
-    """Catches self-reports or confusion bypassing the existing adaptive strategy routing."""
+def test_one_luna_call_receives_full_definitions_without_preselected_semantic_axes() -> None:
+    payload = build_tutor_model_payload(question="Any literal phrase is only context for Luna.")
 
-    assert select_teaching_strategy(message) is expected
+    assert "TeachingMode definitions" in str(payload["input"])
+    assert "TeachingStrategy definitions" in str(payload["input"])
+    assert "PriorMethodRelation definitions" in str(payload["input"])
+    assert [method.value for method in ACTIVE_TEACHING_METHODS] == payload["active_teaching_methods"]
+    assert "mode" not in payload
+    assert "strategy" not in payload
+    assert "eligible_teaching_methods" not in payload
+
+
+def test_relation_guidance_distinguishes_a_new_topic_from_an_immediate_method_outcome() -> None:
+    """A topic change must not be converted into method-effectiveness metadata."""
+
+    payload = build_tutor_model_payload(question="A completely different topic now.")
+
+    assert "A different topic is not DID_NOT_HELP" in str(payload["input"])
+    assert "only when the selected method equals the immediate prior method" in str(payload["input"])
 
 
 def test_tutor_instructions_require_calibrated_child_interaction_without_changing_evidence_authority() -> None:

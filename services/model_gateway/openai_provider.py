@@ -225,20 +225,21 @@ def _normalize_output(
             "suggested_actions": parsed.get("suggested_actions", []),
             "candidate_metadata": None,
             "candidate_metadata_error": "candidate_metadata_missing",
-            **_teaching_method_output(parsed),
+            **_teaching_decision_output(parsed),
         }
     return {
         "text": parsed["text"],
         "suggested_actions": parsed.get("suggested_actions", []),
         "candidate_metadata": parsed["candidate_metadata"],
-        **_teaching_method_output(parsed),
+        **_teaching_decision_output(parsed),
     }
 
 
-def _teaching_method_output(parsed: dict[str, object]) -> dict[str, object]:
-    """Preserve a v4 Tutor method without changing older structured outputs."""
+def _teaching_decision_output(parsed: dict[str, object]) -> dict[str, object]:
+    """Preserve supplied v5 semantic decisions without fabricating absent values."""
 
-    return {"teaching_method_id": parsed["teaching_method_id"]} if "teaching_method_id" in parsed else {}
+    fields = ("teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation")
+    return {field: parsed[field] for field in fields if field in parsed}
 
 
 class _StructuredTutorTextExtractor:

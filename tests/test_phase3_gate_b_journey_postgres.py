@@ -39,7 +39,8 @@ from services.platform.db.models import (
 from services.platform.safety import SafetyAction, SafetyDecision
 from services.retrieval.service import RetrievedBlock
 from services.tutor.context import ContextBudget, TutorContextBuilder
-from services.tutor.runtime import TeachingStrategy, TutorRuntime, TutorTurn
+from services.tutor.runtime import TutorRuntime, TutorTurn
+from services.tutor.teaching_decisions import TeachingStrategy
 from services.tutor.session_lifecycle import SESSION_CONSOLIDATION_JOB, SessionLifecyclePolicy, close_inactive_sessions
 from services.tutor.student_sessions import append_student_message, open_or_resume_math_session
 from workers.intelligence_handlers import register_intelligence_handlers
@@ -111,7 +112,15 @@ class _TutorProvider:
         del route
         self.calls += 1
         self.payloads.append(payload)
-        output: dict[str, object] = {"text": "Let’s compare the same-sized pieces carefully."}
+        output: dict[str, object] = {
+            "text": "Let’s compare the same-sized pieces carefully.",
+            "suggested_actions": [],
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "INDEPENDENT_CHECK" if self.calls == 3 else "EXPLAIN_WITH_EXAMPLE",
+            "teaching_method_id": "CONCRETE_EXAMPLE",
+            "prior_method_relation": None,
+            "candidate_metadata": None,
+        }
         if self.calls == 1:
             source_id = payload["candidate_source_message_id"]
             output["candidate_metadata"] = {
