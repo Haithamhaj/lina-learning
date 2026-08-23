@@ -97,6 +97,7 @@ def _candidate(
     signal: str = "solved_independently",
     observed_student_outcome: str | None = None,
     created_at: datetime | None = None,
+    strategy_method: str | None = None,
 ) -> tuple[CandidateEvent, LearningMessage]:
     student_message = LearningMessage(
         session_id=learning_session.id,
@@ -108,7 +109,15 @@ def _candidate(
         session_id=learning_session.id,
         role="tutor",
         content="Explain why those fractions have the same value.",
-        payload={"source": "fixture"},
+        payload=(
+            {
+                "teaching_method_id": strategy_method,
+                "teaching_method_registry_version": "teaching-method-registry-v1",
+            }
+            if strategy_method is not None
+            else {"source": "fixture"}
+        ),
+        created_at=((created_at or datetime.now(UTC)) - timedelta(seconds=1)) if strategy_method is not None else None,
     )
     session.add_all([student_message, tutor_message])
     session.flush()
@@ -125,6 +134,15 @@ def _candidate(
             "source_message_ids": [str(student_message.id)],
             "subject": "MATH",
             "observed_student_outcome": observed_student_outcome,
+            **(
+                {
+                    "strategy_key": strategy_method,
+                    "strategy_source_tutor_message_id": str(tutor_message.id),
+                    "strategy_registry_version": "teaching-method-registry-v1",
+                }
+                if strategy_method is not None
+                else {}
+            ),
         },
         created_at=created_at or datetime(2026, 8, 21, 12, tzinfo=UTC),
     )
@@ -472,6 +490,7 @@ def test_golden_rubric_scenarios_preserve_only_contextual_supported_values(
             learning_session=learning_session,
             event_type=event_type,
             observed_student_outcome=("Lina correctly applied the visual model." if event_type == "strategy_outcome" else None),
+            strategy_method=("CONCRETE_EXAMPLE" if event_type == "strategy_outcome" else None),
         )
         provider = _Provider(
             _event_output(
@@ -521,6 +540,140 @@ def test_strategy_without_observable_student_outcome_cannot_become_effectiveness
             consolidate_closed_session(session, learning_session=learning_session, gateway=gateway)
 
         assert session.query(LearningEvent).count() == 0
+        assert session.query(LearningEvidence).count() == 0
+
+
+def test_strategy_outcome_uses_server_grounded_method_lineage_without_expanding_event_sources(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Catches method identity being omitted from Evidence input or merged into Student source IDs."""
+
+    with postgres_session_factory.begin() as session:
+        learning_session = _closed_session(session)
+        prior_tutor = LearningMessage(
+            session_id=learning_session.id,
+            role="tutor",
+            content="Think of one half of a pizza split into two equal pieces.",
+            payload={
+                "teaching_method_id": "CONCRETE_EXAMPLE",
+                "teaching_method_registry_version": "teaching-method-registry-v1",
+            },
+            created_at=datetime(2026, 8, 21, 11, 59, tzinfo=UTC),
+        )
+        source_message = LearningMessage(
+            session_id=learning_session.id,
+            role="student",
+            content="Now I can explain why 1/2 equals 2/4.",
+            payload={"source": "fixture"},
+            created_at=datetime(2026, 8, 21, 12, 0, tzinfo=UTC),
+        )
+        session.add_all([prior_tutor, source_message])
+        session.flush()
+        candidate = CandidateEvent(
+            session_id=learning_session.id,
+            message_id=source_message.id,
+            event_type="strategy_outcome",
+            concept_ref="equivalent_fractions",
+            signal="applied_after_concrete_example",
+            payload={
+                "candidate_schema_version": "candidate-event-v1",
+                "summary": "The Student applied the concrete example.",
+                "school_or_extended": "school",
+                "source_message_ids": [str(source_message.id)],
+                "subject": "MATH",
+                "observed_student_outcome": "The Student correctly explained the equivalent fractions.",
+                "strategy_key": "CONCRETE_EXAMPLE",
+                "strategy_source_tutor_message_id": str(prior_tutor.id),
+                "strategy_registry_version": "teaching-method-registry-v1",
+            },
+            created_at=datetime(2026, 8, 21, 12, 0, tzinfo=UTC),
+        )
+        session.add(candidate)
+        session.flush()
+        provider = _Provider(_event_output(
+            candidate,
+            source_message,
+            dimensions=_dimensions(strategy_effectiveness="helped"),
+            event_type="strategy_outcome",
+        ))
+        gateway = ModelGateway(
+            session,
+            routes={ModelTask.SESSION_EVIDENCE: ModelRoute("fixture", "fixture-evidence")},
+            providers={"fixture": provider},
+        )
+
+        consolidate_closed_session(session, learning_session=learning_session, gateway=gateway)
+
+        assert consolidation_module.SESSION_EVIDENCE_PROMPT_VERSION == "session-evidence-prompt-v2"
+        payload = str(provider.payloads[0]["input"])
+        assert "CONCRETE_EXAMPLE" in payload
+        assert str(prior_tutor.id) in payload
+        event = session.query(LearningEvent).one()
+        assert event.source_message_id == source_message.id
+
+
+def test_tampered_method_lineage_cannot_become_strategy_effectiveness_evidence(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Catches a Candidate claiming a method different from the persisted prior Tutor method."""
+
+    with postgres_session_factory.begin() as session:
+        learning_session = _closed_session(session)
+        prior_tutor = LearningMessage(
+            session_id=learning_session.id,
+            role="tutor",
+            content="Use one fraction bar.",
+            payload={
+                "teaching_method_id": "VISUAL_REPRESENTATION",
+                "teaching_method_registry_version": "teaching-method-registry-v1",
+            },
+            created_at=datetime(2026, 8, 21, 11, 59, tzinfo=UTC),
+        )
+        source_message = LearningMessage(
+            session_id=learning_session.id,
+            role="student",
+            content="I can apply it now.",
+            payload={"source": "fixture"},
+            created_at=datetime(2026, 8, 21, 12, 0, tzinfo=UTC),
+        )
+        session.add_all([prior_tutor, source_message])
+        session.flush()
+        candidate = CandidateEvent(
+            session_id=learning_session.id,
+            message_id=source_message.id,
+            event_type="strategy_outcome",
+            concept_ref="equivalent_fractions",
+            signal="claimed_concrete_outcome",
+            payload={
+                "candidate_schema_version": "candidate-event-v1",
+                "summary": "The Student applied a representation.",
+                "school_or_extended": "school",
+                "source_message_ids": [str(source_message.id)],
+                "subject": "MATH",
+                "observed_student_outcome": "The Student correctly applied the idea.",
+                "strategy_key": "CONCRETE_EXAMPLE",
+                "strategy_source_tutor_message_id": str(prior_tutor.id),
+                "strategy_registry_version": "teaching-method-registry-v1",
+            },
+        )
+        session.add(candidate)
+        session.flush()
+        provider = _Provider(_event_output(
+            candidate,
+            source_message,
+            dimensions=_dimensions(strategy_effectiveness="helped"),
+            event_type="strategy_outcome",
+        ))
+        gateway = ModelGateway(
+            session,
+            routes={ModelTask.SESSION_EVIDENCE: ModelRoute("fixture", "fixture-evidence")},
+            providers={"fixture": provider},
+        )
+
+        outcome = consolidate_closed_session(session, learning_session=learning_session, gateway=gateway)
+
+        assert outcome.model_called is False
+        assert provider.calls == 0
         assert session.query(LearningEvidence).count() == 0
 
 

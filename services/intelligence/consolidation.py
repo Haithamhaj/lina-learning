@@ -23,10 +23,14 @@ from services.platform.db.models import (
     ModelTask,
 )
 from services.tutor.candidate_events import HistoricalCandidateEventType
+from services.tutor.teaching_methods import (
+    TEACHING_METHOD_REGISTRY_VERSION,
+    is_supported_teaching_method,
+)
 
 
 SESSION_EVIDENCE_SCHEMA_VERSION = "session-evidence-v1"
-SESSION_EVIDENCE_PROMPT_VERSION = "session-evidence-prompt-v1"
+SESSION_EVIDENCE_PROMPT_VERSION = "session-evidence-prompt-v2"
 EVIDENCE_RUBRIC_VERSION = "evidence-rubric-v1"
 SESSION_CONSOLIDATION_POLICY_VERSION = "session-consolidation-policy-v1"
 
@@ -389,6 +393,11 @@ def _valid_candidates(
         if candidate.message_id in source_messages
         and source_messages[candidate.message_id].role == "student"
         and _candidate_sources(candidate) == {candidate.message_id}
+        and _has_valid_strategy_outcome_lineage(
+            session,
+            learning_session=learning_session,
+            candidate=candidate,
+        )
     ]
 
 
@@ -416,14 +425,19 @@ def _relevant_messages(
         ).scalars()
     )
     source_ids = {candidate.message_id for candidate in candidates}
-    selected: list[LearningMessage] = []
+    lineage_tutor_ids = {
+        UUID(str(candidate.payload["strategy_source_tutor_message_id"]))
+        for candidate in candidates
+        if candidate.event_type == "strategy_outcome"
+    }
+    selected_ids: set[UUID] = set(lineage_tutor_ids)
     for index, message in enumerate(messages):
         if message.id not in source_ids:
             continue
-        selected.append(message)
+        selected_ids.add(message.id)
         if index + 1 < len(messages) and messages[index + 1].role == "tutor":
-            selected.append(messages[index + 1])
-    return selected
+            selected_ids.add(messages[index + 1].id)
+    return [message for message in messages if message.id in selected_ids]
 
 
 def _model_payload(
@@ -432,8 +446,9 @@ def _model_payload(
     candidates: list[CandidateEvent],
     messages: list[LearningMessage],
 ) -> dict[str, object]:
-    candidate_records = [
-        {
+    candidate_records = []
+    for candidate in candidates:
+        record: dict[str, object] = {
             "id": str(candidate.id),
             "event_type": candidate.event_type,
             "concept_ref": candidate.concept_ref,
@@ -442,8 +457,14 @@ def _model_payload(
             "source_message_ids": [str(identifier) for identifier in _candidate_sources(candidate)],
             "school_or_extended": candidate.payload.get("school_or_extended"),
         }
-        for candidate in candidates
-    ]
+        if candidate.event_type == "strategy_outcome":
+            record.update({
+                "strategy_key": candidate.payload.get("strategy_key"),
+                "strategy_source_tutor_message_id": candidate.payload.get("strategy_source_tutor_message_id"),
+                "strategy_registry_version": candidate.payload.get("strategy_registry_version"),
+                "observed_student_outcome": candidate.payload.get("observed_student_outcome"),
+            })
+        candidate_records.append(record)
     excerpts = [
         {
             "id": str(message.id),
@@ -459,7 +480,7 @@ def _model_payload(
             "Use every categorical rubric dimension exactly as defined. Do not infer "
             "independence after full teaching, transfer from near-identical practice, "
             "retention without meaningful delay, or strategy effectiveness without an "
-            "observable Student outcome. Never produce mastery, numeric confidence, or learner labels."
+            "observable Student outcome. For strategy outcomes, the supplied method lineage is server-grounded context: interpret effectiveness only and never choose or rename the method. Never produce mastery, numeric confidence, or learner labels."
         ),
         "input": json.dumps(
             {
@@ -541,10 +562,56 @@ def _validate_inference_boundaries(
     if dimensions.strategy_effectiveness != "not_evaluable" and (
         candidate.event_type != "strategy_outcome"
         or not isinstance(candidate.payload.get("observed_student_outcome"), str)
+        or not _has_valid_strategy_outcome_lineage(
+            session,
+            learning_session=learning_session,
+            candidate=candidate,
+        )
     ):
         raise ConsolidationValidationError("Strategy effectiveness needs an observable Student outcome.")
     if dimensions.self_correction != "not_observed" and candidate.event_type != "self_correction":
         raise ConsolidationValidationError("Self-correction evidence needs a self-correction Candidate Event.")
+
+
+def _has_valid_strategy_outcome_lineage(
+    session: Session,
+    *,
+    learning_session: LearningSession,
+    candidate: CandidateEvent,
+) -> bool:
+    """Accept method effectiveness only when runtime-attached lineage still resolves."""
+
+    if candidate.event_type != "strategy_outcome":
+        return True
+    payload = candidate.payload if isinstance(candidate.payload, dict) else {}
+    method = is_supported_teaching_method(
+        payload.get("strategy_key"),
+        registry_version=payload.get("strategy_registry_version"),
+    )
+    if method is None or payload.get("strategy_registry_version") != TEACHING_METHOD_REGISTRY_VERSION:
+        return False
+    try:
+        tutor_message_id = UUID(str(payload.get("strategy_source_tutor_message_id")))
+    except (TypeError, ValueError):
+        return False
+    tutor_message = session.get(LearningMessage, tutor_message_id)
+    source_message = session.get(LearningMessage, candidate.message_id)
+    if tutor_message is None or source_message is None:
+        return False
+    tutor_payload = tutor_message.payload if isinstance(tutor_message.payload, dict) else {}
+    persisted_method = is_supported_teaching_method(
+        tutor_payload.get("teaching_method_id"),
+        registry_version=tutor_payload.get("teaching_method_registry_version"),
+    )
+    return (
+        tutor_message.session_id == learning_session.id
+        and source_message.session_id == learning_session.id
+        and tutor_message.role == "tutor"
+        and tutor_message.created_at < source_message.created_at
+        and persisted_method is method
+        and tutor_payload.get("teaching_method_registry_version") == payload.get("strategy_registry_version")
+        and isinstance(payload.get("observed_student_outcome"), str)
+    )
 
 
 def _has_meaningful_prior_concept_evidence(

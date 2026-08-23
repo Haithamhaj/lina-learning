@@ -705,7 +705,7 @@ REC-25 remains blocked; the next approved task is REC-35.2.
 
 ## REC-35.2 — Adaptive Teaching Method Foundation
 **Roadmap:** LR-D04A
-**Status:** READY
+**Status:** REVIEW
 **Dependencies:** REC-35.1
 **Purpose:** Implement TeachingMethod identity, an internal versioned registry,
 bounded eligible-method selection, and source-grounded method observability
@@ -723,6 +723,15 @@ Science; Voice/STT; Vision; Learning Canvas; Interactive Artifact Engine;
 Parent Dashboard expansion; RAG/index changes; semantic Prompt-v5/Eureka work;
 new infrastructure; and any DB migration unless a blocker is discovered and
 separately approved.
+**Verification note:** Versioned active TeachingMethod registry, deterministic
+current-turn eligibility/switching, Tutor-turn persistence, server-grounded
+strategy-outcome lineage, and Session Evidence prompt v2 passed focused,
+PostgreSQL, and full-suite verification. One bounded real `gpt-5.6-luna`
+diagnostic persisted `CONCRETE_EXAMPLE` for an equivalent-fractions explanation,
+then excluded it after typed continued confusion and persisted
+`VISUAL_REPRESENTATION` for a number-line explanation. Student-visible output
+remained text and suggested actions only. Product Owner browser validation
+remains required; this task is not DONE.
 
 ---
 

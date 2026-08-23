@@ -276,7 +276,7 @@ def test_preview_reuses_exact_completed_evidence_version_without_writing(factory
                 scope={
                     "session_id": str(target.id),
                     "consolidation_schema_version": "session-evidence-v1",
-                    "prompt_version": "session-evidence-prompt-v1",
+                    "prompt_version": "session-evidence-prompt-v2",
                     "provider": "fixture",
                     "model": "fixture-evidence",
                 },

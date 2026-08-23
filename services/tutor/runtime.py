@@ -27,7 +27,15 @@ from services.tutor.candidate_events import (
     parse_candidate_event_metadata,
 )
 from services.tutor.safety import TutorSafetyRuntime, consume_safety_decision
-from services.tutor.student_sessions import append_student_message
+from services.tutor.student_sessions import append_student_message, latest_prior_tutor_teaching_method
+from services.tutor.teaching_methods import (
+    TEACHING_METHOD_REGISTRY_VERSION,
+    PriorTeachingMethodContext,
+    TeachingMethod,
+    is_supported_teaching_method,
+    select_eligible_teaching_methods,
+    teaching_method_definitions,
+)
 
 
 class TeachingMode(str, Enum):
@@ -74,6 +82,7 @@ class LocalTutorProvider:
             output={
                 "text": f"Let’s work on this step by step. {payload['question']}",
                 "suggested_actions": [],
+                "teaching_method_id": None,
                 "candidate_metadata": None,
             },
             input_tokens=20,
@@ -89,7 +98,7 @@ class LocalTutorProvider:
 
 TUTOR_SHARED_INSTRUCTIONS = (
     "You are Lina's fixed Grade 5 Math tutor: warm, conversational, patient, non-shaming, and focused on understanding. "
-    "Speak naturally to an intelligent approximately 10-year-old: do not use baby-talk or unnecessary formal educational wording. "
+    "Speak naturally to an intelligent approximately 10-year-old: use easy conversational Arabic rather than unnecessary formality, natural child-appropriate English, and mirror the Student's reasonable level of formality. Do not use baby-talk or unnecessary formal educational wording. "
     "Reply primarily in the language of the Student's current message on every turn: Arabic message means primarily Arabic, English message means primarily English. "
     "Follow an immediate Arabic/English language switch without treating it as a topic switch or creating separate learner profiles, intelligence, or learning state. "
     "Use natural Arabic/English mixing only when the Student mixes languages or useful school/math terminology benefits from it. "
@@ -162,6 +171,8 @@ def build_tutor_model_payload(
     strategy: TeachingStrategy = TeachingStrategy.EXPLAIN_WITH_EXAMPLE,
     session_messages: list[dict[str, str]] | None = None,
     candidate_source_message_id: UUID | None = None,
+    eligible_teaching_methods: tuple[TeachingMethod, ...] = (),
+    prior_method: PriorTeachingMethodContext | None = None,
 ) -> dict[str, object]:
     """Build bounded model input from the project-owned Tutor context only."""
 
@@ -179,12 +190,26 @@ def build_tutor_model_payload(
         if candidate_source_message_id is not None
         else ""
     )
+    method_definitions = teaching_method_definitions(eligible_teaching_methods)
+    eligible_method_context = (
+        "\n\nEligible TeachingMethods for this turn:\n"
+        + "\n".join(f"- {definition.method_id.value}: {definition.description}" for definition in method_definitions)
+        + "\nChoose at most one eligible TeachingMethod ID when you apply a pedagogical representation; otherwise return null. The choice itself is not evidence that it worked."
+        if method_definitions
+        else "\n\nNo TeachingMethod is eligible for this non-instructional turn; return teaching_method_id as null."
+    )
+    prior_method_context = (
+        f"\nPrevious Tutor TeachingMethod: {prior_method.teaching_method_id.value} "
+        f"(registry {prior_method.registry_version})."
+        if prior_method is not None
+        else ""
+    )
     return {
         "instructions": TUTOR_SHARED_INSTRUCTIONS,
         "input": (
             f"Teaching mode: {mode.value}\nTeaching strategy: {strategy.value}\n\n"
             f"Student question:\n{question}\n\nSmall recent session window:\n{session_context}\n\n"
-            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}"
+            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}{eligible_method_context}{prior_method_context}"
         ),
         "max_output_tokens": 800,
         "question": question,
@@ -192,6 +217,7 @@ def build_tutor_model_payload(
         "intelligence": intelligence or [],
         "mode": mode.value,
         "strategy": strategy.value,
+        "eligible_teaching_methods": [method.value for method in eligible_teaching_methods],
         "response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA,
         "candidate_source_message_id": str(candidate_source_message_id) if candidate_source_message_id is not None else None,
     }
@@ -241,6 +267,16 @@ class TutorRuntime:
             )
             return
 
+        prior_method = latest_prior_tutor_teaching_method(
+            self._session,
+            learning_session=learning_session,
+            before_message=student_message,
+        )
+        eligible_teaching_methods = select_eligible_teaching_methods(
+            content,
+            strategy=strategy.value,
+            prior_method=prior_method,
+        )
         context = self._context_builder.build(learning_session=learning_session, question=content)
         payload = _payload_from_context(
             context,
@@ -248,6 +284,8 @@ class TutorRuntime:
             strategy=strategy,
             safety=safety,
             candidate_source_message_id=student_message.id,
+            eligible_teaching_methods=eligible_teaching_methods,
+            prior_method=prior_method,
         )
         model_stream = self._gateway.stream(
             ModelTask.TUTOR,
@@ -285,6 +323,8 @@ class TutorRuntime:
                     safety=safety,
                     mode=mode,
                     strategy=strategy,
+                    eligible_teaching_methods=eligible_teaching_methods,
+                    prior_method=prior_method,
                 )
             raise
         except Exception as error:
@@ -300,6 +340,8 @@ class TutorRuntime:
             safety=safety,
             mode=mode,
             strategy=strategy,
+            eligible_teaching_methods=eligible_teaching_methods,
+            prior_method=prior_method,
         )
         yield turn
 
@@ -313,11 +355,18 @@ class TutorRuntime:
         safety: TutorSafetyRuntime,
         mode: TeachingMode,
         strategy: TeachingStrategy,
+        eligible_teaching_methods: tuple[TeachingMethod, ...],
+        prior_method: PriorTeachingMethodContext | None,
     ) -> TutorTurn:
+        selected_method, method_status = _selected_teaching_method(
+            result.output.get("teaching_method_id"),
+            eligible_methods=eligible_teaching_methods,
+        )
         candidate_metadata_status, candidate_metadata_error = self._persist_candidates(
             learning_session=learning_session,
             source_message=student_message,
             result=result,
+            prior_method=prior_method,
         )
         return self._persist_turn(
             learning_session,
@@ -327,6 +376,8 @@ class TutorRuntime:
             safety,
             mode,
             strategy,
+            selected_method=selected_method,
+            method_status=method_status,
             candidate_metadata_status=candidate_metadata_status,
             candidate_metadata_error=candidate_metadata_error,
             ai_execution_id=result.execution_id,
@@ -338,6 +389,7 @@ class TutorRuntime:
         learning_session: LearningSession,
         source_message: LearningMessage,
         result: ModelResult | None,
+        prior_method: PriorTeachingMethodContext | None,
     ) -> tuple[str, str | None]:
         if _is_non_evidentiary_interaction(source_message):
             return "not_evidence", None
@@ -359,10 +411,30 @@ class TutorRuntime:
             metadata = _bounded_answer_choice_metadata(metadata)
             if not metadata.candidates:
                 return "answer_choice_filtered", None
-        if not metadata.candidates:
-            return "absent", None
+        candidates = list(metadata.candidates)
+        missing_strategy_lineage = False
+        if any(candidate.event_type == "strategy_outcome" for candidate in candidates) and prior_method is None:
+            candidates = [candidate for candidate in candidates if candidate.event_type != "strategy_outcome"]
+            missing_strategy_lineage = True
+        if not candidates:
+            return ("strategy_outcome_lineage_missing", None) if missing_strategy_lineage else ("absent", None)
         route = self._gateway.route_for(ModelTask.TUTOR)
-        for candidate in metadata.candidates:
+        for candidate in candidates:
+            payload: dict[str, object] = {
+                "candidate_schema_version": metadata.version,
+                "summary": candidate.summary,
+                "school_or_extended": candidate.school_or_extended,
+                "source_message_ids": [str(identifier) for identifier in candidate.source_message_ids],
+                "subject": learning_session.subject,
+                "observed_student_outcome": candidate.observed_student_outcome,
+                "model_route": {"provider": route.provider, "model": route.model},
+            }
+            if candidate.event_type == "strategy_outcome" and prior_method is not None:
+                payload.update({
+                    "strategy_key": prior_method.teaching_method_id.value,
+                    "strategy_source_tutor_message_id": str(prior_method.tutor_message_id),
+                    "strategy_registry_version": prior_method.registry_version,
+                })
             self._session.add(
                 CandidateEvent(
                     session_id=learning_session.id,
@@ -370,20 +442,12 @@ class TutorRuntime:
                     event_type=candidate.event_type,
                     concept_ref=candidate.concept_ref,
                     signal=candidate.signal,
-                    payload={
-                        "candidate_schema_version": metadata.version,
-                        "summary": candidate.summary,
-                        "school_or_extended": candidate.school_or_extended,
-                        "source_message_ids": [str(identifier) for identifier in candidate.source_message_ids],
-                        "subject": learning_session.subject,
-                        "observed_student_outcome": candidate.observed_student_outcome,
-                        "model_route": {"provider": route.provider, "model": route.model},
-                    },
+                    payload=payload,
                     ai_execution_id=result.execution_id,
                 )
             )
         self._session.flush()
-        return "persisted", None
+        return ("strategy_outcome_lineage_missing", None) if missing_strategy_lineage else ("persisted", None)
 
     def _persist_turn(
         self,
@@ -396,12 +460,19 @@ class TutorRuntime:
         strategy: TeachingStrategy,
         *,
         candidate_metadata_status: str,
+        selected_method: TeachingMethod | None = None,
+        method_status: str = "not_selected",
         candidate_metadata_error: str | None = None,
         ai_execution_id: UUID | None = None,
     ) -> TutorTurn:
         sources = _source_metadata(context)
         intelligence = [item.text for item in context.intelligence] if context else []
         payload: dict[str, object] = {"source_refs": [source["source_ref"] for source in sources], "intelligence_used": intelligence, "safety": safety.audit_metadata(), "mode": mode.value, "strategy": strategy.value, "candidate_metadata_status": candidate_metadata_status, "suggested_actions": [action.model_dump() for action in suggested_actions]}
+        if selected_method is not None:
+            payload["teaching_method_id"] = selected_method.value
+            payload["teaching_method_registry_version"] = TEACHING_METHOD_REGISTRY_VERSION
+        elif method_status != "not_selected":
+            payload["teaching_method_status"] = method_status
         if candidate_metadata_error is not None:
             payload["candidate_metadata_error"] = candidate_metadata_error
         if context is not None:
@@ -428,8 +499,28 @@ def _payload_from_context(
     strategy: TeachingStrategy,
     safety: TutorSafetyRuntime,
     candidate_source_message_id: UUID,
+    eligible_teaching_methods: tuple[TeachingMethod, ...] = (),
+    prior_method: PriorTeachingMethodContext | None = None,
 ) -> dict[str, object]:
-    return build_tutor_model_payload(question=context.question, sources=[{"ref": block.source_ref, "text": block.text} for block in context.retrieval], intelligence=[item.text for item in context.intelligence], safety_directive=safety.tutor_directive, mode=mode, strategy=strategy, session_messages=[{"role": message.role, "content": message.content} for message in context.session_messages], candidate_source_message_id=candidate_source_message_id)
+    return build_tutor_model_payload(question=context.question, sources=[{"ref": block.source_ref, "text": block.text} for block in context.retrieval], intelligence=[item.text for item in context.intelligence], safety_directive=safety.tutor_directive, mode=mode, strategy=strategy, session_messages=[{"role": message.role, "content": message.content} for message in context.session_messages], candidate_source_message_id=candidate_source_message_id, eligible_teaching_methods=eligible_teaching_methods, prior_method=prior_method)
+
+
+def _selected_teaching_method(
+    value: object,
+    *,
+    eligible_methods: tuple[TeachingMethod, ...],
+) -> tuple[TeachingMethod | None, str]:
+    if value is None:
+        return None, "missing" if eligible_methods else "not_selected"
+    method = is_supported_teaching_method(
+        value,
+        registry_version=TEACHING_METHOD_REGISTRY_VERSION,
+    )
+    if method is None:
+        return None, "invalid"
+    if method not in eligible_methods:
+        return None, "ineligible"
+    return method, "selected"
 
 
 def _source_metadata(context: TutorContext | None) -> list[dict[str, object]]:

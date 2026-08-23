@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from services.platform.db.models import LearningMessage, LearningSession, Student, User
 from services.tutor.candidate_events import SuggestedAction, normalize_suggested_actions
+from services.tutor.teaching_methods import PriorTeachingMethodContext, prior_teaching_method_context_from_payload
 from services.tutor.session_lifecycle import (
     SessionLifecyclePolicy,
     close_session_if_eligible,
@@ -156,6 +157,42 @@ def latest_tutor_suggested_action(
     return next(
         (action for action in normalize_suggested_actions(payload.get("suggested_actions")) if action.label == label),
         None,
+    )
+
+
+def latest_prior_tutor_teaching_method(
+    session: Session,
+    *,
+    learning_session: LearningSession,
+    before_message: LearningMessage,
+) -> PriorTeachingMethodContext | None:
+    """Resolve only the immediately previous, valid Tutor method in this session."""
+
+    if hasattr(session, "execute"):
+        message = session.execute(
+            select(LearningMessage)
+            .where(
+                LearningMessage.session_id == learning_session.id,
+                LearningMessage.role == "tutor",
+                LearningMessage.created_at < before_message.created_at,
+            )
+            .order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())
+            .limit(1)
+        ).scalar_one_or_none()
+    else:
+        rows = [
+            row for row in getattr(session, "rows", ())
+            if isinstance(row, LearningMessage)
+            and row.session_id == learning_session.id
+            and row.role == "tutor"
+            and row.created_at < before_message.created_at
+        ]
+        message = max(rows, key=lambda row: (row.created_at, str(row.id)), default=None)
+    if message is None:
+        return None
+    return prior_teaching_method_context_from_payload(
+        tutor_message_id=message.id,
+        payload=message.payload,
     )
 
 

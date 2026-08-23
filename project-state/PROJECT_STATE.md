@@ -2,17 +2,12 @@
 
 ## Current goal
 
-Roadmap Track A architecture simplification is active. LR-A01 governing
-decision correction, LR-A02 — Tutor always available, and LR-A03 — decouple
-index identity from mandatory semantics — and LR-A04 — structural-first index
-builder — and LR-A05 — semantic retrieval behavior advisory — are complete.
-LR-A06 — source processing lifecycle — is complete. LR-A07 — Parent content-
-status decoupling — is complete. LR-A08 — school-focus authority cleanup — is
-complete. LR-A09 — simplification acceptance — is complete. REC-35 — Real Lina
-calibration — has begun and produced verified Tutor UX findings. REC-35.1 —
+Roadmap Track A architecture simplification is COMPLETE / ACCEPTED. REC-35.1 —
 Tutor Child Interaction Calibration Pass — is complete following Product Owner
 browser acceptance. REC-35.2 / LR-D04A — Adaptive Teaching Method Foundation —
-is the next approved READY task. REC-25 has not started and remains blocked.
+is implemented and in REVIEW pending Product Owner browser validation. LR-D04B
+remains future, evidence-dependent work. REC-25 has not started and remains
+blocked.
 
 ## Current reality
 
@@ -52,11 +47,11 @@ is the next approved READY task. REC-25 has not started and remains blocked.
   Student draft. Automated contracts, a fresh PostgreSQL suite, web build, and
   the real-Luna equivalent-fractions diagnostic passed. Product Owner browser
   acceptance completed the review; REC-25 has not resumed.
-- TeachingMethod is now an explicit active architectural decision: it is
-  distinct from TeachingStrategy, selected from a small project-owned versioned
-  registry, and must persist through bounded method → observable-outcome
-  lineage before the existing Evidence pipeline can evaluate it. LR-D04B
-  historical method learning remains future, evidence-dependent work.
+- Teaching Method Foundation is implemented: `tutor_turn_v4` persists a
+  validated selected method from the active versioned registry; current typed
+  confusion switches the next eligible representation without historical
+  ranking; and only server-grounded method → observable-outcome lineage can
+  reach Session Evidence prompt v2. Product Owner browser review remains.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -82,9 +77,8 @@ is the next approved READY task. REC-25 has not started and remains blocked.
   completion.
 - Trusted Educational Reference Pack is approved future Roadmap Track B work,
   not current implementation.
-- Teaching Method Foundation is the next approved scope; immediate method
-  switching follows current behavior, while historical method ranking is not
-  authorized before sufficient Evidence.
+- Immediate method switching follows current behavior; historical method
+  ranking remains unimplemented and unauthorized before sufficient Evidence.
 
 ## Protected areas
 
@@ -97,17 +91,16 @@ and Parent Dashboard expansion.
 
 ## Active risks
 
-- REC-35.2 must preserve the one-call Tutor path and source-grounded Evidence
-  lineage without introducing a new service, agent, MCP, or infrastructure.
-  REC-25 remains blocked; Track B and other future capability work remain
-  frozen.
+- Product Owner browser validation must confirm the Teaching Method Foundation
+  UX; REC-25 remains blocked; LR-D04B, Track B, and other future capability
+  work remain frozen.
 - PostgreSQL/pgvector and real AWS/S3 staging verification remain separate
   operational concerns; this governance correction does not change them.
 
 ## Next recommended action
 
-Execute `REC-35.2 — Adaptive Teaching Method Foundation` only. Do not resume
-REC-25 or LR-D04B, and do not unfreeze Vision, Voice, Science, Learning Canvas,
+Run Product Owner browser validation for REC-35.2 only. Do not begin LR-D04B or
+resume REC-25, and do not unfreeze Vision, Voice, Science, Learning Canvas,
 Interactive Artifacts, or Parent Dashboard expansion.
 
 ## Critical references

@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 
 
 CANDIDATE_EVENT_SCHEMA_VERSION = "candidate-event-v1"
-TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v3"
+TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v4"
 MAX_SUGGESTED_ACTIONS = 4
 CandidateEventType = Literal[
     "learning_attempt",
@@ -156,6 +156,7 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
                 "required": ["label", "kind"],
             },
         },
+        "teaching_method_id": {"type": ["string", "null"]},
         "candidate_metadata": {
             "anyOf": [
                 {
@@ -196,7 +197,7 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
             ]
         },
     },
-    "required": ["text", "suggested_actions", "candidate_metadata"],
+    "required": ["text", "suggested_actions", "candidate_metadata", "teaching_method_id"],
 }
 
 

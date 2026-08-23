@@ -9,7 +9,9 @@ from services.model_gateway.gateway import (
     StreamComplete,
     StreamDelta,
 )
+from services.model_gateway.openai_provider import _normalize_output
 from services.platform.db.models import ModelTask
+from services.tutor.candidate_events import TUTOR_OUTPUT_RESPONSE_SCHEMA
 
 
 class _RecordingSession:
@@ -45,3 +47,14 @@ def test_streaming_gateway_forwards_provider_deltas_and_records_one_execution() 
     assert events[-1].result.output == {"text": "Try one step."}
     assert len(session.rows) == 1
     assert session.rows[0].task == ModelTask.TUTOR.value
+
+
+def test_structured_tutor_normalization_preserves_the_selected_teaching_method() -> None:
+    """Catches a valid model-selected method being dropped before Tutor runtime validation."""
+
+    output = _normalize_output(
+        '{"text":"Use a fraction bar.","suggested_actions":[],"teaching_method_id":"VISUAL_REPRESENTATION","candidate_metadata":null}',
+        {"response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA},
+    )
+
+    assert output["teaching_method_id"] == "VISUAL_REPRESENTATION"

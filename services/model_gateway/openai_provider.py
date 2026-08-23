@@ -225,12 +225,20 @@ def _normalize_output(
             "suggested_actions": parsed.get("suggested_actions", []),
             "candidate_metadata": None,
             "candidate_metadata_error": "candidate_metadata_missing",
+            **_teaching_method_output(parsed),
         }
     return {
         "text": parsed["text"],
         "suggested_actions": parsed.get("suggested_actions", []),
         "candidate_metadata": parsed["candidate_metadata"],
+        **_teaching_method_output(parsed),
     }
+
+
+def _teaching_method_output(parsed: dict[str, object]) -> dict[str, object]:
+    """Preserve a v4 Tutor method without changing older structured outputs."""
+
+    return {"teaching_method_id": parsed["teaching_method_id"]} if "teaching_method_id" in parsed else {}
 
 
 class _StructuredTutorTextExtractor:
