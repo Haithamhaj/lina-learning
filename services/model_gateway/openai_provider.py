@@ -212,6 +212,7 @@ def _normalize_output(
         if fallback_text:
             return {
                 "text": fallback_text,
+                "suggested_actions": [],
                 "candidate_metadata": None,
                 "candidate_metadata_error": "structured_output_invalid_json",
             }
@@ -221,10 +222,15 @@ def _normalize_output(
     if "candidate_metadata" not in parsed:
         return {
             "text": parsed["text"],
+            "suggested_actions": parsed.get("suggested_actions", []),
             "candidate_metadata": None,
             "candidate_metadata_error": "candidate_metadata_missing",
         }
-    return {"text": parsed["text"], "candidate_metadata": parsed["candidate_metadata"]}
+    return {
+        "text": parsed["text"],
+        "suggested_actions": parsed.get("suggested_actions", []),
+        "candidate_metadata": parsed["candidate_metadata"],
+    }
 
 
 class _StructuredTutorTextExtractor:

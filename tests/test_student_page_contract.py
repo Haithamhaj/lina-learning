@@ -38,3 +38,19 @@ def test_student_math_surface_has_lina_tutor_visual_and_bilingual_ready_markers(
     assert 'dir="auto"' in math_session
     assert "Welcome to Math" in math_session
     assert "Tutor is thinking…" in math_session
+
+
+def test_student_math_surface_keeps_only_latest_tutor_actions_active_and_input_editable_while_streaming() -> None:
+    """Catches action chips becoming historical controls or disabling Lina's next thought while a turn streams."""
+
+    workspace = Path(__file__).parents[1]
+    math_session = (workspace / "apps/web/components/student-math-session.tsx").read_text()
+
+    assert "suggested_actions" in math_session
+    assert "latestActionableTutorMessageId" in math_session
+    assert "sendMessage" in math_session
+    assert "suggested_action: suggestedAction" in math_session
+    assert "sendMessage(action, true)" in math_session
+    input_start = math_session.index('id="student-math-message"')
+    input_end = math_session.index("/>", input_start)
+    assert "disabled=" not in math_session[input_start:input_end]

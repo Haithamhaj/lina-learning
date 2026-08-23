@@ -58,11 +58,17 @@ class _Policy:
 
 
 class _Provider:
-    def __init__(self, text: str = "Try one small step.", candidate_metadata: object | None = None) -> None:
+    def __init__(
+        self,
+        text: str = "Try one small step.",
+        candidate_metadata: object | None = None,
+        suggested_actions: object | None = None,
+    ) -> None:
         self.calls = 0
         self.payloads: list[dict[str, object]] = []
         self.text = text
         self.candidate_metadata = candidate_metadata
+        self.suggested_actions = suggested_actions
 
     def stream(self, route: ModelRoute, payload: dict[str, object]):
         del route
@@ -72,6 +78,8 @@ class _Provider:
         yield StreamDelta(self.text[8:])
         metadata = self.candidate_metadata(payload) if callable(self.candidate_metadata) else self.candidate_metadata
         output: dict[str, object] = {"text": self.text}
+        if self.suggested_actions is not None:
+            output["suggested_actions"] = self.suggested_actions
         if metadata is not None:
             output["candidate_metadata"] = metadata
         yield StreamComplete(ModelResult(output=output, input_tokens=4, output_tokens=3))
@@ -82,11 +90,13 @@ def _decision(action: SafetyAction = SafetyAction.ALLOW, directive: str | None =
 
 
 def _runtime(
-    decision: SafetyDecision, candidate_metadata: object | None = None,
+    decision: SafetyDecision,
+    candidate_metadata: object | None = None,
+    suggested_actions: object | None = None,
 ) -> tuple[TutorRuntime, _ContextBuilder, _Provider, _Session]:
     session = _Session()
     context = _ContextBuilder()
-    provider = _Provider(candidate_metadata=candidate_metadata)
+    provider = _Provider(candidate_metadata=candidate_metadata, suggested_actions=suggested_actions)
     gateway = ModelGateway(session, routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")}, providers={"fixture": provider})
     return TutorRuntime(session, context_builder=context, safety_policy=_Policy(decision), gateway=gateway), context, provider, session
 
@@ -133,6 +143,26 @@ def test_current_independence_overrides_support_first_strategy() -> None:
     assert provider.payloads[0]["strategy"] == TeachingStrategy.INDEPENDENT_CHECK.value
 
 
+def test_completed_turn_preserves_only_four_trimmed_string_suggested_actions() -> None:
+    """Catches a completed structured turn leaking malformed actions into persistence or the Student API."""
+
+    runtime, _, _, session = _runtime(
+        _decision(),
+        suggested_actions=[" خليني أجرب ✍️ ", "", 7, "candidate_metadata: {source_message_ids}", "مثال ثاني 🍕", "فهمت 👍", "اشرحها بطريقة ثانية"],
+    )
+
+    events = list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), last_activity_at=None),
+        question="Explain equivalent fractions.",
+    ))
+
+    turn = events[-1]
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    assert isinstance(turn, TutorTurn)
+    assert turn.suggested_actions == ["خليني أجرب ✍️", "مثال ثاني 🍕", "فهمت 👍", "اشرحها بطريقة ثانية"]
+    assert tutor_message.payload["suggested_actions"] == turn.suggested_actions
+
+
 @pytest.mark.parametrize("action", [SafetyAction.REDIRECT_TO_PARENT, SafetyAction.BLOCK])
 def test_redirect_and_protected_actions_persist_policy_response_without_a_model_call(action: SafetyAction) -> None:
     runtime, context, provider, session = _runtime(_decision(action, "Please talk with a trusted grown-up."))
@@ -144,6 +174,7 @@ def test_redirect_and_protected_actions_persist_policy_response_without_a_model_
     assert context.calls == 0
     assert provider.calls == 0
     assert len([row for row in session.rows if isinstance(row, LearningMessage)]) == 2
+    assert events[-1].suggested_actions == []
 
 
 def test_age_appropriate_turn_continues_with_the_policy_directive() -> None:
@@ -242,6 +273,42 @@ def test_valid_same_call_candidate_metadata_is_persisted_with_raw_source_linkage
     assert candidate.payload["subject"] == "MATH"
     assert candidate.payload["source_message_ids"] == [str(student_message.id)]
     assert tutor_message.payload["candidate_metadata_status"] == "persisted"
+
+
+@pytest.mark.parametrize(
+    ("question", "is_suggested_action"),
+    [
+        ("I got it", False),
+        ("فهمت 👍", False),
+        ("Let me try ✍️", True),
+    ],
+)
+def test_self_reports_and_suggested_action_clicks_never_persist_mastery_candidate_metadata(
+    question: str, is_suggested_action: bool,
+) -> None:
+    """Catches a self-report or action selection being promoted to Candidate/Evidence despite no observed work."""
+
+    session_holder: dict[str, _Session] = {}
+
+    def metadata(_: dict[str, object]) -> dict[str, object]:
+        return _candidate_for_current_message(
+            session_holder["session"],
+            event_type="independent_success",
+            signal="solved_independently",
+        )
+
+    runtime, _, provider, session = _runtime(_decision(), metadata)
+    session_holder["session"] = session
+    list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        question=question,
+        is_suggested_action=is_suggested_action,
+    ))
+
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    assert provider.calls == 1
+    assert not [row for row in session.rows if isinstance(row, CandidateEvent)]
+    assert tutor_message.payload["candidate_metadata_status"] == "not_evidence"
 
 
 @pytest.mark.parametrize(

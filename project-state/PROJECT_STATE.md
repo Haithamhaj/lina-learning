@@ -46,6 +46,9 @@ continuation.
   school-position authority.
 - REC-35 bounded real-Lina/manual Product Owner calibration has begun and
   produced verified Tutor UX findings for the approved REC-35.1 correction.
+- REC-35.1 implementation is verified through automated contracts, a fresh
+  PostgreSQL suite, web build, and a real-Luna diagnostic. Product Owner
+  browser retest remains pending; REC-25 has not resumed.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -83,17 +86,17 @@ and Parent Dashboard expansion.
 
 ## Active risks
 
-- REC-35.1 is the only next Track A work. REC-25 remains blocked pending
-  REC-35.1 completion/retest and explicit Product Owner continuation; Track B
-  and other future capability work remain frozen.
+- Product Owner browser retest is the remaining REC-35.1 review gate. REC-25
+  remains blocked pending that retest and explicit Product Owner continuation;
+  Track B and other future capability work remain frozen.
 - PostgreSQL/pgvector and real AWS/S3 staging verification remain separate
   operational concerns; this governance correction does not change them.
 
 ## Next recommended action
 
-Execute `REC-35.1 — Tutor Child Interaction Calibration Pass` only; do not
-resume REC-25 without REC-35.1 completion/retest and explicit Product Owner
-continuation.
+Perform Product Owner browser retest of `REC-35.1 — Tutor Child Interaction
+Calibration Pass`; do not resume REC-25 without that retest and explicit
+Product Owner continuation.
 
 ## Critical references
 

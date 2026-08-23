@@ -11,6 +11,7 @@ type Message = {
   role: string;
   content: string;
   created_at: string;
+  suggested_actions: string[];
 };
 
 type MathSession = {
@@ -22,6 +23,7 @@ type MathSession = {
 
 type TutorTurn = {
   text: string;
+  suggested_actions: string[];
 };
 
 function ChatAvatar({ participant }: { participant: "Lina" | "Tutor" }) {
@@ -90,9 +92,8 @@ export function StudentMathSession() {
     };
   }, [getToken, isLoaded, loadAttempt]);
 
-  const send = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const content = draft.trim();
+  const sendMessage = async (nextContent: string, suggestedAction = false) => {
+    const content = nextContent.trim();
     if (!learningSession || !content || state === "sending") return;
     setState("sending");
     setError("");
@@ -103,7 +104,7 @@ export function StudentMathSession() {
       const tutorId = `local-tutor-${Date.now()}`;
       setLearningSession((current) => current ? {
         ...current,
-        messages: [...current.messages, { id: studentId, role: "student", content, created_at: now }, { id: tutorId, role: "tutor", content: "", created_at: now }],
+        messages: [...current.messages, { id: studentId, role: "student", content, created_at: now, suggested_actions: [] }, { id: tutorId, role: "tutor", content: "", created_at: now, suggested_actions: [] }],
       } : current);
       setDraft("");
       const response = await fetch(`${publicConfig.apiBaseUrl}/v1/student/math/session/${learningSession.id}/turn/stream`, {
@@ -112,7 +113,7 @@ export function StudentMathSession() {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, suggested_action: suggestedAction }),
       });
       if (!response.ok) throw await errorFrom(response);
       if (!response.body) throw new Error("The Tutor response stream was unavailable.");
@@ -140,7 +141,7 @@ export function StudentMathSession() {
             const turn = payload as TutorTurn;
             setLearningSession((current) => current ? {
               ...current,
-              messages: current.messages.map((message) => message.id === tutorId ? { ...message, content: turn.text } : message),
+              messages: current.messages.map((message) => message.id === tutorId ? { ...message, content: turn.text, suggested_actions: turn.suggested_actions } : message),
             } : current);
           }
         }
@@ -150,6 +151,11 @@ export function StudentMathSession() {
       setError(reason instanceof Error ? reason.message : "Your message could not be saved.");
       setState("error");
     }
+  };
+
+  const send = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void sendMessage(draft);
   };
 
   if (state === "loading") {
@@ -164,6 +170,10 @@ export function StudentMathSession() {
       </section>
     );
   }
+
+  const latestActionableTutorMessageId = [...(learningSession?.messages ?? [])]
+    .reverse()
+    .find((message) => message.role === "tutor" && message.suggested_actions.length > 0)?.id;
 
   return (
     <section aria-label="Math learning session" className="relative overflow-hidden rounded-[2rem] border border-white/90 bg-white/95 p-4 shadow-[0_18px_60px_-34px_rgba(47,35,81,0.55)] sm:p-6">
@@ -185,9 +195,23 @@ export function StudentMathSession() {
             return (
               <article className={`flex items-end gap-2.5 ${isTutor ? "justify-start" : "justify-end"}`} key={message.id}>
                 {isTutor ? <ChatAvatar participant="Tutor" /> : null}
-                <div className={`max-w-[82%] rounded-[1.35rem] px-4 py-3 shadow-sm ${isTutor ? "rounded-bl-md border border-[#d4e7e4] bg-[#edf9f7] text-[#163b3b]" : "rounded-br-md bg-[#6a4ba2] text-white"}`}>
-                  <p className={`text-xs font-bold ${isTutor ? "text-[#418377]" : "text-[#eadfff]"}`}>{participant}</p>
-                  {isThinking ? <p className="mt-1.5 flex items-center gap-2 text-sm"><span className="flex gap-1" aria-hidden="true"><span className="size-1.5 rounded-full bg-current opacity-60" /><span className="size-1.5 rounded-full bg-current opacity-80" /><span className="size-1.5 rounded-full bg-current" /></span>Tutor is thinking…</p> : <p dir="auto" className="mt-1.5 whitespace-pre-wrap text-sm leading-6">{message.content}</p>}
+                <div className="max-w-[82%]">
+                  <div className={`rounded-[1.35rem] px-4 py-3 shadow-sm ${isTutor ? "rounded-bl-md border border-[#d4e7e4] bg-[#edf9f7] text-[#163b3b]" : "rounded-br-md bg-[#6a4ba2] text-white"}`}>
+                    <p className={`text-xs font-bold ${isTutor ? "text-[#418377]" : "text-[#eadfff]"}`}>{participant}</p>
+                    {isThinking ? <p className="mt-1.5 flex items-center gap-2 text-sm"><span className="flex gap-1" aria-hidden="true"><span className="size-1.5 rounded-full bg-current opacity-60" /><span className="size-1.5 rounded-full bg-current opacity-80" /><span className="size-1.5 rounded-full bg-current" /></span>Tutor is thinking…</p> : <p dir="auto" className="mt-1.5 whitespace-pre-wrap text-sm leading-6">{message.content}</p>}
+                  </div>
+                  {isTutor && message.id === latestActionableTutorMessageId ? <div className="mt-2 flex flex-wrap gap-2" aria-label="Tutor suggested actions">
+                    {message.suggested_actions.map((action) => <Button
+                      className="h-auto min-h-10 rounded-full border border-[#b8ddd6] bg-white px-3 py-2 text-left text-sm text-[#245b55] hover:bg-[#e2f3ef]"
+                      disabled={state === "sending"}
+                      key={action}
+                      onClick={() => void sendMessage(action, true)}
+                      type="button"
+                      variant="secondary"
+                    >
+                      <span dir="auto">{action}</span>
+                    </Button>)}
+                  </div> : null}
                 </div>
                 {!isTutor ? <ChatAvatar participant="Lina" /> : null}
               </article>
@@ -210,7 +234,6 @@ export function StudentMathSession() {
             onChange={(event) => setDraft(event.target.value)}
             placeholder="Ask a question or share what you tried"
             maxLength={4000}
-            disabled={state === "sending"}
           />
           <Button className="mt-3 w-full sm:mt-0 sm:w-auto" type="submit" disabled={!draft.trim() || state === "sending"}>
             {state === "sending" ? "Tutor is thinking…" : "Send"}

@@ -448,12 +448,49 @@ def test_zero_content_student_tutor_turn_uses_empty_retrieval_and_persists_respo
     assert "event: turn" in response.text
     assert "candidate" not in response.text
     final_event = response.text.split("event: turn\ndata: ", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
-    assert json.loads(final_event) == {"text": "Let’s work on this step by step. Explain equivalent fractions."}
+    assert json.loads(final_event) == {
+        "text": "Let’s work on this step by step. Explain equivalent fractions.",
+        "suggested_actions": [],
+    }
     with postgres_session_factory() as session:
         messages = session.query(LearningMessage).filter_by(session_id=UUID(session_id)).order_by(LearningMessage.created_at, LearningMessage.id).all()
         assert [message.role for message in messages] == ["student", "tutor"]
         assert messages[-1].payload["source_refs"] == []
+        assert messages[-1].payload["suggested_actions"] == []
         assert session.query(AIExecution).filter_by(task="tutor").count() == executions_before + 1
+
+
+def test_session_reload_exposes_persisted_tutor_actions_and_defaults_legacy_messages_to_empty(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Catches a reload that either drops a Tutor action or invents one for a legacy message."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-one")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session.add_all([
+            LearningMessage(
+                session_id=learning_session.id, role="tutor", content="جرّبي خطوة صغيرة.",
+                payload={"suggested_actions": ["خليني أجرب ✍️"]},
+            ),
+            LearningMessage(session_id=learning_session.id, role="tutor", content="رسالة قديمة.", payload={}),
+        ])
+        session.flush()
+        session_id = learning_session.id
+
+    client = _client(postgres_session_factory, subject="student-one")
+    try:
+        response = client.get(f"/api/v1/student/math/session/{session_id}")
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    actions_by_content = {
+        message["content"]: message["suggested_actions"] for message in response.json()["messages"]
+    }
+    assert actions_by_content == {"جرّبي خطوة صغيرة.": ["خليني أجرب ✍️"], "رسالة قديمة.": []}
 
 
 def test_parent_redirect_stream_never_calls_the_tutor_model(

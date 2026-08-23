@@ -672,7 +672,7 @@ successfully after Track A and surfaced actionable Tutor-experience findings.
 REC-25 calibration remains blocked and is not complete.
 
 ## REC-35.1 — Tutor Child Interaction Calibration Pass
-**Status:** READY
+**Status:** REVIEW
 **Dependencies:** REC-35
 **Purpose:** Implement only the Product Owner-approved findings from the first
 real Tutor calibration: age-appropriate concise Tutor interaction; an adaptive
@@ -688,6 +688,11 @@ durability; the 800-token budget; and `response.incomplete` handling.
 **Explicit exclusions:** REC-25 execution; Track B; Science, Voice, Vision;
 Learning Canvas / Artifact Engine; Parent Dashboard expansion; RAG/index
 changes; DB migrations; and parked Prompt-v5/Eureka work.
+**Verification note:** Focused Tutor/provider/API/SSE/page-contract tests,
+Track A acceptance, the relevant PostgreSQL suite, web typecheck/build, and a
+real `gpt-5.6-luna` `tutor_turn_v2` equivalent-fractions diagnostic passed.
+Product Owner browser retest is the remaining review gate. REC-25 remains
+blocked pending that retest and explicit continuation.
 
 ---
 

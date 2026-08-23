@@ -9,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 
 
 CANDIDATE_EVENT_SCHEMA_VERSION = "candidate-event-v1"
+TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v2"
+MAX_SUGGESTED_ACTIONS = 4
 CandidateEventType = Literal[
     "learning_attempt",
     "independent_success",
@@ -84,11 +86,52 @@ def parse_candidate_event_metadata(
     return metadata
 
 
+def normalize_suggested_actions(payload: object) -> list[str]:
+    """Keep completed Tutor action choices small, visible, and safe to show to a Student."""
+
+    if not isinstance(payload, list):
+        return []
+    actions: list[str] = []
+    for item in payload:
+        if not isinstance(item, str):
+            continue
+        action = item.strip()
+        if not action or _contains_action_markup_or_url(action):
+            continue
+        actions.append(action)
+        if len(actions) == MAX_SUGGESTED_ACTIONS:
+            break
+    return actions
+
+
+def _contains_action_markup_or_url(action: str) -> bool:
+    normalized = action.casefold()
+    return (
+        "http://" in normalized
+        or "https://" in normalized
+        or "www." in normalized
+        or "`" in action
+        or "**" in action
+        or "[" in action
+        or "](" in action
+        or "#" in action
+        or "{" in action
+        or "}" in action
+        or "candidate_metadata" in normalized
+        or "source_message_id" in normalized
+    )
+
+
 TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
     "properties": {
         "text": {"type": "string"},
+        "suggested_actions": {
+            "type": "array",
+            "maxItems": MAX_SUGGESTED_ACTIONS,
+            "items": {"type": "string"},
+        },
         "candidate_metadata": {
             "anyOf": [
                 {
@@ -129,11 +172,11 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
             ]
         },
     },
-    "required": ["text", "candidate_metadata"],
+    "required": ["text", "suggested_actions", "candidate_metadata"],
 }
 
 
 TUTOR_OUTPUT_RESPONSE_SCHEMA = {
-    "name": "tutor_turn_v1",
+    "name": TUTOR_TURN_SCHEMA_VERSION,
     "schema": TUTOR_OUTPUT_JSON_SCHEMA,
 }

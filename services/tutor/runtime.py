@@ -20,6 +20,7 @@ from services.tutor.context import TutorContext, TutorContextBuilder
 from services.tutor.candidate_events import (
     CandidateEventContractError,
     TUTOR_OUTPUT_RESPONSE_SCHEMA,
+    normalize_suggested_actions,
     parse_candidate_event_metadata,
 )
 from services.tutor.safety import TutorSafetyRuntime, consume_safety_decision
@@ -49,6 +50,7 @@ class TutorTextDelta:
 @dataclass(frozen=True)
 class TutorTurn:
     text: str
+    suggested_actions: list[str]
     sources: list[dict[str, object]]
     intelligence: list[str]
     mode: TeachingMode
@@ -66,7 +68,11 @@ class LocalTutorProvider:
     def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
         del route
         return ModelResult(
-            output={"text": f"Let’s work on this step by step. {payload['question']}"},
+            output={
+                "text": f"Let’s work on this step by step. {payload['question']}",
+                "suggested_actions": [],
+                "candidate_metadata": None,
+            },
             input_tokens=20,
             output_tokens=18,
             estimated_cost_usd=0.0,
@@ -79,16 +85,25 @@ class LocalTutorProvider:
 
 
 TUTOR_SHARED_INSTRUCTIONS = (
-    "You are Lina's fixed Grade 5 Math tutor: warm, clear, patient, non-shaming, and focused on understanding. "
-    "Reply primarily in the language of the Student's current message; use natural Arabic/English mixing only when "
-    "the message mixes them, while retaining useful school and math terms. Current demonstrated behavior outranks "
-    "historical learning notes. Never announce learner labels or internal records. The book is curriculum grounding, "
-    "not a script: use valid examples, analogies, or visual descriptions when useful. For homework, allow a meaningful "
-    "attempt and hint before giving an answer; if the Student is genuinely stuck, explain clearly, explain why, then ask "
-    "one new application check. Do not withhold answers endlessly. Safety policy is enforced before this call; do not mention internal policies. "
-    "Return the student-facing reply only in the structured `text` field. Set hidden `candidate_metadata` to null for greetings, thanks, generic chat, "
-    "or when no meaningful learning signal occurred. Emit Candidate Event metadata only for a specific, source-linked learning signal; never treat a chosen "
-    "Tutor strategy as an outcome without an observable Student result. Never mention hidden metadata in text."
+    "You are Lina's fixed Grade 5 Math tutor: warm, conversational, patient, non-shaming, and focused on understanding. "
+    "Speak naturally to an intelligent approximately 10-year-old: do not use baby-talk or unnecessary formal educational wording. "
+    "Reply primarily in the language of the Student's current message on every turn: Arabic message means primarily Arabic, English message means primarily English. "
+    "Follow an immediate Arabic/English language switch without treating it as a topic switch or creating separate learner profiles, intelligence, or learning state. "
+    "Use natural Arabic/English mixing only when the Student mixes languages or useful school/math terminology benefits from it. "
+    "Keep the same relevant conversational context across a language switch. Current demonstrated behavior outranks historical learning notes. "
+    "Never announce learner labels or internal records. The book is curriculum grounding, not a script: use valid examples, analogies, or visual descriptions when useful. "
+    "Prefer short sentences and manageable chunks. Default to one concept or one or two small steps, then invite interaction or a check instead of giving a long lecture. "
+    "If the Student remains confused, change representation or support rather than repeating: use a concrete example, visual or mental representation, worked example, or guided step as useful. "
+    "Use adaptive scaffolding such as worked example, guided attempt, lighter hint, and independent attempt; it is not a fixed sequence. "
+    "For homework, allow a meaningful attempt and hint before giving an answer; if the Student is genuinely stuck, explain clearly, explain why, then ask one new application check. "
+    "A Student saying they understand or choosing an action is not proof of understanding or mastery; normally use a small independent or application check when it matters. "
+    "Praise only specific observed effort, reasoning, correction, or persistence; avoid automatic or exaggerated praise. Use zero to three emojis only when they add warmth or meaning, never on every sentence. "
+    "Student-facing text must be plain text: no Markdown markers, headings, bold, or code fences. Do not use LaTeX or raw LaTeX notation. Use simple Grade-5-readable math notation and put equations on their own line when it improves Arabic/English readability. "
+    "Safety policy is enforced before this call; do not mention internal policies. Return student-facing reply only in the structured text field. "
+    "Return suggested_actions as zero to four short, visible choices when useful; otherwise return an empty array. Suggested actions must use the same primary language as the response and contain no URLs, Markdown, or hidden metadata. "
+    "Set hidden candidate_metadata to null for greetings, thanks, generic chat, self-reported understanding, button selection, or when no meaningful observable learning signal occurred. "
+    "Emit Candidate Event metadata only for a specific, source-linked observable learning signal such as solving, explaining, applying, self-correcting, or transferring an idea. "
+    "Never treat a chosen Tutor strategy as an outcome without an observable Student result. Never mention hidden metadata in text."
 )
 
 
@@ -119,10 +134,16 @@ def infer_tutor_mode(question: str) -> TeachingMode:
 
 def select_teaching_strategy(question: str, *, mode: TeachingMode | None = None) -> TeachingStrategy:
     normalized = question.lower()
-    if any(term in normalized for term in ("i solved", "i got it", "my answer is", "حللت", "أعتقد أنني")):
-        return TeachingStrategy.INDEPENDENT_CHECK
-    if any(term in normalized for term in ("stuck", "don't understand", "too hard", "لا أفهم", "عالق")):
+    if any(term in normalized for term in (
+        "stuck", "don't understand", "i don't understand", "still confused", "still not clear", "too hard",
+        "لا أفهم", "ما فهمت", "مش فاهمة", "مش واضحة", "لسه مش واضحة", "عالق",
+    )):
         return TeachingStrategy.EXPLAIN_THEN_CHECK
+    if any(term in normalized for term in (
+        "i solved", "i got it", "i understand", "got it", "my answer is", "حللت", "أعتقد أنني",
+        "فهمت", "فهمت الآن", "تمام فهمت",
+    )):
+        return TeachingStrategy.INDEPENDENT_CHECK
     if mode is TeachingMode.HOMEWORK:
         return TeachingStrategy.HINT_FIRST
     return TeachingStrategy.EXPLAIN_WITH_EXAMPLE
@@ -182,12 +203,23 @@ class TutorRuntime:
         self._safety_policy = safety_policy
         self._gateway = gateway
 
-    def stream_turn(self, *, learning_session: LearningSession, question: str) -> Iterator[TutorTextDelta | TutorTurn]:
+    def stream_turn(
+        self,
+        *,
+        learning_session: LearningSession,
+        question: str,
+        is_suggested_action: bool = False,
+    ) -> Iterator[TutorTextDelta | TutorTurn]:
         content = question.strip()
         if not content:
             raise ValueError("A current Student question is required.")
         learning_session.last_activity_at = datetime.now(UTC)
-        student_message = append_student_message(self._session, learning_session=learning_session, content=content)
+        student_message = append_student_message(
+            self._session,
+            learning_session=learning_session,
+            content=content,
+            interaction_payload={"input_kind": "suggested_action"} if is_suggested_action else None,
+        )
         decision = self._safety_policy.evaluate(student_id=learning_session.student_id, text=content, interaction_ref=str(learning_session.id))
         safety = consume_safety_decision(decision)
         mode = infer_tutor_mode(content)
@@ -196,6 +228,7 @@ class TutorRuntime:
             yield self._persist_turn(
                 learning_session,
                 safety.redirect_directive or "Please ask a trusted grown-up for help with this topic.",
+                [],
                 None,
                 safety,
                 mode,
@@ -285,6 +318,7 @@ class TutorRuntime:
         return self._persist_turn(
             learning_session,
             str(result.output.get("text")),
+            normalize_suggested_actions(result.output.get("suggested_actions")),
             context,
             safety,
             mode,
@@ -301,6 +335,8 @@ class TutorRuntime:
         source_message: LearningMessage,
         result: ModelResult | None,
     ) -> tuple[str, str | None]:
+        if _is_non_evidentiary_interaction(source_message):
+            return "not_evidence", None
         if result is not None:
             metadata_error = result.output.get("candidate_metadata_error")
             if isinstance(metadata_error, str):
@@ -345,6 +381,7 @@ class TutorRuntime:
         self,
         learning_session: LearningSession,
         text: str,
+        suggested_actions: list[str],
         context: TutorContext | None,
         safety: TutorSafetyRuntime,
         mode: TeachingMode,
@@ -356,7 +393,7 @@ class TutorRuntime:
     ) -> TutorTurn:
         sources = _source_metadata(context)
         intelligence = [item.text for item in context.intelligence] if context else []
-        payload: dict[str, object] = {"source_refs": [source["source_ref"] for source in sources], "intelligence_used": intelligence, "safety": safety.audit_metadata(), "mode": mode.value, "strategy": strategy.value, "candidate_metadata_status": candidate_metadata_status}
+        payload: dict[str, object] = {"source_refs": [source["source_ref"] for source in sources], "intelligence_used": intelligence, "safety": safety.audit_metadata(), "mode": mode.value, "strategy": strategy.value, "candidate_metadata_status": candidate_metadata_status, "suggested_actions": suggested_actions}
         if candidate_metadata_error is not None:
             payload["candidate_metadata_error"] = candidate_metadata_error
         if context is not None:
@@ -373,7 +410,7 @@ class TutorRuntime:
         )
         learning_session.last_activity_at = datetime.now(UTC)
         self._session.flush()
-        return TutorTurn(text, sources, intelligence, mode, strategy, safety.audit_metadata())
+        return TutorTurn(text, suggested_actions, sources, intelligence, mode, strategy, safety.audit_metadata())
 
 
 def _payload_from_context(
@@ -389,6 +426,22 @@ def _payload_from_context(
 
 def _source_metadata(context: TutorContext | None) -> list[dict[str, object]]:
     return [] if context is None else [{"source_ref": block.source_ref, "page_number": block.page_number, "block_type": block.block_type} for block in context.retrieval]
+
+
+def _is_non_evidentiary_interaction(message: LearningMessage) -> bool:
+    payload = message.payload if isinstance(message.payload, dict) else {}
+    if payload.get("input_kind") == "suggested_action":
+        return True
+    self_report = message.content.casefold().strip(" .!؟?👍✨✍️")
+    return self_report in {
+        "فهمت",
+        "فهمت الآن",
+        "تمام فهمت",
+        "i got it",
+        "i understand",
+        "got it",
+        "yes",
+    }
 
 
 def create_tutor_runtime(session: Session) -> TutorRuntime:

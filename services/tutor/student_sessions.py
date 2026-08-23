@@ -140,6 +140,7 @@ def append_student_message(
     *,
     learning_session: LearningSession,
     content: str,
+    interaction_payload: dict[str, object] | None = None,
 ) -> LearningMessage:
     """Persist one raw Student message and retain the session as open."""
 
@@ -147,7 +148,7 @@ def append_student_message(
         session_id=learning_session.id,
         role="student",
         content=content,
-        payload={"source": "student-session-v1"},
+        payload={"source": "student-session-v1", **(interaction_payload or {})},
         created_at=datetime.now(UTC),
     )
     session.add(message)
