@@ -15,6 +15,7 @@ from services.platform.auth import AuthenticatedPrincipal, UserRole, get_current
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
     AIExecution,
+    CandidateEvent,
     ContentDocument,
     ContentIndexRun,
     ContentProcessingRun,
@@ -26,6 +27,12 @@ from services.platform.db.models import (
 )
 from services.platform.db.session import get_session
 from services.platform.config import Settings
+from services.model_gateway.gateway import ModelGateway, ModelRoute, StreamDelta
+from services.platform.db.models import ModelTask
+from services.platform.safety import SafetyPolicyService
+from services.retrieval.service import RetrievalService
+from services.tutor.context import TutorContextBuilder
+from services.tutor.runtime import TutorRuntime
 
 
 pytestmark = pytest.mark.skipif(
@@ -112,6 +119,7 @@ def _client(
     postgres_session_factory: sessionmaker[Session],
     *,
     subject: str,
+    raise_server_exceptions: bool = True,
 ) -> TestClient:
     from apps.api.main import app
 
@@ -125,7 +133,7 @@ def _client(
         role=UserRole.STUDENT,
         email=f"{subject}@example.test",
     )
-    return TestClient(app)
+    return TestClient(app, raise_server_exceptions=raise_server_exceptions)
 
 
 def _clear_overrides() -> None:
@@ -133,6 +141,32 @@ def _clear_overrides() -> None:
 
     app.dependency_overrides.pop(get_session, None)
     app.dependency_overrides.pop(get_current_principal, None)
+
+
+class _DeltaThenFailureTutorProvider:
+    """Simulate a provider that streams text but never reaches a final result."""
+
+    def execute(self, route: ModelRoute, payload: dict[str, object]) -> object:
+        del route, payload
+        raise AssertionError("The Student Tutor path must use streaming.")
+
+    def stream(self, route: ModelRoute, payload: dict[str, object]):
+        del route, payload
+        yield StreamDelta("A partial Tutor response.")
+        raise RuntimeError("fixture stream failure")
+
+
+def _delta_then_failure_runtime(session: Session) -> TutorRuntime:
+    return TutorRuntime(
+        session,
+        context_builder=TutorContextBuilder(session, retrieval_service=RetrievalService(session)),
+        safety_policy=SafetyPolicyService(session),
+        gateway=ModelGateway(
+            session,
+            routes={ModelTask.TUTOR: ModelRoute("fixture-stream", "fixture-failure-model")},
+            providers={"fixture-stream": _DeltaThenFailureTutorProvider()},
+        ),
+    )
 
 
 def test_authenticated_student_with_zero_content_starts_and_resumes_one_open_math_session(
@@ -283,6 +317,103 @@ def test_student_session_path_has_no_automatic_close_side_effect(
         assert persisted is not None
         assert persisted.status == "OPEN"
         assert persisted.closed_at is None
+
+
+def test_failed_stream_keeps_the_student_message_and_failure_ledger_without_partial_tutor_output(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Catches the route rollback that erased the raw turn and its failed execution audit."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-one")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    from apps.api.routes import student as student_routes
+
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _delta_then_failure_runtime)
+    client = _client(postgres_session_factory, subject="student-one", raise_server_exceptions=False)
+    try:
+        response = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": "I need help with equivalent fractions."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert "event: turn" not in response.text
+    with postgres_session_factory() as session:
+        messages = session.query(LearningMessage).filter_by(session_id=session_id).order_by(
+            LearningMessage.created_at, LearningMessage.id
+        ).all()
+        assert [(message.role, message.content) for message in messages] == [
+            ("student", "I need help with equivalent fractions."),
+        ]
+        execution = session.query(AIExecution).filter_by(task="tutor").one()
+        assert execution.success is False
+        assert execution.provider == "fixture-stream"
+        assert execution.model == "fixture-failure-model"
+        assert execution.failure_code == "RuntimeError"
+        assert execution.student_id == student.id
+        assert execution.learning_session_id == session_id
+        assert execution.source_message_id == messages[0].id
+        assert execution.operation_type == "tutor_turn"
+        assert session.query(CandidateEvent).filter_by(session_id=session_id).count() == 0
+        assert session.get(LearningSession, session_id).status == "OPEN"
+
+
+def test_a_session_recovers_with_a_successful_turn_after_a_failed_stream(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Catches failed-turn handling that leaves an open Student session unusable."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-one")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    from apps.api.routes import student as student_routes
+    from services.tutor import runtime as tutor_runtime
+
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _delta_then_failure_runtime)
+    client = _client(postgres_session_factory, subject="student-one", raise_server_exceptions=False)
+    try:
+        failed = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": "This first turn fails."},
+        )
+        monkeypatch.setattr(tutor_runtime, "get_settings", lambda: Settings(_env_file=None, model_provider="mock"))
+        monkeypatch.setattr(student_routes, "create_tutor_runtime", tutor_runtime.create_tutor_runtime)
+        recovered = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": "Can we try equivalent fractions again?"},
+        )
+    finally:
+        _clear_overrides()
+
+    assert failed.status_code == 200
+    assert "event: turn" not in failed.text
+    assert recovered.status_code == 200
+    assert "event: turn" in recovered.text
+    with postgres_session_factory() as session:
+        messages = session.query(LearningMessage).filter_by(session_id=session_id).order_by(
+            LearningMessage.created_at, LearningMessage.id
+        ).all()
+        assert [(message.role, message.content) for message in messages] == [
+            ("student", "This first turn fails."),
+            ("student", "Can we try equivalent fractions again?"),
+            ("tutor", "Let’s work on this step by step. Can we try equivalent fractions again?"),
+        ]
+        assert session.query(AIExecution).filter_by(task="tutor", success=False).count() == 1
+        assert session.query(AIExecution).filter_by(task="tutor", success=True).count() == 1
+        assert session.get(LearningSession, session_id).status == "OPEN"
 
 
 def test_zero_content_student_tutor_turn_uses_empty_retrieval_and_persists_response(

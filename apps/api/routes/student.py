@@ -23,7 +23,7 @@ from services.tutor.student_sessions import (
     owned_open_math_session,
     student_for_authenticated_subject,
 )
-from services.tutor.runtime import TutorTextDelta, TutorTurn, create_tutor_runtime
+from services.tutor.runtime import TutorModelStreamFailure, TutorTextDelta, TutorTurn, create_tutor_runtime
 
 
 router = APIRouter(prefix="/api/v1/student", tags=["student"])
@@ -143,6 +143,7 @@ def stream_math_tutor_turn(
 
     def events() -> Iterator[str]:
         stream_session = Session(bind)
+        turn_stream: Iterator[TutorTextDelta | TutorTurn] | None = None
         try:
             owned_session = owned_open_math_session(
                 stream_session, student_id=student_id, session_id=session_id, lock=True
@@ -158,7 +159,11 @@ def stream_math_tutor_turn(
                     yield f"event: turn\ndata: {json.dumps({'text': event.text})}\n\n"
             stream_session.commit()
         except GeneratorExit:
-            turn_stream.close()
+            if turn_stream is not None:
+                turn_stream.close()
+            stream_session.commit()
+            raise
+        except TutorModelStreamFailure:
             stream_session.commit()
             raise
         except Exception:

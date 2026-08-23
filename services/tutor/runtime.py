@@ -56,6 +56,10 @@ class TutorTurn:
     safety: dict[str, str | int]
 
 
+class TutorModelStreamFailure(Exception):
+    """A primary Tutor model stream failed after the Student interaction was accepted."""
+
+
 class LocalTutorProvider:
     """Deterministic test/development adapter; configured providers stream remotely."""
 
@@ -218,47 +222,77 @@ class TutorRuntime:
                 source_message_id=student_message.id,
             ),
         )
-        text_parts: list[str] = []
         result: ModelResult | None = None
-        completed = False
         try:
             for event in model_stream:
                 if isinstance(event, StreamDelta):
-                    text_parts.append(event.text)
                     yield TutorTextDelta(event.text)
-                else:
+                elif isinstance(event, StreamComplete):
                     result = event.result
-                    completed = True
                     break
-        finally:
-            if not completed:
-                for event in model_stream:
-                    if isinstance(event, StreamDelta):
-                        text_parts.append(event.text)
-                    else:
-                        result = event.result
-                        completed = True
-                        break
-            final_text = str(result.output.get("text")) if result is not None else "".join(text_parts)
-            if not final_text:
-                final_text = "Let’s pause here and try the next step together."
-            candidate_metadata_status, candidate_metadata_error = self._persist_candidates(
-                learning_session=learning_session,
-                source_message=student_message,
-                result=result,
-            )
-            turn = self._persist_turn(
-                learning_session,
-                final_text,
-                context,
-                safety,
-                mode,
-                strategy,
-                candidate_metadata_status=candidate_metadata_status,
-                candidate_metadata_error=candidate_metadata_error,
-                ai_execution_id=result.execution_id if result is not None else None,
-            )
+        except GeneratorExit:
+            if result is None:
+                try:
+                    for event in model_stream:
+                        if isinstance(event, StreamComplete):
+                            result = event.result
+                            break
+                except Exception:
+                    pass
+            if result is not None:
+                self._persist_completed_turn(
+                    learning_session=learning_session,
+                    student_message=student_message,
+                    result=result,
+                    context=context,
+                    safety=safety,
+                    mode=mode,
+                    strategy=strategy,
+                )
+            raise
+        except Exception as error:
+            raise TutorModelStreamFailure("The primary Tutor model stream failed.") from error
+
+        if result is None:
+            raise TutorModelStreamFailure("The primary Tutor model stream ended without a final result.")
+        turn = self._persist_completed_turn(
+            learning_session=learning_session,
+            student_message=student_message,
+            result=result,
+            context=context,
+            safety=safety,
+            mode=mode,
+            strategy=strategy,
+        )
         yield turn
+
+    def _persist_completed_turn(
+        self,
+        *,
+        learning_session: LearningSession,
+        student_message: LearningMessage,
+        result: ModelResult,
+        context: TutorContext,
+        safety: TutorSafetyRuntime,
+        mode: TeachingMode,
+        strategy: TeachingStrategy,
+    ) -> TutorTurn:
+        candidate_metadata_status, candidate_metadata_error = self._persist_candidates(
+            learning_session=learning_session,
+            source_message=student_message,
+            result=result,
+        )
+        return self._persist_turn(
+            learning_session,
+            str(result.output.get("text")),
+            context,
+            safety,
+            mode,
+            strategy,
+            candidate_metadata_status=candidate_metadata_status,
+            candidate_metadata_error=candidate_metadata_error,
+            ai_execution_id=result.execution_id,
+        )
 
     def _persist_candidates(
         self,
