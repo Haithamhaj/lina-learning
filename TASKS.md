@@ -592,14 +592,19 @@ structural sources support a later rebuild. No index-building behavior changed.
 
 ## REC-29 — Structural-First Index Builder
 **Roadmap:** LR-A04
-**Status:** READY
+**Status:** DONE
 **Dependencies:** REC-28
 **Purpose:** Build retrieval-ready structural blocks from completed structural
 content without blind fixed-token-first chunking.
+**Completion note:** The existing index builder now accepts a completed
+structural run without semantic enrichment and creates source-linked,
+lexical/pgvector structural blocks with nullable semantic lineage. Structural
+item boundaries are retained unless one source exceeds the existing 2,000
+character block limit; semantic-backed index behavior remains compatible.
 
 ## REC-30 — Semantic Retrieval Behavior Advisory
 **Roadmap:** LR-A05
-**Status:** BLOCKED
+**Status:** READY
 **Dependencies:** REC-29
 **Purpose:** Retain semantic metadata as optional ranking/navigation enrichment
 without making it a core retrieval-candidate eligibility requirement.
