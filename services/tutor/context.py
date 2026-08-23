@@ -158,12 +158,12 @@ class TutorContextBuilder:
         )
         used = 0
         selected: list[SessionContextMessage] = []
-        for message in reversed(rows):
+        for message in rows:
             if used + len(message.content) > self._budget.session_characters:
-                continue
+                break
             selected.append(SessionContextMessage(message.id, message.role, message.content))
             used += len(message.content)
-        return tuple(selected)
+        return tuple(reversed(selected))
 
     def _session_focus(self, session_id: UUID) -> CurrentFocus | None:
         """Use recent persisted topic metadata only as conversational continuity."""

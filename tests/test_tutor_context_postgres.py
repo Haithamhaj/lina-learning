@@ -25,6 +25,7 @@ from services.platform.db.models import (
 )
 from services.retrieval.service import CurrentFocus, RetrievedBlock
 from services.tutor.context import ContextBudget, TutorContextBuilder
+from services.tutor.runtime import build_tutor_model_payload
 
 
 pytestmark = pytest.mark.skipif(
@@ -137,6 +138,133 @@ def test_context_keeps_current_question_bounds_history_and_uses_task014_retrieva
         }
     ]
     assert context.character_count <= len(context.question) + 40 + 100 + 100
+
+
+def test_recent_context_keeps_immediate_tutor_question_ahead_of_older_long_message(
+    factory: sessionmaker[Session],
+) -> None:
+    """CTX-01: an opaque answer needs its immediately preceding Tutor question."""
+
+    retrieval = RecordingRetrieval()
+    tutor_question = (
+        "Question 1: 6 stickers are shared equally between 2 children. "
+        "How many stickers does each child get? A) 2 B) 3 C) 4"
+    )
+    with factory.begin() as session:
+        _, learning_session, _ = _seed(session)
+        base = datetime.now(UTC)
+        older_long_tutor_message = "Older explanation: " + ("x" * 530)
+        messages = [
+            LearningMessage(
+                session_id=learning_session.id,
+                role="tutor",
+                content=older_long_tutor_message,
+                created_at=base,
+            ),
+            LearningMessage(
+                session_id=learning_session.id,
+                role="student",
+                content="make me a quiz",
+                created_at=base + timedelta(seconds=1),
+            ),
+            LearningMessage(
+                session_id=learning_session.id,
+                role="tutor",
+                content=tutor_question,
+                created_at=base + timedelta(seconds=2),
+            ),
+            LearningMessage(
+                session_id=learning_session.id,
+                role="student",
+                content="B) 3",
+                created_at=base + timedelta(seconds=3),
+            ),
+        ]
+        session.add_all(messages)
+        session.flush()
+        context = TutorContextBuilder(
+            session,
+            retrieval_service=retrieval,  # type: ignore[arg-type]
+            budget=ContextBudget(
+                recent_message_count=4,
+                session_characters=600,
+                retrieval_characters=100,
+                intelligence_characters=100,
+            ),
+        ).build(learning_session=learning_session, question="B) 3")
+
+    assert [message.content for message in context.session_messages] == [
+        "make me a quiz",
+        tutor_question,
+        "B) 3",
+    ]
+    assert messages[2].id in context.debug.session_message_ids
+    assert messages[0].id not in context.debug.session_message_ids
+    assert sum(len(message.content) for message in context.session_messages) <= 600
+
+
+def test_model_input_keeps_immediate_tutor_question_for_opaque_answer(
+    factory: sessionmaker[Session],
+) -> None:
+    """CTX-01 reaches the one-call Tutor input, not merely a private helper."""
+
+    retrieval = RecordingRetrieval()
+    tutor_question = (
+        "Question 1: 6 stickers are shared equally between 2 children. "
+        "How many stickers does each child get? A) 2 B) 3 C) 4"
+    )
+    with factory.begin() as session:
+        _, learning_session, _ = _seed(session)
+        base = datetime.now(UTC)
+        session.add_all(
+            [
+                LearningMessage(
+                    session_id=learning_session.id,
+                    role="tutor",
+                    content="Older explanation: " + ("x" * 530),
+                    created_at=base,
+                ),
+                LearningMessage(
+                    session_id=learning_session.id,
+                    role="student",
+                    content="make me a quiz",
+                    created_at=base + timedelta(seconds=1),
+                ),
+                LearningMessage(
+                    session_id=learning_session.id,
+                    role="tutor",
+                    content=tutor_question,
+                    created_at=base + timedelta(seconds=2),
+                ),
+                LearningMessage(
+                    session_id=learning_session.id,
+                    role="student",
+                    content="B) 3",
+                    created_at=base + timedelta(seconds=3),
+                ),
+            ]
+        )
+        session.flush()
+        context = TutorContextBuilder(
+            session,
+            retrieval_service=retrieval,  # type: ignore[arg-type]
+            budget=ContextBudget(
+                recent_message_count=4,
+                session_characters=600,
+                retrieval_characters=100,
+                intelligence_characters=100,
+            ),
+        ).build(learning_session=learning_session, question="B) 3")
+        payload = build_tutor_model_payload(
+            question=context.question,
+            session_messages=[
+                {"role": message.role, "content": message.content}
+                for message in context.session_messages
+            ],
+        )
+
+    assert "Student question:\nB) 3" in str(payload["input"])
+    assert tutor_question in str(payload["input"])
 
 
 def test_recent_persisted_topic_metadata_supports_an_ambiguous_continuation(

@@ -751,7 +751,7 @@ closed, or used to start REC-25 or LR-D04B.
 
 | ID | Criticality | Status | Meaning / boundary | Dependency |
 |---|---:|---|---|---|
-| **CTX-01** — Recent Conversation Context Integrity | 5 | OPEN / ROOT CAUSE VERIFIED | The bounded recent-conversation builder can retain an older long message while dropping the immediately preceding Tutor question. In the manual division quiz this made `B) 3` semantically ambiguous to Luna. Fix context delivery, not Tutor intelligence or prompt semantics. | Blocks answer correctness, ACT-01, reliable DEC-01/DEC-02 calibration, and trustworthy Candidate interpretation. |
+| **CTX-01** — Recent Conversation Context Integrity | 5 | VERIFICATION | Root cause verified and minimal fix implemented: the bounded recent-conversation builder had accumulated messages oldest-first, allowing an older long message to displace the immediately preceding Tutor question. It now selects the newest coherent suffix that fits, then delivers it chronologically. Faithful PostgreSQL RED and model-input regressions prove that `B) 3` retains the preceding 6 ÷ 2 Tutor question. | Blocks answer correctness, ACT-01, reliable DEC-01/DEC-02 calibration, and trustworthy Candidate interpretation. |
 | **ACT-01** — Quick Action Source-Context Robustness | 5 | OPEN | An ANSWER_CHOICE is persisted as raw Student text, but Luna still needs the source Tutor question/action in surrounding context to know what it answers. | CTX-01 first. |
 | **OBS-01** — Browser / SSE Lifecycle Observability | 4 | OPEN | Persisted server data cannot fully distinguish click → request → headers → first delta → terminal turn → EOF → client ready. | Required before confidently closing UI-01. |
 | **UI-01** — Terminal Tutor Turn Leaves UI Sending | 5 | OPEN / ROOT CAUSE HIGH-CONFIDENCE | The Student frontend stays `sending` until the response reader reaches EOF; a terminal `event: turn` visibly updates the response but does not itself make the UI ready. | OBS-01 should accompany verification; CTX-01 is independent but first because it affects correctness. |
@@ -797,11 +797,31 @@ after difficulty; WORKED_EXAMPLE → CONCRETE_EXAMPLE → VISUAL_REPRESENTATION
 adaptation; zero-book Tutor availability; Safety before Tutor; and optional
 grounding.
 
-**Next implementation task:** investigate and fix **CTX-01 only**. Do not
-start ACT-01 in the same implementation commit. REC-25 remains BLOCKED,
+**Implemented scope:** investigate and fix **CTX-01 only**. Do not start
+ACT-01 in the same implementation commit. REC-25 remains BLOCKED,
 LR-D04B remains future/evidence-dependent, and Track B, Science production,
 Voice, Vision, Learning Canvas, Interactive Artifacts, and Parent Dashboard
 expansion remain frozen.
+
+#### CTX-01 verification record
+
+- **RED:** `test_recent_context_keeps_immediate_tutor_question_ahead_of_older_long_message`
+  failed before production changes because the selected context retained the
+  older long Tutor message and omitted the immediate 6 ÷ 2 Tutor question.
+  `test_model_input_keeps_immediate_tutor_question_for_opaque_answer` also
+  failed because that question was absent from the one-call model input.
+- **Implemented invariant:** within the configured recent-message and
+  character budget, selection prioritizes the newest contiguous conversation
+  suffix. On the first non-fitting older message it stops, then returns the
+  selected suffix in chronological order.
+- **GREEN:** both regressions pass; `tests/test_tutor_context_postgres.py`
+  passes (6); the relevant Tutor suite passes (61); the canonical disposable
+  PostgreSQL Python suite passes (417 passed, 5 skipped).
+- **Lifecycle:** CTX-01 is **VERIFICATION**, not CLOSED. Independent review
+  must still close it. ACT-01 remains OPEN and was not started.
+
+**Next action:** obtain independent review of CTX-01 verification only; do not
+start ACT-01 until that review closes CTX-01.
 
 ---
 

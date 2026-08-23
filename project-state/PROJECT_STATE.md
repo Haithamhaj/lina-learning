@@ -5,9 +5,9 @@
 Roadmap Track A architecture simplification is COMPLETE / ACCEPTED. REC-35.1 —
 Tutor Child Interaction Calibration Pass — is complete following Product Owner
 browser acceptance. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory
-Lina Stabilization Gate: CTX-01 is next, followed only by the approved
-dependency order in `TASKS.md`. LR-D04B remains future/evidence-dependent and
-REC-25 remains BLOCKED.
+Lina Stabilization Gate: CTX-01 is in VERIFICATION pending independent review;
+ACT-01 remains OPEN and unstarted. LR-D04B remains future/evidence-dependent
+and REC-25 remains BLOCKED.
 
 ## Current reality
 
@@ -56,6 +56,12 @@ REC-25 remains BLOCKED.
   established the Lina Stabilization Issue Register v1: REC-35.2 cannot become
   DONE until its ordered gate is completed, beginning with CTX-01 recent
   conversation context integrity.
+- CTX-01 root cause was reproduced faithfully: oldest-first budget selection
+  retained an older long message and dropped the immediately preceding Tutor
+  question. The minimal fix now selects the newest contiguous suffix within
+  budget and returns it chronologically. Context and model-input regressions,
+  the focused Tutor suite, and the canonical disposable PostgreSQL suite pass;
+  CTX-01 remains VERIFICATION, not CLOSED.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -102,19 +108,20 @@ and Parent Dashboard expansion.
 
 ## Active risks
 
-- REC-35.2 stabilization is active: CTX-01 is root-cause verified; UI-01 is
-  high-confidence but requires observability during verification; EVID-01 has
-  an unknown HTTPError root cause; PERS-01 is blocked validation. REC-25,
-  LR-D04B, Track B, and other future capability work remain frozen.
+- REC-35.2 stabilization is active: CTX-01 has an implemented, automated
+  verification pending independent review; ACT-01 remains blocked behind it.
+  UI-01 is high-confidence but requires observability during verification;
+  EVID-01 has an unknown HTTPError root cause; PERS-01 is blocked validation.
+  REC-25, LR-D04B, Track B, and other future capability work remain frozen.
 - PostgreSQL/pgvector and real AWS/S3 staging verification remain separate
   operational concerns; this governance correction does not change them.
 
 ## Next recommended action
 
-Investigate and fix CTX-01 only. Do not start ACT-01 in the same implementation
-commit; do not begin LR-D04B or REC-25, and do not unfreeze Vision, Voice,
-Science production, Learning Canvas, Interactive Artifacts, or Parent
-Dashboard expansion.
+Obtain independent review of CTX-01 verification only. Do not start ACT-01;
+do not begin LR-D04B or REC-25, and do not unfreeze Vision, Voice, Science
+production, Learning Canvas, Interactive Artifacts, or Parent Dashboard
+expansion.
 
 ## Critical references
 
