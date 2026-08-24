@@ -6,8 +6,9 @@ Roadmap Track A architecture simplification is COMPLETE / ACCEPTED. REC-35.1 —
 Tutor Child Interaction Calibration Pass — is complete following Product Owner
 browser acceptance. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory
 Lina Stabilization Gate: CTX-01 is CLOSED following independent review;
-ACT-01 is in VERIFICATION pending independent review. LR-D04B remains
-future/evidence-dependent and REC-25 remains BLOCKED.
+ACT-01 is CLOSED following independent review; OBS-01 is in VERIFICATION
+pending independent review. LR-D04B remains future/evidence-dependent and
+REC-25 remains BLOCKED.
 
 ## Current reality
 
@@ -62,13 +63,20 @@ future/evidence-dependent and REC-25 remains BLOCKED.
   question. The minimal fix now selects the newest contiguous suffix within
   budget and returns it chronologically. Context and model-input regressions,
   the focused Tutor suite, and the canonical disposable PostgreSQL suite pass.
-- ACT-01 root cause is verified and its fix is in VERIFICATION: resolving an
+- ACT-01 is CLOSED following independent review: resolving an
   accepted suggested action now retains its exact server-owned Tutor message
   ID. Runtime verifies that source belongs to the active session and Tutor,
   persists it on the raw Student action payload, and adds a bounded explicit
   source block to the one Tutor call beside ordinary recent context. Candidate,
   Evidence, teaching semantics, public API/SSE, and the browser contract are
   unchanged.
+- OBS-01 root cause is verified and its fix is in VERIFICATION: the Student
+  browser now records a bounded, sessionStorage-backed local trace for each
+  accepted send. It distinguishes submit, fetch, response headers, reader,
+  first delta, terminal turn, EOF, ready, and error without storing Student or
+  Tutor content, identity, auth, learning, or curriculum data. The terminal
+  turn remains separate from the existing later ready transition; UI-01 was
+  not changed.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -98,8 +106,9 @@ future/evidence-dependent and REC-25 remains BLOCKED.
   behavior outranks history. Turn decisions are not learner memory, and
   historical method ranking remains unimplemented and unauthorized before
   sufficient Evidence.
-- The Stabilization Gate preserves 13 Product Owner-approved issues. CTX-01 is
-  closed; ACT-01 awaits independent review before OBS-01. Browser/SSE,
+- The Stabilization Gate preserves 13 Product Owner-approved issues. CTX-01
+  and ACT-01 are closed; OBS-01 awaits independent review before UI-01.
+  Browser/SSE,
   Candidate/Evidence,
   personalization, decision calibration, language, and Math-session scope work
   remain ordered behind it.
@@ -115,9 +124,9 @@ and Parent Dashboard expansion.
 
 ## Active risks
 
-- REC-35.2 stabilization is active: CTX-01 is closed and ACT-01 has an
-  implemented, automated verification pending independent review. OBS-01 and
-  UI-01 remain unstarted.
+- REC-35.2 stabilization is active: CTX-01 and ACT-01 are closed; OBS-01 has
+  an implemented, automated verification pending independent review. UI-01
+  remains unstarted.
   UI-01 is high-confidence but requires observability during verification;
   EVID-01 has an unknown HTTPError root cause; PERS-01 is blocked validation.
   REC-25, LR-D04B, Track B, and other future capability work remain frozen.
@@ -126,8 +135,8 @@ and Parent Dashboard expansion.
 
 ## Next recommended action
 
-Obtain independent review of ACT-01 verification only. Do not start OBS-01,
-UI-01, ACT-02, LR-D04B, or REC-25, and do not unfreeze Vision, Voice, Science
+Obtain independent review of OBS-01 verification only. Do not start UI-01,
+ACT-02, LR-D04B, or REC-25, and do not unfreeze Vision, Voice, Science
 production, Learning Canvas, Interactive Artifacts, or Parent Dashboard
 expansion.
 

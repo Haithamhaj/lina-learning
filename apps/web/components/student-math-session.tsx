@@ -1,10 +1,14 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { publicConfig } from "@/lib/public-config";
+import {
+  createTutorStreamLifecycleTrace,
+  type TutorStreamLifecycleEntry,
+} from "@/lib/tutor-stream-lifecycle-trace";
 
 type Message = {
   id: string;
@@ -29,6 +33,12 @@ type MathSession = {
 type TutorTurn = {
   text: string;
   suggested_actions: SuggestedAction[];
+};
+
+type TutorLifecycleDebugWindow = Window & {
+  __linaTutorDebug?: {
+    getTutorStreamLifecycleTrace: () => TutorStreamLifecycleEntry[];
+  };
 };
 
 function ChatAvatar({ participant }: { participant: "Lina" | "Tutor" }) {
@@ -66,6 +76,17 @@ export function StudentMathSession() {
   const [state, setState] = useState<"loading" | "ready" | "sending" | "error">("loading");
   const [error, setError] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const lifecycleTrace = useRef(createTutorStreamLifecycleTrace()).current;
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    const debugWindow = window as TutorLifecycleDebugWindow;
+    const debug = { getTutorStreamLifecycleTrace: lifecycleTrace.read };
+    debugWindow.__linaTutorDebug = debug;
+    return () => {
+      if (debugWindow.__linaTutorDebug === debug) delete debugWindow.__linaTutorDebug;
+    };
+  }, [lifecycleTrace]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -97,11 +118,28 @@ export function StudentMathSession() {
     };
   }, [getToken, isLoaded, loadAttempt]);
 
-  const sendMessage = async (nextContent: string, suggestedAction = false) => {
+  const sendMessage = async (
+    nextContent: string,
+    {
+      suggestedAction = false,
+      suggestedActionKind,
+    }: {
+      suggestedAction?: boolean;
+      suggestedActionKind?: SuggestedAction["kind"];
+    } = {},
+  ) => {
     const content = nextContent.trim();
     if (!learningSession || !content || state === "sending") return;
+    const trace = lifecycleTrace.start({
+      origin: suggestedAction ? "suggested_action" : "typed",
+      suggestedActionKind,
+    });
+    if (suggestedAction) trace.record("suggested_action_click");
+    trace.record("submit_attempt");
     setState("sending");
     setError("");
+    trace.record("submit_accepted");
+    let requestErrorRecorded = false;
     try {
       const token = await getToken();
       const now = new Date().toISOString();
@@ -112,6 +150,7 @@ export function StudentMathSession() {
         messages: [...current.messages, { id: studentId, role: "student", content, created_at: now, suggested_actions: [] }, { id: tutorId, role: "tutor", content: "", created_at: now, suggested_actions: [] }],
       } : current);
       if (!suggestedAction) setDraft("");
+      trace.record("fetch_started");
       const response = await fetch(`${publicConfig.apiBaseUrl}/v1/student/math/session/${learningSession.id}/turn/stream`, {
         method: "POST",
         headers: {
@@ -120,11 +159,18 @@ export function StudentMathSession() {
         },
         body: JSON.stringify({ content, suggested_action: suggestedAction }),
       });
-      if (!response.ok) throw await errorFrom(response);
+      trace.record("response_headers_received", { httpStatus: response.status });
+      if (!response.ok) {
+        trace.record("request_error", { httpStatus: response.status });
+        requestErrorRecorded = true;
+        throw await errorFrom(response);
+      }
       if (!response.body) throw new Error("The Tutor response stream was unavailable.");
       const reader = response.body.getReader();
+      trace.record("stream_reader_started");
       const decoder = new TextDecoder();
       let buffer = "";
+      let receivedDelta = false;
       while (true) {
         const next = await reader.read();
         if (next.done) break;
@@ -137,12 +183,17 @@ export function StudentMathSession() {
           if (!type || !rawData) continue;
           const payload = JSON.parse(rawData) as { text?: string };
           if (type === "delta" && payload.text) {
+            if (!receivedDelta) {
+              trace.record("first_delta_received");
+              receivedDelta = true;
+            }
             setLearningSession((current) => current ? {
               ...current,
               messages: current.messages.map((message) => message.id === tutorId ? { ...message, content: `${message.content}${payload.text}` } : message),
             } : current);
           }
           if (type === "turn") {
+            trace.record("terminal_turn_received");
             const turn = payload as TutorTurn;
             setLearningSession((current) => current ? {
               ...current,
@@ -151,8 +202,11 @@ export function StudentMathSession() {
           }
         }
       }
+      trace.record("stream_eof");
       setState("ready");
+      trace.record("ui_ready");
     } catch (reason) {
+      if (!requestErrorRecorded) trace.record("request_error");
       setError(reason instanceof Error ? reason.message : "Your message could not be saved.");
       setState("error");
     }
@@ -210,7 +264,7 @@ export function StudentMathSession() {
                       className="h-auto min-h-10 rounded-full border border-[#b8ddd6] bg-white px-3 py-2 text-left text-sm text-[#245b55] hover:bg-[#e2f3ef]"
                       disabled={state === "sending"}
                       key={`${action.kind}:${action.label}`}
-                      onClick={() => void sendMessage(action.label, true)}
+                      onClick={() => void sendMessage(action.label, { suggestedAction: true, suggestedActionKind: action.kind })}
                       type="button"
                       variant="secondary"
                     >
