@@ -164,6 +164,8 @@ def stream_math_tutor_turn(
     def events() -> Iterator[str]:
         stream_session = Session(bind)
         turn_stream: Iterator[TutorTextDelta | TutorTurn] | None = None
+        final_turn: TutorTurn | None = None
+        committed = False
         try:
             owned_session = owned_open_math_session(
                 stream_session, student_id=student_id, session_id=session_id, lock=True
@@ -183,12 +185,16 @@ def stream_math_tutor_turn(
                 if isinstance(event, TutorTextDelta):
                     yield f"event: delta\ndata: {json.dumps({'text': event.text})}\n\n"
                 elif isinstance(event, TutorTurn):
-                    yield f"event: turn\ndata: {json.dumps({'text': event.text, 'suggested_actions': [action.model_dump() for action in event.suggested_actions]})}\n\n"
+                    final_turn = event
             stream_session.commit()
+            committed = True
+            if final_turn is not None:
+                yield f"event: turn\ndata: {json.dumps({'text': final_turn.text, 'suggested_actions': [action.model_dump() for action in final_turn.suggested_actions]})}\n\n"
         except GeneratorExit:
             if turn_stream is not None:
                 turn_stream.close()
-            stream_session.commit()
+            if not committed:
+                stream_session.commit()
             raise
         except TutorModelStreamFailure:
             stream_session.commit()

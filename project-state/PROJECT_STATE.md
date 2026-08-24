@@ -5,10 +5,9 @@
 Roadmap Track A architecture simplification is COMPLETE / ACCEPTED. REC-35.1 —
 Tutor Child Interaction Calibration Pass — is complete following Product Owner
 browser acceptance. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory
-Lina Stabilization Gate: CTX-01 is CLOSED following independent review;
-ACT-01 is CLOSED following independent review; OBS-01 is in VERIFICATION
-pending independent review. LR-D04B remains future/evidence-dependent and
-REC-25 remains BLOCKED.
+Lina Stabilization Gate: CTX-01, ACT-01, and OBS-01 are CLOSED following
+independent review. UI-01 is in VERIFICATION pending independent review.
+LR-D04B remains future/evidence-dependent and REC-25 remains BLOCKED.
 
 ## Current reality
 
@@ -70,13 +69,16 @@ REC-25 remains BLOCKED.
   source block to the one Tutor call beside ordinary recent context. Candidate,
   Evidence, teaching semantics, public API/SSE, and the browser contract are
   unchanged.
-- OBS-01 root cause is verified and its fix is in VERIFICATION: the Student
+- OBS-01 is CLOSED following independent review: the Student
   browser now records a bounded, sessionStorage-backed local trace for each
   accepted send. It distinguishes submit, fetch, response headers, reader,
   first delta, terminal turn, EOF, ready, and error without storing Student or
-  Tutor content, identity, auth, learning, or curriculum data. The terminal
-  turn remains separate from the existing later ready transition; UI-01 was
-  not changed.
+  Tutor content, identity, auth, learning, or curriculum data.
+- UI-01 root cause is verified and its fix is in VERIFICATION: the server now
+  commits a successful Tutor turn before emitting its terminal SSE event. The
+  browser becomes ready as soon as that durable terminal event arrives, then
+  keeps draining the reader through EOF. A commit failure emits no terminal
+  event, and a later reader error cannot reverse a durable completed turn.
 - Hybrid retrieval remains reusable and protected: Docling structural
   representation, PostgreSQL lexical retrieval, pgvector, deterministic fusion,
   context budgets, and exact source provenance.
@@ -106,8 +108,8 @@ REC-25 remains BLOCKED.
   behavior outranks history. Turn decisions are not learner memory, and
   historical method ranking remains unimplemented and unauthorized before
   sufficient Evidence.
-- The Stabilization Gate preserves 13 Product Owner-approved issues. CTX-01
-  and ACT-01 are closed; OBS-01 awaits independent review before UI-01.
+- The Stabilization Gate preserves 13 Product Owner-approved issues. CTX-01,
+  ACT-01, and OBS-01 are closed; UI-01 awaits independent review before S3.
   Browser/SSE,
   Candidate/Evidence,
   personalization, decision calibration, language, and Math-session scope work
@@ -124,19 +126,20 @@ and Parent Dashboard expansion.
 
 ## Active risks
 
-- REC-35.2 stabilization is active: CTX-01 and ACT-01 are closed; OBS-01 has
-  an implemented, automated verification pending independent review. UI-01
-  remains unstarted.
-  UI-01 is high-confidence but requires observability during verification;
-  EVID-01 has an unknown HTTPError root cause; PERS-01 is blocked validation.
+- REC-35.2 stabilization is active: CTX-01, ACT-01, and OBS-01 are closed;
+  UI-01 has an implemented, automated verification pending independent review.
+  The committed-candidate browser trace remains required before independent
+  review; EVID-01 has an unknown HTTPError root cause; PERS-01 is blocked
+  validation.
   REC-25, LR-D04B, Track B, and other future capability work remain frozen.
 - PostgreSQL/pgvector and real AWS/S3 staging verification remain separate
   operational concerns; this governance correction does not change them.
 
 ## Next recommended action
 
-Obtain independent review of OBS-01 verification only. Do not start UI-01,
-ACT-02, LR-D04B, or REC-25, and do not unfreeze Vision, Voice, Science
+Obtain independent review of UI-01 verification only, then perform S3 short
+manual re-test. Do not start S3 in this task, ACT-02, Candidate/Evidence,
+LR-D04B, or REC-25, and do not unfreeze Vision, Voice, Science
 production, Learning Canvas, Interactive Artifacts, or Parent Dashboard
 expansion.
 

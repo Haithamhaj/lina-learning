@@ -140,6 +140,7 @@ export function StudentMathSession() {
     setError("");
     trace.record("submit_accepted");
     let requestErrorRecorded = false;
+    let terminalTurnReceived = false;
     try {
       const token = await getToken();
       const now = new Date().toISOString();
@@ -199,16 +200,19 @@ export function StudentMathSession() {
               ...current,
               messages: current.messages.map((message) => message.id === tutorId ? { ...message, content: turn.text, suggested_actions: turn.suggested_actions } : message),
             } : current);
+            terminalTurnReceived = true;
+            setState("ready");
+            trace.record("ui_ready");
           }
         }
       }
       trace.record("stream_eof");
-      setState("ready");
-      trace.record("ui_ready");
     } catch (reason) {
       if (!requestErrorRecorded) trace.record("request_error");
-      setError(reason instanceof Error ? reason.message : "Your message could not be saved.");
-      setState("error");
+      if (!terminalTurnReceived) {
+        setError(reason instanceof Error ? reason.message : "Your message could not be saved.");
+        setState("error");
+      }
     }
   };
 

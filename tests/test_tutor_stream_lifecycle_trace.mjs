@@ -69,7 +69,7 @@ test("bounds private lifecycle entries without retaining Student or Tutor conten
 
 test("records a suggested action delayed EOF separately from the later ready state", () => {
   const { createTutorStreamLifecycleTrace } = loadTraceModule();
-  const timestamps = [0, 1, 2, 3, 4, 5, 6, 7, 8, 308, 309];
+  const timestamps = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 309];
   const trace = createTutorStreamLifecycleTrace({
     storage: new MemoryStorage(),
     createTraceId: () => "trace-delayed-eof",
@@ -85,8 +85,8 @@ test("records a suggested action delayed EOF separately from the later ready sta
   attempt.record("stream_reader_started");
   attempt.record("first_delta_received");
   attempt.record("terminal_turn_received");
-  attempt.record("stream_eof");
   attempt.record("ui_ready");
+  attempt.record("stream_eof");
 
   const entries = trace.read();
   assert.deepEqual(entries.map((entry) => entry.event), [
@@ -98,14 +98,14 @@ test("records a suggested action delayed EOF separately from the later ready sta
     "stream_reader_started",
     "first_delta_received",
     "terminal_turn_received",
-    "stream_eof",
     "ui_ready",
+    "stream_eof",
   ]);
   assert.equal(entries.every((entry) => entry.traceId === "trace-delayed-eof"), true);
   assert.equal(entries[0].origin, "suggested_action");
   assert.equal(entries[0].suggestedActionKind, "ANSWER_CHOICE");
-  assert.equal(entries[8].elapsedMs - entries[7].elapsedMs, 300);
-  assert.equal(entries[9].elapsedMs - entries[8].elapsedMs, 1);
+  assert.equal(entries[8].elapsedMs - entries[7].elapsedMs, 1);
+  assert.equal(entries[9].elapsedMs - entries[8].elapsedMs, 300);
 });
 
 test("storage failure cannot prevent an in-memory lifecycle trace", () => {

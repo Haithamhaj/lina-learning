@@ -753,8 +753,8 @@ closed, or used to start REC-25 or LR-D04B.
 |---|---:|---|---|---|
 | **CTX-01** — Recent Conversation Context Integrity | 5 | CLOSED | Independently reviewed at `60fa36415a52100cfa4f86489bf763c335182708`: the bounded recent-conversation builder selects the newest coherent suffix that fits, then delivers it chronologically. Faithful PostgreSQL and model-input regressions prove that `B) 3` retains the preceding 6 ÷ 2 Tutor question. | Unblocks ACT-01; preserves answer correctness, reliable DEC-01/DEC-02 calibration, and trustworthy Candidate interpretation. |
 | **ACT-01** — Quick Action Source-Context Robustness | 5 | CLOSED | Independently reviewed: server-validated suggested actions retain their exact source Tutor message ID, persist it on the raw Student interaction, and supply a bounded explicit source block to the one Tutor call alongside ordinary context. | S1 Conversation Integrity complete. |
-| **OBS-01** — Browser / SSE Lifecycle Observability | 4 | VERIFICATION | Root cause verified and fix implemented: a bounded browser-local lifecycle trace now distinguishes submit, fetch, SSE boundaries, terminal turn, EOF, ready, and errors without recording learning content or changing UI behavior. | Independent OBS-01 review before UI-01. |
-| **UI-01** — Terminal Tutor Turn Leaves UI Sending | 5 | OPEN / ROOT CAUSE HIGH-CONFIDENCE | The Student frontend stays `sending` until the response reader reaches EOF; a terminal `event: turn` visibly updates the response but does not itself make the UI ready. | OBS-01 should accompany verification; CTX-01 is independent but first because it affects correctness. |
+| **OBS-01** — Browser / SSE Lifecycle Observability | 4 | CLOSED | Independently reviewed: a bounded browser-local lifecycle trace distinguishes submit, fetch, SSE boundaries, terminal turn, EOF, ready, and errors without recording learning content or changing UI behavior. | S2 observability complete. |
+| **UI-01** — Terminal Tutor Turn Leaves UI Sending | 5 | VERIFICATION | The server commits the streamed Tutor turn before emitting terminal `event: turn`; on that terminal event the Student UI becomes ready while the reader continues draining EOF. | Independent UI-01 review, then S3 short manual re-test. |
 | **ACT-02** — NAVIGATION vs ANSWER_CHOICE Semantic Misuse | 4 | OPEN | Topic/branch selections can be emitted as ANSWER_CHOICE even though they are not observable learning attempts. | Address before relying on the Evidence pipeline. |
 | **CAND-01** — Confusion Is Not Automatically Misconception | 4 | OPEN | “I don't understand you” was emitted as `misconception_signal`; lack of understanding of an explanation does not establish a specific incorrect conceptual model. | Address before trusting successful Evidence consolidation. |
 | **CAND-02** — Candidate Classification Consistency | 3 | OPEN | Equivalent guided answer-choice behavior is inconsistently `guided_success` versus filtered. Preserve the bounded ANSWER_CHOICE / no-independent-mastery protection. | After context integrity; before personalization validation. |
@@ -797,8 +797,9 @@ after difficulty; WORKED_EXAMPLE → CONCRETE_EXAMPLE → VISUAL_REPRESENTATION
 adaptation; zero-book Tutor availability; Safety before Tutor; and optional
 grounding.
 
-**Implemented scope:** investigate and fix **OBS-01 only**. Do not start
-UI-01 in the same implementation commit. REC-25 remains BLOCKED,
+**Implemented scope:** investigate and fix **UI-01 only**. CTX-01, ACT-01,
+and OBS-01 are CLOSED. Do not start S3, ACT-02, Candidate/Evidence, REC-25,
+or LR-D04B. REC-25 remains BLOCKED,
 LR-D04B remains future/evidence-dependent, and Track B, Science production,
 Voice, Vision, Learning Canvas, Interactive Artifacts, and Parent Dashboard
 expansion remain frozen.
@@ -841,11 +842,30 @@ expansion remain frozen.
   ID; terminal Tutor event, EOF, and the existing later ready transition are
   recorded separately. Storage failures are ignored so Tutor interaction
   continues normally.
-- **Lifecycle:** OBS-01 is **VERIFICATION**, not CLOSED. Independent review is
-  required before starting UI-01.
+- **Lifecycle:** OBS-01 is **CLOSED** following independent review.
 
-**Next action:** obtain independent review of OBS-01 verification only; do not
-start UI-01, ACT-02, REC-25, or LR-D04B.
+#### UI-01 verification record
+
+- **RED:** a faithful server regression could read the terminal `turn` and,
+  before that stream closed, find no persisted Tutor action from an independent
+  database session. The page contract also showed `stream_eof` preceding the
+  existing `ready` transition.
+- **Implemented invariant:** the route buffers its final `TutorTurn`, commits
+  the transaction, then emits one terminal event. A commit failure therefore
+  emits no terminal event. The browser treats that durable event as the ready
+  boundary but continues to drain the response reader; a later EOF or reader
+  error cannot reverse a delivered durable turn to an error state.
+- **GREEN:** Student/session and interrupted-stream tests pass (15); page
+  contracts pass (5); the bounded lifecycle trace proves
+  `terminal_turn_received → ui_ready → stream_eof` with delayed EOF (3);
+  web typecheck and production build pass. The canonical full Python suite and
+  committed-candidate browser trace remain required verification.
+- **Lifecycle:** UI-01 is **VERIFICATION**, not CLOSED. Independent review is
+  required before S3.
+
+**Next action:** obtain independent review of UI-01 verification only, then
+perform S3 short manual re-test. Do not start S3, ACT-02, Candidate/Evidence,
+REC-25, or LR-D04B in this task.
 
 ---
 

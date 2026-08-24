@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from uuid import UUID
@@ -32,7 +33,8 @@ from services.platform.db.models import ModelTask
 from services.platform.safety import SafetyPolicyService
 from services.retrieval.service import RetrievalService
 from services.tutor.context import TutorContextBuilder
-from services.tutor.runtime import TutorRuntime
+from services.tutor.candidate_events import SuggestedAction
+from services.tutor.runtime import TutorRuntime, TutorTextDelta, TutorTurn
 from services.tutor.student_sessions import latest_tutor_suggested_action
 
 
@@ -168,6 +170,27 @@ def _delta_then_failure_runtime(session: Session) -> TutorRuntime:
             providers={"fixture-stream": _DeltaThenFailureTutorProvider()},
         ),
     )
+
+
+class _CommittedTurnFixtureRuntime:
+    """Persist one final Tutor action so the route transaction boundary is observable."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def stream_turn(self, *, learning_session: LearningSession, question: str, **_: object):
+        action = SuggestedAction(label="Give me a hint", kind="NAVIGATION")
+        self._session.add(
+            LearningMessage(
+                session_id=learning_session.id,
+                role="tutor",
+                content=f"Tutor reply for: {question}",
+                payload={"suggested_actions": [action.model_dump()]},
+            )
+        )
+        self._session.flush()
+        yield TutorTextDelta("Tutor reply")
+        yield TutorTurn("Tutor reply", [action], [], [], None, None, {})
 
 
 def test_authenticated_student_with_zero_content_starts_and_resumes_one_open_math_session(
@@ -365,6 +388,58 @@ def test_failed_stream_keeps_the_student_message_and_failure_ledger_without_part
         assert execution.operation_type == "tutor_turn"
         assert session.query(CandidateEvent).filter_by(session_id=session_id).count() == 0
         assert session.get(LearningSession, session_id).status == "OPEN"
+
+
+def test_terminal_turn_is_emitted_only_after_its_suggested_action_source_is_committed(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """UI-01: terminal SSE delivery must never race the next suggested-action request."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-one")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    from apps.api.routes import student as student_routes
+
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _CommittedTurnFixtureRuntime)
+    principal = AuthenticatedPrincipal(subject="student-one", role=UserRole.STUDENT, email="student-one@example.test")
+    with postgres_session_factory() as route_session:
+        response = student_routes.stream_math_tutor_turn(
+            session_id=session_id,
+            request=student_routes.StudentMessageRequest(content="Please help."),
+            principal=principal,
+            session=route_session,
+        )
+
+        async def terminal_event_source() -> tuple[str, UUID, UUID]:
+            iterator = response.body_iterator
+            try:
+                first = await anext(iterator)
+                assert "event: delta" in first
+                terminal = await anext(iterator)
+                with postgres_session_factory() as independent_session:
+                    source_message = independent_session.query(LearningMessage).filter_by(
+                        session_id=session_id,
+                        role="tutor",
+                    ).one()
+                    resolved = latest_tutor_suggested_action(
+                        independent_session,
+                        learning_session=independent_session.get(LearningSession, session_id),
+                        label="Give me a hint",
+                    )
+                assert resolved is not None
+                return terminal, source_message.id, resolved.source_tutor_message_id
+            finally:
+                await iterator.aclose()
+
+        terminal, source_message_id, resolved_source_message_id = asyncio.run(terminal_event_source())
+
+    assert "event: turn" in terminal
+    assert resolved_source_message_id == source_message_id
 
 
 def test_a_session_recovers_with_a_successful_turn_after_a_failed_stream(
