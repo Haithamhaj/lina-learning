@@ -742,42 +742,46 @@ DONE.
 ### Lina Stabilization Gate — mandatory before REC-35.2 DONE
 
 **Status:** ACTIVE
-**Baseline:** `64a9a26f6c4bf7f9bfa7c8b544aae6ebfbdc7276`
+**Baseline:** `bda9ff4fe79c91a6ecde7b2aeb54e5103edd9ce5`
 **Purpose:** Preserve the Product Owner-approved stabilization backlog from
 real browser testing. These issues must not be reordered, merged, silently
 closed, or used to start REC-25 or LR-D04B.
 
-#### Stabilization Issue Register v1
+#### Stabilization TODO v2.1
 
 | ID | Criticality | Status | Meaning / boundary | Dependency |
 |---|---:|---|---|---|
-| **CTX-01** — Recent Conversation Context Integrity | 5 | CLOSED | Independently reviewed at `60fa36415a52100cfa4f86489bf763c335182708`: the bounded recent-conversation builder selects the newest coherent suffix that fits, then delivers it chronologically. Faithful PostgreSQL and model-input regressions prove that `B) 3` retains the preceding 6 ÷ 2 Tutor question. | Unblocks ACT-01; preserves answer correctness, reliable DEC-01/DEC-02 calibration, and trustworthy Candidate interpretation. |
-| **ACT-01** — Quick Action Source-Context Robustness | 5 | CLOSED | Independently reviewed: server-validated suggested actions retain their exact source Tutor message ID, persist it on the raw Student interaction, and supply a bounded explicit source block to the one Tutor call alongside ordinary context. | S1 Conversation Integrity complete. |
-| **OBS-01** — Browser / SSE Lifecycle Observability | 4 | CLOSED | Independently reviewed: a bounded browser-local lifecycle trace distinguishes submit, fetch, SSE boundaries, terminal turn, EOF, ready, and errors without recording learning content or changing UI behavior. | S2 observability complete. |
-| **UI-01** — Terminal Tutor Turn Leaves UI Sending | 5 | VERIFICATION | The server commits the streamed Tutor turn before emitting terminal `event: turn`; on that terminal event the Student UI becomes ready while the reader continues draining EOF. | Independent UI-01 review, then S3 short manual re-test. |
-| **ACT-02** — NAVIGATION vs ANSWER_CHOICE Semantic Misuse | 4 | OPEN | Topic/branch selections can be emitted as ANSWER_CHOICE even though they are not observable learning attempts. | Address before relying on the Evidence pipeline. |
-| **CAND-01** — Confusion Is Not Automatically Misconception | 4 | OPEN | “I don't understand you” was emitted as `misconception_signal`; lack of understanding of an explanation does not establish a specific incorrect conceptual model. | Address before trusting successful Evidence consolidation. |
-| **CAND-02** — Candidate Classification Consistency | 3 | OPEN | Equivalent guided answer-choice behavior is inconsistently `guided_success` versus filtered. Preserve the bounded ANSWER_CHOICE / no-independent-mastery protection. | After context integrity; before personalization validation. |
-| **EVID-01** — Session Evidence Consolidation HTTPError | 5 | OPEN / ROOT CAUSE UNKNOWN | Three `session_evidence` model executions failed with HTTPError for the long manual session. Tutor turns and Candidate Events exist, but no LearningEvent, LearningEvidence, or IntelligenceSessionAuthority output exists. Diagnose the exact failure before proposing a fix. | Understand Candidate hygiene before trusting resulting Evidence. |
-| **PERS-01** — End-to-End Personalization Not Yet Verified | 5 | BLOCKED VALIDATION | Real browser sessions have not proved Interaction → Candidate → Evidence → State/Pattern → Learner Intelligence → relevant later-Tutor context. Observed manual turns used `intelligence_used = []`. | Blocked by EVID-01 and Evidence-quality stabilization. |
-| **DEC-01** — Mode / Strategy / Prior-Relation Calibration | 3 | OPEN | Voluntary practice can be HOMEWORK; one quiz can move among QUIZ / LEARN / REVIEW; continuations can be NOT_RELEVANT or all-null. Do not replace Luna semantics with deterministic keyword routing. | Re-evaluate after CTX-01. |
-| **DEC-02** — TeachingMethod Attribution Fidelity | 4 | OPEN | The selected TeachingMethod must truthfully describe the representation actually used. Incorrect identity would poison future LR-D04B method-outcome learning. | Re-evaluate after CTX-01; do not implement historical ranking. |
-| **LANG-01** — Language Continuity Drift | 3 | OPEN | Tutor returned to Arabic inside an explicitly English thread, including after an English request. | Re-test after context integrity before changing language policy. |
-| **SCOPE-01** — Science / Explore Inside Math Session | 3 | OPEN / PRODUCT POLICY DECISION REQUIRED LATER | A MATH session accepted a Science request and continued through Space/Mars. This is not automatically a Tutor-quality defect. | Resolve only with Product Owner approval: whether adjacent exploration remains in Math or transitions to a future subject context. |
+| **CTX-01** — Recent Conversation Context Integrity | 5 | CLOSED | Original oldest-first displacement is closed. | Do not merge with CTX-02. |
+| **ACT-01** — Quick Action Source-Context Robustness | 5 | CLOSED | Server-owned suggested-action source context is closed. | S1 original issues complete. |
+| **OBS-01** — Browser / SSE Lifecycle Observability | 4 | CLOSED | Browser/SSE lifecycle trace is closed. | S2 complete. |
+| **UI-01** — Terminal Tutor Turn Leaves UI Sending | 5 | CLOSED | Real S3 browser use completed with no hang and no refresh. | S2 complete. |
+| **CTX-02** — Oversized Immediate Context Drop | 5 | OPEN / ROOT CAUSE HIGH-CONFIDENCE | S3 Turn 40 lost the preceding flashlight/ball activity; model context held only the current Student message because the immediate prior message did not fit the bounded character budget. | First implementation task; distinct from closed CTX-01. |
+| **SAFE-01** — Hands-on Activity Safety Follow-up | 5 | OPEN | After the flashlight/ball activity, the Student said the light reached their eyes; Tutor did not prioritize the physical-safety cue. Safety must not ultimately depend on fragile conversational memory. | Investigate after CTX-02. |
+| **ACT-02** — NAVIGATION vs ANSWER_CHOICE Semantic Misuse | 4 | OPEN | Topic, agency, and support actions must not be classified as observable learning attempts. | Start B after the A manual gate. |
+| **CAND-01** — Confusion / Ambiguity Is Not Misconception | 4 | OPEN / REPRODUCED | A misconception signal requires a specific incorrect mental model; confusion, ambiguity, “why?”, another explanation, or one incorrect answer alone are insufficient. | After ACT-02. |
+| **SCOPE-01** — Science / Explore Inside Math Session | 3 | OPEN / PRODUCT POLICY DECISION REQUIRED | Cross-subject exploration policy is a Product Owner decision, not an engineering decision. | Product Owner decision before SUBJ-01. |
+| **SUBJ-01** — Cross-Subject Candidate Attribution | 4 | OPEN | S3 persisted a moon-phases Candidate with subject MATH / school; Evidence must not silently contaminate the wrong subject/thread. | SCOPE-01 decision first. |
+| **DEC-01** — Mode / Strategy / Prior-Relation Calibration | 3 | OPEN / STILL PRESENT | S3 direct continuations remain NOT_RELEVANT or otherwise unstable. Do not replace Luna/Terra understanding with keyword routing. | Start C. |
+| **DEC-02** — TeachingMethod Attribution Fidelity | 4 | OPEN / STILL PRESENT | TeachingMethod must truthfully describe the visible Tutor representation. | DEC-01 first; required before LR-D04B. |
+| **REP-01** — Over-Practice / Repetition Control | 3 | OPEN / CONFIRMED | After repeated independent success, Tutor continued near-identical checks instead of progressing, changing task type, testing transfer, or restoring agency. | After Mode/Strategy/Method calibration. |
+| **LANG-01** — Language Continuity | 3 | OPEN / STILL PRESENT | Numeric-only Student answers caused an English long-division thread to drift back to Arabic without an explicit language switch. | After REP-01. |
+| **CAND-02** — Guided vs Independent Candidate Consistency | 3 | OPEN / STILL PRESENT | Equivalent learning behaviors alternate between guided_success and independent_success without a justified support difference. | Final C calibration after Tutor semantic/prompt changes. |
+| **EVID-01** — Session Evidence Consolidation HTTPError | 5 | OPEN / ROOT CAUSE UNKNOWN | Three prior session_evidence HTTPErrors produced no completed LearningEvent, LearningEvidence, or session authority output. | Candidate and Tutor semantic hygiene first. |
+| **PERS-01** — End-to-End Personalization Validation | 5 | BLOCKED VALIDATION | Must prove Interaction → Candidate → Evidence → Current State / Patterns → Learner Intelligence → relevant later Tutor context. | EVID-01 and trustworthy Evidence first. |
+| **MATH-01** — Structured Math Readability | 4 | OPEN / CONFIRMED | Plain-text long-division alignment is not reliably readable in proportional chat rendering; a future minimal structured Math representation is needed. | Independent; do not unfreeze the Artifact Engine. |
+| **ID-01** — Concurrent First-Identity Creation Race | 3 | OPEN / INVESTIGATION REQUIRED | One concurrent demo/session creation attempt returned duplicate-user HTTP 500. Lookup-then-create under DB uniqueness makes a race plausible, not proven. | Independent; exact reproduction/root cause before any fix. |
 
 #### Approved dependency order
 
-1. **S1 — Conversation Integrity:** CTX-01, then ACT-01.
-2. **S2 — Browser Reliability:** OBS-01, then UI-01.
-3. **S3 — Short Manual Re-test:** re-test the stabilized path; re-evaluate
-   DEC-01, DEC-02, LANG-01, and CAND-02 before changing semantic calibration.
-4. **S4 — Evidence Hygiene:** ACT-02, CAND-01, then CAND-02 only if still
-   reproducible.
-5. **S5 — Evidence Pipeline:** EVID-01.
-6. **S6 — Personalization Validation:** PERS-01.
-7. **S7 — Teaching Calibration:** DEC-01, DEC-02, then LANG-01 only if each
-   remains reproducible.
-8. **S8 — Product Boundary:** SCOPE-01.
+1. **A — Conversation & Safety Integrity:** CTX-02 → SAFE-01 → targeted
+   manual verification.
+2. **B — Interaction / Evidence Hygiene:** ACT-02 → CAND-01 → SCOPE-01
+   Product Owner decision → SUBJ-01.
+3. **C — Tutor Semantic Calibration:** DEC-01 → DEC-02 → REP-01 → LANG-01
+   → CAND-02 final.
+4. **D — Evidence / Personalization:** EVID-01 → PERS-01.
+5. **E — Independent Product / Platform:** MATH-01 and ID-01 are independent
+   from the Evidence critical path and must not reorder A → B → C → D.
 
 #### Lifecycle and protected successful behavior
 
@@ -797,9 +801,9 @@ after difficulty; WORKED_EXAMPLE → CONCRETE_EXAMPLE → VISUAL_REPRESENTATION
 adaptation; zero-book Tutor availability; Safety before Tutor; and optional
 grounding.
 
-**Implemented scope:** investigate and fix **UI-01 only**. CTX-01, ACT-01,
-and OBS-01 are CLOSED. Do not start S3, ACT-02, Candidate/Evidence, REC-25,
-or LR-D04B. REC-25 remains BLOCKED,
+**Governance scope:** record the approved Stabilization TODO v2.1 only.
+CTX-01, ACT-01, OBS-01, and UI-01 are CLOSED. Do not investigate or start
+CTX-02 in this commit. Do not begin REC-25 or LR-D04B. REC-25 remains BLOCKED,
 LR-D04B remains future/evidence-dependent, and Track B, Science production,
 Voice, Vision, Learning Canvas, Interactive Artifacts, and Parent Dashboard
 expansion remain frozen.
@@ -860,12 +864,11 @@ expansion remain frozen.
   `terminal_turn_received → ui_ready → stream_eof` with delayed EOF (3);
   web typecheck and production build pass. The canonical full Python suite and
   committed-candidate browser trace remain required verification.
-- **Lifecycle:** UI-01 is **VERIFICATION**, not CLOSED. Independent review is
-  required before S3.
+- **Lifecycle:** UI-01 is **CLOSED** following real S3 browser use with no hang
+  and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
-**Next action:** obtain independent review of UI-01 verification only, then
-perform S3 short manual re-test. Do not start S3, ACT-02, Candidate/Evidence,
-REC-25, or LR-D04B in this task.
+**Next action:** CTX-02 — Oversized Immediate Context Drop. Do not start it in
+this governance task; do not begin REC-25 or LR-D04B.
 
 ---
 
