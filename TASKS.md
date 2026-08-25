@@ -755,9 +755,9 @@ closed, or used to start REC-25 or LR-D04B.
 | **ACT-01** — Quick Action Source-Context Robustness | 5 | CLOSED | Server-owned suggested-action source context is closed. | S1 original issues complete. |
 | **OBS-01** — Browser / SSE Lifecycle Observability | 4 | CLOSED | Browser/SSE lifecycle trace is closed. | S2 complete. |
 | **UI-01** — Terminal Tutor Turn Leaves UI Sending | 5 | CLOSED | Real S3 browser use completed with no hang and no refresh. | S2 complete. |
-| **CTX-02** — Direct Conversation Continuity | 5 | CLOSED | The failed 1,200-character head+tail mechanism was replaced with Full Immediate Exchange while preserving exact Current Turn lineage. Focused/canonical automated verification and real-Luna beginning, middle, end, and faithful S3-style direct-continuity cases passed; browser verification was unavailable in the isolated worktree but was not required for this faithful backend/context regression. | Closed after independent review; SAFE-01 is next. |
-| **SAFE-01** — Hands-on Activity Safety Follow-up | 5 | FIX IMPLEMENTED / VERIFICATION | The deterministic physical-policy-coverage hypothesis remains rejected. One compact shared Tutor instruction now makes immediate real-world Student safety outrank continuing a lesson/activity while preserving normal educational discussion; hard product restrictions and Parent boundaries remain upstream. Focused, relevant PostgreSQL, and canonical automated verification passed. | Run the varied real-Luna diagnostic against the configured Tutor route; this is BLOCKED in the isolated mock-only worktree. Do not close until independent review. |
-| **CTX-03** — Hybrid Segment Context Runtime | 5 | OPEN / ARCHITECTURE APPROVED | Implement session-local Segment runtime, compact Structured Segment State, 0..N relevance-selected complete raw Exchanges from the current Segment, final capacity guardrail, source lineage, observability, and one primary Tutor call. Excludes prior-session archive retrieval, memory service, retro-linking, extra classifier/model call, and historical semantic search. | Start after SAFE-01; then complete final targeted Gate-A manual verification. |
+| **CTX-02** — Direct Conversation Continuity | 5 | CLOSED | The failed 1,200-character head+tail mechanism was replaced with Full Immediate Exchange while preserving exact Current Turn lineage. Focused/canonical automated verification and real-Luna beginning, middle, end, and faithful S3-style direct-continuity cases passed; browser verification was unavailable in the isolated worktree but was not required for this faithful backend/context regression. | Closed after independent review. |
+| **SAFE-01** — Hands-on Activity Safety Follow-up | 5 | CLOSED | The rejected deterministic physical-hazard-policy hypothesis remains rejected: hard Product Safety restrictions and Parent Boundaries remain upstream, while open-ended situational safety remains Luna/Tutor semantic behavior. One compact Tutor instruction prioritizes immediate real-world Student safety over continuing ordinary teaching/activity when warranted; SafetyPolicyService semantics, one primary Tutor call, and zero additional classifier/model calls are unchanged. Focused/relevant/canonical automated verification, four real `gpt-5.6-luna` safety situations, four isolated benign controls without material overreaction, and the low-information Immediate-Exchange case passed; independent closure review accepted it. | Closed. CTX-03 is next. |
+| **CTX-03** — Hybrid Segment Context Runtime | 5 | OPEN / ARCHITECTURE APPROVED / NOT IMPLEMENTED | Implement session-local Segment runtime, compact Structured Segment State, 0..N relevance-selected complete raw Exchanges from the current Segment, final capacity guardrail, source lineage, observability, and one primary Tutor call. Excludes prior-session archive retrieval, memory service, retro-linking, extra classifier/model call, and historical semantic search. | Next Gate-A stabilization task; do not start without separate authorization, then complete final targeted Gate-A manual verification. |
 | **ACT-02** — NAVIGATION vs ANSWER_CHOICE Semantic Misuse | 4 | OPEN | Topic, agency, and support actions must not be classified as observable learning attempts. | Start B after the A manual gate. |
 | **CAND-01** — Confusion / Ambiguity Is Not Misconception | 4 | OPEN / REPRODUCED | A misconception signal requires a specific incorrect mental model; confusion, ambiguity, “why?”, another explanation, or one incorrect answer alone are insufficient. | After ACT-02. |
 | **SCOPE-01** — Science / Explore Inside Math Session | 3 | OPEN / PRODUCT POLICY DECISION REQUIRED | Cross-subject exploration policy is a Product Owner decision, not an engineering decision. | Product Owner decision before SUBJ-01. |
@@ -774,7 +774,7 @@ closed, or used to start REC-25 or LR-D04B.
 
 #### Approved dependency order
 
-1. **A — Conversation & Safety Integrity:** CTX-02 CLOSED → SAFE-01 NEXT → CTX-03 →
+1. **A — Conversation & Safety Integrity:** CTX-02 CLOSED → SAFE-01 CLOSED → CTX-03 NEXT →
    final targeted Gate-A manual verification.
 2. **B — Interaction / Evidence Hygiene:** ACT-02 → CAND-01 → SCOPE-01
    Product Owner decision → SUBJ-01.
@@ -868,8 +868,8 @@ expansion remain frozen.
 - **Lifecycle:** UI-01 is **CLOSED** following real S3 browser use with no hang
   and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
-**Next action:** SAFE-01 — Hands-on Activity Safety Follow-up. Do not start it
-in this status-sync task; do not begin CTX-03, REC-25, or LR-D04B.
+**Next action:** CTX-03 — Hybrid Segment Context Runtime. Do not start it in
+this status-sync task; do not begin REC-25 or LR-D04B.
 
 ---
 

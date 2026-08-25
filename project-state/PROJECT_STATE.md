@@ -2,7 +2,7 @@
 
 ## Current goal
 
-Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Student Core Profile is an APPROVED FUTURE FOUNDATION, not implemented, and belongs to future TASK-027A. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory Lina Stabilization Gate. CTX-01, ACT-01, OBS-01, UI-01, and CTX-02 are CLOSED. SAFE-01 is FIX IMPLEMENTED / VERIFICATION, with real-Luna diagnosis blocked in this isolated mock-only worktree; CTX-03 is architecture-approved but not implemented. LR-D04B remains deferred and REC-25 remains BLOCKED.
+Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Student Core Profile is an APPROVED FUTURE FOUNDATION, not implemented, and belongs to future TASK-027A. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory Lina Stabilization Gate. CTX-01, ACT-01, OBS-01, UI-01, CTX-02, and SAFE-01 are CLOSED. CTX-03 is the next Gate-A stabilization task: OPEN / ARCHITECTURE APPROVED / NOT IMPLEMENTED. LR-D04B remains deferred and REC-25 remains BLOCKED.
 
 ## Current reality
 
@@ -22,10 +22,10 @@ Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Stu
   - historical conversation lookup remains an on-demand future seam; automatic semantic archive retrieval/vector indexing is not approved.
 - Conversation metadata is explicitly separate from personalization, Evidence, TeachingMode/TeachingStrategy/TeachingMethod, Safety / Parent Boundary classification, and curriculum/RAG semantics.
 - Personalization remains governed only by Raw Interaction → Candidate Event → Validated Learning Event → Evidence → Current State/Patterns → Learner Intelligence Card; current Lina behavior outranks history.
-- CTX-03 is the future implementation task for Segment runtime, Structured Segment State, relevance-selected complete current-Segment Exchanges, and a final capacity guardrail. No Context v2 DB tables, separate classifier, archive vector index, retro-link job, memory service, agent chain, or extra normal-turn model call has been authorized or implemented.
+- CTX-03 is the next Gate-A stabilization task for Segment runtime, Structured Segment State, relevance-selected complete current-Segment Exchanges, and a final capacity guardrail. It remains OPEN / ARCHITECTURE APPROVED / NOT IMPLEMENTED: no Context v2 DB tables, separate classifier, archive vector index, retro-link job, memory service, agent chain, or extra normal-turn model call has been authorized or implemented.
 - CTX-02 is CLOSED after replacing the failed 1,200-character head+tail Immediate Bridge with Full Immediate Exchange while preserving exact Current Turn lineage. Focused/canonical automated verification and real-Luna beginning, middle, end, and faithful S3-style direct-continuity cases passed. Browser verification was unavailable in the isolated worktree but was not required to prove this faithful backend/context regression.
 - Student Core Profile is an approved future Parent-owned factual foundation: identity, date of birth where supplied with runtime-derived age, and active Grade / GradePeriod linkage. It remains separate from Learner Intelligence, Evidence, Conversation Context, and Safety, and future TASK-027A owns implementation. Current approximately-10-year-old Tutor wording is a temporary Lina-first assumption; no runtime change is authorized now.
-- SAFE-01 has a compact shared Tutor instruction: immediate real-world Student safety outranks continuing a lesson, experiment, activity, or exercise; Luna should first give calm, simple, age-appropriate guidance when the conversation reasonably suggests immediate risk, avoid overreacting to ordinary educational discussion, and resume learning naturally when appropriate. The deterministic physical-policy-coverage hypothesis remains rejected: hard product restrictions and Parent learning boundaries remain upstream. Focused, relevant PostgreSQL, and canonical automated verification passed; real-Luna diagnosis is blocked because this isolated worktree is configured only for the mock route.
+- SAFE-01 is CLOSED after independent review. The rejected deterministic physical-hazard-policy hypothesis remains rejected: hard Product Safety restrictions and Parent Boundaries remain upstream, while open-ended situational safety remains Luna/Tutor semantic behavior. One compact Tutor instruction makes immediate real-world Student safety outrank continuing ordinary teaching/activity when warranted; SafetyPolicyService semantics, one primary Tutor call, and zero added classifier/model calls remain unchanged. Focused/relevant/canonical automated verification, four real `gpt-5.6-luna` safety situations, four isolated benign controls without material overreaction, and a low-information Immediate-Exchange case passed.
 - Candidate → Evidence → State/Pattern boundaries, raw-source provenance, Model Gateway routing, one primary Tutor call, and rebuildability remain protected.
 - The local uncommitted Prompt-v5/Eureka semantic-enrichment files remain parked optional work and are not approved Context v2 scope.
 
@@ -41,7 +41,7 @@ Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Stu
 - Historical archive lookup is on-demand and deferred until independently validated; no automatic semantic retrieval is approved.
 - No separate normal-turn conversation classifier is approved; the executor remains replaceable and any extra model call requires measured need and Product Owner approval.
 - Structured Segment State/runtime retrieval, automatic retro-linking, archive retrieval, memory service, and extra classifier/summarizer model calls remain deferred until CTX-03 is separately implemented and real usage demonstrates value.
-- Stabilization order remains CTX-02 CLOSED → SAFE-01 NEXT → CTX-03 → final targeted Gate-A manual verification, then B → C → D. SCOPE-01 remains a Product Owner decision gate before SUBJ-01.
+- Stabilization order remains CTX-02 CLOSED → SAFE-01 CLOSED → CTX-03 NEXT → final targeted Gate-A manual verification, then B → C → D. SCOPE-01 remains a Product Owner decision gate before SUBJ-01.
 
 ## Protected areas
 
@@ -49,7 +49,7 @@ Event → Evidence → State/Pattern → Learner Intelligence Card; current beha
 
 ## Active risks
 
-- SAFE-01 is Criticality 5 in verification: the varied real-Luna diagnostic must confirm safety priority without material benign-control overreaction before independent review. CTX-03 remains architecture-approved but unimplemented.
+- CTX-03 is the next Criticality 5 Gate-A task, architecture-approved but not implemented. Its approved scope must remain separate from archive retrieval, memory service, extra classifier/model calls, and other frozen work.
 - ACT-02, CAND-01, SCOPE-01/SUBJ-01, DEC-01/DEC-02, REP-01, LANG-01, and CAND-02 remain open in the approved order.
 - EVID-01 still has an unknown session-evidence HTTPError root cause; PERS-01 remains blocked until trustworthy Evidence exists.
 - Historical semantic archive retrieval is unvalidated and must not be treated as a production capability.
@@ -57,7 +57,7 @@ Event → Evidence → State/Pattern → Learner Intelligence Card; current beha
 
 ## Next recommended action
 
-Run the varied real-Luna SAFE-01 diagnostic when a configured Luna Tutor route is available, then obtain independent review. Do not begin CTX-03, ACT-02, REC-25, LR-D04B, archive retrieval, or frozen future capabilities. TASK-027A remains future/blocked.
+CTX-03 — Hybrid Segment Context Runtime is next. Do not begin it in this status-only commit or begin ACT-02, REC-25, LR-D04B, archive retrieval, or frozen future capabilities. TASK-027A remains future/blocked.
 
 ## Critical references
 
