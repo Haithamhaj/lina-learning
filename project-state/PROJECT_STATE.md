@@ -2,7 +2,7 @@
 
 ## Current goal
 
-Hybrid Segment Context is the APPROVED Context v2 architecture. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory Lina Stabilization Gate. CTX-01, ACT-01, OBS-01, UI-01, and CTX-02 are CLOSED. SAFE-01 root cause is VERIFIED and requires a separately approved policy-coverage fix; CTX-03 is architecture-approved but not implemented. LR-D04B remains deferred and REC-25 remains BLOCKED.
+Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Student Core Profile is an APPROVED FUTURE FOUNDATION, not implemented, and belongs to future TASK-027A. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory Lina Stabilization Gate. CTX-01, ACT-01, OBS-01, UI-01, and CTX-02 are CLOSED. SAFE-01 is in reassessment after Product Owner boundary clarification; CTX-03 is architecture-approved but not implemented. LR-D04B remains deferred and REC-25 remains BLOCKED.
 
 ## Current reality
 
@@ -24,7 +24,8 @@ Hybrid Segment Context is the APPROVED Context v2 architecture. REC-35.2 / LR-D0
 - Personalization remains governed only by Raw Interaction → Candidate Event → Validated Learning Event → Evidence → Current State/Patterns → Learner Intelligence Card; current Lina behavior outranks history.
 - CTX-03 is the future implementation task for Segment runtime, Structured Segment State, relevance-selected complete current-Segment Exchanges, and a final capacity guardrail. No Context v2 DB tables, separate classifier, archive vector index, retro-link job, memory service, agent chain, or extra normal-turn model call has been authorized or implemented.
 - CTX-02 is CLOSED after replacing the failed 1,200-character head+tail Immediate Bridge with Full Immediate Exchange while preserving exact Current Turn lineage. Focused/canonical automated verification and real-Luna beginning, middle, end, and faithful S3-style direct-continuity cases passed. Browser verification was unavailable in the isolated worktree but was not required to prove this faithful backend/context regression.
-- SAFE-01 root cause is VERIFIED: current-text-only `SafetyPolicyService` returns `ALLOW / NORMAL_LEARNING` with no directive for explicit flashlight eye exposure and the faithful Arabic wording. `TutorRuntime` structurally consumes non-`ALLOW` decisions correctly, but no such decision is produced; the real-Luna safe response was therefore independent model behavior, not upstream enforcement. No fix is implemented.
+- Student Core Profile is an approved future Parent-owned factual foundation: identity, date of birth where supplied with runtime-derived age, and active Grade / GradePeriod linkage. It remains separate from Learner Intelligence, Evidence, Conversation Context, and Safety, and future TASK-027A owns implementation. Current approximately-10-year-old Tutor wording is a temporary Lina-first assumption; no runtime change is authorized now.
+- SAFE-01 remains under review. The deterministic physical-policy-coverage hypothesis is rejected: hard product restrictions and Parent learning boundaries remain upstream, while open-ended situational safety during normal dialogue belongs primarily to Luna/Tutor behavior using normal conversation context and concise Tutor instructions. No correction is implemented.
 - Candidate → Evidence → State/Pattern boundaries, raw-source provenance, Model Gateway routing, one primary Tutor call, and rebuildability remain protected.
 - The local uncommitted Prompt-v5/Eureka semantic-enrichment files remain parked optional work and are not approved Context v2 scope.
 
@@ -48,7 +49,7 @@ Event → Evidence → State/Pattern → Learner Intelligence Card; current beha
 
 ## Active risks
 
-- SAFE-01 is Criticality 5 with root cause VERIFIED: physical-safety coverage must be added upstream without relying on fragile conversational memory or Luna behavior. A separate fix remains required. CTX-03 remains architecture-approved but unimplemented.
+- SAFE-01 is Criticality 5 in reassessment: the exact correction must be re-verified against the clarified Product Safety / normal situational-safety boundary. CTX-03 remains architecture-approved but unimplemented.
 - ACT-02, CAND-01, SCOPE-01/SUBJ-01, DEC-01/DEC-02, REP-01, LANG-01, and CAND-02 remain open in the approved order.
 - EVID-01 still has an unknown session-evidence HTTPError root cause; PERS-01 remains blocked until trustworthy Evidence exists.
 - Historical semantic archive retrieval is unvalidated and must not be treated as a production capability.
@@ -56,7 +57,7 @@ Event → Evidence → State/Pattern → Learner Intelligence Card; current beha
 
 ## Next recommended action
 
-Approve and separately scope the SAFE-01 upstream physical-safety policy-coverage fix. Do not implement it in this investigation or begin CTX-03, ACT-02, REC-25, LR-D04B, archive retrieval, or frozen future capabilities.
+Reassess SAFE-01 against the clarified Product Safety / normal situational-safety boundary before any correction. Do not implement it in this governance task or begin CTX-03, ACT-02, REC-25, LR-D04B, archive retrieval, or frozen future capabilities. TASK-027A remains future/blocked.
 
 ## Critical references
 

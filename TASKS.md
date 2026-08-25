@@ -756,7 +756,7 @@ closed, or used to start REC-25 or LR-D04B.
 | **OBS-01** — Browser / SSE Lifecycle Observability | 4 | CLOSED | Browser/SSE lifecycle trace is closed. | S2 complete. |
 | **UI-01** — Terminal Tutor Turn Leaves UI Sending | 5 | CLOSED | Real S3 browser use completed with no hang and no refresh. | S2 complete. |
 | **CTX-02** — Direct Conversation Continuity | 5 | CLOSED | The failed 1,200-character head+tail mechanism was replaced with Full Immediate Exchange while preserving exact Current Turn lineage. Focused/canonical automated verification and real-Luna beginning, middle, end, and faithful S3-style direct-continuity cases passed; browser verification was unavailable in the isolated worktree but was not required for this faithful backend/context regression. | Closed after independent review; SAFE-01 is next. |
-| **SAFE-01** — Hands-on Activity Safety Follow-up | 5 | ROOT CAUSE VERIFIED / FIX REQUIRED | Current-text-only SafetyPolicyService returns `ALLOW / NORMAL_LEARNING` with no directive for both explicit flashlight eye exposure and the faithful Arabic wording; non-`ALLOW` consumption is already structurally enforced. The upstream physical-safety policy has a coverage gap, not a Context or Tutor-consumption defect. | Separate, approved policy-coverage fix next; do not begin it in this investigation. |
+| **SAFE-01** — Hands-on Activity Safety Follow-up | 5 | REASSESSMENT / PRODUCT BOUNDARY CLARIFIED | Original unsafe/insufficient Tutor behavior remains under review, but the deterministic physical-policy-coverage hypothesis is rejected. Hard product restrictions remain upstream; open-ended situational safety belongs primarily to Luna/Tutor behavior using normal conversation context and concise Tutor instructions. | Re-verify the exact correction against this clarified boundary; do not implement it in this governance task. |
 | **CTX-03** — Hybrid Segment Context Runtime | 5 | OPEN / ARCHITECTURE APPROVED | Implement session-local Segment runtime, compact Structured Segment State, 0..N relevance-selected complete raw Exchanges from the current Segment, final capacity guardrail, source lineage, observability, and one primary Tutor call. Excludes prior-session archive retrieval, memory service, retro-linking, extra classifier/model call, and historical semantic search. | Start after SAFE-01; then complete final targeted Gate-A manual verification. |
 | **ACT-02** — NAVIGATION vs ANSWER_CHOICE Semantic Misuse | 4 | OPEN | Topic, agency, and support actions must not be classified as observable learning attempts. | Start B after the A manual gate. |
 | **CAND-01** — Confusion / Ambiguity Is Not Misconception | 4 | OPEN / REPRODUCED | A misconception signal requires a specific incorrect mental model; confusion, ambiguity, “why?”, another explanation, or one incorrect answer alone are insufficient. | After ACT-02. |
@@ -887,15 +887,23 @@ Vision, Canvas, Parent Dashboard expansion, Track B, or other frozen work.
 
 # Phase 4 — Parent Basic Visibility & Control
 
+## TASK-027A — Parent-managed Student Core Profile & Tutor Student Context
+**Status:** BLOCKED
+**Dependencies:** Phase 3 Exit Gate, explicit authorization after REC-24 review
+**Purpose:** Let an authorized Parent/Admin create and manage durable factual child information, then make a compact authoritative Student Core Context available to the Tutor.
+**Expected output:** Parent-managed child profile UI/API; authorization-safe Parent → Student ownership; date-of-birth-based age derivation; active Grade / GradePeriod linkage; compact Student Core Context for Tutor runtime; and removal of the hardcoded approximately-10-year-old Tutor assumption.
+**Boundaries:** no Learner Intelligence or Evidence editing; no learning-style/personality labels; no transcript summary or memory service; no automatic inference of core-profile facts when Parent authority exists.
+**Verification:** Parent can edit only owned child profiles; Tutor receives correct identity, derived age, and active Grade; age changes naturally from date of birth; another child's profile cannot leak; Core Profile changes do not mutate Evidence or Learner Intelligence; Tutor no longer relies on hardcoded approximately-10-year-old behavior.
+
 ## TASK-027 — Parent Overview and Math insight views
 **Status:** BLOCKED  
-**Dependencies:** Phase 3 Exit Gate, explicit authorization after REC-24 review
+**Dependencies:** TASK-027A, Phase 3 Exit Gate, explicit authorization after REC-24 review
 **Purpose:** Let Parent understand current focus, important changes, learning state, and useful insights without surveillance-style activity counts.  
 **Expected output:** Overview + Math views using categorical decision views and evidence-linked insights.  
 **Likely areas:** `/apps/web`, `/apps/api`, `/services/intelligence`.  
 **Verification:** no pseudo-precision percentages; evidence drill-down works; Lina-facing UI contains no analytics.  
 
-## TASK-028 — Lina Profile / Pattern / Evidence audit views
+## TASK-028 — Learner Profile / Pattern / Evidence audit views
 **Status:** BLOCKED  
 **Dependencies:** TASK-027  
 **Purpose:** Make Patterns, recent changes, successful strategies, current state, and source Evidence inspectable by Parent.  

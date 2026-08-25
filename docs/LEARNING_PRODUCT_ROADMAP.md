@@ -411,6 +411,15 @@ Stable roadmap IDs are used so decisions can be referenced consistently across C
 
 When a roadmap item is approved for execution, `TASKS.md` should reference the Roadmap ID and assign the repository's normal TASK/REC execution ID.
 
+## Approved future Parent foundation
+
+**Parent-managed Student Core Profile / child onboarding** is an approved future
+foundation capability, blocked behind the existing Parent / Real Lina gates.
+Parent/Admin will own durable factual child identity, date of birth with
+runtime-derived age, and active Grade linkage. Its compact Tutor Student Core
+Context remains separate from Evidence-derived Learner Intelligence and does
+not authorize broader Parent Dashboard work or alter Track A/B/C/D sequencing.
+
 ## Track A — Core Simplification
 
 **Goal:** Make Tutor availability as frictionless as normal GPT while preserving grounding, intelligence, provenance, and safety.

@@ -357,6 +357,7 @@ The implementation should expose clear domain boundaries without turning each do
 Owns:
 
 - tutor runtime,
+- consumption of compact Student Core Context without owning or inferring the profile,
 - teaching mode resolution,
 - Multimodal Turn context,
 - session-local Learning Thread / Segment resolution,
@@ -483,6 +484,7 @@ Owns shared infrastructure:
 
 - authentication,
 - roles/authorization,
+- Parent ↔ Student ownership/authorization and durable Student Core Profile facts,
 - settings,
 - parent topic boundaries,
 - files,
@@ -628,6 +630,10 @@ The exact SQL schema is an implementation task, but the initial data model shoul
 - students
 - parent/student relationship
 - Grade periods
+
+Parent-owned Student Core Profile facts are a future, separately authorized
+implementation seam. Grade continues to own active Grade / GradePeriod
+lifecycle; Tutor consumes only compact Student Core Context.
 
 ## 11.2 Content
 
@@ -851,6 +857,8 @@ Safety & Learning Boundary Policy Engine
      ↓
 Effective SafetyDecision
      ↓
+Compact Student Core Context (future TASK-027A)
+     ↓
 Session / Segment Resolver
      ↓
 Hybrid Segment Context Assembler
@@ -869,6 +877,11 @@ Stream Student Response
      +
 Hidden Candidate Event Metadata
 ```
+
+Student Core Context is a compact Parent-authoritative future input, distinct
+from conversation context and Evidence-derived Learner Intelligence. TASK-027A
+will supply authoritative identity, derived age, and active Grade; this plan
+does not authorize schema, service, or runtime work now.
 
 ## 14.2 Tutor Identity vs Teaching Strategy and Method
 
@@ -1825,7 +1838,7 @@ Allow the Parent/Admin to understand what the system is doing and control core l
 
 - Parent Overview,
 - Math learning view,
-- Lina Profile view,
+- Learner Profile / Intelligence view,
 - important Evidence drill-down,
 - learning-history essentials,
 - Content status/reprocessing,

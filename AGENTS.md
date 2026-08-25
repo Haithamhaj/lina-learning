@@ -50,6 +50,7 @@ The following require Product Owner approval before changing their meaning:
 - A blind shared character window must not be the authority for conversation selection, and selected Immediate Exchange messages must not be positionally character-sliced. Capacity/token budgets are final guardrails calibrated from real usage, not a relevance algorithm.
 - Do not inject a full Session or prior-session raw transcripts into normal Tutor input. No extra classifier or summarizer model call, archive retrieval, memory service, or CTX-03 runtime work is authorized without measured need and Product Owner approval.
 - Structured Segment State is compact, source-linked, rebuildable conversational metadata only. It cannot become Evidence, Learner Intelligence, personalization, curriculum authority, or a Safety decision.
+- Parent-owned Student Core Profile facts remain separate from Evidence-derived Learner Intelligence and conversation memory/context. Agents must not convert Parent factual profile fields into learning conclusions.
 - Tutor availability is independent of whether curriculum/book grounding is available; grounding improves the interaction but must not become permission to learn.
 - Retrieval is driven by the current question; school plans and curriculum position do not control what Lina is allowed or expected to ask now.
 - Book and trusted references are grounding sources, not Teaching Authority. The Tutor may change explanation method when useful.

@@ -181,6 +181,7 @@ The Parent/Admin controls the learning environment and can inspect how the syste
 
 The Parent/Admin should be able to:
 
+- create and manage the child's authoritative Student Core Profile,
 - upload books,
 - upload school plans and other reference material,
 - assign books to a Grade,
@@ -200,7 +201,25 @@ The Parent/Admin should be able to:
 
 The Parent/Admin does **not** directly overwrite evidence-grounded learner conclusions. Parent input can create a hypothesis or a review request, but the learner state remains evidence-governed.
 
-## 4.3 UX Separation Principle
+## 4.3 Student Core Profile
+
+The **Student Core Profile** answers “who is this child?” It is Parent/Admin-owned
+factual state: child display/name identity, date of birth when supplied, and
+linkage to the active Grade / Grade Period. Age is derived from date of birth at
+runtime; it is not a manually maintained fixed value.
+
+Parent authentication, email, and account data are Parent identity data: they
+are neither child Learner Intelligence nor automatically Student Core Profile
+data.
+
+Student Core Profile is separate from Learner Intelligence, Evidence,
+Conversation Context, Segment State, Safety classification, and Tutor teaching
+decisions. Parent/Admin may not write learning claims such as weakness,
+mastery, learning-style, or support-preference labels into it. The future Tutor
+runtime consumes only a compact authoritative **Student Core Context**; it does
+not infer or turn profile facts into learner conclusions.
+
+## 4.4 UX Separation Principle
 
 ```text
 Lina UI   -> Learning
@@ -721,6 +740,11 @@ The Tutor should normally begin with a concrete, simple idea before unnecessary
 formal terminology, then teach one manageable idea and interact rather than
 deliver a full lecture.
 
+The current approximately-10-year-old wording is a temporary Lina-first
+implementation assumption, not the long-term identity architecture. When
+TASK-027A is implemented, the Tutor will receive authoritative age and Grade
+through Student Core Context and remove that hardcoded assumption.
+
 ## 9.2 Adaptive Teaching Strategy and Teaching Method
 
 The system does **not** maintain a large mutable "Adaptive Persona" as the main personalization mechanism.
@@ -754,6 +778,8 @@ Turn decisions are routing/audit metadata, not learner memory. Selecting or usin
 Student question
     ↓
 SafetyDecision
+    ↓
+Compact authoritative Student Core Context
     ↓
 Optional question-driven grounding
     ↓
@@ -1393,7 +1419,13 @@ The Parent interface should prioritize **insight before activity tracking**.
 
 Recommended areas:
 
-## 17.1 Overview
+## 17.1 Child Core Information
+
+Parent-managed **Student Core Profile** facts: child identity, date of birth
+when supplied, derived age, and active Grade / Grade Period linkage. This is
+distinct from the evidence-derived Learner Profile / Learner Intelligence view.
+
+## 17.2 Overview
 
 - Relevant recent learning context when it helps the current question.
 - What is going well.
@@ -1401,18 +1433,18 @@ Recommended areas:
 - Important recent changes.
 - Meaningful open learning loops.
 
-## 17.2 Math
+## 17.3 Math
 
 - Current topics/concepts.
 - Interpretable learning state.
 - Important misconceptions.
 - Relevant evidence on demand.
 
-## 17.3 Science
+## 17.4 Science
 
 Same philosophy as Math, adapted to Science evidence.
 
-## 17.4 Lina Profile
+## 17.5 Learner Profile / Learner Intelligence
 
 Human-readable view of:
 
@@ -1423,7 +1455,7 @@ Human-readable view of:
 - successful teaching strategies,
 - resolved patterns/history on demand.
 
-## 17.5 Learning History
+## 17.6 Learning History
 
 - important sessions,
 - session intelligence deltas,
@@ -1431,7 +1463,7 @@ Human-readable view of:
 - tutor adaptation events,
 - original/derived learning artifacts.
 
-## 17.6 Content and Settings
+## 17.7 Content and Settings
 
 - books,
 - Grade activation,
@@ -1443,13 +1475,13 @@ Human-readable view of:
 - Learning Boundaries (Allow / Age-appropriate only / Redirect to parent),
 - Recent Redirects / Policy Audit for `REDIRECT_TO_PARENT` events, kept separate from Learner Profile intelligence.
 
-## 17.7 Parent Insight Rule
+## 17.8 Parent Insight Rule
 
 > **Insights first; raw evidence on demand.**
 
 The Parent interface should not become an activity-surveillance dashboard.
 
-## 17.8 Separation of Conversation Context, Personalization, Pedagogy, Safety, and Curriculum Semantics
+## 17.9 Separation of Conversation Context, Personalization, Pedagogy, Safety, and Curriculum Semantics
 
 Conversation Segment and Durable Conversation Topic metadata describe what the
 conversation is about. They must not directly update personalization. The only
