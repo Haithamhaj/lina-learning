@@ -2,7 +2,7 @@
 
 ## Current goal
 
-Conversation Context v2 governance is APPROVED and recorded in the governing references. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory Lina Stabilization Gate. CTX-01, ACT-01, OBS-01, and UI-01 are CLOSED. The next implementation decision is to scope CTX-02 as the first bounded Context v2 implementation slice; SAFE-01 follows it. LR-D04B remains deferred and REC-25 remains BLOCKED.
+Conversation Context v2 governance is APPROVED and recorded in the governing references. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory Lina Stabilization Gate. CTX-01, ACT-01, OBS-01, and UI-01 are CLOSED. CTX-02 is in VERIFICATION after the first bounded Context v2 implementation slice; SAFE-01 follows it. LR-D04B remains deferred and REC-25 remains BLOCKED.
 
 ## Current reality
 
@@ -23,7 +23,7 @@ Conversation Context v2 governance is APPROVED and recorded in the governing ref
 - Conversation metadata is explicitly separate from personalization, Evidence, TeachingMode/TeachingStrategy/TeachingMethod, Safety / Parent Boundary classification, and curriculum/RAG semantics.
 - Personalization remains governed only by Raw Interaction → Candidate Event → Validated Learning Event → Evidence → Current State/Patterns → Learner Intelligence Card; current Lina behavior outranks history.
 - No Context v2 DB tables, separate classifier, archive vector index, mandatory Segment summary, retro-link job, memory service, or agent chain has been authorized or implemented by the governance update.
-- Current runtime still contains the bounded recent-context behavior corrected by CTX-01; S3 still demonstrates CTX-02, where an oversized immediately preceding Tutor message could be absent from model context. The old narrow character-budget patch is no longer sufficient as the design target; CTX-02 must be scoped against the approved Context v2 contract.
+- CTX-02 root cause was verified by a faithful PostgreSQL RED: after the current Student message is persisted, it is selected again in the generic recent-history window; the oversized immediately preceding Tutor activity then exceeds the remaining budget and is omitted from the one-call model input. The implemented slice sends Current Turn once, adds a 1,200-character Immediate Bridge, and keeps older current-session continuity bounded and separately inspectable. Focused Tutor/Candidate tests and the canonical Python suite passed; independent/manual browser validation remains outstanding.
 - Safety remains upstream and policy-engine governed. The real reproduction/religion conversation still demonstrates SAFE-01/policy-consistency concerns that are not closed by the Context v2 documentation work.
 - Candidate → Evidence → State/Pattern boundaries, raw-source provenance, Model Gateway routing, one primary Tutor call, and rebuildability remain protected.
 - The local uncommitted Prompt-v5/Eureka semantic-enrichment files remain parked optional work and are not approved Context v2 scope.
@@ -48,7 +48,7 @@ Event → Evidence → State/Pattern → Learner Intelligence Card; current beha
 
 ## Active risks
 
-- CTX-02 remains Criticality 5. Its implementation must solve immediate continuity within the approved bounded Context v2 architecture rather than introduce another isolated history-budget patch.
+- CTX-02 remains Criticality 5 and is in VERIFICATION. Independent/manual browser validation must confirm the bounded context behavior without extending scope beyond the approved Context v2 slice.
 - SAFE-01 remains Criticality 5 and follows CTX-02; physical-safety and parent-boundary behavior must not depend on fragile conversational memory.
 - ACT-02, CAND-01, SCOPE-01/SUBJ-01, DEC-01/DEC-02, REP-01, LANG-01, and CAND-02 remain open in the approved order.
 - EVID-01 still has an unknown session-evidence HTTPError root cause; PERS-01 remains blocked until trustworthy Evidence exists.
@@ -57,7 +57,7 @@ Event → Evidence → State/Pattern → Learner Intelligence Card; current beha
 
 ## Next recommended action
 
-Define and obtain approval for the revised CTX-02 implementation task as the first Context v2 production slice. The task should implement only the minimum current-session continuity needed by the approved architecture and preserve Safety, Evidence, personalization, pedagogy, RAG, and one-primary-call boundaries. Do not begin SAFE-01, ACT-02, REC-25, LR-D04B, archive retrieval, or frozen future capabilities before CTX-02 is separately approved and verified.
+Complete the approved CTX-02 implementation slice through automated verification, then leave CTX-02 at VERIFICATION for independent review and targeted manual/browser validation. Do not begin SAFE-01, ACT-02, REC-25, LR-D04B, archive retrieval, or frozen future capabilities.
 
 ## Critical references
 

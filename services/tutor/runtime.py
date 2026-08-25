@@ -124,6 +124,7 @@ def build_tutor_model_payload(
     sources: list[dict[str, object]] | None = None,
     intelligence: list[str] | None = None,
     safety_directive: str | None = None,
+    immediate_bridge: list[dict[str, str]] | None = None,
     session_messages: list[dict[str, str]] | None = None,
     candidate_source_message_id: UUID | None = None,
     prior_method: PriorTeachingMethodContext | None = None,
@@ -135,9 +136,12 @@ def build_tutor_model_payload(
         f"Curriculum source ({source['ref']}):\n{source['text']}" for source in (sources or [])
     ) or "No matching curriculum excerpt was retrieved."
     intelligence_context = "\n".join(intelligence or []) or "No relevant compact learning note was selected."
+    immediate_bridge_context = "\n".join(
+        f"{message['role']}: {message['content']}" for message in (immediate_bridge or [])
+    ) or "No immediate bridge was selected."
     session_context = "\n".join(
         f"{message['role']}: {message['content']}" for message in (session_messages or [])
-    ) or "No prior session messages were selected."
+    ) or "No older current-session continuity was selected."
     safety_context = f"\n\nAge-handling directive:\n{safety_directive}" if safety_directive else ""
     candidate_context = (
         "\n\nHidden Candidate Event source link:\n"
@@ -166,7 +170,8 @@ def build_tutor_model_payload(
     return {
         "instructions": TUTOR_SHARED_INSTRUCTIONS,
         "input": (
-            f"Student question:\n{question}\n\nSmall recent session window:\n{session_context}\n\n"
+            f"Current Turn:\nStudent question:\n{question}\n\nImmediate bridge:\n{immediate_bridge_context}\n\n"
+            f"Bounded older current-session continuity:\n{session_context}\n\n"
             f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}"
         ),
         "max_output_tokens": 800,
@@ -458,7 +463,22 @@ class TutorRuntime:
         if candidate_metadata_error is not None:
             payload["candidate_metadata_error"] = candidate_metadata_error
         if context is not None:
-            payload["context_debug"] = {"session_message_ids": [str(identifier) for identifier in context.debug.session_message_ids], "retrieval_source_refs": list(context.debug.retrieval_source_refs), "intelligence_source_ids": [str(identifier) for identifier in context.debug.intelligence_source_ids]}
+            payload["context_debug"] = {
+                "current_turn_message_id": (
+                    str(context.debug.current_turn_message_id)
+                    if context.debug.current_turn_message_id is not None
+                    else None
+                ),
+                "immediate_bridge_message_ids": [
+                    str(identifier) for identifier in context.debug.immediate_bridge_message_ids
+                ],
+                "older_continuity_message_ids": [
+                    str(identifier) for identifier in context.debug.older_continuity_message_ids
+                ],
+                "session_message_ids": [str(identifier) for identifier in context.debug.session_message_ids],
+                "retrieval_source_refs": list(context.debug.retrieval_source_refs),
+                "intelligence_source_ids": [str(identifier) for identifier in context.debug.intelligence_source_ids],
+            }
         self._session.add(
             LearningMessage(
                 session_id=learning_session.id,
@@ -487,6 +507,10 @@ def _payload_from_context(
         sources=[{"ref": block.source_ref, "text": block.text} for block in context.retrieval],
         intelligence=[item.text for item in context.intelligence],
         safety_directive=safety.tutor_directive,
+        immediate_bridge=[
+            {"role": message.role, "content": message.content}
+            for message in context.immediate_bridge
+        ],
         session_messages=[
             {"role": message.role, "content": message.content}
             for message in context.session_messages

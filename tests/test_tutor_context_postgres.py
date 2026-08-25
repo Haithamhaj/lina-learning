@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from services.intelligence.current_state import CURRENT_STATE_POLICY_VERSION
 from services.intelligence.patterns import PATTERN_POLICY_VERSION
 from services.intelligence.selection import select_relevant_intelligence
+from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
     CurrentLearningState,
@@ -20,12 +21,14 @@ from services.platform.db.models import (
     LearnerPattern,
     LearningMessage,
     LearningSession,
+    ModelTask,
     Student,
     User,
 )
+from services.platform.safety import SafetyAction, SafetyDecision
 from services.retrieval.service import CurrentFocus, RetrievedBlock
 from services.tutor.context import ContextBudget, TutorContextBuilder
-from services.tutor.runtime import build_tutor_model_payload
+from services.tutor.runtime import TutorRuntime, build_tutor_model_payload
 
 
 pytestmark = pytest.mark.skipif(
@@ -69,6 +72,33 @@ class RecordingRetrieval:
                 matched=True,
             )
         ]
+
+
+class RecordingTutorProvider:
+    def __init__(self) -> None:
+        self.payloads: list[dict[str, object]] = []
+
+    def stream(self, route: ModelRoute, payload: dict[str, object]):
+        del route
+        self.payloads.append(payload)
+        yield StreamComplete(
+            ModelResult(
+                output={
+                    "text": "Let's keep working through it together.",
+                    "suggested_actions": [],
+                    "teaching_mode": None,
+                    "teaching_strategy": None,
+                    "teaching_method_id": None,
+                    "prior_method_relation": None,
+                    "candidate_metadata": None,
+                }
+            )
+        )
+
+
+class AllowSafetyPolicy:
+    def evaluate(self, **_: object) -> SafetyDecision:
+        return SafetyDecision(SafetyAction.ALLOW, None, "BASELINE", 1, "TEST_ALLOW", "normal", None)
 
 
 def _seed(session: Session) -> tuple[Student, LearningSession, IntelligenceProcessingRun]:
@@ -193,13 +223,9 @@ def test_recent_context_keeps_immediate_tutor_question_ahead_of_older_long_messa
             ),
         ).build(learning_session=learning_session, question="B) 3")
 
-    assert [message.content for message in context.session_messages] == [
-        "make me a quiz",
-        tutor_question,
-        "B) 3",
-    ]
-    assert messages[2].id in context.debug.session_message_ids
-    assert messages[0].id not in context.debug.session_message_ids
+    assert [message.content for message in context.immediate_bridge] == [tutor_question]
+    assert messages[2].id in context.debug.immediate_bridge_message_ids
+    assert messages[3].id not in context.debug.session_message_ids
     assert sum(len(message.content) for message in context.session_messages) <= 600
 
 
@@ -257,14 +283,112 @@ def test_model_input_keeps_immediate_tutor_question_for_opaque_answer(
         ).build(learning_session=learning_session, question="B) 3")
         payload = build_tutor_model_payload(
             question=context.question,
+            immediate_bridge=[
+                {"role": message.role, "content": message.content}
+                for message in context.immediate_bridge
+            ],
             session_messages=[
                 {"role": message.role, "content": message.content}
                 for message in context.session_messages
             ],
         )
 
-    assert "Student question:\nB) 3" in str(payload["input"])
+    assert "Current Turn:\nStudent question:\nB) 3" in str(payload["input"])
     assert tutor_question in str(payload["input"])
+
+
+def test_ctx02_runtime_keeps_oversized_immediate_tutor_turn_in_one_call_input(
+    factory: sessionmaker[Session],
+) -> None:
+    """CTX-02: a short opaque follow-up keeps its immediate Tutor activity bridge."""
+
+    retrieval = RecordingRetrieval()
+    provider = RecordingTutorProvider()
+    immediate_tutor_turn = "Flashlight and ball activity: " + ("look at the ball, not the light. " * 45)
+    follow_up = "ما زبطت معي الصو في عيوني"
+    with factory.begin() as session:
+        _, learning_session, _ = _seed(session)
+        base = datetime.now(UTC)
+        older_recent_turn = "Older current-session continuity: we were comparing shadows."
+        older_too_large_turn = "Older bounded history: " + ("x" * 580)
+        older_recent_message = LearningMessage(
+            session_id=learning_session.id,
+            role="tutor",
+            content=older_recent_turn,
+            created_at=base - timedelta(seconds=2),
+        )
+        bridge_message = LearningMessage(
+            session_id=learning_session.id,
+            role="tutor",
+            content=immediate_tutor_turn,
+            created_at=base - timedelta(seconds=1),
+        )
+        session.add_all(
+            [
+                LearningMessage(
+                    session_id=learning_session.id,
+                    role="student",
+                    content=older_too_large_turn,
+                    created_at=base - timedelta(seconds=3),
+                ),
+                older_recent_message,
+                bridge_message,
+            ]
+        )
+        session.flush()
+        runtime = TutorRuntime(
+            session,
+            context_builder=TutorContextBuilder(
+                session,
+                retrieval_service=retrieval,  # type: ignore[arg-type]
+                budget=ContextBudget(
+                    recent_message_count=4,
+                    session_characters=600,
+                    immediate_bridge_characters=1200,
+                    retrieval_characters=100,
+                    intelligence_characters=100,
+                ),
+            ),
+            safety_policy=AllowSafetyPolicy(),  # type: ignore[arg-type]
+            gateway=ModelGateway(
+                session,
+                routes={ModelTask.TUTOR: ModelRoute("fixture", "ctx02")},
+                providers={"fixture": provider},
+            ),
+        )
+
+        list(runtime.stream_turn(learning_session=learning_session, question=follow_up))
+
+        current_student_message = session.query(LearningMessage).filter_by(
+            session_id=learning_session.id,
+            role="student",
+            content=follow_up,
+        ).one()
+        persisted_tutor_message = session.query(LearningMessage).filter_by(
+            session_id=learning_session.id,
+            role="tutor",
+        ).order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc()).first()
+        assert persisted_tutor_message is not None
+        model_input = str(provider.payloads[0]["input"])
+
+    assert current_student_message.content == follow_up
+    assert f"Current Turn:\nStudent question:\n{follow_up}" in model_input
+    assert immediate_tutor_turn[:1200] in model_input
+    assert immediate_tutor_turn not in model_input
+    assert model_input.count(follow_up) == 1
+    assert older_recent_turn in model_input
+    assert older_too_large_turn not in model_input
+    assert model_input.index("Current Turn:") < model_input.index("Immediate bridge:")
+    assert model_input.index("Immediate bridge:") < model_input.index("Bounded older current-session continuity:")
+    assert model_input.index("Bounded older current-session continuity:") < model_input.index("Retrieved curriculum:")
+    assert persisted_tutor_message.payload["context_debug"] == {
+        "current_turn_message_id": str(current_student_message.id),
+        "immediate_bridge_message_ids": [str(bridge_message.id)],
+        "older_continuity_message_ids": [str(older_recent_message.id)],
+        "session_message_ids": [str(older_recent_message.id)],
+        "retrieval_source_refs": ["book#page=12"],
+        "intelligence_source_ids": [],
+    }
 
 
 def test_recent_persisted_topic_metadata_supports_an_ambiguous_continuation(

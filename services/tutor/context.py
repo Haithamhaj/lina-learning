@@ -19,6 +19,7 @@ from services.retrieval.service import CurrentFocus, RetrievedBlock, RetrievalSe
 class ContextBudget:
     max_question_characters: int = 4000
     session_characters: int = 600
+    immediate_bridge_characters: int = 1200
     retrieval_characters: int = 1400
     intelligence_characters: int = 600
     recent_message_count: int = 4
@@ -40,6 +41,9 @@ class TutorContextDebug:
     intelligence_source_kinds: tuple[str, ...]
     intelligence_card_schema_version: str = "not-built"
     intelligence_card_policy_version: str = "not-built"
+    current_turn_message_id: UUID | None = None
+    immediate_bridge_message_ids: tuple[UUID, ...] = ()
+    older_continuity_message_ids: tuple[UUID, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -52,11 +56,13 @@ class TutorContext:
     retrieval: tuple[RetrievedBlock, ...]
     intelligence: tuple[RelevantIntelligence, ...]
     debug: TutorContextDebug
+    immediate_bridge: tuple[SessionContextMessage, ...] = ()
 
     @property
     def character_count(self) -> int:
         return (
             len(self.question)
+            + sum(len(message.content) for message in self.immediate_bridge)
             + sum(len(message.content) for message in self.session_messages)
             + sum(len(block.text) for block in self.retrieval)
             + sum(len(item.text) for item in self.intelligence)
@@ -94,7 +100,25 @@ class TutorContextBuilder:
         if len(question) > self._budget.max_question_characters:
             raise ValueError("Current Student question exceeds the context limit.")
         effective_focus = focus or self._session_focus(learning_session.id)
-        messages = self._recent_messages(learning_session.id)
+        current_turn = self._current_turn(
+            learning_session=learning_session,
+            question=question,
+        )
+        immediate_bridge = self._immediate_bridge(
+            learning_session=learning_session,
+            current_turn=current_turn,
+        )
+        messages = self._recent_messages(
+            learning_session.id,
+            exclude_message_ids=tuple(
+                message_id
+                for message_id in (
+                    current_turn.id if current_turn is not None else None,
+                    *(message.message_id for message in immediate_bridge),
+                )
+                if message_id is not None
+            ),
+        )
         retrieval = tuple(
             self._retrieval.retrieve(
                 student_id=learning_session.student_id,
@@ -128,6 +152,7 @@ class TutorContextBuilder:
             subject=learning_session.subject,
             grade_level=grade_level,
             focus=effective_focus,
+            immediate_bridge=immediate_bridge,
             session_messages=messages,
             retrieval=retrieval,
             intelligence=intelligence,
@@ -139,6 +164,9 @@ class TutorContextBuilder:
                 intelligence_source_kinds=tuple(item.source_kind for item in intelligence),
                 intelligence_card_schema_version=card.schema_version,
                 intelligence_card_policy_version=card.policy_version,
+                current_turn_message_id=current_turn.id if current_turn is not None else None,
+                immediate_bridge_message_ids=tuple(message.message_id for message in immediate_bridge),
+                older_continuity_message_ids=tuple(message.message_id for message in messages),
             ),
         )
 
@@ -147,11 +175,63 @@ class TutorContextBuilder:
 
         return CardBudget(max_characters=self._budget.intelligence_characters)
 
-    def _recent_messages(self, session_id: UUID) -> tuple[SessionContextMessage, ...]:
+    def _current_turn(
+        self,
+        *,
+        learning_session: LearningSession,
+        question: str,
+    ) -> LearningMessage | None:
+        return self._session.execute(
+            select(LearningMessage)
+            .where(
+                LearningMessage.session_id == learning_session.id,
+                LearningMessage.role == "student",
+                LearningMessage.content == question,
+            )
+            .order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())
+            .limit(1)
+        ).scalar_one_or_none()
+
+    def _immediate_bridge(
+        self,
+        *,
+        learning_session: LearningSession,
+        current_turn: LearningMessage | None,
+    ) -> tuple[SessionContextMessage, ...]:
+        if current_turn is None:
+            return ()
+        message = self._session.execute(
+            select(LearningMessage)
+            .where(
+                LearningMessage.session_id == learning_session.id,
+                LearningMessage.role == "tutor",
+                LearningMessage.created_at < current_turn.created_at,
+            )
+            .order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())
+            .limit(1)
+        ).scalar_one_or_none()
+        if message is None:
+            return ()
+        return (
+            SessionContextMessage(
+                message.id,
+                message.role,
+                message.content[: self._budget.immediate_bridge_characters],
+            ),
+        )
+
+    def _recent_messages(
+        self,
+        session_id: UUID,
+        *,
+        exclude_message_ids: tuple[UUID, ...] = (),
+    ) -> tuple[SessionContextMessage, ...]:
+        statement = select(LearningMessage).where(LearningMessage.session_id == session_id)
+        if exclude_message_ids:
+            statement = statement.where(LearningMessage.id.not_in(exclude_message_ids))
         rows = list(
             self._session.execute(
-                select(LearningMessage)
-                .where(LearningMessage.session_id == session_id)
+                statement
                 .order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())
                 .limit(self._budget.recent_message_count)
             ).scalars()
