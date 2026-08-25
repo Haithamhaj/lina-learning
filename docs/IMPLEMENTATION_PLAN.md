@@ -932,6 +932,16 @@ Existing Candidate / Evidence pipeline
 
 Turn-level decisions are not learner memory, and selection or use alone is not method-effectiveness Evidence. Historical method ranking is explicitly deferred to LR-D04B, after sufficient real Evidence and validation.
 
+## 14.5 Candidate Events
+
+The Tutor may return small hidden Candidate Event metadata in the same AI execution.
+
+Candidate Events must not directly become stable learner intelligence.
+
+`NAVIGATION` and pure self-report choices remain non-evidentiary merely because they were clicked. A bounded `ANSWER_CHOICE` can be an observable guided attempt and may emit only the approved bounded Candidate types; it never becomes independent success or mastery from the click alone. The Tutor prompt must not globally require `candidate_metadata = null` for every button selection.
+
+---
+
 ## 14.6 Conversation Context v2 Direction
 
 The Tutor Domain conceptually owns Multimodal Turn context, session-local
@@ -954,16 +964,6 @@ prior-session retrieval, mandatory compact Segment summaries, retro-link
 background job, memory service, and agent chain for conversation routing.
 Historical lookup is an on-demand future seam only, subject to independent
 validation and Product Owner approval.
-
-## 14.5 Candidate Events
-
-The Tutor may return small hidden Candidate Event metadata in the same AI execution.
-
-Candidate Events must not directly become stable learner intelligence.
-
-`NAVIGATION` and pure self-report choices remain non-evidentiary merely because they were clicked. A bounded `ANSWER_CHOICE` can be an observable guided attempt and may emit only the approved bounded Candidate types; it never becomes independent success or mastery from the click alone. The Tutor prompt must not globally require `candidate_metadata = null` for every button selection.
-
----
 
 # 15. Multimodal Input Architecture
 
