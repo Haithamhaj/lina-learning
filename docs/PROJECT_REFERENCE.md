@@ -656,6 +656,24 @@ Recent conversational/topic context may help follow-up turns such as
 substantive current question must outrank stale context. School plans and
 curriculum position are references, not retrieval or teaching authority.
 
+The approved current-session context principle is bounded and relevance-first:
+
+```text
+Current Multimodal Turn
++ Immediate Bridge
++ bounded current Learning Thread / Segment context
++ latest prior Segment with the same Durable Conversation Topic only when that
+  topic resumes inside the current Session
++ relevant Learner Intelligence / Open Loops separately
++ question-driven RAG / curriculum grounding separately
++ effective Safety policy decision separately
+```
+
+Do not automatically load all Session history, all Segments for a Durable
+Conversation Topic, all Grade conversation history, any whole Topic Registry,
+or prior-session raw transcripts. Relevant context outranks raw recency; the
+current Student Turn remains authoritative.
+
 ## 8.5 Retrieval Is Grounding, Not Teaching Style
 
 Retrieval supplies authoritative and relevant content.
@@ -1066,10 +1084,15 @@ It includes, as applicable:
 - uploaded work,
 - interaction assets,
 - timestamps,
-- session/thread references,
+- session and session-local Segment / Learning Thread references,
 - model/request references.
 
 Raw audio is excluded under the current voice policy.
+
+The raw message, transcript, and original asset/reference remain the source
+authority. Derived conversation metadata, including a Segment or Durable
+Conversation Topic reference, is rebuildable navigation metadata and can never
+be the sole source for Evidence.
 
 ## 13.3 Candidate Events
 
@@ -1229,7 +1252,7 @@ The calculation method may change later without losing historical learning data.
 
 ---
 
-# 16. Session and Thread Model
+# 16. Conversation Context: Sessions, Segments, and Durable Topics
 
 ## 16.1 Session Lifecycle
 
@@ -1239,24 +1262,94 @@ A grace window may allow a quick return to continue the same session.
 
 After the session is closed, background consolidation can process candidate events and update intelligence.
 
-## 16.2 Multiple Learning Threads
+A new Session begins conversationally fresh. It does not normally inject prior
+raw transcripts, old Segments, or archived conversation history. Cross-session
+personalization continues through the existing Learner Intelligence Card,
+Current Learning State, relevant stable Patterns, relevant Open Learning Loops,
+and Grade context—not through a replacement conversation-memory system.
 
-One session may contain several learning threads.
+## 16.2 Multimodal Turns
 
-Lina should be able to move naturally between topics without manually creating a new chat.
+A logical Student **Multimodal Turn** may contain text, a speech transcript,
+zero or more images/assets, raw asset references, and a derived Vision/OCR
+interpretation when available. The whole Turn is the normal
+conversation/segmentation unit. Original images/assets remain source authority;
+Vision/OCR interpretation is derived and never replaces them.
+
+For example, an image of handwritten work plus “حليت هيك صح؟” is one logical
+Student Turn. A later “ليش هون؟” may depend on the relevant original asset,
+derived interpretation when needed, and preceding Tutor explanation. This does
+not authorize production Vision expansion.
+
+## 16.3 Learning Thread = Session-local Segment
+
+A **Learning Thread** is the session-local contiguous **Segment**; there is no
+third conversation entity above or below Segment. Conceptually,
+`thread_id = session-local Segment identity`.
+
+A Segment belongs to one Session and holds contiguous relevant Turns while the
+local intent/topic remains coherent. It may contain several questions,
+explanations, checks, and exercises; it does not split for every Q/A pair. A
+meaningful conversational transition starts a new Segment. Once another
+Segment intervenes, the earlier Segment is never reopened.
+
+Lina can move naturally without creating a chat manually. Returning to the
+same idea after another Segment creates a **new** Segment, optionally with the
+same `conversation_topic_ref`; it does not reopen the previous Segment.
 
 Example:
 
 ```text
 Session
-├── Math / Adding Fractions
-├── Science / Free Exploration
-└── Math / Homework continuation
+├── Segment / Learning Thread 1 — Adding Fractions
+├── Segment / Learning Thread 2 — Free Exploration
+└── Segment / Learning Thread 3 — Adding Fractions (new Segment)
 ```
 
 Thread separation is internal and supports correct evidence/context assignment.
 
-## 16.3 Open Learning Loops
+## 16.4 Optional Durable Conversation Topics
+
+A **Durable Conversation Topic** is optional, Grade/Grade-Period-scoped
+conversation-navigation metadata with stable identity independent of its label.
+It may be referenced by many Segments across Sessions in that Grade, for
+example `math.long_division`. It is not Evidence, Learner Intelligence, a
+learner characteristic, curriculum authority, or Safety authority.
+
+Ephemeral is the default: casual or one-off conversation remains without a
+`conversation_topic_ref` unless stable organizational value is clear. Before
+creating a durable topic, reuse an existing identity when the idea is the same.
+If uncertain, preserve Ephemeral state or let the Tutor ask naturally rather
+than silently creating a duplicate. Aliases are grounded in observed phrasing;
+do not generate speculative synonym lists. A semantic match does not by itself
+persist a new alias. Optional curriculum linkage is enrichment only and cannot
+be a prerequisite for conversation classification.
+
+The conceptual classification contract is intentionally executor-independent:
+
+```text
+Segment: CONTINUE | NEW_SEGMENT | UNCERTAIN
+New-Segment Topic: EPHEMERAL | REUSE_EXISTING_TOPIC |
+                   CREATE_DURABLE_TOPIC | UNCERTAIN
+```
+
+`UNCERTAIN` means do not silently guess. A natural clarification is permitted
+when it matters. No separate classifier/model call is a governing requirement;
+the preferred normal architecture remains no extra model call unless measured
+evidence and Product Owner approval justify one. An older Ephemeral Segment may
+later receive a clearly supported topic link, but no retro-link job or automatic
+mass backfill is approved.
+
+## 16.5 Historical Lookup Is On-Demand and Deferred
+
+Historical conversation lookup is a future on-demand seam for a clear request,
+such as remembering a prior image or explanation. Its conceptual outcomes are
+`CLEAR_MATCH / USE`, `MULTIPLE_POSSIBILITIES / ASK`, and `NO_MATCH`; ambiguity
+must ask Lina rather than guess. Automatic historical semantic retrieval,
+archive vector indexing, and normal-turn prior-session injection are deferred:
+the exploration did not validate them.
+
+## 16.6 Open Learning Loops
 
 If a session ends before understanding is sufficiently checked, the system may retain a compact open learning loop.
 
@@ -1332,6 +1425,46 @@ Human-readable view of:
 > **Insights first; raw evidence on demand.**
 
 The Parent interface should not become an activity-surveillance dashboard.
+
+## 17.8 Separation of Conversation Context, Personalization, Pedagogy, Safety, and Curriculum Semantics
+
+Conversation Segment and Durable Conversation Topic metadata describe what the
+conversation is about. They must not directly update personalization. The only
+protected personalization path remains:
+
+```text
+Raw Interaction → Candidate Event → Validated Learning Event → Evidence
+→ Current Learning State / Patterns → Learner Intelligence Card
+→ Tutor personalization
+```
+
+For example, `conversation_topic = math.long_division` does not imply that
+Lina struggles with long division, has a preference, has mastery, or found a
+method effective. Current behavior continues to outrank historical
+personalization, and demonstrated independence must never be personalized away.
+
+Conversation context is also orthogonal to pedagogical routing:
+`segment_relation`, `conversation_topic_relation`, and
+`conversation_topic_ref` are not TeachingMode, TeachingStrategy,
+TeachingMethod, or `prior_method_relation`. Selecting a method remains not
+Evidence of effectiveness; an observable Lina outcome is required through the
+Candidate → Evidence path.
+
+Conversation Topic is distinct from a Safety / Parent Boundary category.
+Safety remains upstream authority: the Current Student Turn is evaluated by the
+Safety & Learning Boundary Policy Engine before Tutor/tools consume the
+effective policy decision. Conversation metadata cannot authorize restricted
+content, reinterpret `ALLOW`, `AGE_APPROPRIATE_ONLY`, or
+`REDIRECT_TO_PARENT`, or weaken the non-overridable baseline.
+
+Conversation Topic is also distinct from a Curriculum Concept, Evidence
+subject/concept, and Safety category. They may link but none is automatic
+authority for another. Conversation context cannot make curriculum semantics
+mandatory, recreate Current School Focus authority, change question-driven
+retrieval, change Book = Curriculum Anchor / not Teaching Authority, change
+the current-question authority, or resolve SCOPE-01/SUBJ-01. Dialogue
+continuity does not add a production Subject, change LearningSession.subject,
+authorize Evidence attribution, or expand Math/Science scope.
 
 ---
 
@@ -1439,6 +1572,7 @@ Having data stored does not mean sending all of it to the model.
 Tutor context should contain only the relevant slice of:
 
 - current interaction,
+- immediate bridge and bounded current Segment / Learning Thread context,
 - current learning state,
 - relevant recent patterns,
 - relevant stable patterns,
@@ -1451,6 +1585,7 @@ Explicit configurable budgets should limit:
 - tutor output size,
 - image size,
 - historical lookback,
+- Segment context,
 - session consolidation input,
 - optional web/image-generation usage.
 
@@ -1588,7 +1723,8 @@ Suggested responsibilities:
 - runtime context,
 - modes,
 - teaching strategy,
-- threads,
+- Multimodal Turn context and session-local Segment / Learning Thread resolution,
+- optional Durable Conversation Topic resolution,
 - tutor call,
 - candidate events,
 - open loops.
@@ -1795,27 +1931,31 @@ The following rules should be treated as protected design constraints unless the
 11. **No psychological/personality/intelligence diagnosis from learning interactions.**
 12. **No fixed learning-style labels.**
 13. **Do not send full historical memory to the Tutor by default.**
-14. **The Intelligence Card must remain compact and temporally relevant.**
-15. **Resolved patterns leave current runtime context but remain historically available.**
-16. **Pattern weights/lifecycle are system-governed, not free LLM judgment.**
-17. **AI is used for cognition; deterministic code is preferred for state, counts, lifecycle, and rules.**
-18. **The normal Tutor path uses one primary Tutor model call.**
-19. **Evidence consolidation is session-level rather than one extra LLM call per message.**
-20. **Original books and raw learning history are preserved so derived state can be rebuilt.**
-21. **Every important derived processing path is versionable and auditable.**
-22. **No unnecessary AI call without identifiable product/learning value.**
-23. **Artifact failure must never block learning.**
-24. **Interactive visuals are used because they add learning value, not merely because animation is available.**
-25. **Lina may change topics naturally; internal thread separation must not burden her.**
-26. **Student UX remains simpler than system internals.**
-27. **Parent insight should not become surveillance-style activity tracking.**
-28. **Grade transition is Parent/Admin controlled through new Grade book activation.**
-29. **The next Grade receives a compact transition card, not the entire previous Grade runtime state.**
-30. **Math and Science are first, but the core architecture must remain extensible to future subjects.**
-31. **No microservices, graph infrastructure, or generic agent framework without demonstrated need.**
-32. **All student-facing generation and tools must comply with the non-overridable child-safety baseline; prompt instructions alone are not considered enforcement.**
-33. **Parent-configurable topic boundaries may restrict discussion further but may never weaken the system safety baseline.**
-34. **Parent-controlled topic restrictions use only the approved states: Allow / Age-appropriate only / Redirect to parent.**
+14. **Normal new-session Tutor context does not inject prior-session raw transcripts, archived Segments, or automatic historical semantic retrieval.**
+15. **Learning Thread / `thread_id` means the session-local Segment; returning after an intervening Segment creates a new Segment.**
+16. **Durable Conversation Topic is optional Grade-scoped navigation metadata, not Learner Intelligence, Evidence, Safety, or curriculum authority.**
+17. **Conversation classification does not substitute for TeachingMode, TeachingStrategy, TeachingMethod, Safety / Parent Boundary classification, or curriculum semantics.**
+18. **The Intelligence Card must remain compact and temporally relevant.**
+19. **Resolved patterns leave current runtime context but remain historically available.**
+20. **Pattern weights/lifecycle are system-governed, not free LLM judgment.**
+21. **AI is used for cognition; deterministic code is preferred for state, counts, lifecycle, and rules.**
+22. **The normal Tutor path uses one primary Tutor model call.**
+23. **Evidence consolidation is session-level rather than one extra LLM call per message.**
+24. **Original books and raw learning history are preserved so derived state can be rebuilt.**
+25. **Every important derived processing path is versionable and auditable.**
+26. **No unnecessary AI call without identifiable product/learning value.**
+27. **Artifact failure must never block learning.**
+28. **Interactive visuals are used because they add learning value, not merely because animation is available.**
+29. **Lina may change topics naturally; internal Segment separation must not burden her.**
+30. **Student UX remains simpler than system internals.**
+31. **Parent insight should not become surveillance-style activity tracking.**
+32. **Grade transition is Parent/Admin controlled through new Grade book activation.**
+33. **The next Grade receives a compact transition card, not the entire previous Grade runtime state.**
+34. **Math and Science are first, but the core architecture must remain extensible to future subjects.**
+35. **No microservices, graph infrastructure, or generic agent framework without demonstrated need.**
+36. **All student-facing generation and tools must comply with the non-overridable child-safety baseline; prompt instructions alone are not considered enforcement.**
+37. **Parent-configurable topic boundaries may restrict discussion further but may never weaken the system safety baseline.**
+38. **Parent-controlled topic restrictions use only the approved states: Allow / Age-appropriate only / Redirect to parent.**
 ---
 
 # 24. Approved Decisions
@@ -1864,6 +2004,11 @@ The following rules should be treated as protected design constraints unless the
 | Detailed Session Learning Card for every trivial session | Rejected |
 | Meaningful-session intelligence deltas/history | Approved |
 | Multiple learning threads per session | Approved |
+| Learning Thread = session-local contiguous Segment (`thread_id`) | Approved |
+| Optional Grade-scoped Durable Conversation Topic navigation metadata | Approved |
+| Durable Conversation Topic as Learner Intelligence, Evidence, Safety, or curriculum authority | Rejected |
+| Automatic normal-turn prior-session transcript injection | Rejected |
+| Archive vector / automatic historical semantic retrieval | Deferred — on-demand seam requires independent validation |
 | Session auto-close after inactivity | Approved |
 | Tutor emits candidate events in same Tutor call | Approved |
 | Session-level evidence consolidation | Approved |

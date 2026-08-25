@@ -85,6 +85,12 @@ The original interaction record. Examples:
 
 Raw interaction is the historical source from which downstream intelligence can be rebuilt.
 
+Here `thread_id` has one governing meaning: the identity of the session-local
+contiguous **Learning Thread / Segment**. It is context linkage, not an
+independent third Thread entity or a replacement for raw source references.
+Messages, transcripts, and original asset/source references remain authoritative
+for all downstream lineage.
+
 ## 2.2 Candidate Event
 
 A lightweight signal emitted during the interaction indicating that something potentially meaningful happened.
@@ -612,6 +618,11 @@ question remains highest authority; relevance comes before recency.
 Historical `current_school_focus` Current State rows remain preserved for audit
 but are excluded from runtime Learner Intelligence Card selection.
 
+Optional Durable Conversation Topic metadata may assist bounded conversation
+navigation or audit, but it is neither Evidence nor Learner Intelligence and
+cannot create a learner conclusion. It does not directly update Current State,
+Patterns, the Intelligence Card, or personalization.
+
 ## 11.3 Current State Lifecycle
 
 Conceptual lifecycle:
@@ -887,9 +898,11 @@ A short configurable grace window may allow Lina to return and continue the same
 
 The exact inactivity duration is an implementation calibration parameter.
 
-## 17.2 Multiple Learning Threads
+## 17.2 Learning Thread = Session-local Segment
 
-A single session may contain multiple topics or subjects.
+A Learning Thread is the session-local contiguous Segment; `thread_id` is that
+Segment identity. It is not a third entity. A Session may contain several
+Segments as Lina changes topics or intent naturally.
 
 Example:
 
@@ -900,9 +913,19 @@ Session
 └── Math / Homework continuation
 ```
 
-Thread detection is internal. Lina is not required to create a new chat manually when she changes topic.
+Thread/Segment resolution is internal. Lina is not required to create a new
+chat manually when she changes topic. A return to the same topic after an
+intervening Segment creates a new Segment; it may reuse the same optional
+`conversation_topic_ref`.
 
 Events and evidence are associated with the relevant thread/context.
+
+A Durable Conversation Topic is optional Grade-scoped conversation-navigation
+metadata. It may help audit/context, but cannot be Evidence authority,
+personalization, a learner characteristic, curriculum authority, or Safety
+authority. Segment summaries, topic references, and aliases can never be the
+sole source for Evidence; raw `source_refs` (message IDs and asset/source refs
+where applicable) preserve lineage.
 
 ## 17.3 Candidate Event Capture
 
@@ -948,6 +971,10 @@ Intelligence Card Refresh
 ```
 
 The consolidation step should receive only the relevant excerpts needed to interpret Candidate Events accurately, not automatically the entire historical transcript.
+
+Normal new-session context does not automatically load prior raw transcripts or
+archived Segments. Historical conversation lookup and semantic archive retrieval
+remain deferred on-demand work, not part of normal Tutor context.
 
 ## 17.5 Sessions Without Meaningful Learning
 
@@ -1342,6 +1369,10 @@ Multimodal work is a first-class evidence source.
 
 Original Lina text is raw source.
 
+A logical Multimodal Turn may combine text, speech transcript, image/assets,
+raw asset references, and derived interpretation. The whole Turn may provide
+conversation context, while original raw records remain source authority.
+
 ## 27.2 Voice
 
 Current policy:
@@ -1611,6 +1642,9 @@ These rules are non-negotiable unless explicitly changed by the project owner.
 24. **Grade transition carries a compact intelligence card, not the previous Grade's full state.**
 25. **No irreversible AI judgment is allowed in the Learning Intelligence architecture.**
 26. **TeachingMethod selection/use is not evidence of effectiveness; an observable Student outcome and persisted project-owned method lineage are required.**
+27. **A Learning Thread / `thread_id` is the session-local Segment identity; its metadata does not replace raw message or asset lineage.**
+28. **Durable Conversation Topic and Segment metadata are navigation context only and create no learner conclusion, Evidence, personalization, Safety, or curriculum authority.**
+29. **Normal Tutor context does not inject prior-session raw history or automatic historical semantic archive retrieval.**
 
 ---
 

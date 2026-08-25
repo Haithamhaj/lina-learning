@@ -358,7 +358,9 @@ Owns:
 
 - tutor runtime,
 - teaching mode resolution,
-- thread resolution,
+- Multimodal Turn context,
+- session-local Learning Thread / Segment resolution,
+- optional Grade-scoped Durable Conversation Topic resolution,
 - context assembly orchestration,
 - adaptive teaching strategy selection,
 - one primary tutor-model call,
@@ -641,9 +643,9 @@ The exact SQL schema is an implementation task, but the initial data model shoul
 ## 11.3 Interaction
 
 - sessions
-- learning threads
-- messages
-- interaction assets
+- messages/raw interactions and original assets
+- session-local Learning Threads / Segments
+- optional Grade-scoped Durable Conversation Topics
 
 ## 11.4 Learning Intelligence
 
@@ -812,6 +814,14 @@ plans and curriculum position do not control retrieval or teaching. Semantic
 unit/lesson/concept/type metadata may improve ranking or navigation when
 available, but is not core candidate eligibility.
 
+The Tutor context builder uses the current Multimodal Turn, immediate bridge,
+and bounded current Learning Thread / Segment context first. The latest prior
+Segment for the same Durable Conversation Topic is eligible only when that
+topic resumes inside the current Session. Learner Intelligence/Open Loops,
+question-driven RAG, and the effective Safety decision are separate inputs.
+Do not automatically load all Session history, all topic history, a Topic
+Registry, prior-session transcripts, or a historical archive.
+
 ## 13.3 Retrieval Context Budget
 
 The runtime must enforce a configurable maximum amount of retrieved content.
@@ -837,15 +847,15 @@ Before calling Math RAG ready, maintain a small real-book retrieval evaluation s
 ```text
 Student Input
      ↓
-Input Understanding
+Safety & Learning Boundary Policy Engine
      ↓
-Session / Thread Resolver
+Effective SafetyDecision
+     ↓
+Session / Segment Resolver
      ↓
 Learning Mode / Intent
      ↓
 Current Grade / Subject when known
-    ↓
-SafetyDecision
      ↓
 Optional question-driven grounding (may be empty)
      ↓
@@ -921,6 +931,29 @@ Existing Candidate / Evidence pipeline
 ```
 
 Turn-level decisions are not learner memory, and selection or use alone is not method-effectiveness Evidence. Historical method ranking is explicitly deferred to LR-D04B, after sufficient real Evidence and validation.
+
+## 14.6 Conversation Context v2 Direction
+
+The Tutor Domain conceptually owns Multimodal Turn context, session-local
+Segment/Learning Thread resolution, optional Grade-scoped Durable Conversation
+Topic resolution, bounded context assembly, and the existing one primary Tutor
+call. A Learning Thread is the contiguous session-local Segment (`thread_id`),
+not a separate third entity. Returning to a topic after an intervening Segment
+creates a new Segment and may reuse its optional `conversation_topic_ref`.
+
+Durable Conversation Topic is navigation metadata, not Learner Intelligence,
+Evidence, curriculum semantics, a Safety category, or a learner-memory system.
+It does not directly update personalization; that remains governed by the
+Raw Interaction → Candidate → Event → Evidence → State/Pattern → Intelligence
+Card path. Raw messages/assets remain source authority and all derived metadata
+must remain rebuildable.
+
+This direction does not authorize schema/table work. It explicitly defers a
+separate conversation classifier, archive vector index, automatic semantic
+prior-session retrieval, mandatory compact Segment summaries, retro-link
+background job, memory service, and agent chain for conversation routing.
+Historical lookup is an on-demand future seam only, subject to independent
+validation and Product Owner approval.
 
 ## 14.5 Candidate Events
 
@@ -1101,9 +1134,9 @@ Sessions close automatically after configurable inactivity and grace behavior.
 
 Lina should not need an End Session button.
 
-## 17.2 Multiple Learning Threads
+## 17.2 Session-local Learning Threads / Segments
 
-One session may contain multiple learning threads.
+A session may contain multiple contiguous Learning Threads / Segments.
 
 Example:
 
@@ -1114,7 +1147,10 @@ Session
 └── Math / Homework Continuation
 ```
 
-Thread separation is internal and should not complicate Lina's experience.
+Thread/Segment separation is internal and should not complicate Lina's
+experience. An optional Durable Conversation Topic may link Segments within a
+Grade, but never authorizes Evidence attribution, personalization, Safety, or
+curriculum interpretation.
 
 ## 17.3 End-of-Session Consolidation
 
@@ -2084,6 +2120,10 @@ The following must remain deferred unless real evidence creates a clear requirem
 - dedicated vector database,
 - generic autonomous-agent framework,
 - chains of AI evaluators per Tutor turn,
+- separate conversation classifier/model call in the normal path,
+- archive vector or automatic semantic prior-session retrieval,
+- mandatory compact Segment summaries or retro-link background job,
+- conversation memory service or agent chain for conversation routing,
 - advanced ML/clustering,
 - complex event-stream infrastructure,
 - large generic artifact marketplace.
