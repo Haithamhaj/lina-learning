@@ -15,14 +15,10 @@ from services.platform.db.models import LearningMessage, LearningSession
 from services.retrieval.service import CurrentFocus, RetrievedBlock, RetrievalService
 
 
-_IMMEDIATE_BRIDGE_OMISSION_MARKER = "\n[... earlier Tutor context omitted ...]\n"
-
-
 @dataclass(frozen=True)
 class ContextBudget:
     max_question_characters: int = 4000
     session_characters: int = 600
-    immediate_bridge_characters: int = 1200
     retrieval_characters: int = 1400
     intelligence_characters: int = 600
     recent_message_count: int = 4
@@ -45,7 +41,7 @@ class TutorContextDebug:
     intelligence_card_schema_version: str = "not-built"
     intelligence_card_policy_version: str = "not-built"
     current_turn_message_id: UUID | None = None
-    immediate_bridge_message_ids: tuple[UUID, ...] = ()
+    immediate_exchange_message_ids: tuple[UUID, ...] = ()
     older_continuity_message_ids: tuple[UUID, ...] = ()
 
 
@@ -59,13 +55,13 @@ class TutorContext:
     retrieval: tuple[RetrievedBlock, ...]
     intelligence: tuple[RelevantIntelligence, ...]
     debug: TutorContextDebug
-    immediate_bridge: tuple[SessionContextMessage, ...] = ()
+    immediate_exchange: tuple[SessionContextMessage, ...] = ()
 
     @property
     def character_count(self) -> int:
         return (
             len(self.question)
-            + sum(len(message.content) for message in self.immediate_bridge)
+            + sum(len(message.content) for message in self.immediate_exchange)
             + sum(len(message.content) for message in self.session_messages)
             + sum(len(block.text) for block in self.retrieval)
             + sum(len(item.text) for item in self.intelligence)
@@ -108,7 +104,7 @@ class TutorContextBuilder:
             learning_session=learning_session,
             current_turn_message_id=current_turn_message_id,
         )
-        immediate_bridge = self._immediate_bridge(
+        immediate_exchange = self._immediate_exchange(
             learning_session=learning_session,
             current_turn=current_turn,
         )
@@ -118,7 +114,7 @@ class TutorContextBuilder:
                 message_id
                 for message_id in (
                     current_turn.id if current_turn is not None else None,
-                    *(message.message_id for message in immediate_bridge),
+                    *(message.message_id for message in immediate_exchange),
                 )
                 if message_id is not None
             ),
@@ -156,7 +152,7 @@ class TutorContextBuilder:
             subject=learning_session.subject,
             grade_level=grade_level,
             focus=effective_focus,
-            immediate_bridge=immediate_bridge,
+            immediate_exchange=immediate_exchange,
             session_messages=messages,
             retrieval=retrieval,
             intelligence=intelligence,
@@ -169,7 +165,7 @@ class TutorContextBuilder:
                 intelligence_card_schema_version=card.schema_version,
                 intelligence_card_policy_version=card.policy_version,
                 current_turn_message_id=current_turn.id if current_turn is not None else None,
-                immediate_bridge_message_ids=tuple(message.message_id for message in immediate_bridge),
+                immediate_exchange_message_ids=tuple(message.message_id for message in immediate_exchange),
                 older_continuity_message_ids=tuple(message.message_id for message in messages),
             ),
         )
@@ -196,7 +192,7 @@ class TutorContextBuilder:
             raise ValueError("Current Turn must be a persisted Student message in this LearningSession.")
         return message
 
-    def _immediate_bridge(
+    def _immediate_exchange(
         self,
         *,
         learning_session: LearningSession,
@@ -204,7 +200,7 @@ class TutorContextBuilder:
     ) -> tuple[SessionContextMessage, ...]:
         if current_turn is None:
             return ()
-        message = self._session.execute(
+        tutor_message = self._session.execute(
             select(LearningMessage)
             .where(
                 LearningMessage.session_id == learning_session.id,
@@ -214,31 +210,29 @@ class TutorContextBuilder:
             .order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())
             .limit(1)
         ).scalar_one_or_none()
-        if message is None:
+        if tutor_message is None:
             return ()
-        return (
+        previous_student_message = self._session.execute(
+            select(LearningMessage)
+            .where(
+                LearningMessage.session_id == learning_session.id,
+                LearningMessage.role == "student",
+                LearningMessage.created_at < tutor_message.created_at,
+            )
+            .order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())
+            .limit(1)
+        ).scalar_one_or_none()
+        messages = (
+            ([previous_student_message] if previous_student_message is not None else [])
+            + [tutor_message]
+        )
+        return tuple(
             SessionContextMessage(
                 message.id,
                 message.role,
-                self._bounded_immediate_bridge_content(message.content),
-            ),
-        )
-
-    def _bounded_immediate_bridge_content(self, content: str) -> str:
-        budget = self._budget.immediate_bridge_characters
-        if len(content) <= budget:
-            return content
-        if budget <= 0:
-            return ""
-        if budget <= len(_IMMEDIATE_BRIDGE_OMISSION_MARKER):
-            return content[-budget:]
-        remaining = budget - len(_IMMEDIATE_BRIDGE_OMISSION_MARKER)
-        prefix_characters = remaining // 2
-        suffix_characters = remaining - prefix_characters
-        return (
-            content[:prefix_characters]
-            + _IMMEDIATE_BRIDGE_OMISSION_MARKER
-            + content[-suffix_characters:]
+                message.content,
+            )
+            for message in messages
         )
 
     def _recent_messages(

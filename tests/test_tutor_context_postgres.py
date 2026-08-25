@@ -222,10 +222,10 @@ def test_context_uses_the_supplied_current_turn_id_when_student_text_repeats(
         )
 
     assert context.debug.current_turn_message_id == supplied_student_turn.id
-    assert [message.content for message in context.immediate_bridge] == [
+    assert [message.content for message in context.immediate_exchange] == [
         "Bridge for the supplied Student turn."
     ]
-    assert bridge_for_duplicate_turn.id not in context.debug.immediate_bridge_message_ids
+    assert bridge_for_duplicate_turn.id not in context.debug.immediate_exchange_message_ids
 
 
 @pytest.mark.parametrize("invalid_kind", ["missing", "tutor", "other_session"])
@@ -328,8 +328,12 @@ def test_recent_context_keeps_immediate_tutor_question_ahead_of_older_long_messa
             current_turn_message_id=messages[3].id,
         )
 
-    assert [message.content for message in context.immediate_bridge] == [tutor_question]
-    assert messages[2].id in context.debug.immediate_bridge_message_ids
+    assert [message.content for message in context.immediate_exchange] == [
+        "make me a quiz",
+        tutor_question,
+    ]
+    assert messages[1].id in context.debug.immediate_exchange_message_ids
+    assert messages[2].id in context.debug.immediate_exchange_message_ids
     assert messages[3].id not in context.debug.session_message_ids
     assert sum(len(message.content) for message in context.session_messages) <= 600
 
@@ -393,9 +397,9 @@ def test_model_input_keeps_immediate_tutor_question_for_opaque_answer(
         )
         payload = build_tutor_model_payload(
             question=context.question,
-            immediate_bridge=[
+            immediate_exchange=[
                 {"role": message.role, "content": message.content}
-                for message in context.immediate_bridge
+                for message in context.immediate_exchange
             ],
             session_messages=[
                 {"role": message.role, "content": message.content}
@@ -407,18 +411,23 @@ def test_model_input_keeps_immediate_tutor_question_for_opaque_answer(
     assert tutor_question in str(payload["input"])
 
 
-def test_ctx02_runtime_keeps_oversized_immediate_tutor_turn_in_one_call_input(
+def test_ctx02_runtime_keeps_the_full_immediate_exchange_in_one_call_input(
     factory: sessionmaker[Session],
 ) -> None:
-    """CTX-02: a short opaque follow-up keeps its immediate Tutor activity bridge."""
+    """CTX-02 preserves exact raw lineage for an opaque follow-up."""
 
     retrieval = RecordingRetrieval()
     provider = RecordingTutorProvider()
-    crucial_bridge_ending = "IMPORTANT: cover the flashlight and tell me if the ball is still easy to see."
+    previous_student_turn = (
+        "I will try the flashlight and ball activity carefully: "
+        + ("I will point the light away from my eyes and look at the ball. " * 8)
+    )
+    crucial_middle_fact = "IMPORTANT: cover the flashlight and tell me if the ball is still easy to see."
     immediate_tutor_turn = (
         "Flashlight and ball activity: "
-        + ("look at the ball, not the light. " * 45)
-        + crucial_bridge_ending
+        + ("look at the ball, not the light. " * 28)
+        + crucial_middle_fact
+        + ("Then describe the shadow, not the flashlight beam. " * 28)
     )
     follow_up = "ما زبطت معي الصو في عيوني"
     with factory.begin() as session:
@@ -444,13 +453,24 @@ def test_ctx02_runtime_keeps_oversized_immediate_tutor_turn_in_one_call_input(
                     session_id=learning_session.id,
                     role="student",
                     content=older_too_large_turn,
-                    created_at=base - timedelta(seconds=3),
+                    created_at=base - timedelta(seconds=4),
                 ),
                 older_recent_message,
+                LearningMessage(
+                    session_id=learning_session.id,
+                    role="student",
+                    content=previous_student_turn,
+                    created_at=base - timedelta(seconds=2),
+                ),
                 bridge_message,
             ]
         )
         session.flush()
+        previous_student_message = session.query(LearningMessage).filter_by(
+            session_id=learning_session.id,
+            role="student",
+            content=previous_student_turn,
+        ).one()
         runtime = TutorRuntime(
             session,
             context_builder=TutorContextBuilder(
@@ -459,7 +479,6 @@ def test_ctx02_runtime_keeps_oversized_immediate_tutor_turn_in_one_call_input(
                 budget=ContextBudget(
                     recent_message_count=4,
                     session_characters=600,
-                    immediate_bridge_characters=1200,
                     retrieval_characters=100,
                     intelligence_characters=100,
                 ),
@@ -488,18 +507,23 @@ def test_ctx02_runtime_keeps_oversized_immediate_tutor_turn_in_one_call_input(
 
     assert current_student_message.content == follow_up
     assert f"Current Turn:\nStudent question:\n{follow_up}" in model_input
-    assert "Flashlight and ball activity:" in model_input
-    assert crucial_bridge_ending in model_input
-    assert immediate_tutor_turn not in model_input
+    assert previous_student_turn in model_input
+    assert immediate_tutor_turn in model_input
+    assert crucial_middle_fact in model_input
+    assert "[... earlier Tutor context omitted ...]" not in model_input
     assert model_input.count(follow_up) == 1
     assert older_recent_turn in model_input
     assert older_too_large_turn not in model_input
-    assert model_input.index("Current Turn:") < model_input.index("Immediate bridge:")
-    assert model_input.index("Immediate bridge:") < model_input.index("Bounded older current-session continuity:")
+    assert len(provider.payloads) == 1
+    assert model_input.index("Current Turn:") < model_input.index("Immediate exchange:")
+    assert model_input.index("Immediate exchange:") < model_input.index("Bounded older current-session continuity:")
     assert model_input.index("Bounded older current-session continuity:") < model_input.index("Retrieved curriculum:")
     assert persisted_tutor_message.payload["context_debug"] == {
         "current_turn_message_id": str(current_student_message.id),
-        "immediate_bridge_message_ids": [str(bridge_message.id)],
+        "immediate_exchange_message_ids": [
+            str(previous_student_message.id),
+            str(bridge_message.id),
+        ],
         "older_continuity_message_ids": [str(older_recent_message.id)],
         "session_message_ids": [str(older_recent_message.id)],
         "retrieval_source_refs": ["book#page=12"],

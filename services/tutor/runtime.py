@@ -124,7 +124,7 @@ def build_tutor_model_payload(
     sources: list[dict[str, object]] | None = None,
     intelligence: list[str] | None = None,
     safety_directive: str | None = None,
-    immediate_bridge: list[dict[str, str]] | None = None,
+    immediate_exchange: list[dict[str, str]] | None = None,
     session_messages: list[dict[str, str]] | None = None,
     candidate_source_message_id: UUID | None = None,
     prior_method: PriorTeachingMethodContext | None = None,
@@ -136,9 +136,9 @@ def build_tutor_model_payload(
         f"Curriculum source ({source['ref']}):\n{source['text']}" for source in (sources or [])
     ) or "No matching curriculum excerpt was retrieved."
     intelligence_context = "\n".join(intelligence or []) or "No relevant compact learning note was selected."
-    immediate_bridge_context = "\n".join(
-        f"{message['role']}: {message['content']}" for message in (immediate_bridge or [])
-    ) or "No immediate bridge was selected."
+    immediate_exchange_context = "\n".join(
+        f"{message['role']}: {message['content']}" for message in (immediate_exchange or [])
+    ) or "No immediate exchange was selected."
     session_context = "\n".join(
         f"{message['role']}: {message['content']}" for message in (session_messages or [])
     ) or "No older current-session continuity was selected."
@@ -170,7 +170,7 @@ def build_tutor_model_payload(
     return {
         "instructions": TUTOR_SHARED_INSTRUCTIONS,
         "input": (
-            f"Current Turn:\nStudent question:\n{question}\n\nImmediate bridge:\n{immediate_bridge_context}\n\n"
+            f"Current Turn:\nStudent question:\n{question}\n\nImmediate exchange:\n{immediate_exchange_context}\n\n"
             f"Bounded older current-session continuity:\n{session_context}\n\n"
             f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}"
         ),
@@ -473,8 +473,8 @@ class TutorRuntime:
                     if context.debug.current_turn_message_id is not None
                     else None
                 ),
-                "immediate_bridge_message_ids": [
-                    str(identifier) for identifier in context.debug.immediate_bridge_message_ids
+                "immediate_exchange_message_ids": [
+                    str(identifier) for identifier in context.debug.immediate_exchange_message_ids
                 ],
                 "older_continuity_message_ids": [
                     str(identifier) for identifier in context.debug.older_continuity_message_ids
@@ -511,9 +511,9 @@ def _payload_from_context(
         sources=[{"ref": block.source_ref, "text": block.text} for block in context.retrieval],
         intelligence=[item.text for item in context.intelligence],
         safety_directive=safety.tutor_directive,
-        immediate_bridge=[
+        immediate_exchange=[
             {"role": message.role, "content": message.content}
-            for message in context.immediate_bridge
+            for message in context.immediate_exchange
         ],
         session_messages=[
             {"role": message.role, "content": message.content}
