@@ -36,8 +36,14 @@ def postgres_session_factory() -> sessionmaker[Session]:
 
 
 class _ContextBuilder:
-    def build(self, *, learning_session: LearningSession, question: str) -> TutorContext:
-        message_id = uuid4()
+    def build(
+        self,
+        *,
+        learning_session: LearningSession,
+        question: str,
+        current_turn_message_id: object | None = None,
+    ) -> TutorContext:
+        message_id = current_turn_message_id if current_turn_message_id is not None else uuid4()
         retrieval = RetrievedBlock(
             text="Equivalent fractions name the same amount.", source_ref="book#page=12", page_number=12,
             block_type="EXERCISE", score=1.0, semantic_key="fractions", semantic_type="EXERCISE",

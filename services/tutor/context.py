@@ -15,6 +15,9 @@ from services.platform.db.models import LearningMessage, LearningSession
 from services.retrieval.service import CurrentFocus, RetrievedBlock, RetrievalService
 
 
+_IMMEDIATE_BRIDGE_OMISSION_MARKER = "\n[... earlier Tutor context omitted ...]\n"
+
+
 @dataclass(frozen=True)
 class ContextBudget:
     max_question_characters: int = 4000
@@ -91,6 +94,7 @@ class TutorContextBuilder:
         *,
         learning_session: LearningSession,
         question: str,
+        current_turn_message_id: UUID | None = None,
         grade_level: int = 5,
         focus: CurrentFocus | None = None,
     ) -> TutorContext:
@@ -102,7 +106,7 @@ class TutorContextBuilder:
         effective_focus = focus or self._session_focus(learning_session.id)
         current_turn = self._current_turn(
             learning_session=learning_session,
-            question=question,
+            current_turn_message_id=current_turn_message_id,
         )
         immediate_bridge = self._immediate_bridge(
             learning_session=learning_session,
@@ -179,18 +183,18 @@ class TutorContextBuilder:
         self,
         *,
         learning_session: LearningSession,
-        question: str,
+        current_turn_message_id: UUID | None,
     ) -> LearningMessage | None:
-        return self._session.execute(
-            select(LearningMessage)
-            .where(
-                LearningMessage.session_id == learning_session.id,
-                LearningMessage.role == "student",
-                LearningMessage.content == question,
-            )
-            .order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())
-            .limit(1)
-        ).scalar_one_or_none()
+        if current_turn_message_id is None:
+            return None
+        message = self._session.get(LearningMessage, current_turn_message_id)
+        if (
+            message is None
+            or message.session_id != learning_session.id
+            or message.role != "student"
+        ):
+            raise ValueError("Current Turn must be a persisted Student message in this LearningSession.")
+        return message
 
     def _immediate_bridge(
         self,
@@ -216,8 +220,25 @@ class TutorContextBuilder:
             SessionContextMessage(
                 message.id,
                 message.role,
-                message.content[: self._budget.immediate_bridge_characters],
+                self._bounded_immediate_bridge_content(message.content),
             ),
+        )
+
+    def _bounded_immediate_bridge_content(self, content: str) -> str:
+        budget = self._budget.immediate_bridge_characters
+        if len(content) <= budget:
+            return content
+        if budget <= 0:
+            return ""
+        if budget <= len(_IMMEDIATE_BRIDGE_OMISSION_MARKER):
+            return content[-budget:]
+        remaining = budget - len(_IMMEDIATE_BRIDGE_OMISSION_MARKER)
+        prefix_characters = remaining // 2
+        suffix_characters = remaining - prefix_characters
+        return (
+            content[:prefix_characters]
+            + _IMMEDIATE_BRIDGE_OMISSION_MARKER
+            + content[-suffix_characters:]
         )
 
     def _recent_messages(

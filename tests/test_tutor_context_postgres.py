@@ -170,6 +170,107 @@ def test_context_keeps_current_question_bounds_history_and_uses_task014_retrieva
     assert context.character_count <= len(context.question) + 40 + 100 + 100
 
 
+def test_context_uses_the_supplied_current_turn_id_when_student_text_repeats(
+    factory: sessionmaker[Session],
+) -> None:
+    """CTX-02: supplied current-turn lineage wins over identical message text."""
+
+    retrieval = RecordingRetrieval()
+    with factory.begin() as session:
+        _, learning_session, _ = _seed(session)
+        base = datetime.now(UTC)
+        bridge_for_supplied_turn = LearningMessage(
+            session_id=learning_session.id,
+            role="tutor",
+            content="Bridge for the supplied Student turn.",
+            created_at=base,
+        )
+        supplied_student_turn = LearningMessage(
+            session_id=learning_session.id,
+            role="student",
+            content="Can you explain that again?",
+            created_at=base + timedelta(seconds=1),
+        )
+        bridge_for_duplicate_turn = LearningMessage(
+            session_id=learning_session.id,
+            role="tutor",
+            content="Bridge for the later identical Student turn.",
+            created_at=base + timedelta(seconds=2),
+        )
+        later_identical_student_turn = LearningMessage(
+            session_id=learning_session.id,
+            role="student",
+            content="Can you explain that again?",
+            created_at=base + timedelta(seconds=3),
+        )
+        session.add_all(
+            [
+                bridge_for_supplied_turn,
+                supplied_student_turn,
+                bridge_for_duplicate_turn,
+                later_identical_student_turn,
+            ]
+        )
+        session.flush()
+        context = TutorContextBuilder(
+            session,
+            retrieval_service=retrieval,  # type: ignore[arg-type]
+        ).build(
+            learning_session=learning_session,
+            question="Can you explain that again?",
+            current_turn_message_id=supplied_student_turn.id,
+        )
+
+    assert context.debug.current_turn_message_id == supplied_student_turn.id
+    assert [message.content for message in context.immediate_bridge] == [
+        "Bridge for the supplied Student turn."
+    ]
+    assert bridge_for_duplicate_turn.id not in context.debug.immediate_bridge_message_ids
+
+
+@pytest.mark.parametrize("invalid_kind", ["missing", "tutor", "other_session"])
+def test_context_rejects_invalid_supplied_current_turn_identity(
+    factory: sessionmaker[Session],
+    invalid_kind: str,
+) -> None:
+    """CTX-02: only a persisted Student message in this session may be Current Turn."""
+
+    retrieval = RecordingRetrieval()
+    with factory.begin() as session:
+        _, learning_session, _ = _seed(session)
+        if invalid_kind == "missing":
+            current_turn_message_id = uuid4()
+        elif invalid_kind == "tutor":
+            invalid_message = LearningMessage(
+                session_id=learning_session.id,
+                role="tutor",
+                content="A Tutor message cannot be the Current Turn.",
+            )
+            session.add(invalid_message)
+            session.flush()
+            current_turn_message_id = invalid_message.id
+        else:
+            _, other_learning_session, _ = _seed(session)
+            invalid_message = LearningMessage(
+                session_id=other_learning_session.id,
+                role="student",
+                content="A Student message from another session.",
+            )
+            session.add(invalid_message)
+            session.flush()
+            current_turn_message_id = invalid_message.id
+
+        with pytest.raises(ValueError):
+            TutorContextBuilder(
+                session,
+                retrieval_service=retrieval,  # type: ignore[arg-type]
+            ).build(
+                learning_session=learning_session,
+                question="Can you explain that again?",
+                current_turn_message_id=current_turn_message_id,
+            )
+
+
 def test_recent_context_keeps_immediate_tutor_question_ahead_of_older_long_message(
     factory: sessionmaker[Session],
 ) -> None:
@@ -221,7 +322,11 @@ def test_recent_context_keeps_immediate_tutor_question_ahead_of_older_long_messa
                 retrieval_characters=100,
                 intelligence_characters=100,
             ),
-        ).build(learning_session=learning_session, question="B) 3")
+        ).build(
+            learning_session=learning_session,
+            question="B) 3",
+            current_turn_message_id=messages[3].id,
+        )
 
     assert [message.content for message in context.immediate_bridge] == [tutor_question]
     assert messages[2].id in context.debug.immediate_bridge_message_ids
@@ -242,6 +347,12 @@ def test_model_input_keeps_immediate_tutor_question_for_opaque_answer(
     with factory.begin() as session:
         _, learning_session, _ = _seed(session)
         base = datetime.now(UTC)
+        current_student_turn = LearningMessage(
+            session_id=learning_session.id,
+            role="student",
+            content="B) 3",
+            created_at=base + timedelta(seconds=3),
+        )
         session.add_all(
             [
                 LearningMessage(
@@ -262,12 +373,7 @@ def test_model_input_keeps_immediate_tutor_question_for_opaque_answer(
                     content=tutor_question,
                     created_at=base + timedelta(seconds=2),
                 ),
-                LearningMessage(
-                    session_id=learning_session.id,
-                    role="student",
-                    content="B) 3",
-                    created_at=base + timedelta(seconds=3),
-                ),
+                current_student_turn,
             ]
         )
         session.flush()
@@ -280,7 +386,11 @@ def test_model_input_keeps_immediate_tutor_question_for_opaque_answer(
                 retrieval_characters=100,
                 intelligence_characters=100,
             ),
-        ).build(learning_session=learning_session, question="B) 3")
+        ).build(
+            learning_session=learning_session,
+            question="B) 3",
+            current_turn_message_id=current_student_turn.id,
+        )
         payload = build_tutor_model_payload(
             question=context.question,
             immediate_bridge=[
@@ -304,7 +414,12 @@ def test_ctx02_runtime_keeps_oversized_immediate_tutor_turn_in_one_call_input(
 
     retrieval = RecordingRetrieval()
     provider = RecordingTutorProvider()
-    immediate_tutor_turn = "Flashlight and ball activity: " + ("look at the ball, not the light. " * 45)
+    crucial_bridge_ending = "IMPORTANT: cover the flashlight and tell me if the ball is still easy to see."
+    immediate_tutor_turn = (
+        "Flashlight and ball activity: "
+        + ("look at the ball, not the light. " * 45)
+        + crucial_bridge_ending
+    )
     follow_up = "ما زبطت معي الصو في عيوني"
     with factory.begin() as session:
         _, learning_session, _ = _seed(session)
@@ -373,7 +488,8 @@ def test_ctx02_runtime_keeps_oversized_immediate_tutor_turn_in_one_call_input(
 
     assert current_student_message.content == follow_up
     assert f"Current Turn:\nStudent question:\n{follow_up}" in model_input
-    assert immediate_tutor_turn[:1200] in model_input
+    assert "Flashlight and ball activity:" in model_input
+    assert crucial_bridge_ending in model_input
     assert immediate_tutor_turn not in model_input
     assert model_input.count(follow_up) == 1
     assert older_recent_turn in model_input

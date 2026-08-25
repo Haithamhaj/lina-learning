@@ -241,7 +241,11 @@ class TutorRuntime:
             learning_session=learning_session,
             before_message=student_message,
         )
-        context = self._context_builder.build(learning_session=learning_session, question=content)
+        context = self._context_builder.build(
+            learning_session=learning_session,
+            question=content,
+            current_turn_message_id=student_message.id,
+        )
         payload = _payload_from_context(
             context,
             safety=safety,

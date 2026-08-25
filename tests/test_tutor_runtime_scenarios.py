@@ -44,10 +44,16 @@ class _ContextBuilder:
     def __init__(self) -> None:
         self.calls = 0
 
-    def build(self, *, learning_session: object, question: str) -> TutorContext:
+    def build(
+        self,
+        *,
+        learning_session: object,
+        question: str,
+        current_turn_message_id: object | None = None,
+    ) -> TutorContext:
         del learning_session
         self.calls += 1
-        message_id = uuid4()
+        message_id = current_turn_message_id if current_turn_message_id is not None else uuid4()
         block = RetrievedBlock(
             text="Equivalent fractions name the same amount.", source_ref="book#page=12", page_number=12,
             block_type="EXERCISE", score=1.0, semantic_key="fractions", semantic_type="EXERCISE",
