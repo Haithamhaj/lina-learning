@@ -180,6 +180,22 @@ def test_arbitrary_literal_message_persists_luna_semantic_decision_without_runti
     assert len([row for row in session.rows if isinstance(row, LearningMessage)]) == 2
 
 
+def test_allow_turn_sends_situational_safety_guidance_in_its_one_tutor_call() -> None:
+    """SAFE-01: ALLOW permits one Tutor call; Luna still gets situational-safety guidance."""
+
+    runtime, _, provider, _ = _runtime(_decision(SafetyAction.ALLOW))
+
+    events = list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        question="I am doing an activity now.",
+    ))
+
+    assert isinstance(events[-1], TutorTurn)
+    assert events[-1].safety["action"] == SafetyAction.ALLOW.value
+    assert provider.calls == 1
+    assert "immediate real-world safety" in str(provider.payloads[0]["instructions"])
+
+
 def test_all_null_luna_decision_persists_no_fictional_teaching_classification() -> None:
     runtime, _, provider, session = _runtime(_decision())
     events = list(runtime.stream_turn(learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), last_activity_at=None), question="Thanks for being here."))
