@@ -254,3 +254,18 @@ def test_protected_baseline_wins_even_when_a_parent_allows_a_matching_topic(
     assert decision.policy_source == "BASELINE"
     assert decision.reason_code == "PROTECTED_BASELINE"
     assert decision.directive is not None
+
+
+def test_explicit_flashlight_eye_exposure_is_not_normal_learning(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """SAFE-01: an immediate physical-safety cue needs an upstream policy action."""
+
+    with postgres_session_factory.begin() as session:
+        decision = SafetyPolicyService(session).evaluate(
+            student_id=make_student(session),
+            text="ضوء الكشاف دخل بعيني",
+            interaction_ref="safe-01-explicit-eye-exposure",
+        )
+
+    assert decision.action is not SafetyAction.ALLOW
