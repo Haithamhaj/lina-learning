@@ -6,37 +6,42 @@
 <title>Lina Personal Learning System — Operating Map</title>
 <style>
   :root{
-    --bg:#f5f7fb; --panel:#fff; --ink:#182033; --muted:#667085; --line:#d9e0ec;
-    --student:#fff1f5; --parent:#eef6ff; --core:#f4efff; --data:#eefbf4; --warn:#fff7e8;
-    --accent:#6658d3; --radius:18px; --shadow:0 10px 30px rgba(25,35,58,.08);
+    --bg:#f5f7fb;--panel:#fff;--ink:#182033;--muted:#667085;--line:#d9e0ec;
+    --student:#fff1f5;--parent:#eef6ff;--core:#f4efff;--data:#eefbf4;--warn:#fff7e8;--context:#eef8ff;
+    --accent:#6658d3;--radius:18px;--shadow:0 10px 30px rgba(25,35,58,.08)
   }
-  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-  .wrap{max-width:1480px;margin:auto;padding:28px}
-  header{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin-bottom:22px}
-  h1{margin:0 0 8px;font-size:32px;letter-spacing:-.03em} h2{font-size:20px;margin:0 0 14px} h3{font-size:15px;margin:0 0 8px}
-  p{margin:0;color:var(--muted);line-height:1.55}.badge{display:inline-flex;padding:7px 11px;border-radius:999px;background:#e9f8ee;color:#25754a;font-weight:700;font-size:12px}
+  *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  .wrap{max-width:1480px;margin:auto;padding:28px}header{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin-bottom:20px}
+  h1{margin:0 0 8px;font-size:32px;letter-spacing:-.03em}h2{font-size:20px;margin:0 0 14px}h3{font-size:15px;margin:0 0 8px}p{margin:0;color:var(--muted);line-height:1.55}
+  .badge,.status{display:inline-flex;padding:7px 11px;border-radius:999px;font-weight:750;font-size:12px}.badge{background:#fff2cc;color:#7a5710}.status{background:#e9f8ee;color:#25754a;margin-bottom:12px}
   .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 24px}.toolbar button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 13px;cursor:pointer;font-weight:650;color:#374151}.toolbar button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
   .grid{display:grid;grid-template-columns:1.05fr 1.55fr 1.05fr;gap:16px;align-items:stretch}.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;position:relative;overflow:hidden}
-  .panel.student{background:linear-gradient(145deg,var(--student),#fff)}.panel.parent{background:linear-gradient(145deg,var(--parent),#fff)}.panel.core{background:linear-gradient(145deg,var(--core),#fff)}.panel.data{background:linear-gradient(145deg,var(--data),#fff)}.panel.warn{background:linear-gradient(145deg,var(--warn),#fff)}
-  .stack{display:grid;gap:10px}.node{border:1px solid var(--line);background:rgba(255,255,255,.87);border-radius:14px;padding:12px 13px}.node strong{display:block;margin-bottom:4px}.node small{color:var(--muted);line-height:1.4;display:block}
-  .flow{grid-column:1/-1;background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-top:16px}.flow svg{width:100%;height:auto;display:block}.flow .box{fill:#fff;stroke:#cfd6e4;stroke-width:1.3}.flow .box.core{fill:#f4efff}.flow .box.data{fill:#eefbf4}.flow .box.student{fill:#fff1f5}.flow .box.parent{fill:#eef6ff}.flow text{fill:#202939;font-size:13px;font-weight:700}.flow .sub{fill:#667085;font-size:10.5px;font-weight:500}.flow .arrow{stroke:#8d98aa;stroke-width:1.7;fill:none;marker-end:url(#arrow)}
-  .lanes{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}.lane{padding:18px}.steps{display:grid;gap:9px;counter-reset:step}.step{display:flex;gap:10px;align-items:flex-start}.step:before{counter-increment:step;content:counter(step);width:24px;height:24px;flex:0 0 24px;border-radius:50%;display:grid;place-items:center;background:#eef0f5;font-size:12px;font-weight:800}.step b{font-size:13px}.step span{display:block;color:var(--muted);font-size:12px;margin-top:2px;line-height:1.45}
-  .timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:12px}.phase{border:1px solid var(--line);background:#fff;border-radius:13px;padding:11px;min-height:94px}.phase strong{font-size:12px}.phase span{display:block;color:var(--muted);font-size:11px;line-height:1.35;margin-top:5px}.phase.gate{background:#fff7e8;border-color:#e7c879}.phase.future{opacity:.58}
-  .footer-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-top:16px}.rule{padding:9px 0;border-top:1px solid #edf0f5;font-size:12px}.rule:first-child{border-top:0}.rule b{color:#30374a}.files code{display:block;background:#f6f7fa;border:1px solid #e5e8ef;padding:7px 9px;margin:6px 0;border-radius:9px;font-size:11px;white-space:normal}
+  .panel.student{background:linear-gradient(145deg,var(--student),#fff)}.panel.parent{background:linear-gradient(145deg,var(--parent),#fff)}.panel.core{background:linear-gradient(145deg,var(--core),#fff)}.panel.data{background:linear-gradient(145deg,var(--data),#fff)}.panel.warn{background:linear-gradient(145deg,var(--warn),#fff)}.panel.context{background:linear-gradient(145deg,var(--context),#fff)}
+  .stack,.context-grid{display:grid;gap:10px}.context-grid{grid-template-columns:repeat(4,1fr)}.node{border:1px solid var(--line);background:rgba(255,255,255,.9);border-radius:14px;padding:12px 13px}.node strong{display:block;margin-bottom:4px}.node small{color:var(--muted);line-height:1.42;display:block}
+  .section{margin-top:16px}.assembly{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;align-items:stretch}.assembly .node{min-height:112px}.arrow-note{text-align:center;color:var(--muted);font-size:12px;margin:10px 0 0}
+  .flow{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-top:16px}.flow svg{width:100%;height:auto;display:block}.flow .box{fill:#fff;stroke:#cfd6e4;stroke-width:1.3}.flow .box.core{fill:#f4efff}.flow .box.data{fill:#eefbf4}.flow .box.student{fill:#fff1f5}.flow .box.context{fill:#eef8ff}.flow text{fill:#202939;font-size:12.5px;font-weight:700}.flow .sub{fill:#667085;font-size:10px;font-weight:500}.flow .arrow{stroke:#8d98aa;stroke-width:1.7;fill:none;marker-end:url(#arrow)}
+  .lanes{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}.lane{padding:18px}.step{display:flex;gap:10px;align-items:flex-start;margin:9px 0}.step:before{content:'•';font-weight:900;color:var(--accent)}.step b{font-size:13px}.step span{display:block;color:var(--muted);font-size:12px;margin-top:2px;line-height:1.45}
+  .timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:12px}.phase{border:1px solid var(--line);background:#fff;border-radius:13px;padding:11px;min-height:96px}.phase strong{font-size:12px}.phase span{display:block;color:var(--muted);font-size:11px;line-height:1.35;margin-top:5px}.phase.gate{background:#fff7e8;border-color:#e7c879}.phase.approved{background:#eefbf4;border-color:#aed8bc}.phase.future{opacity:.58}
+  .footer-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;margin-top:16px}.rule{padding:9px 0;border-top:1px solid #edf0f5;font-size:12px}.rule:first-child{border-top:0}.rule b{color:#30374a}.files code{display:block;background:#f6f7fa;border:1px solid #e5e8ef;padding:7px 9px;margin:6px 0;border-radius:9px;font-size:11px;white-space:normal}
   [data-layer]{transition:opacity .2s,filter .2s}.dim{opacity:.16;filter:grayscale(.85)}
-  @media(max-width:1000px){.grid,.lanes,.footer-grid{grid-template-columns:1fr}.timeline{grid-template-columns:repeat(2,1fr)}header{display:block}.badge{margin-top:12px}}
+  @media(max-width:1100px){.context-grid,.assembly{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:900px){.grid,.lanes,.footer-grid,.context-grid,.assembly{grid-template-columns:1fr}.timeline{grid-template-columns:repeat(2,1fr)}header{display:block}.badge{margin-top:12px}}
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
-  <div><h1>Lina Personal Learning System</h1><p>Operating map for Codex/AI implementation. REC-35.2 remains in review behind Stabilization TODO v2.1; CTX-02 oversized immediate context drop is next.</p></div>
-  <div class="badge">REVIEW · STABILIZATION GATE ACTIVE</div>
+  <div>
+    <h1>Lina Personal Learning System</h1>
+    <p>Operating map after Conversation Context v2 governance approval. REC-35.2 remains in REVIEW behind Stabilization TODO v2.1; revised CTX-02 is the next implementation decision.</p>
+  </div>
+  <div class="badge">STABILIZATION ACTIVE · CONTEXT v2 GOVERNED</div>
 </header>
 
 <div class="toolbar" aria-label="Map layer filter">
   <button class="active" data-filter="all">All layers</button>
   <button data-filter="experience">Student / Parent</button>
+  <button data-filter="context">Conversation Context</button>
   <button data-filter="runtime">Tutor Runtime</button>
   <button data-filter="intelligence">Learning Intelligence</button>
   <button data-filter="content">Content / RAG</button>
@@ -44,109 +49,124 @@
 
 <section class="grid">
   <article class="panel student" data-layer="experience"><h2>👧 Lina Experience</h2><div class="stack">
-    <div class="node"><strong>Student Home</strong><small>Math · Science · Ask anything. No mastery analytics.</small></div>
-    <div class="node"><strong>Natural Tutor Session</strong><small>Text now; voice/images after the real-Lina gate.</small></div>
-    <div class="node"><strong>Multimodal Work</strong><small>Handwriting, drawings, homework images; preserve the student original.</small></div>
-    <div class="node"><strong>Learning Canvas</strong><small>Inline visual → expandable interactive workspace → return to same session.</small></div>
+    <div class="node"><strong>Student Home</strong><small>Math · Science · Ask naturally. No learner analytics shown to Lina.</small></div>
+    <div class="node"><strong>Natural Tutor Session</strong><small>Conversation may move between topics without Lina managing chats or threads.</small></div>
+    <div class="node"><strong>Multimodal Direction</strong><small>Text, transcript, and future image/work assets belong to one logical Turn while originals remain preserved.</small></div>
+    <div class="node"><strong>Low-pressure Interaction</strong><small>Explain → interact/check → adapt representation; free text remains available.</small></div>
   </div></article>
 
-  <article class="panel core" data-layer="runtime"><h2>🧠 Tutor Runtime</h2><div class="stack">
-    <div class="node"><strong>Context Builder</strong><small>Current question + relevant intelligence + optional question-driven grounding.</small></div>
-    <div class="node"><strong>Safety + Parent Boundaries</strong><small>Protected baseline, then Allow / Age-appropriate only / Redirect to parent.</small></div>
-    <div class="node"><strong>Teaching Taxonomies + Registry</strong><small>Mode, Strategy, prior relation, and seven active Method definitions. Canonical IDs and frozen status only; no keyword routing.</small></div>
-    <div class="node"><strong>One Luna Semantic Tutor Call</strong><small>Understands current meaning; relevant personalization informs but never controls or overrides demonstrated independence.</small></div>
-    <div class="node"><strong>Deterministic Runtime Governance</strong><small>Validates values, nulls, lineage, safety, and persistence. Turn decisions are audit metadata, not learner memory.</small></div>
+  <article class="panel core" data-layer="runtime context"><h2>🧠 Tutor Runtime</h2><div class="stack">
+    <div class="node"><strong>Safety First</strong><small>Policy Engine produces the effective Safety / Parent Boundary decision before Tutor behavior.</small></div>
+    <div class="node"><strong>Bounded Context Assembly</strong><small>Approved target: Current Turn + Immediate Bridge + bounded current Segment; same-topic resume is bounded and session-local.</small></div>
+    <div class="node"><strong>Separate Decision Inputs</strong><small>Conversation context, Learner Intelligence/Open Loops, RAG, and Safety remain separate authorities.</small></div>
+    <div class="node"><strong>One Primary Luna Tutor Call</strong><small>Current behavior outranks history. TeachingMode, Strategy, Method, and prior relation remain pedagogical metadata, not conversation topics.</small></div>
+    <div class="node"><strong>Deterministic Governance</strong><small>Validates canonical values, lineage, policy, persistence, and structural consistency; no extra normal-turn classifier is approved.</small></div>
   </div></article>
 
   <article class="panel parent" data-layer="experience"><h2>👨‍👩‍👧 Parent / Admin</h2><div class="stack">
     <div class="node"><strong>Overview & Subject Views</strong><small>Insights first, source evidence on demand.</small></div>
-    <div class="node"><strong>Content / Reference Control</strong><small>Upload sources, inspect processing, reprocess, activate next Grade.</small></div>
-    <div class="node"><strong>Lina Profile / Audit</strong><small>Patterns, recent changes, current state, “why does the system think this?”</small></div>
+    <div class="node"><strong>Lina Profile / Audit</strong><small>Evidence-grounded Current State, Patterns, recent changes, and explanation of important conclusions.</small></div>
+    <div class="node"><strong>Content / Grade Control</strong><small>Upload sources, inspect processing, reprocess, and activate the next Grade.</small></div>
     <div class="node"><strong>Settings</strong><small>Learning Boundaries · model routes · AI usage/cost.</small></div>
   </div></article>
 </section>
 
-<section class="flow" data-layer="runtime intelligence content experience">
+<section class="panel context section" data-layer="context runtime">
+  <span class="status">APPROVED TARGET · PRODUCTION IMPLEMENTATION NOT YET STARTED</span>
+  <h2>Conversation Context v2</h2>
+  <div class="context-grid">
+    <div class="node"><strong>Session</strong><small>Temporary conversational container. New Sessions begin conversationally fresh; prior raw transcripts are not injected by default.</small></div>
+    <div class="node"><strong>Multimodal Turn</strong><small>Logical Turn may bundle text, transcript, and original asset references. Derived Vision/OCR remains rebuildable and never replaces originals.</small></div>
+    <div class="node"><strong>Segment = Learning Thread</strong><small>`thread_id` means the session-local contiguous Segment. A meaningful transition starts a new Segment; an old noncontiguous Segment is never reopened.</small></div>
+    <div class="node"><strong>Durable Conversation Topic</strong><small>Optional Grade-scoped navigation identity. EPHEMERAL is default; reuse before create; ambiguity must not silently create durable memory.</small></div>
+  </div>
+  <p class="arrow-note">Return to an earlier topic inside the same Session → create a new Segment and optionally reuse the same <code>conversation_topic_ref</code>.</p>
+</section>
+
+<section class="panel context section" data-layer="context runtime intelligence content">
+  <h2>Bounded Tutor-facing Context</h2>
+  <div class="assembly">
+    <div class="node"><strong>1 · Current Turn</strong><small>Current Lina input is authoritative.</small></div>
+    <div class="node"><strong>2 · Immediate Bridge</strong><small>Enough directly preceding exchange to resolve opaque follow-ups such as “ليش؟” or a short answer.</small></div>
+    <div class="node"><strong>3 · Current Segment</strong><small>Bounded relevant context from the active Learning Thread / Segment.</small></div>
+    <div class="node"><strong>4 · Same-topic Resume</strong><small>Latest prior Segment of the same Durable Conversation Topic only when resuming within the current Session.</small></div>
+    <div class="node"><strong>5 · Intelligence / RAG</strong><small>Relevant Learner Intelligence/Open Loops and question-driven grounding enter separately.</small></div>
+    <div class="node"><strong>6 · Safety Decision</strong><small>Effective policy directive remains independent and upstream authority.</small></div>
+  </div>
+  <p class="arrow-note">Not loaded automatically: full Session history · all Topic history · prior-session transcripts · archive vector memory. Historical lookup is a deferred on-demand seam.</p>
+</section>
+
+<section class="flow" data-layer="runtime context intelligence content experience">
 <h2>End-to-End Learning Loop</h2>
-<svg viewBox="0 0 1360 300" role="img" aria-label="Lina semantic Tutor decision flow">
+<svg viewBox="0 0 1360 300" role="img" aria-label="Lina Tutor flow with conversation context separation">
   <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#8d98aa"/></marker></defs>
-  <rect class="box student" x="18" y="82" width="155" height="82" rx="14"/><text x="96" y="112" text-anchor="middle">Current Student Message</text><text class="sub" x="96" y="132" text-anchor="middle">current behavior</text><text class="sub" x="96" y="148" text-anchor="middle">is authoritative</text>
-  <rect class="box core" x="193" y="82" width="205" height="82" rx="14"/><text x="296" y="108" text-anchor="middle">Safety + Decision Inputs</text><text class="sub" x="296" y="130" text-anchor="middle">relevant context / personalization</text><text class="sub" x="296" y="146" text-anchor="middle">prior method + compact taxonomies</text>
-  <rect class="box core" x="418" y="82" width="190" height="82" rx="14"/><text x="513" y="108" text-anchor="middle">ONE Luna Semantic Call</text><text class="sub" x="513" y="130" text-anchor="middle">understands meaning</text><text class="sub" x="513" y="146" text-anchor="middle">no keyword router / extra call</text>
-  <rect class="box" x="628" y="82" width="205" height="82" rx="14"/><text x="731" y="108" text-anchor="middle">Turn Decision + Response</text><text class="sub" x="731" y="130" text-anchor="middle">Mode · Strategy · Method</text><text class="sub" x="731" y="146" text-anchor="middle">prior relation + Tutor response</text>
-  <rect class="box core" x="853" y="82" width="215" height="82" rx="14"/><text x="961" y="108" text-anchor="middle">Runtime Validation / Persistence</text><text class="sub" x="961" y="130" text-anchor="middle">canonical values, nulls, lineage, safety</text><text class="sub" x="961" y="146" text-anchor="middle">turn decisions are not learner memory</text>
-  <rect class="box data" x="1088" y="82" width="254" height="82" rx="14"/><text x="1215" y="108" text-anchor="middle">Student Outcome → Candidate / Evidence</text><text class="sub" x="1215" y="130" text-anchor="middle">observable outcome only</text><text class="sub" x="1215" y="146" text-anchor="middle">existing source-grounded path</text>
-  <path class="arrow" d="M173 123H193"/><path class="arrow" d="M398 123H418"/><path class="arrow" d="M608 123H628"/><path class="arrow" d="M833 123H853"/><path class="arrow" d="M1068 123H1088"/>
-  <path class="arrow" d="M1215 164 C1215 244, 296 244, 296 164"/><text class="sub" x="705" y="248" text-anchor="middle">personalization advises but does not control; current Lina behavior outranks history; method choice is not effectiveness Evidence</text><text class="sub" x="705" y="266" text-anchor="middle">Only observable outcomes can support later method effectiveness; historical influence is LR-D04B future work.</text>
+  <rect class="box student" x="18" y="82" width="160" height="82" rx="14"/><text x="98" y="108" text-anchor="middle">Current Multimodal Turn</text><text class="sub" x="98" y="130" text-anchor="middle">text / transcript / asset refs</text><text class="sub" x="98" y="146" text-anchor="middle">current Lina behavior wins</text>
+  <rect class="box core" x="198" y="82" width="180" height="82" rx="14"/><text x="288" y="108" text-anchor="middle">Safety Policy Decision</text><text class="sub" x="288" y="130" text-anchor="middle">baseline + parent boundary</text><text class="sub" x="288" y="146" text-anchor="middle">independent authority</text>
+  <rect class="box context" x="398" y="82" width="210" height="82" rx="14"/><text x="503" y="108" text-anchor="middle">Bounded Context Assembly</text><text class="sub" x="503" y="130" text-anchor="middle">bridge + Segment + optional resume</text><text class="sub" x="503" y="146" text-anchor="middle">Intelligence / RAG remain separate</text>
+  <rect class="box core" x="628" y="82" width="190" height="82" rx="14"/><text x="723" y="108" text-anchor="middle">ONE Luna Tutor Call</text><text class="sub" x="723" y="130" text-anchor="middle">response + teaching decisions</text><text class="sub" x="723" y="146" text-anchor="middle">no chain / extra classifier by default</text>
+  <rect class="box core" x="838" y="82" width="220" height="82" rx="14"/><text x="948" y="108" text-anchor="middle">Validation / Persistence</text><text class="sub" x="948" y="130" text-anchor="middle">canonical values · lineage · policy</text><text class="sub" x="948" y="146" text-anchor="middle">conversation metadata ≠ learner truth</text>
+  <rect class="box data" x="1078" y="82" width="264" height="82" rx="14"/><text x="1210" y="108" text-anchor="middle">Outcome → Candidate → Evidence</text><text class="sub" x="1210" y="130" text-anchor="middle">observable Lina outcome only</text><text class="sub" x="1210" y="146" text-anchor="middle">raw source-grounded lineage</text>
+  <path class="arrow" d="M178 123H198"/><path class="arrow" d="M378 123H398"/><path class="arrow" d="M608 123H628"/><path class="arrow" d="M818 123H838"/><path class="arrow" d="M1058 123H1078"/>
+  <path class="arrow" d="M1210 164 C1210 244, 503 244, 503 164"/><text class="sub" x="856" y="248" text-anchor="middle">Evidence-grounded Intelligence may advise later Tutor turns; current behavior still outranks historical personalization.</text><text class="sub" x="856" y="266" text-anchor="middle">Conversation Topic, TeachingMethod, Safety category, and Curriculum Concept remain distinct.</text>
 </svg>
 </section>
 
 <section class="lanes">
-  <article class="panel data lane" data-layer="content"><h2>📚 Content / RAG Pipeline</h2>
-    <div class="step"><div><b>Learning Source</b><span>Book/material now; future trusted reference or captured page.</span></div></div>
-    <div class="step"><div><b>Preserve original + provenance</b><span>Source identity remains durable and rebuildable.</span></div></div>
+  <article class="panel data lane" data-layer="content"><h2>📚 Content / RAG</h2>
+    <div class="step"><div><b>Preserve original + provenance</b><span>Book/source identity remains durable and rebuildable.</span></div></div>
     <div class="step"><div><b>Docling structural normalization</b><span>Hierarchy, pages, figures, tables, formulas, provenance.</span></div></div>
-    <div class="step"><div><b>Retrieval-ready structural index</b><span>Hierarchy first; token refinement only when needed.</span></div></div>
-    <div class="step"><div><b>Lexical + pgvector + fusion</b><span>Question-driven retrieval, budgets, and exact provenance.</span></div></div>
-    <div class="step"><div><b>Optional semantic enrichment</b><span>Useful metadata/navigation; never a Tutor or basic-RAG gate.</span></div></div>
-    <div class="step"><div><b>Deferred sources</b><span>Trusted Educational References — Track B; Student-Captured Pages — Track C / Vision frozen.</span></div></div>
+    <div class="step"><div><b>Structural-first hybrid retrieval</b><span>PostgreSQL lexical + pgvector + deterministic fusion; current question drives retrieval.</span></div></div>
+    <div class="step"><div><b>Optional semantic enrichment</b><span>Useful metadata/navigation, never a Tutor or basic-RAG prerequisite.</span></div></div>
   </article>
-  <article class="panel core lane" data-layer="intelligence"><h2>🧩 Intelligence Contract</h2>
-    <div class="step"><div><b>Raw Interaction</b><span>Immutable source history; student originals remain originals.</span></div></div>
-    <div class="step"><div><b>Candidate Event</b><span>Flagged by Tutor in the normal call.</span></div></div>
-    <div class="step"><div><b>Validated Event + Evidence</b><span>Session-level consolidation under the approved rubric.</span></div></div>
-    <div class="step"><div><b>Current State / Pattern</b><span>Temporary state is distinct from repeated temporal patterns.</span></div></div>
-    <div class="step"><div><b>Compact Intelligence Card</b><span>What matters now; resolved history stays available but out of runtime.</span></div></div>
+  <article class="panel core lane" data-layer="intelligence"><h2>🧩 Learning Intelligence</h2>
+    <div class="step"><div><b>Raw Interaction</b><span>Authoritative source history and original student work.</span></div></div>
+    <div class="step"><div><b>Candidate → Validated Event → Evidence</b><span>Conversation classification alone creates no learner conclusion.</span></div></div>
+    <div class="step"><div><b>Current State ≠ Pattern</b><span>Current state may change quickly; patterns require repeated evidence.</span></div></div>
+    <div class="step"><div><b>Compact Intelligence Card</b><span>Normal cross-session personalization path; not a transcript summary.</span></div></div>
   </article>
-  <article class="panel warn lane" data-layer="runtime"><h2>🎨 Learning Artifacts</h2>
-    <div class="step"><div><b>Typed Artifact Spec</b><span>AI describes the educational representation, not arbitrary implementation.</span></div></div>
-    <div class="step"><div><b>Reusable renderer</b><span>React/SVG · Motion · JSXGraph · Konva · MathLive.</span></div></div>
-    <div class="step"><div><b>Inline card or Canvas</b><span>Simple inline; complex interaction expands without leaving the session.</span></div></div>
-    <div class="step"><div><b>Meaningful interaction only</b><span>Do not log every click as learning evidence.</span></div></div>
-    <div class="step"><div><b>Fallback safely</b><span>Custom HTML/SVG is fallback; artifact failure never blocks learning.</span></div></div>
+  <article class="panel warn lane" data-layer="runtime"><h2>🎓 Pedagogy & Deferred Capabilities</h2>
+    <div class="step"><div><b>TeachingMode / Strategy / Method</b><span>Separate from Conversation Topic; method selection is not effectiveness Evidence.</span></div></div>
+    <div class="step"><div><b>Learning Artifacts</b><span>Typed renderers remain frozen until their approved gate; artifact failure must never block Tutor conversation.</span></div></div>
+    <div class="step"><div><b>Vision / Voice / Science production</b><span>Still frozen; Context v2 governance does not unfreeze them.</span></div></div>
+    <div class="step"><div><b>Historical archive retrieval</b><span>On-demand future seam only; semantic retrieval was not validated.</span></div></div>
   </article>
 </section>
 
-<section class="panel" style="margin-top:16px">
+<section class="panel section">
   <h2>Implementation Sequence & Mandatory Gate</h2>
   <div class="timeline">
-    <div class="phase"><strong>Foundation</strong><span>Auth, storage, jobs, model gateway, safety, evidence infrastructure.</span></div>
-    <div class="phase"><strong>Track A</strong><span>Zero-book Tutor → structural-first index → advisory semantics → acceptance.</span></div>
-    <div class="phase gate"><strong>REAL LINA CALIBRATION</strong><span>Product Owner browser acceptance completed REC-35.1.</span></div>
-    <div class="phase"><strong>REC-35.2 REVIEW → STABILIZATION TODO v2.1</strong><span>CTX-01, ACT-01, OBS-01, and UI-01 closed; CTX-02 next. Preserve LR-D04A boundaries and A → B → C → D order.</span></div>
-    <div class="phase future"><strong>Track B</strong><span>Trusted Educational Reference pilot; future, not active.</span></div>
-    <div class="phase future"><strong>Phase 5</strong><span>Voice + student images.</span></div>
-    <div class="phase future"><strong>Phase 6</strong><span>Interactive artifacts.</span></div>
-    <div class="phase future"><strong>Phase 7</strong><span>Science.</span></div>
-    <div class="phase future"><strong>Phase 8</strong><span>Retention + proactive.</span></div>
-    <div class="phase future"><strong>Phase 9</strong><span>Grade transition.</span></div>
-    <div class="phase future"><strong>Phase 10</strong><span>Refinement / light gamification / expansion.</span></div>
+    <div class="phase"><strong>Foundation</strong><span>Auth, DB, storage, jobs, Model Gateway, safety, evidence infrastructure.</span></div>
+    <div class="phase approved"><strong>Track A</strong><span>COMPLETE / ACCEPTED: zero-book Tutor, structural-first grounding, advisory semantics.</span></div>
+    <div class="phase approved"><strong>REC-35.1</strong><span>DONE: child interaction calibration and Product Owner browser acceptance.</span></div>
+    <div class="phase approved"><strong>Context v2 Governance</strong><span>APPROVED: Segment = Learning Thread; optional Grade-scoped Durable Conversation Topic; bounded/fresh-session contracts.</span></div>
+    <div class="phase gate"><strong>Stabilization A</strong><span>CTX-01/ACT-01/OBS-01/UI-01 closed. Revised CTX-02 is next; SAFE-01 follows, then targeted manual verification.</span></div>
+    <div class="phase future"><strong>Later</strong><span>B → C → D stabilization; LR-D04B, REC-25, Track B and frozen capabilities remain deferred.</span></div>
   </div>
 </section>
 
 <section class="footer-grid">
   <article class="panel"><h2>Protected Invariants</h2>
-    <div class="rule"><b>Evidence-first:</b> Mastery/confidence are derived views, not source truth.</div>
+    <div class="rule"><b>Evidence-first:</b> mastery/confidence are derived views, not source truth.</div>
     <div class="rule"><b>Current Lina wins:</b> current behavior outranks historical personalization.</div>
-    <div class="rule"><b>Raw source stays:</b> original books and student work are never replaced by AI interpretations.</div>
-    <div class="rule"><b>Grounding ≠ permission:</b> Tutor remains available without a book, source, semantic enrichment, or retrieval match.</div>
-    <div class="rule"><b>Question first:</b> recent context and available sources improve grounding but do not control what Lina may ask now.</div>
-    <div class="rule"><b>Safety is layered:</b> protected baseline cannot be weakened by Parent settings.</div>
-    <div class="rule"><b>Simple runtime:</b> normal Tutor path uses one primary model call; no chain-of-agents by default.</div>
-    <div class="rule"><b>Method evidence:</b> method selection is not effectiveness evidence; only a later observable Lina outcome can be evaluated.</div>
-    <div class="rule"><b>Rebuildable intelligence:</b> derived Events/Evidence/Patterns/Card are versioned and reprocessable.</div>
-    <div class="rule"><b>No premature platform:</b> no microservices, graph infra, generic agent framework, or multi-family SaaS without proof.</div>
+    <div class="rule"><b>Thread means Segment:</b> `thread_id` is the session-local contiguous Learning Thread / Segment; no third Thread entity.</div>
+    <div class="rule"><b>Topic ≠ memory:</b> Durable Conversation Topic is optional Grade-scoped navigation metadata, not Evidence, learner memory, Safety, or curriculum authority.</div>
+    <div class="rule"><b>Fresh Sessions:</b> prior-session raw transcripts are not normal Tutor context; Learner Intelligence/Open Loops carry relevant cross-session state.</div>
+    <div class="rule"><b>Raw source stays:</b> messages, original books, images, and student work remain authoritative; derived interpretations are rebuildable.</div>
+    <div class="rule"><b>Safety is separate:</b> Conversation classification cannot override the Policy Engine or Parent Boundary decision.</div>
+    <div class="rule"><b>Pedagogy is separate:</b> TeachingMode/Strategy/Method are not Conversation Topics; method selection is not effectiveness Evidence.</div>
+    <div class="rule"><b>Question first:</b> RAG and curriculum semantics ground the current question but do not control what Lina may ask.</div>
+    <div class="rule"><b>Simple runtime:</b> one primary Tutor model call; no extra classifier, archive memory service, or agent chain without measured need and approval.</div>
   </article>
   <article class="panel files"><h2>Codex Source-of-Truth Map</h2>
     <code>AGENTS.md — agent rules and protected areas</code>
-    <code>docs/PROJECT_REFERENCE.md — product & architecture truth</code>
+    <code>docs/PROJECT_REFERENCE.md — product & Context v2 architecture truth</code>
     <code>docs/LEARNING_PRODUCT_ROADMAP.md — approved capability tracks and gates</code>
-    <code>docs/LEARNING_INTELLIGENCE_SPEC.md — measurement & intelligence truth</code>
+    <code>docs/LEARNING_INTELLIGENCE_SPEC.md — Evidence / intelligence truth and thread_id mapping</code>
     <code>docs/CHILD_SAFETY_POLICY.md — safety & parent boundaries</code>
-    <code>docs/IMPLEMENTATION_PLAN.md — execution direction and gates</code>
-    <code>project-state/PROJECT_STATE.md — current reality</code>
-    <code>TASKS.md — actual work queue</code>
-    <p style="margin-top:12px">REC-35.2 remains in REVIEW. Stabilization TODO v2.1 is active and CTX-02 is next; do not begin REC-25, LR-D04B, or frozen future capabilities.</p>
+    <code>docs/IMPLEMENTATION_PLAN.md — execution direction, deferred complexity, Context v2 target</code>
+    <code>project-state/PROJECT_STATE.md — current operational reality</code>
+    <code>TASKS.md — actual executable queue; CTX-02 must be separately scoped/approved</code>
+    <p style="margin-top:12px">Current reality: Context v2 is governed but not yet implemented as a new runtime data model. The next action is to define and approve revised CTX-02 as the smallest production slice. Do not start SAFE-01, REC-25, LR-D04B, archive retrieval, or frozen future capabilities first.</p>
   </article>
 </section>
 </div>
@@ -158,7 +178,7 @@ buttons.forEach(btn=>btn.addEventListener('click',()=>{
   const f=btn.dataset.filter;
   layers.forEach(el=>{
     const tokens=(el.dataset.layer||'').split(/\s+/);
-    el.classList.toggle('dim', f!=='all' && !tokens.includes(f) && !(f==='experience'&&tokens.includes('experience')));
+    el.classList.toggle('dim',f!=='all'&&!tokens.includes(f));
   });
 }));
 </script>
