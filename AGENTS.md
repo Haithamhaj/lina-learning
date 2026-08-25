@@ -46,7 +46,10 @@ The following require Product Owner approval before changing their meaning:
 - Raw interaction and original student work preservation.
 - A Learning Thread is the session-local contiguous Conversation Segment; there is no third Thread entity.
 - A Durable Conversation Topic is optional Grade-scoped navigation metadata, never Learner Intelligence, Evidence, curriculum authority, or Safety authority.
-- Conversation classification remains separate from TeachingMode/TeachingStrategy/TeachingMethod, Safety / Parent Boundary categories, and curriculum semantics. Raw messages and original assets remain source authority; normal Tutor turns do not load prior-session raw transcripts.
+- Hybrid Segment Context is conversational continuity only: Current Multimodal Turn, Full Immediate Exchange, compact Structured Segment State, and relevance-selected complete raw Exchanges from the current Segment are separate from Learner Intelligence, Evidence, pedagogy, Safety, and RAG authority. Raw messages and original assets remain source authority.
+- A blind shared character window must not be the authority for conversation selection, and selected Immediate Exchange messages must not be positionally character-sliced. Capacity/token budgets are final guardrails calibrated from real usage, not a relevance algorithm.
+- Do not inject a full Session or prior-session raw transcripts into normal Tutor input. No extra classifier or summarizer model call, archive retrieval, memory service, or CTX-03 runtime work is authorized without measured need and Product Owner approval.
+- Structured Segment State is compact, source-linked, rebuildable conversational metadata only. It cannot become Evidence, Learner Intelligence, personalization, curriculum authority, or a Safety decision.
 - Tutor availability is independent of whether curriculum/book grounding is available; grounding improves the interaction but must not become permission to learn.
 - Retrieval is driven by the current question; school plans and curriculum position do not control what Lina is allowed or expected to ask now.
 - Book and trusted references are grounding sources, not Teaching Authority. The Tutor may change explanation method when useful.
@@ -61,7 +64,7 @@ The following require Product Owner approval before changing their meaning:
 - In the same primary Tutor call, Luna semantically determines the turn-level TeachingMode, TeachingStrategy, TeachingMethod, and relevant prior-method relation. Runtime code validates canonical values, lineage, safety, persistence, and structural consistency; it must not replace semantic understanding with keyword or phrase routing.
 - Selecting a method is not Evidence of effectiveness. Any method identity used by Evidence must come from persisted, project-owned Tutor-turn state, never be invented by Evidence processing.
 - Historical method ranking belongs only to LR-D04B after sufficient Evidence and approval; do not introduce MCP, agents, or infrastructure for this problem without approval.
-- Do not add a separate conversation classifier or archive-retrieval layer without measured evidence and Product Owner approval.
+- Do not add a separate conversation classifier, summarizer, archive-retrieval layer, or memory service without measured evidence and Product Owner approval. CTX-03 is a separate implementation task.
 - Modular Monolith architecture unless scaling evidence justifies a change.
 - Early Lina Calibration Checkpoint before Phase 3 and Real Lina Decision Gate after Phase 4, subject to the currently approved Roadmap sequencing corrections.
 

@@ -656,12 +656,14 @@ Recent conversational/topic context may help follow-up turns such as
 substantive current question must outrank stale context. School plans and
 curriculum position are references, not retrieval or teaching authority.
 
-The approved current-session context principle is bounded and relevance-first:
+The approved current-session **Hybrid Segment Context** principle is structural,
+relevance-first, and bounded only by final capacity guardrails:
 
 ```text
 Current Multimodal Turn
-+ Immediate Bridge
-+ bounded current Learning Thread / Segment context
++ Full Immediate Exchange
++ compact Structured Current Segment State
++ 0..N relevant complete raw Exchanges from the Current Segment
 + latest prior Segment with the same Durable Conversation Topic only when that
   topic resumes inside the current Session
 + relevant Learner Intelligence / Open Loops separately
@@ -672,7 +674,19 @@ Current Multimodal Turn
 Do not automatically load all Session history, all Segments for a Durable
 Conversation Topic, all Grade conversation history, any whole Topic Registry,
 or prior-session raw transcripts. Relevant context outranks raw recency; the
-current Student Turn remains authoritative.
+current Student Turn remains authoritative. Raw history remains preserved
+outside normal Tutor input. Character slicing is not the conversation-selection
+algorithm: if selected context must be reduced, prefer dropping a lower-value
+complete selected Exchange rather than positionally slicing critical raw
+conversation content. Exact token/capacity values are calibrated from real
+usage. Structured Segment State is derived conversational metadata, not learner
+truth, Evidence, or personalization.
+
+The Full Immediate Exchange is the available immediately preceding raw
+conversation in chronological order: previous Student Turn, then previous Tutor
+Turn, followed by the Current Student Turn. When no preceding Student Turn
+exists, preserve the available preceding Tutor Turn only; never invent missing
+context or re-identify message lineage by text.
 
 ## 8.5 Retrieval Is Grounding, Not Teaching Style
 
@@ -1308,6 +1322,15 @@ Session
 
 Thread separation is internal and supports correct evidence/context assignment.
 
+For Hybrid Segment Context, a long active Segment may have a compact,
+source-linked, rebuildable **Structured Segment State** describing only what is
+conversationally necessary, such as an active goal, reference, unresolved point,
+or relevant raw Exchange reference. It is not a free-form learner summary and
+cannot create learner conclusions, Evidence, Current State, Patterns, Learner
+Intelligence, personalization, curriculum authority, or Safety authority. This
+is approved architecture; the production Segment State/runtime assembler remains
+future CTX-03 work.
+
 ## 16.4 Optional Durable Conversation Topics
 
 A **Durable Conversation Topic** is optional, Grade/Grade-Period-scoped
@@ -1569,10 +1592,12 @@ Each AI execution should record enough information to audit usage and quality, i
 
 Having data stored does not mean sending all of it to the model.
 
-Tutor context should contain only the relevant slice of:
+Tutor context should contain only the structurally selected, relevant slice of:
 
 - current interaction,
-- immediate bridge and bounded current Segment / Learning Thread context,
+- full Immediate Exchange and relevant complete current Segment / Learning
+  Thread Exchanges,
+- compact Structured Segment State when that future runtime is implemented,
 - current learning state,
 - relevant recent patterns,
 - relevant stable patterns,
@@ -1590,6 +1615,8 @@ Explicit configurable budgets should limit:
 - optional web/image-generation usage.
 
 Exact values should be tuned from real usage rather than guessed prematurely.
+They are final capacity/cost guardrails, not a positional conversation-selection
+algorithm.
 
 ## 19.3 Cost Dashboard
 

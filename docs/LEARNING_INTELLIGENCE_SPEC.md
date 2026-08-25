@@ -623,6 +623,14 @@ navigation or audit, but it is neither Evidence nor Learner Intelligence and
 cannot create a learner conclusion. It does not directly update Current State,
 Patterns, the Intelligence Card, or personalization.
 
+Likewise, Structured Segment State and conversation retrieval metadata may be
+compact, session-local, source-linked, and rebuildable conversational context.
+They may reference raw messages or complete Exchanges, but are not Candidate
+Evidence, Learning Evidence, Current Learning State, Learner Pattern, or
+Learner Intelligence. They cannot create learner conclusions or bypass the
+protected Raw Interaction → Candidate Event → Validated Learning Event →
+Evidence path.
+
 ## 11.3 Current State Lifecycle
 
 Conceptual lifecycle:

@@ -853,17 +853,15 @@ Effective SafetyDecision
      ↓
 Session / Segment Resolver
      ↓
-Learning Mode / Intent
+Hybrid Segment Context Assembler
+├── Current Multimodal Turn
+├── Full Immediate Exchange
+├── Structured Segment State
+└── Relevant Current-Segment Raw Exchanges
      ↓
-Current Grade / Subject when known
+Separate question-driven RAG / Learner Intelligence / effective Safety inputs
      ↓
-Optional question-driven grounding (may be empty)
-     ↓
-Relevant Current State
-     ↓
-Relevant Learner Intelligence
-     ↓
-Tutor Context Builder
+Final token / capacity guardrail
      ↓
 ONE primary Tutor model call
      ↓
@@ -946,10 +944,37 @@ Candidate Events must not directly become stable learner intelligence.
 
 The Tutor Domain conceptually owns Multimodal Turn context, session-local
 Segment/Learning Thread resolution, optional Grade-scoped Durable Conversation
-Topic resolution, bounded context assembly, and the existing one primary Tutor
-call. A Learning Thread is the contiguous session-local Segment (`thread_id`),
-not a separate third entity. Returning to a topic after an intervening Segment
-creates a new Segment and may reuse its optional `conversation_topic_ref`.
+Topic resolution, Hybrid Segment Context assembly, and the existing one primary
+Tutor call. A Learning Thread is the contiguous session-local Segment
+(`thread_id`), not a separate third entity. Returning to a topic after an
+intervening Segment creates a new Segment and may reuse its optional
+`conversation_topic_ref`.
+
+The approved Hybrid Segment Context shape is:
+
+```text
+Current Multimodal Turn
+        ↓
+Full Immediate Exchange
+        ↓
+Compact Structured Segment State
+        ↓
+0..N relevant complete raw Exchanges from the Current Segment
+        ↓
+Final token / capacity guardrail
+        ↓
+ONE primary Tutor call
+```
+
+Context selection is structural and relevance-first. Capacity/token budgets are
+guardrails calibrated from real usage; they are not a positional character
+slicing algorithm. Selected Immediate Exchange messages remain complete raw
+source messages: previous Student Turn then previous Tutor Turn when both are
+available, or the available Tutor Turn only. If selected conversational context
+must be reduced, drop a lower-value complete selected Exchange rather than
+slicing a critical raw message. Learner Intelligence/Open Loops, question-driven RAG, and the
+effective Safety decision remain separate inputs. The latest prior same-topic
+Segment is eligible only under the approved within-session resume rules.
 
 Durable Conversation Topic is navigation metadata, not Learner Intelligence,
 Evidence, curriculum semantics, a Safety category, or a learner-memory system.
@@ -958,12 +983,15 @@ Raw Interaction → Candidate → Event → Evidence → State/Pattern → Intel
 Card path. Raw messages/assets remain source authority and all derived metadata
 must remain rebuildable.
 
-This direction does not authorize schema/table work. It explicitly defers a
-separate conversation classifier, archive vector index, automatic semantic
-prior-session retrieval, mandatory compact Segment summaries, retro-link
-background job, memory service, and agent chain for conversation routing.
-Historical lookup is an on-demand future seam only, subject to independent
-validation and Product Owner approval.
+This direction does not authorize schema/table work in this document update.
+CTX-03 is the separate future implementation task for production Segment
+runtime, Structured Segment State, relevance-selected current-Segment raw
+Exchange retrieval, and final Hybrid assembly. It explicitly defers a separate
+conversation classifier, extra summarizer model call, archive vector index,
+automatic semantic prior-session retrieval, retro-link background job, memory
+service, and agent chain for conversation routing. Historical lookup is an
+on-demand future seam only, subject to independent validation and Product Owner
+approval.
 
 # 15. Multimodal Input Architecture
 

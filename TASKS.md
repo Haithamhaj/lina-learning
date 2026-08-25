@@ -755,8 +755,9 @@ closed, or used to start REC-25 or LR-D04B.
 | **ACT-01** — Quick Action Source-Context Robustness | 5 | CLOSED | Server-owned suggested-action source context is closed. | S1 original issues complete. |
 | **OBS-01** — Browser / SSE Lifecycle Observability | 4 | CLOSED | Browser/SSE lifecycle trace is closed. | S2 complete. |
 | **UI-01** — Terminal Tutor Turn Leaves UI Sending | 5 | CLOSED | Real S3 browser use completed with no hang and no refresh. | S2 complete. |
-| **CTX-02** — Oversized Immediate Context Drop | 5 | VERIFICATION | Faithful PostgreSQL RED proved the cause; the approved Current Turn + bounded Immediate Bridge + bounded older continuity slice now passes focused and canonical automated validation. Independent/manual browser validation remains required; this is not closed. | First implementation task; distinct from closed CTX-01. |
+| **CTX-02** — Direct Conversation Continuity | 5 | VERIFICATION / FAILED — FIX MODIFICATION REQUIRED | Real-Luna verification proved that the 1,200-character head+tail Immediate Bridge can remove a follow-up-critical middle fact. Correct only exact Current Turn lineage plus Full Immediate Exchange with no positional slicing; Hybrid Segment State/retrieval is not CTX-02 scope. | First implementation task; distinct from closed CTX-01; SAFE-01 follows only after CTX-02 is independently verified. |
 | **SAFE-01** — Hands-on Activity Safety Follow-up | 5 | OPEN | After the flashlight/ball activity, the Student said the light reached their eyes; Tutor did not prioritize the physical-safety cue. Safety must not ultimately depend on fragile conversational memory. | Investigate after CTX-02. |
+| **CTX-03** — Hybrid Segment Context Runtime | 5 | OPEN / ARCHITECTURE APPROVED | Implement session-local Segment runtime, compact Structured Segment State, 0..N relevance-selected complete raw Exchanges from the current Segment, final capacity guardrail, source lineage, observability, and one primary Tutor call. Excludes prior-session archive retrieval, memory service, retro-linking, extra classifier/model call, and historical semantic search. | Start after SAFE-01; then complete final targeted Gate-A manual verification. |
 | **ACT-02** — NAVIGATION vs ANSWER_CHOICE Semantic Misuse | 4 | OPEN | Topic, agency, and support actions must not be classified as observable learning attempts. | Start B after the A manual gate. |
 | **CAND-01** — Confusion / Ambiguity Is Not Misconception | 4 | OPEN / REPRODUCED | A misconception signal requires a specific incorrect mental model; confusion, ambiguity, “why?”, another explanation, or one incorrect answer alone are insufficient. | After ACT-02. |
 | **SCOPE-01** — Science / Explore Inside Math Session | 3 | OPEN / PRODUCT POLICY DECISION REQUIRED | Cross-subject exploration policy is a Product Owner decision, not an engineering decision. | Product Owner decision before SUBJ-01. |
@@ -773,8 +774,8 @@ closed, or used to start REC-25 or LR-D04B.
 
 #### Approved dependency order
 
-1. **A — Conversation & Safety Integrity:** CTX-02 → SAFE-01 → targeted
-   manual verification.
+1. **A — Conversation & Safety Integrity:** CTX-02 → SAFE-01 → CTX-03 →
+   final targeted Gate-A manual verification.
 2. **B — Interaction / Evidence Hygiene:** ACT-02 → CAND-01 → SCOPE-01
    Product Owner decision → SUBJ-01.
 3. **C — Tutor Semantic Calibration:** DEC-01 → DEC-02 → REP-01 → LANG-01
