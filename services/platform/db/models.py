@@ -16,6 +16,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     SmallInteger,
     String,
     Text,
@@ -537,11 +538,40 @@ class LearningSession(Base):
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class LearningSegment(Base):
+    """Contiguous session-local conversation segment; raw messages remain authoritative."""
+
+    __tablename__ = "learning_segments"
+    __table_args__ = (UniqueConstraint("session_id", "sequence", name="uq_learning_segments_session_sequence"),)
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    session_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("learning_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class LearningMessage(Base):
     __tablename__ = "learning_messages"
-    __table_args__ = (Index("ix_learning_messages_session_created", "session_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_learning_messages_session_created", "session_id", "created_at"),
+        Index(
+            "ix_learning_messages_session_segment_created_id",
+            "session_id",
+            "segment_id",
+            "created_at",
+            "id",
+        ),
+    )
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("learning_sessions.id", ondelete="CASCADE"), nullable=False)
+    segment_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("learning_segments.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     role: Mapped[str] = mapped_column(String(16), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     payload: Mapped[dict[str, object]] = mapped_column("metadata", JSONB, nullable=False, default=dict, server_default="{}")
