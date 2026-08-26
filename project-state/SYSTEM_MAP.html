@@ -73,7 +73,7 @@
 </section>
 
 <section class="panel context section" data-layer="context runtime">
-  <span class="status">CTX-03 NEXT · HYBRID ARCHITECTURE APPROVED · RUNTIME NOT YET IMPLEMENTED</span>
+  <span class="status">CTX-03 IN PROGRESS · CTX-03A LINEAGE FOUNDATION AUTHORIZED</span>
   <h2>Conversation Context v2</h2>
   <div class="context-grid">
     <div class="node"><strong>Session</strong><small>Temporary conversational container. New Sessions begin conversationally fresh; prior raw transcripts are not injected by default.</small></div>
@@ -81,7 +81,7 @@
     <div class="node"><strong>Segment = Learning Thread</strong><small>`thread_id` means the session-local contiguous Segment. A meaningful transition starts a new Segment; an old noncontiguous Segment is never reopened.</small></div>
     <div class="node"><strong>Durable Conversation Topic</strong><small>Optional Grade-scoped navigation identity. EPHEMERAL is default; reuse before create; ambiguity must not silently create durable memory.</small></div>
   </div>
-  <p class="arrow-note">Return to an earlier topic inside the same Session → create a new Segment and optionally reuse the same <code>conversation_topic_ref</code>.</p>
+  <p class="arrow-note">Return to an earlier topic inside the same Session → create a new Segment. Normal raw Exchange recall remains Current-Segment-only; an older Segment is never reopened or injected because of topic similarity.</p>
 </section>
 
 <section class="panel context section" data-layer="context runtime intelligence content">
@@ -91,10 +91,9 @@
     <div class="node"><strong>1 · Current Turn</strong><small>Current Lina input is authoritative.</small></div>
     <div class="node"><strong>2 · Full Immediate Exchange</strong><small>Complete previous Student + Tutor raw messages when available; no positional slicing.</small></div>
     <div class="node"><strong>3 · Structured Segment State</strong><small>Compact, source-linked conversational metadata only; CTX-03 runtime is not yet implemented.</small></div>
-    <div class="node"><strong>4 · Relevant Raw Exchanges</strong><small>0..N complete relevance-selected Exchanges from the active Segment; not arbitrary character chunks.</small></div>
-    <div class="node"><strong>5 · Same-topic Resume</strong><small>Latest prior Segment of the same Durable Conversation Topic only when resuming within the current Session.</small></div>
-    <div class="node"><strong>6 · Intelligence / RAG</strong><small>Relevant Learner Intelligence/Open Loops and question-driven grounding enter separately.</small></div>
-    <div class="node"><strong>7 · Safety Decision</strong><small>Effective policy directive remains independent and upstream authority.</small></div>
+    <div class="node"><strong>4 · Recent + Older Raw Exchanges</strong><small>Recent complete Exchanges enter directly; 0..N older complete Exchanges are selected only from the active Segment.</small></div>
+    <div class="node"><strong>5 · Intelligence / RAG</strong><small>Relevant Learner Intelligence/Open Loops and question-driven grounding enter separately.</small></div>
+    <div class="node"><strong>6 · Safety Decision</strong><small>Effective policy directive remains independent and upstream authority.</small></div>
   </div>
   <p class="arrow-note">Final token/capacity guardrail applies after relevance selection. Not loaded automatically: full Session history · all Topic history · prior-session transcripts · archive vector memory.</p>
 </section>
@@ -141,8 +140,8 @@
     <div class="phase"><strong>Foundation</strong><span>Auth, DB, storage, jobs, Model Gateway, safety, evidence infrastructure.</span></div>
     <div class="phase approved"><strong>Track A</strong><span>COMPLETE / ACCEPTED: zero-book Tutor, structural-first grounding, advisory semantics.</span></div>
     <div class="phase approved"><strong>REC-35.1</strong><span>DONE: child interaction calibration and Product Owner browser acceptance.</span></div>
-    <div class="phase approved"><strong>Hybrid Context Governance</strong><span>APPROVED: full Immediate Exchange, Structured Segment State, selected raw Exchanges, and final guardrail. CTX-03 runtime is not implemented.</span></div>
-    <div class="phase gate"><strong>Stabilization A</strong><span>CTX-01/ACT-01/OBS-01/UI-01/CTX-02/SAFE-01 closed. CTX-03 is next, then final targeted manual verification.</span></div>
+    <div class="phase approved"><strong>Hybrid Context Governance</strong><span>APPROVED: Current-Segment-only raw recall, full Immediate Exchange, Structured Segment State, selected raw Exchanges, and final guardrail.</span></div>
+    <div class="phase gate"><strong>Stabilization A</strong><span>CTX-01/ACT-01/OBS-01/UI-01/CTX-02/SAFE-01 closed. CTX-03A lineage foundation is in progress; B–E remain gated.</span></div>
     <div class="phase future"><strong>Later</strong><span>B → C → D stabilization; LR-D04B, REC-25, Track B and frozen capabilities remain deferred.</span></div>
   </div>
 </section>
@@ -169,7 +168,7 @@
     <code>docs/IMPLEMENTATION_PLAN.md — execution direction, deferred complexity, Context v2 target</code>
     <code>project-state/PROJECT_STATE.md — current operational reality</code>
     <code>TASKS.md — actual executable queue; CTX-03 is the next separately scoped task</code>
-    <p style="margin-top:12px">Current reality: Hybrid Segment Context is governed; CTX-02 and SAFE-01 are closed, and CTX-03 is the separately approved but unimplemented runtime. Do not start REC-25, LR-D04B, archive retrieval, or frozen future capabilities first.</p>
+    <p style="margin-top:12px">Current reality: CTX-03A Segment/message lineage is authorized; CTX-03B–E remain separately gated. Do not start REC-25, LR-D04B, archive retrieval, or frozen future capabilities.</p>
   </article>
 </section>
 </div>

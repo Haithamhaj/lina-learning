@@ -821,12 +821,12 @@ unit/lesson/concept/type metadata may improve ranking or navigation when
 available, but is not core candidate eligibility.
 
 The Tutor context builder uses the current Multimodal Turn, immediate bridge,
-and bounded current Learning Thread / Segment context first. The latest prior
-Segment for the same Durable Conversation Topic is eligible only when that
-topic resumes inside the current Session. Learner Intelligence/Open Loops,
-question-driven RAG, and the effective Safety decision are separate inputs.
-Do not automatically load all Session history, all topic history, a Topic
-Registry, prior-session transcripts, or a historical archive.
+and bounded current Learning Thread / Segment context first. Raw Exchange
+recall is limited to the Current Segment: an earlier Segment never enters
+normal context merely because it shares a Durable Conversation Topic. Learner
+Intelligence/Open Loops, question-driven RAG, and the effective Safety decision
+are separate inputs. Do not automatically load all Session history, all topic
+history, a Topic Registry, prior-session transcripts, or a historical archive.
 
 ## 13.3 Retrieval Context Budget
 
@@ -960,8 +960,8 @@ Segment/Learning Thread resolution, optional Grade-scoped Durable Conversation
 Topic resolution, Hybrid Segment Context assembly, and the existing one primary
 Tutor call. A Learning Thread is the contiguous session-local Segment
 (`thread_id`), not a separate third entity. Returning to a topic after an
-intervening Segment creates a new Segment and may reuse its optional
-`conversation_topic_ref`.
+intervening Segment creates a new Segment; normal raw Exchange recall remains
+limited to that Current Segment.
 
 The approved Hybrid Segment Context shape is:
 
@@ -986,8 +986,8 @@ source messages: previous Student Turn then previous Tutor Turn when both are
 available, or the available Tutor Turn only. If selected conversational context
 must be reduced, drop a lower-value complete selected Exchange rather than
 slicing a critical raw message. Learner Intelligence/Open Loops, question-driven RAG, and the
-effective Safety decision remain separate inputs. The latest prior same-topic
-Segment is eligible only under the approved within-session resume rules.
+effective Safety decision remain separate inputs. An earlier Segment is never
+reopened or injected into normal context merely because it shares a topic.
 
 Durable Conversation Topic is navigation metadata, not Learner Intelligence,
 Evidence, curriculum semantics, a Safety category, or a learner-memory system.
@@ -996,15 +996,16 @@ Raw Interaction → Candidate → Event → Evidence → State/Pattern → Intel
 Card path. Raw messages/assets remain source authority and all derived metadata
 must remain rebuildable.
 
-This direction does not authorize schema/table work in this document update.
-CTX-03 is the separate future implementation task for production Segment
-runtime, Structured Segment State, relevance-selected current-Segment raw
-Exchange retrieval, and final Hybrid assembly. It explicitly defers a separate
-conversation classifier, extra summarizer model call, archive vector index,
-automatic semantic prior-session retrieval, retro-link background job, memory
-service, and agent chain for conversation routing. Historical lookup is an
-on-demand future seam only, subject to independent validation and Product Owner
-approval.
+CTX-03A authorizes only durable session-local Segment identity and
+LearningMessage-to-Segment lineage. CTX-03B owns same-primary-Luna Segment
+relation plus compact Structured Segment State; CTX-03C owns recent raw Context
+and lazy Segment-scoped semantic recall of older complete Exchanges; CTX-03D
+owns the final capacity guardrail and observability; CTX-03E owns real-Luna and
+targeted Gate-A verification. CTX-03 explicitly defers a separate conversation
+classifier, extra summarizer model call, archive vector index, automatic
+semantic prior-session retrieval, retro-link background job, memory service,
+and agent chain for conversation routing. Historical lookup is an on-demand
+future seam only, subject to independent validation and Product Owner approval.
 
 # 15. Multimodal Input Architecture
 

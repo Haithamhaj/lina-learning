@@ -757,7 +757,7 @@ closed, or used to start REC-25 or LR-D04B.
 | **UI-01** — Terminal Tutor Turn Leaves UI Sending | 5 | CLOSED | Real S3 browser use completed with no hang and no refresh. | S2 complete. |
 | **CTX-02** — Direct Conversation Continuity | 5 | CLOSED | The failed 1,200-character head+tail mechanism was replaced with Full Immediate Exchange while preserving exact Current Turn lineage. Focused/canonical automated verification and real-Luna beginning, middle, end, and faithful S3-style direct-continuity cases passed; browser verification was unavailable in the isolated worktree but was not required for this faithful backend/context regression. | Closed after independent review. |
 | **SAFE-01** — Hands-on Activity Safety Follow-up | 5 | CLOSED | The rejected deterministic physical-hazard-policy hypothesis remains rejected: hard Product Safety restrictions and Parent Boundaries remain upstream, while open-ended situational safety remains Luna/Tutor semantic behavior. One compact Tutor instruction prioritizes immediate real-world Student safety over continuing ordinary teaching/activity when warranted; SafetyPolicyService semantics, one primary Tutor call, and zero additional classifier/model calls are unchanged. Focused/relevant/canonical automated verification, four real `gpt-5.6-luna` safety situations, four isolated benign controls without material overreaction, and the low-information Immediate-Exchange case passed; independent closure review accepted it. | Closed. CTX-03 is next. |
-| **CTX-03** — Hybrid Segment Context Runtime | 5 | OPEN / ARCHITECTURE APPROVED / NOT IMPLEMENTED | Implement session-local Segment runtime, compact Structured Segment State, 0..N relevance-selected complete raw Exchanges from the current Segment, final capacity guardrail, source lineage, observability, and one primary Tutor call. Excludes prior-session archive retrieval, memory service, retro-linking, extra classifier/model call, and historical semantic search. | Next Gate-A stabilization task; do not start without separate authorization, then complete final targeted Gate-A manual verification. |
+| **CTX-03** — Hybrid Segment Context Runtime | 5 | IN PROGRESS / CTX-03A AUTHORIZED | Current-Segment-only runtime: session-local Segment lineage, compact Structured Segment State, recent raw complete Exchanges, lazy Segment-scoped semantic recall of older complete Exchanges, final capacity guardrail, source lineage, observability, and one primary Tutor call. Excludes prior-Segment raw recall, prior-session archive retrieval, memory service, retro-linking, extra classifier/model call, and historical semantic search. | CTX-03A is authorized; B–E remain separately gated, then targeted Gate-A manual verification. |
 | **ACT-02** — NAVIGATION vs ANSWER_CHOICE Semantic Misuse | 4 | OPEN | Topic, agency, and support actions must not be classified as observable learning attempts. | Start B after the A manual gate. |
 | **CAND-01** — Confusion / Ambiguity Is Not Misconception | 4 | OPEN / REPRODUCED | A misconception signal requires a specific incorrect mental model; confusion, ambiguity, “why?”, another explanation, or one incorrect answer alone are insufficient. | After ACT-02. |
 | **SCOPE-01** — Science / Explore Inside Math Session | 3 | OPEN / PRODUCT POLICY DECISION REQUIRED | Cross-subject exploration policy is a Product Owner decision, not an engineering decision. | Product Owner decision before SUBJ-01. |
@@ -783,6 +783,16 @@ closed, or used to start REC-25 or LR-D04B.
 4. **D — Evidence / Personalization:** EVID-01 → PERS-01.
 5. **E — Independent Product / Platform:** MATH-01 and ID-01 are independent
    from the Evidence critical path and must not reorder A → B → C → D.
+
+#### CTX-03 implementation slices
+
+| Slice | Status | Scope |
+|---|---|---|
+| **CTX-03A** | IN PROGRESS | Segment persistence + LearningMessage lineage foundation only. |
+| **CTX-03B** | NOT IMPLEMENTED | Same-primary-Luna Segment relation + compact Structured Segment State. `UNCERTAIN` creates a new independent Ephemeral Segment without topic, reassignment, merge, or backfill. |
+| **CTX-03C** | NOT IMPLEMENTED | Recent raw complete Exchange context + lazy current-Segment-only semantic recall of older complete Exchanges through existing embedding/pgvector infrastructure. |
+| **CTX-03D** | NOT IMPLEMENTED | Final capacity guardrail + private context lineage/observability. |
+| **CTX-03E** | NOT IMPLEMENTED | Real-Luna + targeted Gate-A verification. |
 
 #### Lifecycle and protected successful behavior
 

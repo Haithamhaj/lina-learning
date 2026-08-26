@@ -683,23 +683,23 @@ Current Multimodal Turn
 + Full Immediate Exchange
 + compact Structured Current Segment State
 + 0..N relevant complete raw Exchanges from the Current Segment
-+ latest prior Segment with the same Durable Conversation Topic only when that
-  topic resumes inside the current Session
 + relevant Learner Intelligence / Open Loops separately
 + question-driven RAG / curriculum grounding separately
 + effective Safety policy decision separately
 ```
 
-Do not automatically load all Session history, all Segments for a Durable
-Conversation Topic, all Grade conversation history, any whole Topic Registry,
-or prior-session raw transcripts. Relevant context outranks raw recency; the
-current Student Turn remains authoritative. Raw history remains preserved
-outside normal Tutor input. Character slicing is not the conversation-selection
-algorithm: if selected context must be reduced, prefer dropping a lower-value
-complete selected Exchange rather than positionally slicing critical raw
-conversation content. Exact token/capacity values are calibrated from real
-usage. Structured Segment State is derived conversational metadata, not learner
-truth, Evidence, or personalization.
+Do not automatically load all Session history, any earlier Segment merely
+because it shares a Durable Conversation Topic, all Grade conversation history,
+any whole Topic Registry, or prior-session raw transcripts. Returning to an
+earlier idea after an intervening Segment creates a new Segment; normal context
+recall remains limited to that Current Segment. Relevant context outranks raw
+recency; the current Student Turn remains authoritative. Raw history remains
+preserved outside normal Tutor input. Character slicing is not the
+conversation-selection algorithm: if selected context must be reduced, prefer
+dropping a lower-value complete selected Exchange rather than positionally
+slicing critical raw conversation content. Exact token/capacity values are
+calibrated from real usage. Structured Segment State is derived conversational
+metadata, not learner truth, Evidence, or personalization.
 
 The Full Immediate Exchange is the available immediately preceding raw
 conversation in chronological order: previous Student Turn, then previous Tutor
@@ -1382,12 +1382,13 @@ New-Segment Topic: EPHEMERAL | REUSE_EXISTING_TOPIC |
                    CREATE_DURABLE_TOPIC | UNCERTAIN
 ```
 
-`UNCERTAIN` means do not silently guess. A natural clarification is permitted
-when it matters. No separate classifier/model call is a governing requirement;
-the preferred normal architecture remains no extra model call unless measured
-evidence and Product Owner approval justify one. An older Ephemeral Segment may
-later receive a clearly supported topic link, but no retro-link job or automatic
-mass backfill is approved.
+`UNCERTAIN` creates a new independent Ephemeral Segment: it has no
+`conversation_topic_ref`, does not attach the exchange to the prior active
+Segment, and never triggers deferred reassignment, retroactive merge, or
+backfill. A natural clarification is permitted when it matters. No separate
+classifier/model call is a governing requirement; the preferred normal
+architecture remains no extra model call unless measured evidence and Product
+Owner approval justify one.
 
 ## 16.5 Historical Lookup Is On-Demand and Deferred
 

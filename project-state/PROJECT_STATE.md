@@ -2,7 +2,7 @@
 
 ## Current goal
 
-Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Student Core Profile is an APPROVED FUTURE FOUNDATION, not implemented, and belongs to future TASK-027A. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory Lina Stabilization Gate. CTX-01, ACT-01, OBS-01, UI-01, CTX-02, and SAFE-01 are CLOSED. CTX-03 is the next Gate-A stabilization task: OPEN / ARCHITECTURE APPROVED / NOT IMPLEMENTED. LR-D04B remains deferred and REC-25 remains BLOCKED.
+Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Student Core Profile is an APPROVED FUTURE FOUNDATION, not implemented, and belongs to future TASK-027A. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory Lina Stabilization Gate. CTX-01, ACT-01, OBS-01, UI-01, CTX-02, and SAFE-01 are CLOSED. CTX-03 is IN PROGRESS for the authorized CTX-03A Segment persistence and LearningMessage-lineage foundation only. LR-D04B remains deferred and REC-25 remains BLOCKED.
 
 ## Current reality
 
@@ -16,13 +16,13 @@ Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Stu
   - Learning Thread = session-local contiguous Segment (`thread_id`), with no third Thread entity;
   - Segments are EPHEMERAL by default;
   - optional Durable Conversation Topics are Grade-scoped navigation metadata only;
-  - returning to a topic after an intervening Segment creates a new Segment that may reuse the same `conversation_topic_ref`;
-  - context is structural and relevance-first: Current Multimodal Turn + Full Immediate Exchange + compact Structured Segment State + 0..N relevant complete raw Exchanges from the current Segment, with the latest prior same-topic Segment eligible only for within-session resume;
+  - returning to a topic after an intervening Segment creates a new Segment; normal raw Exchange recall never reopens or injects an earlier Segment merely because it shares a topic;
+  - context is structural and relevance-first: Current Multimodal Turn + Full Immediate Exchange + compact Structured Segment State + recent complete Exchanges + 0..N semantically relevant older complete raw Exchanges from the current Segment only;
   - a new Session begins conversationally fresh; prior raw transcripts are not injected by default;
   - historical conversation lookup remains an on-demand future seam; automatic semantic archive retrieval/vector indexing is not approved.
 - Conversation metadata is explicitly separate from personalization, Evidence, TeachingMode/TeachingStrategy/TeachingMethod, Safety / Parent Boundary classification, and curriculum/RAG semantics.
 - Personalization remains governed only by Raw Interaction → Candidate Event → Validated Learning Event → Evidence → Current State/Patterns → Learner Intelligence Card; current Lina behavior outranks history.
-- CTX-03 is the next Gate-A stabilization task for Segment runtime, Structured Segment State, relevance-selected complete current-Segment Exchanges, and a final capacity guardrail. It remains OPEN / ARCHITECTURE APPROVED / NOT IMPLEMENTED: no Context v2 DB tables, separate classifier, archive vector index, retro-link job, memory service, agent chain, or extra normal-turn model call has been authorized or implemented.
+- CTX-03A is authorized and IN PROGRESS for durable session-local Segment identity, deterministic within-Session sequence, and nullable LearningMessage lineage only. CTX-03B–E remain NOT IMPLEMENTED: same-call Segment relation/State, recent/raw semantic recall, capacity/observability, and real-Luna Gate-A verification remain separately scoped.
 - CTX-02 is CLOSED after replacing the failed 1,200-character head+tail Immediate Bridge with Full Immediate Exchange while preserving exact Current Turn lineage. Focused/canonical automated verification and real-Luna beginning, middle, end, and faithful S3-style direct-continuity cases passed. Browser verification was unavailable in the isolated worktree but was not required to prove this faithful backend/context regression.
 - Student Core Profile is an approved future Parent-owned factual foundation: identity, date of birth where supplied with runtime-derived age, and active Grade / GradePeriod linkage. It remains separate from Learner Intelligence, Evidence, Conversation Context, and Safety, and future TASK-027A owns implementation. Current approximately-10-year-old Tutor wording is a temporary Lina-first assumption; no runtime change is authorized now.
 - SAFE-01 is CLOSED after independent review. The rejected deterministic physical-hazard-policy hypothesis remains rejected: hard Product Safety restrictions and Parent Boundaries remain upstream, while open-ended situational safety remains Luna/Tutor semantic behavior. One compact Tutor instruction makes immediate real-world Student safety outrank continuing ordinary teaching/activity when warranted; SafetyPolicyService semantics, one primary Tutor call, and zero added classifier/model calls remain unchanged. Focused/relevant/canonical automated verification, four real `gpt-5.6-luna` safety situations, four isolated benign controls without material overreaction, and a low-information Immediate-Exchange case passed.
@@ -36,11 +36,13 @@ Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Stu
 - Learning Thread means the session-local Conversation Segment.
 - Durable Conversation Topic is optional Grade-scoped navigation metadata, not learner memory or Evidence authority.
 - EPHEMERAL is the default; reuse an existing durable topic before creating a new one; ambiguity should not silently create durable memory.
+- `UNCERTAIN` will create a new independent Ephemeral Segment without a topic, reassignment, merge, or backfill; CTX-03B owns that behavior, not CTX-03A.
+- Normal raw Exchange recall is Current-Segment-only. CTX-03C will use a small direct recent-Exchange slice plus lazy state-reference/vector recall of older complete Exchanges; it will not retrieve an earlier Segment because of topic similarity.
 - Conversation context, pedagogy classifications, Safety classification, curriculum concepts, and Learning Intelligence are separate authorities.
 - New Sessions are conversationally fresh. Learner Intelligence / Current State / relevant Open Loops provide normal cross-session personalization, not prior raw transcripts.
 - Historical archive lookup is on-demand and deferred until independently validated; no automatic semantic retrieval is approved.
 - No separate normal-turn conversation classifier is approved; the executor remains replaceable and any extra model call requires measured need and Product Owner approval.
-- Structured Segment State/runtime retrieval, automatic retro-linking, archive retrieval, memory service, and extra classifier/summarizer model calls remain deferred until CTX-03 is separately implemented and real usage demonstrates value.
+- CTX-03B–E remain deferred: Structured Segment State, automatic semantic turn relation, temporary semantic recall, final guardrail/observability, and real-Luna verification. Archive retrieval, automatic retro-linking, memory service, and extra classifier/summarizer model calls remain deferred.
 - Stabilization order remains CTX-02 CLOSED → SAFE-01 CLOSED → CTX-03 NEXT → final targeted Gate-A manual verification, then B → C → D. SCOPE-01 remains a Product Owner decision gate before SUBJ-01.
 
 ## Protected areas
@@ -49,7 +51,7 @@ Event → Evidence → State/Pattern → Learner Intelligence Card; current beha
 
 ## Active risks
 
-- CTX-03 is the next Criticality 5 Gate-A task, architecture-approved but not implemented. Its approved scope must remain separate from archive retrieval, memory service, extra classifier/model calls, and other frozen work.
+- CTX-03A must stay limited to schema/model/helper/test lineage foundation. CTX-03B–E, archive retrieval, memory service, extra classifier/model calls, and other frozen work remain outside its scope.
 - ACT-02, CAND-01, SCOPE-01/SUBJ-01, DEC-01/DEC-02, REP-01, LANG-01, and CAND-02 remain open in the approved order.
 - EVID-01 still has an unknown session-evidence HTTPError root cause; PERS-01 remains blocked until trustworthy Evidence exists.
 - Historical semantic archive retrieval is unvalidated and must not be treated as a production capability.
@@ -57,7 +59,7 @@ Event → Evidence → State/Pattern → Learner Intelligence Card; current beha
 
 ## Next recommended action
 
-CTX-03 — Hybrid Segment Context Runtime is next. Do not begin it in this status-only commit or begin ACT-02, REC-25, LR-D04B, archive retrieval, or frozen future capabilities. TASK-027A remains future/blocked.
+Complete and independently review CTX-03A, then begin CTX-03B only with separate authorization. Do not begin CTX-03C–E, ACT-02, REC-25, LR-D04B, archive retrieval, or frozen future capabilities. TASK-027A remains future/blocked.
 
 ## Critical references
 
