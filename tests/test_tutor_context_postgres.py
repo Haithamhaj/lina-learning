@@ -398,7 +398,7 @@ def test_model_input_keeps_immediate_tutor_question_for_opaque_answer(
         payload = build_tutor_model_payload(
             question=context.question,
             immediate_exchange=[
-                {"role": message.role, "content": message.content}
+                {"message_id": str(message.message_id), "role": message.role, "content": message.content}
                 for message in context.immediate_exchange
             ],
             session_messages=[

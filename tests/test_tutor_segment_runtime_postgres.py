@@ -136,12 +136,13 @@ class _FailingProvider:
 
 def _output(
     *,
+    text: str = "Try one small step.",
     relation: object = _MISSING,
     state: object = _MISSING,
     suggested_actions: object = _MISSING,
 ) -> dict[str, object]:
     output: dict[str, object] = {
-        "text": "Try one small step.",
+        "text": text,
         "suggested_actions": [] if suggested_actions is _MISSING else suggested_actions,
         "teaching_mode": None,
         "teaching_strategy": None,
@@ -160,9 +161,9 @@ def _state(payload: dict[str, object], *, goal: str = "Compare equivalent fracti
     return {
         "schema_version": SEGMENT_STATE_SCHEMA_VERSION,
         "active_goal": goal,
-        "unresolved_point": "Why do 1/2 and 2/4 match?",
-        "active_references": ["fraction bars"],
-        "established_facts": ["1/2 equals 2/4"],
+        "unresolved_point": "The Student's current question remains open.",
+        "active_references": [],
+        "established_facts": [],
         "source_message_ids": [payload["candidate_source_message_id"]],
         **extra,
     }
@@ -353,8 +354,8 @@ def test_state_rejects_extra_learner_profile_fields_without_losing_valid_tutor_t
         assert student.payload["conversation"]["state_status"] == "invalid"
 
 
-def test_latest_valid_state_enters_same_primary_call_without_changing_immediate_exchange(factory: sessionmaker[Session]) -> None:
-    """Catches loss of the CTX-02 bridge or absence of the minimal State update seam."""
+def test_latest_valid_state_enters_same_primary_call_with_exact_immediate_lineage(factory: sessionmaker[Session]) -> None:
+    """Catches CTX-02 bridge content being preserved while its exact raw lineage is dropped."""
 
     with factory.begin() as session:
         learning_session = _learning_session(session)
@@ -376,10 +377,146 @@ def test_latest_valid_state_enters_same_primary_call_without_changing_immediate_
         list(runtime.stream_turn(learning_session=learning_session, question="Continue fractions."))
         payload = provider.calls[-1]
 
-        assert "Immediate exchange:\nstudent: Start fractions.\ntutor: Try one small step." in str(payload["input"])
+        assert f"student message [{first_student.id}]:\nStart fractions." in str(payload["input"])
+        assert f"tutor message [{first_tutor.id}]:\nTry one small step." in str(payload["input"])
         assert "Latest confirmed Segment State" in str(payload["input"])
         assert "Fractions" in str(payload["input"])
         assert len(provider.calls) == 2
+
+
+def test_state_can_cite_exact_prior_tutor_and_repeated_student_ids(factory: sessionmaker[Session]) -> None:
+    """Catches state lineage that cannot distinguish two identical raw messages by their persisted IDs."""
+
+    with factory.begin() as session:
+        learning_session = _learning_session(session)
+        provider = _ScriptedProvider([
+            lambda _: _output(text="One half is the same as two fourths.", relation="NEW_SEGMENT", state=None),
+            lambda payload: _output(
+                relation="CONTINUE",
+                state={
+                    "schema_version": SEGMENT_STATE_SCHEMA_VERSION,
+                    "active_goal": "Continue equivalent fractions",
+                    "unresolved_point": None,
+                    "active_references": [],
+                    "established_facts": ["One half is the same as two fourths."],
+                    "source_message_ids": [
+                        str(first_student.id),
+                        str(first_tutor.id),
+                        payload["candidate_source_message_id"],
+                    ],
+                },
+            ),
+        ])
+        runtime, _ = _runtime(session, provider)
+        list(runtime.stream_turn(learning_session=learning_session, question="same words"))
+        first_student, first_tutor = _messages(session, learning_session)
+        context = _ContextBuilder(
+            immediate_exchange=(
+                SessionContextMessage(first_student.id, "student", first_student.content),
+                SessionContextMessage(first_tutor.id, "tutor", first_tutor.content),
+            )
+        )
+        runtime, _ = _runtime(session, provider, context_builder=context)
+
+        list(runtime.stream_turn(learning_session=learning_session, question="same words"))
+        current_student = _messages(session, learning_session)[2]
+        segment = session.scalar(select(LearningSegment).where(LearningSegment.session_id == learning_session.id))
+        payload = provider.calls[-1]
+
+        assert segment is not None
+        assert first_student.id != current_student.id
+        assert f"student message [{first_student.id}]:\nsame words" in str(payload["input"])
+        assert f"tutor message [{first_tutor.id}]:\nOne half is the same as two fourths." in str(payload["input"])
+        assert f"Current Student raw source ID: [{current_student.id}]" in str(payload["input"])
+        assert segment.structured_state["source_message_ids"] == [
+            str(first_student.id),
+            str(first_tutor.id),
+            str(current_student.id),
+        ]
+
+
+def test_state_rejects_an_invented_source_id_without_losing_tutor_text(factory: sessionmaker[Session]) -> None:
+    """Catches a fabricated raw identifier being accepted as Segment State provenance."""
+
+    with factory.begin() as session:
+        learning_session = _learning_session(session)
+
+        def invented_source(payload: dict[str, object]) -> dict[str, object]:
+            return _output(
+                relation="NEW_SEGMENT",
+                state={
+                    "schema_version": SEGMENT_STATE_SCHEMA_VERSION,
+                    "active_goal": "Must not persist",
+                    "unresolved_point": None,
+                    "active_references": [],
+                    "established_facts": [],
+                    "source_message_ids": [str(uuid4())],
+                },
+            )
+
+        runtime, _ = _runtime(session, _ScriptedProvider([invented_source]))
+        turn = list(runtime.stream_turn(learning_session=learning_session, question="A valid answer remains."))[-1]
+        segment = session.scalar(select(LearningSegment).where(LearningSegment.session_id == learning_session.id))
+        student, _ = _messages(session, learning_session)
+
+        assert isinstance(turn, TutorTurn)
+        assert segment is not None and segment.structured_state is None
+        assert student.payload["conversation"]["state_status"] == "invalid"
+
+
+def test_state_rejects_same_segment_source_not_exposed_to_this_call(factory: sessionmaker[Session]) -> None:
+    """Catches State provenance citing arbitrary older Segment history rather than visible raw lineage."""
+
+    with factory.begin() as session:
+        learning_session = _learning_session(session)
+        provider = _ScriptedProvider([
+            lambda payload: _output(relation="NEW_SEGMENT", state=_state(payload, goal="First orientation")),
+            lambda payload: _output(relation="CONTINUE", state=_state(payload, goal="Second orientation")),
+            lambda _: _output(
+                relation="CONTINUE",
+                state={
+                    "schema_version": SEGMENT_STATE_SCHEMA_VERSION,
+                    "active_goal": "Must not use hidden old history",
+                    "unresolved_point": None,
+                    "active_references": [],
+                    "established_facts": [],
+                    "source_message_ids": [str(first_tutor.id)],
+                },
+            ),
+        ])
+        runtime, _ = _runtime(session, provider)
+        list(runtime.stream_turn(learning_session=learning_session, question="first question"))
+        first_student, first_tutor = _messages(session, learning_session)
+        runtime, _ = _runtime(
+            session,
+            provider,
+            context_builder=_ContextBuilder(
+                immediate_exchange=(
+                    SessionContextMessage(first_student.id, "student", first_student.content),
+                    SessionContextMessage(first_tutor.id, "tutor", first_tutor.content),
+                )
+            ),
+        )
+        list(runtime.stream_turn(learning_session=learning_session, question="second question"))
+        second_student, second_tutor = _messages(session, learning_session)[2:]
+        runtime, _ = _runtime(
+            session,
+            provider,
+            context_builder=_ContextBuilder(
+                immediate_exchange=(
+                    SessionContextMessage(second_student.id, "student", second_student.content),
+                    SessionContextMessage(second_tutor.id, "tutor", second_tutor.content),
+                )
+            ),
+        )
+
+        list(runtime.stream_turn(learning_session=learning_session, question="third question"))
+        segment = session.scalar(select(LearningSegment).where(LearningSegment.session_id == learning_session.id))
+        current_student = _messages(session, learning_session)[4]
+
+        assert segment is not None
+        assert current_student.payload["conversation"]["state_status"] == "invalid"
+        assert segment.structured_state["active_goal"] == "Second orientation"
 
 
 def test_failed_stream_keeps_raw_student_unsegmented_and_creates_no_tutor_exchange(factory: sessionmaker[Session]) -> None:
