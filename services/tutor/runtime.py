@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
 import json
+import logging
 from uuid import UUID
 
 from sqlalchemy import select
@@ -25,6 +26,11 @@ from services.platform.config import get_settings
 from services.platform.db.models import CandidateEvent, LearningMessage, LearningSegment, LearningSession, ModelTask
 from services.platform.safety import ParentBoundaryResolution, SafetyAction, SafetyPolicyService
 from services.retrieval.service import RetrievalService
+from services.tutor.capacity import (
+    TutorContextCapacityExceeded,
+    TutorContextCapacityLineage,
+    apply_context_capacity_guardrail,
+)
 from services.tutor.context import SessionContextMessage, TutorContext, TutorContextBuilder
 from services.tutor.candidate_events import (
     CandidateEventContractError,
@@ -75,6 +81,7 @@ from services.tutor.teaching_methods import (
 
 
 SUGGESTED_ACTION_SOURCE_CONTEXT_CHARACTERS = 4000
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -330,17 +337,30 @@ class TutorRuntime:
             self._session,
             segment=latest_segment,
         )
-        payload = _payload_from_context(
-            context,
-            safety=safety,
-            candidate_source_message_id=student_message.id,
-            prior_method=prior_method,
-            suggested_action_source=suggested_action_source,
-            latest_segment_state=latest_segment_state,
-            effective_parent_boundaries=self._effective_parent_boundaries(
-                student_id=learning_session.student_id,
-            ),
-        )
+        effective_parent_boundaries = self._effective_parent_boundaries(student_id=learning_session.student_id)
+        try:
+            guarded = apply_context_capacity_guardrail(
+                context,
+                capacity_limit=get_settings().tutor_context_capacity,
+                payload_builder=lambda selected: _payload_from_context(
+                    selected,
+                    safety=safety,
+                    candidate_source_message_id=student_message.id,
+                    prior_method=prior_method,
+                    suggested_action_source=suggested_action_source,
+                    latest_segment_state=latest_segment_state,
+                    effective_parent_boundaries=effective_parent_boundaries,
+                ),
+            )
+        except TutorContextCapacityExceeded as error:
+            logger.warning(
+                "Tutor context capacity exceeded before the primary model call.",
+                extra={"tutor_context_capacity": error.lineage.as_metadata()},
+            )
+            raise
+        context = guarded.context
+        payload = guarded.payload
+        capacity_lineage = guarded.lineage
         model_stream = self._gateway.stream(
             ModelTask.TUTOR,
             payload,
@@ -395,6 +415,7 @@ class TutorRuntime:
                     prior_segment_state=latest_segment_state,
                     parent_decision=parent_decision,
                     parent_resolution=parent_resolution,
+                    capacity_lineage=capacity_lineage,
                 )
             raise
         except Exception as error:
@@ -421,6 +442,7 @@ class TutorRuntime:
             prior_segment_state=latest_segment_state,
             parent_decision=parent_decision,
             parent_resolution=parent_resolution,
+            capacity_lineage=capacity_lineage,
         )
         for buffered in deferred_deltas:
             yield TutorTextDelta(buffered)
@@ -455,6 +477,7 @@ class TutorRuntime:
         prior_segment_state: StructuredSegmentState | None,
         parent_decision: ParentBoundaryDecision | None = None,
         parent_resolution: ParentBoundaryResolution | None = None,
+        capacity_lineage: TutorContextCapacityLineage | None = None,
     ) -> TutorTurn:
         if parent_resolution is None:
             parent_decision = parse_parent_boundary_decision(result.output.get("parent_boundary"))
@@ -511,6 +534,7 @@ class TutorRuntime:
                 ai_execution_id=result.execution_id,
                 segment_id=resolved_segment.segment.id,
                 parent_boundary=parent_audit,
+                capacity_lineage=capacity_lineage,
             )
             if state is not None:
                 resolved_segment.segment.structured_state = state.model_dump(mode="json")
@@ -546,6 +570,7 @@ class TutorRuntime:
             ai_execution_id=result.execution_id,
             segment_id=resolved_segment.segment.id,
             parent_boundary=parent_audit,
+            capacity_lineage=capacity_lineage,
         )
         if state is not None:
             resolved_segment.segment.structured_state = state.model_dump(mode="json")
@@ -756,6 +781,7 @@ class TutorRuntime:
         ai_execution_id: UUID | None = None,
         segment_id: UUID | None = None,
         parent_boundary: dict[str, object] | None = None,
+        capacity_lineage: TutorContextCapacityLineage | None = None,
     ) -> TutorTurn:
         sources = _source_metadata(context)
         intelligence = [item.text for item in context.intelligence] if context else []
@@ -779,6 +805,8 @@ class TutorRuntime:
             payload["candidate_metadata_error"] = candidate_metadata_error
         if parent_boundary is not None:
             payload["parent_boundary"] = parent_boundary
+        if capacity_lineage is not None:
+            payload["context_capacity"] = capacity_lineage.as_metadata()
         if context is not None:
             payload["context_debug"] = {
                 "current_turn_message_id": (

@@ -22,6 +22,9 @@ from services.platform.db.models import (
     ContentProcessingRun,
     ContentSemanticProcessingRun,
     LearningMessage,
+    LearningEvidence,
+    LearningEvent,
+    LearnerIntelligenceCard,
     LearningSession,
     Student,
     User,
@@ -32,6 +35,7 @@ from services.model_gateway.gateway import ModelGateway, ModelRoute, StreamDelta
 from services.platform.db.models import ModelTask
 from services.platform.safety import SafetyPolicyService
 from services.retrieval.service import RetrievalService
+from services.tutor.capacity import TutorContextCapacityExceeded, TutorContextCapacityLineage
 from services.tutor.context import TutorContextBuilder
 from services.tutor.candidate_events import SuggestedAction
 from services.tutor.runtime import TutorRuntime, TutorTextDelta, TutorTurn
@@ -191,6 +195,28 @@ class _CommittedTurnFixtureRuntime:
         self._session.flush()
         yield TutorTextDelta("Tutor reply")
         yield TutorTurn("Tutor reply", [action], [], [], None, None, {})
+
+
+class _CapacityFailureFixtureRuntime:
+    """Model no-call failure after the raw Student turn has been accepted."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def stream_turn(self, *, learning_session: LearningSession, question: str, **_: object):
+        self._session.add(LearningMessage(session_id=learning_session.id, role="student", content=question))
+        self._session.flush()
+        raise TutorContextCapacityExceeded(
+            TutorContextCapacityLineage(
+                capacity_limit=1,
+                initial_measured_size=2,
+                final_measured_size=2,
+                selected_context={},
+                kept_context={},
+                dropped_context=(),
+            )
+        )
+        yield  # pragma: no cover - makes this a generator fixture
 
 
 def test_authenticated_student_with_zero_content_starts_and_resumes_one_open_math_session(
@@ -388,6 +414,45 @@ def test_failed_stream_keeps_the_student_message_and_failure_ledger_without_part
         assert execution.operation_type == "tutor_turn"
         assert session.query(CandidateEvent).filter_by(session_id=session_id).count() == 0
         assert session.get(LearningSession, session_id).status == "OPEN"
+
+
+def test_capacity_failure_keeps_the_accepted_student_turn_without_a_model_execution(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Catches capacity overflow rolling back a raw turn or fabricating a failed Tutor execution."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-one")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    from apps.api.routes import student as student_routes
+
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _CapacityFailureFixtureRuntime)
+    client = _client(postgres_session_factory, subject="student-one", raise_server_exceptions=False)
+    try:
+        response = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": "I need help with a very long question."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert "event: turn" not in response.text
+    with postgres_session_factory() as session:
+        messages = session.query(LearningMessage).filter_by(session_id=session_id).all()
+        assert [(message.role, message.content) for message in messages] == [
+            ("student", "I need help with a very long question."),
+        ]
+        assert session.query(AIExecution).filter_by(task="tutor").count() == 0
+        assert session.query(CandidateEvent).filter_by(session_id=session_id).count() == 0
+        assert session.query(LearningEvent).filter_by(session_id=session_id).count() == 0
+        assert session.query(LearningEvidence).count() == 0
+        assert session.query(LearnerIntelligenceCard).filter_by(student_id=student.id).count() == 0
 
 
 def test_terminal_turn_is_emitted_only_after_its_suggested_action_source_is_committed(

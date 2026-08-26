@@ -31,6 +31,22 @@ def test_tutor_output_ceiling_reads_a_positive_environment_override(
     assert settings.tutor_max_output_tokens == 2400
 
 
+def test_tutor_context_capacity_reads_a_positive_server_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TUTOR_CONTEXT_CAPACITY", "64001")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.tutor_context_capacity == 64001
+
+
+@pytest.mark.parametrize("value", [0, -1])
+def test_tutor_context_capacity_rejects_non_positive_values(value: int) -> None:
+    with pytest.raises(ValidationError, match="tutor_context_capacity"):
+        Settings(_env_file=None, tutor_context_capacity=value)
+
+
 @pytest.mark.parametrize("value", [0, -1])
 def test_tutor_output_ceiling_rejects_non_positive_values(value: int) -> None:
     with pytest.raises(ValidationError, match="tutor_max_output_tokens"):

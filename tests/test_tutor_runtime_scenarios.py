@@ -13,6 +13,7 @@ from services.platform.db.models import CandidateEvent, LearningMessage, ModelTa
 from services.platform.safety import ParentBoundaryResolution, SafetyAction, SafetyDecision
 from services.retrieval.service import RetrievedBlock
 from services.tutor.context import SessionContextMessage, TutorContext, TutorContextDebug
+from services.tutor.capacity import TutorContextCapacityExceeded
 from services.tutor.runtime import TutorRuntime, TutorTextDelta, TutorTurn, _compose_parent_redirect
 from services.tutor.teaching_decisions import PriorMethodRelation, TeachingMode, TeachingStrategy
 from services.tutor.parent_boundaries import (
@@ -200,6 +201,52 @@ def test_allow_turn_sends_situational_safety_guidance_in_its_one_tutor_call() ->
     assert events[-1].safety["action"] == SafetyAction.ALLOW.value
     assert provider.calls == 1
     assert "immediate real-world safety" in str(provider.payloads[0]["instructions"])
+
+
+def test_protected_context_capacity_overflow_skips_the_primary_model_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Catches a pre-Luna overflow that still starts streaming or fabricates a Tutor reply."""
+
+    runtime, _, provider, session = _runtime(_decision())
+    monkeypatch.setattr(
+        "services.tutor.runtime.get_settings",
+        lambda: SimpleNamespace(tutor_context_capacity=1, tutor_max_output_tokens=2000),
+    )
+
+    with pytest.raises(TutorContextCapacityExceeded):
+        list(runtime.stream_turn(
+            learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+            question="Explain equivalent fractions.",
+        ))
+
+    assert provider.calls == 0
+    assert [row.role for row in session.rows if isinstance(row, LearningMessage)] == ["student"]
+
+
+def test_successful_tutor_turn_persists_private_capacity_lineage(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Catches lost capacity audit data or raw prompt text being persisted as lineage."""
+
+    runtime, _, provider, session = _runtime(_decision())
+    monkeypatch.setattr(
+        "services.tutor.runtime.get_settings",
+        lambda: SimpleNamespace(tutor_context_capacity=1_000_000, tutor_max_output_tokens=2000),
+    )
+
+    list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        question="Explain equivalent fractions.",
+    ))
+
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    capacity = tutor_message.payload["context_capacity"]
+    assert provider.calls == 1
+    assert capacity["capacity_policy_version"] == "tutor-context-capacity-v1"
+    assert capacity["initial_measured_size"] == capacity["final_measured_size"]
+    assert "Equivalent fractions name the same amount." not in str(capacity)
+    assert "Explain equivalent fractions." not in str(capacity)
 
 
 def test_all_null_luna_decision_persists_no_fictional_teaching_classification() -> None:

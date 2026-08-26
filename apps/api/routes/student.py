@@ -26,6 +26,7 @@ from services.tutor.student_sessions import (
     student_for_authenticated_subject,
 )
 from services.tutor.runtime import TutorModelStreamFailure, TutorTextDelta, TutorTurn, create_tutor_runtime
+from services.tutor.capacity import TutorContextCapacityExceeded
 
 
 router = APIRouter(prefix="/api/v1/student", tags=["student"])
@@ -196,7 +197,7 @@ def stream_math_tutor_turn(
             if not committed:
                 stream_session.commit()
             raise
-        except TutorModelStreamFailure:
+        except (TutorModelStreamFailure, TutorContextCapacityExceeded):
             stream_session.commit()
             raise
         except Exception:
