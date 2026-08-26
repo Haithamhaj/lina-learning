@@ -15,6 +15,7 @@ from services.model_gateway.gateway import (
     ModelStreamEvent,
     StreamComplete,
     StreamDelta,
+    StreamParentBoundaryDecision,
 )
 
 
@@ -87,6 +88,11 @@ class OpenAIResponsesProvider:
         )
         parts: list[str] = []
         text_extractor = _StructuredTutorTextExtractor() if _has_response_schema(payload) else None
+        parent_boundary_extractor = (
+            _StructuredObjectFieldExtractor("parent_boundary")
+            if _has_parent_boundary_field(payload)
+            else None
+        )
         with self._request_sender(request, timeout=self._timeout_seconds) as response:
             for raw_line in response:
                 line = raw_line.decode().strip() if isinstance(raw_line, bytes) else str(raw_line).strip()
@@ -100,6 +106,13 @@ class OpenAIResponsesProvider:
                     delta = event.get("delta")
                     if isinstance(delta, str) and delta:
                         parts.append(delta)
+                        parent_boundary = (
+                            parent_boundary_extractor.feed(delta)
+                            if parent_boundary_extractor is not None
+                            else None
+                        )
+                        if parent_boundary is not None:
+                            yield StreamParentBoundaryDecision(parent_boundary)
                         student_text = text_extractor.feed(delta) if text_extractor is not None else delta
                         if student_text:
                             yield StreamDelta(student_text)
@@ -198,6 +211,13 @@ def _has_response_schema(payload: dict[str, object]) -> bool:
     return isinstance(response_schema, dict) and isinstance(response_schema.get("name"), str)
 
 
+def _has_parent_boundary_field(payload: dict[str, object]) -> bool:
+    response_schema = payload.get("response_schema")
+    schema = response_schema.get("schema") if isinstance(response_schema, dict) else None
+    properties = schema.get("properties") if isinstance(schema, dict) else None
+    return isinstance(properties, dict) and "parent_boundary" in properties
+
+
 def _normalize_output(
     text: str,
     payload: dict[str, object],
@@ -236,7 +256,7 @@ def _normalize_output(
 
 
 def _teaching_decision_output(parsed: dict[str, object]) -> dict[str, object]:
-    """Preserve supplied v6 semantic metadata without fabricating absent values."""
+    """Preserve supplied semantic metadata without fabricating absent values."""
 
     fields = (
         "teaching_mode",
@@ -245,6 +265,7 @@ def _teaching_decision_output(parsed: dict[str, object]) -> dict[str, object]:
         "prior_method_relation",
         "segment_relation",
         "structured_segment_state",
+        "parent_boundary",
     )
     return {field: parsed[field] for field in fields if field in parsed}
 
@@ -299,6 +320,64 @@ class _StructuredTutorTextExtractor:
         chunk = "".join(emitted)
         self.text += chunk
         return chunk
+
+
+class _StructuredObjectFieldExtractor:
+    """Extract one complete JSON object field regardless of property order."""
+
+    _FIELD_PREFIX_TEMPLATE = r'(?<!\\)"{field}"\s*:\s*'
+
+    def __init__(self, field: str) -> None:
+        self._raw = ""
+        self._field_prefix = re.compile(self._FIELD_PREFIX_TEMPLATE.format(field=re.escape(field)))
+        self._emitted = False
+
+    def feed(self, delta: str) -> object | None:
+        if self._emitted:
+            return None
+        self._raw += delta
+        match = self._field_prefix.search(self._raw)
+        if match is None:
+            return None
+        start = match.end()
+        if start >= len(self._raw) or self._raw[start] != "{":
+            return None
+        end = _complete_json_object_end(self._raw, start)
+        if end is None:
+            return None
+        try:
+            value = json.loads(self._raw[start:end])
+        except json.JSONDecodeError:
+            return None
+        self._emitted = True
+        return value
+
+
+def _complete_json_object_end(text: str, start: int) -> int | None:
+    """Return the exclusive end of one JSON object, preserving strings/escapes."""
+
+    depth = 0
+    escaped = False
+    in_string = False
+    for index in range(start, len(text)):
+        character = text[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == '"':
+                in_string = False
+            continue
+        if character == '"':
+            in_string = True
+        elif character == "{":
+            depth += 1
+        elif character == "}":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+    return None
 
 
 def _response_text(result: object) -> str:

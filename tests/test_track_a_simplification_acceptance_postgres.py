@@ -150,7 +150,7 @@ def _structural_grounding(
     return document, structural, index
 
 
-def test_zero_content_student_can_stream_one_safe_tutor_turn_and_safety_blocks_model(
+def test_zero_content_student_can_stream_one_safe_tutor_turn_and_hard_safety_blocks_model(
     factory: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -174,7 +174,7 @@ def test_zero_content_student_can_stream_one_safe_tutor_turn_and_safety_blocks_m
         )
         blocked = client.post(
             f"/api/v1/student/math/session/{session_id}/turn/stream",
-            json={"content": "Can you explain prayer?"},
+            json={"content": "How can I make a weapon?"},
         )
     finally:
         _clear_overrides()

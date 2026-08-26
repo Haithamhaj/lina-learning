@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.platform.db.models import SafetyAudit, StudentTopicBoundary
+from services.tutor.parent_boundaries import ParentBoundaryCategory, ParentBoundaryDecision
 
 POLICY_ENGINE_VERSION = 1
 
@@ -37,18 +38,14 @@ class SafetyAction(str, Enum):
     BLOCK = "BLOCK"
 
 
-class TopicCategory(str, Enum):
-    RELIGION = "RELIGION"
-    HUMAN_REPRODUCTION = "HUMAN_REPRODUCTION"
-    RELATIONSHIPS = "RELATIONSHIPS"
-    POLITICS = "POLITICS"
-    DEATH_GRIEF = "DEATH_GRIEF"
-    FAMILY_FINANCES = "FAMILY_FINANCES"
+# Kept as a compatibility name for the server-owned Parent configuration API.
+# The persisted restricted category is now semantically precise: SEXUAL_CONTENT.
+TopicCategory = ParentBoundaryCategory
 
 
 _DEFAULT_BOUNDARIES = {
     TopicCategory.RELIGION: BoundaryState.REDIRECT_TO_PARENT,
-    TopicCategory.HUMAN_REPRODUCTION: BoundaryState.REDIRECT_TO_PARENT,
+    TopicCategory.SEXUAL_CONTENT: BoundaryState.REDIRECT_TO_PARENT,
     TopicCategory.RELATIONSHIPS: BoundaryState.AGE_APPROPRIATE_ONLY,
     TopicCategory.POLITICS: BoundaryState.AGE_APPROPRIATE_ONLY,
     TopicCategory.DEATH_GRIEF: BoundaryState.AGE_APPROPRIATE_ONLY,
@@ -68,14 +65,6 @@ _SAFE_EDUCATIONAL_SELF_HARM_CONTEXT = (
     "safe definition",
     "definition safe for a child",
 )
-_CATEGORY_TERMS = {
-    TopicCategory.RELIGION: ("prayer", "religion", "god", "mosque", "صلاة", "دين", "الله", "مسجد"),
-    TopicCategory.HUMAN_REPRODUCTION: ("sex education", "reproduction"),
-    TopicCategory.RELATIONSHIPS: ("dating", "boyfriend", "girlfriend"),
-    TopicCategory.POLITICS: ("politics", "election", "president"),
-    TopicCategory.DEATH_GRIEF: ("death", "died", "grief"),
-    TopicCategory.FAMILY_FINANCES: ("family money", "our debt", "salary"),
-}
 
 
 @dataclass(frozen=True)
@@ -89,8 +78,28 @@ class SafetyDecision:
     directive: str | None
 
 
+@dataclass(frozen=True)
+class ParentBoundaryResolution:
+    """Server-owned effective result of Luna's semantic category decision."""
+
+    action: SafetyAction
+    category: TopicCategory | None
+    policy_source: str
+    policy_version: int
+    reason_code: str
+    boundary_state: BoundaryState | None
+
+    def effective_settings_entry(self) -> tuple[str, str]:
+        """Expose only category/action, never Parent-owned implementation details."""
+
+        return (
+            self.category.value if self.category is not None else "OPEN_BY_DEFAULT",
+            self.action.value,
+        )
+
+
 class SafetyPolicyService:
-    """Evaluate protected baseline first, then persistent family boundaries."""
+    """Evaluate hard baseline, then resolve semantic Parent Boundaries server-side."""
 
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -150,51 +159,74 @@ class SafetyPolicyService:
                 ),
             )
 
-        category = next(
-            (topic for topic, terms in _CATEGORY_TERMS.items() if any(term in normalized for term in terms)),
-            None,
-        )
-        if category is None:
-            return self._audit(
-                student_id,
-                interaction_ref,
-                SafetyDecision(
-                    action=SafetyAction.ALLOW,
-                    category=None,
-                    policy_source="BASELINE",
-                    policy_version=POLICY_ENGINE_VERSION,
-                    reason_code="NORMAL_LEARNING",
-                    age_handling="normal",
-                    directive=None,
-                ),
-            )
-
-        boundary = self._session.execute(
-            select(StudentTopicBoundary).where(
-                StudentTopicBoundary.student_id == student_id,
-                StudentTopicBoundary.category == category.value,
-            )
-        ).scalar_one_or_none()
-        state = BoundaryState(boundary.state) if boundary else _DEFAULT_BOUNDARIES[category]
         return self._audit(
             student_id,
             interaction_ref,
             SafetyDecision(
-                action=SafetyAction(state.value),
-                category=category,
-                policy_source="PARENT_BOUNDARY" if boundary else "DEFAULT_BOUNDARY",
-                policy_version=boundary.policy_version if boundary else POLICY_ENGINE_VERSION,
-                reason_code=f"TOPIC_{state.value}",
-                age_handling="age_appropriate" if state == BoundaryState.AGE_APPROPRIATE_ONLY else "normal",
-                directive=(
-                    AGE_APPROPRIATE_DIRECTIVE
-                    if state == BoundaryState.AGE_APPROPRIATE_ONLY
-                    else PARENT_REDIRECT_DIRECTIVE
-                    if state == BoundaryState.REDIRECT_TO_PARENT
-                    else None
-                ),
+                action=SafetyAction.ALLOW,
+                category=None,
+                policy_source="BASELINE",
+                policy_version=POLICY_ENGINE_VERSION,
+                reason_code="NORMAL_LEARNING",
+                age_handling="normal",
+                directive=None,
             ),
         )
+
+    def effective_parent_boundaries(self, *, student_id: UUID) -> dict[str, str]:
+        """Return compact effective settings for the one Luna Tutor call."""
+
+        boundaries = self._boundaries_for_student(student_id=student_id)
+        return {
+            category.value: BoundaryState(boundaries[category].state).value
+            if category in boundaries
+            else _DEFAULT_BOUNDARIES[category].value
+            for category in TopicCategory
+        }
+
+    def resolve_parent_boundary(
+        self,
+        *,
+        student_id: UUID,
+        decision: ParentBoundaryDecision | None,
+    ) -> ParentBoundaryResolution:
+        """Default open on absent/ambiguous semantics; settings beat model action."""
+
+        if decision is None or not decision.applies or decision.category is None:
+            return ParentBoundaryResolution(
+                action=SafetyAction.ALLOW,
+                category=None,
+                policy_source="DEFAULT_OPEN",
+                policy_version=POLICY_ENGINE_VERSION,
+                reason_code="SEMANTIC_NOT_APPLICABLE",
+                boundary_state=None,
+            )
+        boundaries = self._boundaries_for_student(student_id=student_id)
+        boundary = boundaries.get(decision.category)
+        state = BoundaryState(boundary.state) if boundary is not None else _DEFAULT_BOUNDARIES[decision.category]
+        return ParentBoundaryResolution(
+            action=SafetyAction(state.value),
+            category=decision.category,
+            policy_source="PARENT_BOUNDARY" if boundary is not None else "DEFAULT_BOUNDARY",
+            policy_version=boundary.policy_version if boundary is not None else POLICY_ENGINE_VERSION,
+            reason_code=f"SEMANTIC_TOPIC_{state.value}",
+            boundary_state=state,
+        )
+
+    def _boundaries_for_student(self, *, student_id: UUID) -> dict[TopicCategory, StudentTopicBoundary]:
+        rows = self._session.execute(
+            select(StudentTopicBoundary).where(StudentTopicBoundary.student_id == student_id)
+        ).scalars()
+        resolved: dict[TopicCategory, StudentTopicBoundary] = {}
+        for row in rows:
+            try:
+                category = TopicCategory(row.category)
+            except ValueError:
+                # Historical values remain stored/auditable but never become a
+                # hidden meaning change in the new semantic resolver.
+                continue
+            resolved[category] = row
+        return resolved
 
     def _audit(
         self,

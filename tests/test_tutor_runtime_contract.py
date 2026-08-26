@@ -13,11 +13,11 @@ from services.tutor.teaching_decisions import PriorMethodRelation, TeachingMode,
 from services.tutor.teaching_methods import ACTIVE_TEACHING_METHODS
 
 
-def test_tutor_turn_v6_requires_segment_metadata_without_changing_candidate_metadata() -> None:
-    """Catches a response-contract upgrade that omits hidden Segment metadata or rewrites Candidates."""
+def test_tutor_turn_v7_requires_parent_boundary_semantics_without_rewriting_other_metadata() -> None:
+    """SAFE-02 keeps one strict output contract for visible text and hidden decisions."""
 
-    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v6"
-    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "candidate_metadata"]
+    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v7"
+    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata"]
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_mode"] == {"type": ["string", "null"], "enum": [*(mode.value for mode in TeachingMode), None]}
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_strategy"] == {"type": ["string", "null"], "enum": [*(strategy.value for strategy in TeachingStrategy), None]}
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_method_id"] == {"type": ["string", "null"], "enum": [*(method.value for method in ACTIVE_TEACHING_METHODS), None]}
@@ -44,6 +44,12 @@ def test_tutor_turn_v6_requires_segment_metadata_without_changing_candidate_meta
         },
     }
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["candidate_metadata"]["anyOf"][0]["properties"]["version"]["enum"] == ["candidate-event-v1"]
+    parent_boundary = TUTOR_OUTPUT_JSON_SCHEMA["properties"]["parent_boundary"]
+    assert parent_boundary["required"] == ["schema_version", "category", "applies", "model_action", "redirect"]
+    assert parent_boundary["additionalProperties"] is False
+    assert parent_boundary["properties"]["schema_version"]["enum"] == ["parent-boundary-v1"]
+    assert parent_boundary["properties"]["category"]["enum"] == ["RELIGION", "SEXUAL_CONTENT", "RELATIONSHIPS", "POLITICS", "DEATH_GRIEF", "FAMILY_FINANCES", None]
+    assert parent_boundary["properties"]["model_action"]["enum"] == ["ALLOW", "AGE_APPROPRIATE_ONLY", "REDIRECT_TO_PARENT"]
 
 
 def test_one_luna_call_receives_full_definitions_without_preselected_semantic_axes() -> None:
@@ -56,6 +62,8 @@ def test_one_luna_call_receives_full_definitions_without_preselected_semantic_ax
     assert "mode" not in payload
     assert "strategy" not in payload
     assert "eligible_teaching_methods" not in payload
+    assert "Effective Parent Boundary settings" in str(payload["input"])
+    assert "Parent Boundary semantic decision" in str(payload["input"])
 
 
 def test_relation_guidance_distinguishes_a_new_topic_from_an_immediate_method_outcome() -> None:

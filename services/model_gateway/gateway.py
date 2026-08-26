@@ -66,13 +66,20 @@ class StreamDelta:
 
 
 @dataclass(frozen=True)
+class StreamParentBoundaryDecision:
+    """One extracted structured Parent Boundary field, before visible text release."""
+
+    payload: object
+
+
+@dataclass(frozen=True)
 class StreamComplete:
     """The provider's final normalized result after its streamed response."""
 
     result: ModelResult
 
 
-ModelStreamEvent = StreamDelta | StreamComplete
+ModelStreamEvent = StreamDelta | StreamParentBoundaryDecision | StreamComplete
 
 
 class ModelProvider(Protocol):
@@ -194,7 +201,7 @@ class ModelGateway:
         completed = False
         try:
             for event in stream(route, payload):
-                if isinstance(event, StreamDelta):
+                if isinstance(event, (StreamDelta, StreamParentBoundaryDecision)):
                     yield event
                     continue
                 if isinstance(event, StreamComplete):

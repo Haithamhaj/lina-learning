@@ -8,7 +8,7 @@ import json
 import pytest
 
 from services.model_gateway.factory import create_tutor_gateway
-from services.model_gateway.gateway import ModelResult, ModelRoute, StaticModelProvider, StreamComplete, StreamDelta
+from services.model_gateway.gateway import ModelResult, ModelRoute, StaticModelProvider, StreamComplete, StreamDelta, StreamParentBoundaryDecision
 from services.model_gateway.openai_provider import OpenAIResponsesProvider
 from services.platform.config import Settings, reset_settings_cache
 from services.platform.db.models import ModelTask
@@ -256,6 +256,55 @@ def test_openai_responses_provider_streams_student_text_from_a_structured_tutor_
         "suggested_actions": [{"label": "Let me try ✍️", "kind": "NAVIGATION"}],
         "candidate_metadata": {"version": "candidate-event-v1", "candidates": []},
     }
+
+
+def test_openai_structured_stream_extracts_parent_decision_after_text_without_key_order_assumption() -> None:
+    """SAFE-02: runtime can buffer text until this independent field is complete."""
+
+    class FakeResponse:
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def __iter__(self):
+            return iter(
+                [
+                    b'data: {"type":"response.output_text.delta","delta":"{\\"text\\":\\"ordinary reply\\",\\"parent_boundary\\":{\\"schema_version\\":\\"parent-boundary-v1\\",\\"category\\":\\"RELIGION\\",\\"applies\\":true,"}\n\n',
+                    b'data: {"type":"response.output_text.delta","delta":"\\"model_action\\":\\"REDIRECT_TO_PARENT\\",\\"redirect\\":null}}"}\n\n',
+                    b'data: {"type":"response.completed","response":{"usage":{"input_tokens":5,"output_tokens":2}}}\n\n',
+                ]
+            )
+
+    def send(request: object, *, timeout: float) -> FakeResponse:
+        del request, timeout
+        return FakeResponse()
+
+    events = list(
+        OpenAIResponsesProvider(api_key="test-key", request_sender=send).stream(
+            ModelRoute(provider="openai", model="gpt-5.6-luna"),
+            {
+                "instructions": "Teach calmly.",
+                "input": "Help with fractions.",
+                "response_schema": {
+                    "name": "tutor_turn_v7",
+                    "schema": {"type": "object", "properties": {"text": {}, "parent_boundary": {}}},
+                },
+            },
+        )
+    )
+
+    assert [event.text for event in events if isinstance(event, StreamDelta)] == ["ordinary reply"]
+    decisions = [event.payload for event in events if isinstance(event, StreamParentBoundaryDecision)]
+    assert decisions == [{
+        "schema_version": "parent-boundary-v1",
+        "category": "RELIGION",
+        "applies": True,
+        "model_action": "REDIRECT_TO_PARENT",
+        "redirect": None,
+    }]
+    assert events[-1].result.output["parent_boundary"] == decisions[0]
 
 
 def test_tutor_gateway_uses_openai_route_from_settings() -> None:

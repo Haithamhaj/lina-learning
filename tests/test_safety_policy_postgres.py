@@ -18,6 +18,12 @@ from services.platform.safety import (
     TopicCategory,
 )
 from services.platform.db.models import SafetyAudit, Student, User
+from services.tutor.parent_boundaries import (
+    PARENT_BOUNDARY_SCHEMA_VERSION,
+    ParentBoundaryCategory,
+    ParentBoundaryDecision,
+    ParentBoundaryModelAction,
+)
 
 
 pytestmark = pytest.mark.skipif(
@@ -53,29 +59,29 @@ SAFETY_GOLDEN_SCENARIOS = (
         expected_source="BASELINE",
     ),
     SafetyScenario(
-        name="religion_parent_allow_english",
+        name="religion_words_are_open_until_semantic_decision",
         text="Can you explain prayer?",
-        expected_category=TopicCategory.RELIGION,
+        expected_category=None,
         expected_action=SafetyAction.ALLOW,
-        expected_source="PARENT_BOUNDARY",
+        expected_source="BASELINE",
         parent_category=TopicCategory.RELIGION,
         parent_state=BoundaryState.ALLOW,
     ),
     SafetyScenario(
-        name="religion_parent_age_appropriate_arabic",
+        name="arabic_religion_words_are_open_until_semantic_decision",
         text="ما معنى الصلاة؟",
-        expected_category=TopicCategory.RELIGION,
-        expected_action=SafetyAction.AGE_APPROPRIATE_ONLY,
-        expected_source="PARENT_BOUNDARY",
+        expected_category=None,
+        expected_action=SafetyAction.ALLOW,
+        expected_source="BASELINE",
         parent_category=TopicCategory.RELIGION,
         parent_state=BoundaryState.AGE_APPROPRIATE_ONLY,
     ),
     SafetyScenario(
-        name="religion_parent_redirect_english",
+        name="religion_setting_waits_for_semantic_decision",
         text="Can you explain prayer?",
-        expected_category=TopicCategory.RELIGION,
-        expected_action=SafetyAction.REDIRECT_TO_PARENT,
-        expected_source="PARENT_BOUNDARY",
+        expected_category=None,
+        expected_action=SafetyAction.ALLOW,
+        expected_source="BASELINE",
         parent_category=TopicCategory.RELIGION,
         parent_state=BoundaryState.REDIRECT_TO_PARENT,
     ),
@@ -159,7 +165,7 @@ def test_protected_baseline_cannot_be_persisted_as_a_parent_boundary(
             )
 
 
-def test_religion_default_redirect_is_auditable_and_normal_math_passes(
+def test_hard_baseline_allow_is_auditable_without_parent_keyword_routing(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
     with postgres_session_factory.begin() as session:
@@ -176,14 +182,14 @@ def test_religion_default_redirect_is_auditable_and_normal_math_passes(
             interaction_ref="message-2",
         )
 
-    assert religion.action == SafetyAction.REDIRECT_TO_PARENT
-    assert religion.category == TopicCategory.RELIGION
+    assert religion.action == SafetyAction.ALLOW
+    assert religion.category is None
     assert math.action == SafetyAction.ALLOW
     with postgres_session_factory() as session:
         audits = list(session.query(SafetyAudit).order_by(SafetyAudit.created_at))
 
     assert [(audit.action, audit.policy_source, audit.policy_version, audit.reason_code) for audit in audits] == [
-        (SafetyAction.REDIRECT_TO_PARENT.value, "DEFAULT_BOUNDARY", 1, "TOPIC_REDIRECT_TO_PARENT"),
+        (SafetyAction.ALLOW.value, "BASELINE", 1, "NORMAL_LEARNING"),
         (SafetyAction.ALLOW.value, "BASELINE", 1, "NORMAL_LEARNING"),
     ]
 
@@ -199,17 +205,22 @@ def test_parent_boundary_update_takes_effect_without_deployment(
             category=TopicCategory.RELIGION,
             state=BoundaryState.ALLOW,
         )
-        decision = policy.evaluate(
+        decision = policy.resolve_parent_boundary(
             student_id=student_id,
-            text="Can you explain prayer?",
-            interaction_ref="message-3",
+            decision=ParentBoundaryDecision(
+                schema_version=PARENT_BOUNDARY_SCHEMA_VERSION,
+                category=ParentBoundaryCategory.RELIGION,
+                applies=True,
+                model_action=ParentBoundaryModelAction.REDIRECT_TO_PARENT,
+                redirect=None,
+            ),
         )
 
     assert decision.action == SafetyAction.ALLOW
     assert decision.policy_source == "PARENT_BOUNDARY"
 
 
-def test_parent_age_appropriate_boundary_keeps_tutor_continuation_directive_auditable(
+def test_parent_age_appropriate_boundary_resolves_server_side(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
     with postgres_session_factory.begin() as session:
@@ -220,17 +231,21 @@ def test_parent_age_appropriate_boundary_keeps_tutor_continuation_directive_audi
             category=TopicCategory.RELIGION,
             state=BoundaryState.AGE_APPROPRIATE_ONLY,
         )
-        decision = policy.evaluate(
+        decision = policy.resolve_parent_boundary(
             student_id=student_id,
-            text="Can you explain prayer?",
-            interaction_ref="message-4",
+            decision=ParentBoundaryDecision(
+                schema_version=PARENT_BOUNDARY_SCHEMA_VERSION,
+                category=ParentBoundaryCategory.RELIGION,
+                applies=True,
+                model_action=ParentBoundaryModelAction.ALLOW,
+                redirect=None,
+            ),
         )
 
     assert decision.action == SafetyAction.AGE_APPROPRIATE_ONLY
     assert decision.policy_source == "PARENT_BOUNDARY"
     assert decision.policy_version == boundary.policy_version
-    assert decision.reason_code == "TOPIC_AGE_APPROPRIATE_ONLY"
-    assert decision.directive is not None
+    assert decision.reason_code == "SEMANTIC_TOPIC_AGE_APPROPRIATE_ONLY"
 
 
 def test_protected_baseline_wins_even_when_a_parent_allows_a_matching_topic(
@@ -254,3 +269,72 @@ def test_protected_baseline_wins_even_when_a_parent_allows_a_matching_topic(
     assert decision.policy_source == "BASELINE"
     assert decision.reason_code == "PROTECTED_BASELINE"
     assert decision.directive is not None
+
+
+def test_parent_topic_words_are_open_until_luna_semantically_marks_an_applicable_boundary(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """SAFE-02 removes lexical Parent-topic routing without weakening the hard baseline."""
+
+    with postgres_session_factory.begin() as session:
+        student_id = make_student(session)
+        policy = SafetyPolicyService(session)
+        hard = policy.evaluate(
+            student_id=student_id,
+            text="Why does air become cooler high in the sky when people say God made it?",
+        )
+        resolution = policy.resolve_parent_boundary(
+            student_id=student_id,
+            decision=ParentBoundaryDecision(
+                schema_version=PARENT_BOUNDARY_SCHEMA_VERSION,
+                category=ParentBoundaryCategory.RELIGION,
+                applies=True,
+                model_action=ParentBoundaryModelAction.ALLOW,
+                redirect=None,
+            ),
+        )
+
+    assert hard.action is SafetyAction.ALLOW
+    assert hard.category is None
+    assert resolution.action is SafetyAction.REDIRECT_TO_PARENT
+    assert resolution.category is TopicCategory.RELIGION
+    assert resolution.policy_source == "DEFAULT_BOUNDARY"
+
+
+def test_explicit_parent_allow_wins_over_luna_redirect_recommendation(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    with postgres_session_factory.begin() as session:
+        student_id = make_student(session)
+        policy = SafetyPolicyService(session)
+        policy.set_boundary(
+            student_id=student_id,
+            category=TopicCategory.RELIGION,
+            state=BoundaryState.ALLOW,
+        )
+        resolution = policy.resolve_parent_boundary(
+            student_id=student_id,
+            decision=ParentBoundaryDecision(
+                schema_version=PARENT_BOUNDARY_SCHEMA_VERSION,
+                category=ParentBoundaryCategory.RELIGION,
+                applies=True,
+                model_action=ParentBoundaryModelAction.REDIRECT_TO_PARENT,
+                redirect=None,
+            ),
+        )
+
+    assert resolution.action is SafetyAction.ALLOW
+    assert resolution.policy_source == "PARENT_BOUNDARY"
+
+
+def test_default_open_and_ambiguous_semantic_decision_stay_open(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    with postgres_session_factory.begin() as session:
+        student_id = make_student(session)
+        policy = SafetyPolicyService(session)
+        resolution = policy.resolve_parent_boundary(student_id=student_id, decision=None)
+
+    assert resolution.action is SafetyAction.ALLOW
+    assert resolution.category is None
+    assert resolution.policy_source == "DEFAULT_OPEN"

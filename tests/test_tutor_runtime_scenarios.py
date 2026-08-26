@@ -8,13 +8,19 @@ from uuid import uuid4
 
 import pytest
 
-from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
+from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta, StreamParentBoundaryDecision
 from services.platform.db.models import CandidateEvent, LearningMessage, ModelTask
-from services.platform.safety import SafetyAction, SafetyDecision
+from services.platform.safety import ParentBoundaryResolution, SafetyAction, SafetyDecision
 from services.retrieval.service import RetrievedBlock
 from services.tutor.context import SessionContextMessage, TutorContext, TutorContextDebug
-from services.tutor.runtime import TutorRuntime, TutorTextDelta, TutorTurn
+from services.tutor.runtime import TutorRuntime, TutorTextDelta, TutorTurn, _compose_parent_redirect
 from services.tutor.teaching_decisions import PriorMethodRelation, TeachingMode, TeachingStrategy
+from services.tutor.parent_boundaries import (
+    PARENT_BOUNDARY_SCHEMA_VERSION,
+    ParentBoundaryCategory,
+    ParentBoundaryDecision,
+    ParentBoundaryModelAction,
+)
 
 
 class _Session:
@@ -578,6 +584,161 @@ def test_interrupted_stream_drains_provider_and_persists_the_final_tutor_respons
     assert provider.calls == 1
     assert [message.role for message in messages] == ["student", "tutor"]
     assert messages[-1].content == "Try one small step."
+
+
+class _SemanticPolicy(_Policy):
+    def effective_parent_boundaries(self, **_: object) -> dict[str, str]:
+        return {"RELIGION": "REDIRECT_TO_PARENT"}
+
+    def resolve_parent_boundary(
+        self,
+        *,
+        decision: ParentBoundaryDecision | None,
+        **_: object,
+    ) -> ParentBoundaryResolution:
+        if decision is not None and decision.applies and decision.category is ParentBoundaryCategory.RELIGION:
+            return ParentBoundaryResolution(
+                action=SafetyAction.REDIRECT_TO_PARENT,
+                category=ParentBoundaryCategory.RELIGION,
+                policy_source="DEFAULT_BOUNDARY",
+                policy_version=1,
+                reason_code="SEMANTIC_TOPIC_REDIRECT_TO_PARENT",
+                boundary_state=None,
+            )
+        return ParentBoundaryResolution(
+            action=SafetyAction.ALLOW,
+            category=None,
+            policy_source="DEFAULT_OPEN",
+            policy_version=1,
+            reason_code="SEMANTIC_NOT_APPLICABLE",
+            boundary_state=None,
+        )
+
+
+class _DecisionFirstProvider:
+    def __init__(self, *, applies: bool) -> None:
+        self.calls = 0
+        self.applies = applies
+
+    def stream(self, route: ModelRoute, payload: dict[str, object]):
+        del route, payload
+        self.calls += 1
+        ordinary = "ORDINARY MODEL TEXT MUST NOT LEAK"
+        decision = {
+            "schema_version": PARENT_BOUNDARY_SCHEMA_VERSION,
+            "category": "RELIGION" if self.applies else None,
+            "applies": self.applies,
+            "model_action": "REDIRECT_TO_PARENT" if self.applies else "ALLOW",
+            "redirect": (
+                {
+                    "acknowledgement": "أفهم سؤالك.",
+                    "parent_reference": "الأفضل أن تتحدثي مع أحد والديك.",
+                    "safe_offer": "أستطيع مساعدتك في سؤال دراسي آخر.",
+                }
+                if self.applies
+                else None
+            ),
+        }
+        yield StreamDelta(ordinary[:12])
+        yield StreamParentBoundaryDecision(decision)
+        yield StreamDelta(ordinary[12:])
+        yield StreamComplete(ModelResult(output={
+            "text": ordinary,
+            "suggested_actions": [],
+            "teaching_method_id": None,
+            "teaching_mode": None,
+            "teaching_strategy": None,
+            "prior_method_relation": None,
+            "segment_relation": None,
+            "structured_segment_state": None,
+            "parent_boundary": decision,
+            "candidate_metadata": {"version": "candidate-event-v1", "candidates": []},
+        }))
+
+
+def _semantic_runtime(*, applies: bool) -> tuple[TutorRuntime, _DecisionFirstProvider, _Session]:
+    session = _Session()
+    provider = _DecisionFirstProvider(applies=applies)
+    runtime = TutorRuntime(
+        session,
+        context_builder=_ContextBuilder(),
+        safety_policy=_SemanticPolicy(_decision()),
+        gateway=ModelGateway(
+            session,
+            routes={ModelTask.TUTOR: ModelRoute("fixture", "safe02")},
+            providers={"fixture": provider},
+        ),
+    )
+    return runtime, provider, session
+
+
+def test_parent_redirect_discards_all_ordinary_stream_text_and_persists_only_server_composed_reply() -> None:
+    """SAFE-02 L/M/N/O/P/Q: no provider text becomes visible or durable on redirect."""
+
+    runtime, provider, session = _semantic_runtime(applies=True)
+    question = "هل الله موجود؟"
+    events = list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), last_activity_at=None),
+        question=question,
+    ))
+
+    assert not [event for event in events if isinstance(event, TutorTextDelta)]
+    turn = events[-1]
+    assert isinstance(turn, TutorTurn)
+    assert turn.text == "أفهم سؤالك. الأفضل أن تتحدثي مع أحد والديك. أستطيع مساعدتك في سؤال دراسي آخر."
+    messages = [row for row in session.rows if isinstance(row, LearningMessage)]
+    assert [message.content for message in messages] == [question, turn.text]
+    assert "ORDINARY MODEL TEXT" not in messages[-1].content
+    assert messages[-1].payload["candidate_metadata_status"] == "parent_boundary_redirect"
+    assert messages[-1].payload["parent_boundary"] == {
+        "semantic_category": "RELIGION",
+        "applies": True,
+        "model_action": "REDIRECT_TO_PARENT",
+        "effective_action": "REDIRECT_TO_PARENT",
+        "boundary_source": "DEFAULT_BOUNDARY",
+        "enforced": True,
+        "response_origin": "server_composed_redirect",
+    }
+    assert provider.calls == 1
+
+
+def test_allow_releases_buffered_text_only_after_semantic_parent_decision() -> None:
+    """SAFE-02 streaming guard preserves ALLOW streaming after the decision arrives."""
+
+    runtime, provider, _ = _semantic_runtime(applies=False)
+    events = list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), last_activity_at=None),
+        question="Why does air cool at high altitude?",
+    ))
+
+    assert [event.text for event in events if isinstance(event, TutorTextDelta)] == [
+        "ORDINARY MOD", "EL TEXT MUST NOT LEAK",
+    ]
+    assert isinstance(events[-1], TutorTurn)
+    assert events[-1].text == "ORDINARY MODEL TEXT MUST NOT LEAK"
+    assert provider.calls == 1
+
+
+def test_invalid_redirect_fragments_use_the_deterministic_server_fallback() -> None:
+    """SAFE-02 R: a fragment defect cannot make a redirect turn fail or expose model text."""
+
+    text, origin = _compose_parent_redirect(
+        question="هل الله موجود؟",
+        decision=ParentBoundaryDecision(
+            schema_version=PARENT_BOUNDARY_SCHEMA_VERSION,
+            category=ParentBoundaryCategory.RELIGION,
+            applies=True,
+            model_action=ParentBoundaryModelAction.REDIRECT_TO_PARENT,
+            redirect={
+                "acknowledgement": "x" * 161,
+                "parent_reference": "راجعي أحد والديك.",
+                "safe_offer": "يمكننا الانتقال إلى سؤال دراسي.",
+            },
+        ),
+    )
+
+    assert origin == "server_fallback_redirect"
+    assert text == "هذا موضوع يناسب الحديث عنه مع أحد والديك. أستطيع مساعدتك في سؤال دراسي آخر."
 
 
 def _candidate_for_current_message(

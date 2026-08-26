@@ -18,7 +18,7 @@ This policy separates two different concerns:
 1. **Non-overridable child-safety baseline** — system rules that Parent/Admin settings may never weaken.
 2. **Parent-controlled learning boundaries** — family-sensitive or age-sensitive topics that a Parent/Admin may configure from the dashboard.
 
-The system must apply both layers before the Tutor, learning-artifact engine, Vision pipeline, web tools, or other student-facing generation produces a response.
+The non-overridable baseline must be enforced before any student-facing generation. For a normal Tutor turn, configurable Parent Boundary applicability is semantically determined inside the same primary Tutor call; the server then resolves the effective Parent setting and enforces the final visible response before it is streamed or persisted.
 
 ---
 
@@ -106,7 +106,7 @@ Initial categories:
 | Topic category | Runtime states | Initial MVP default |
 |---|---|---|
 | Religion | Allow / Age-appropriate only / Redirect to parent | **Redirect to parent** |
-| Human reproduction / sex education | Allow / Age-appropriate only / Redirect to parent | **Redirect to parent** |
+| Restricted sexual content / sex behavior | Allow / Age-appropriate only / Redirect to parent | **Redirect to parent** |
 | Relationships | Allow / Age-appropriate only / Redirect to parent | Age-appropriate only |
 | Politics / current affairs | Allow / Age-appropriate only / Redirect to parent | Age-appropriate only |
 | Death / grief | Allow / Age-appropriate only / Redirect to parent | Age-appropriate only |
@@ -123,22 +123,17 @@ Student input follows this conceptual flow:
 ```text
 Student input
     ↓
-Safety policy evaluation
-    ├── baseline category? → enforce protected behavior
+Deterministic hard baseline evaluation
+    ├── protected baseline? → enforce protected behavior and stop
     ↓
-Parent topic policy lookup
-    ├── ALLOW
-    ├── AGE_APPROPRIATE_ONLY
-    └── REDIRECT_TO_PARENT
+Compact effective Parent Boundary settings
     ↓
-Tutor / Tool execution
+One primary Tutor call emits semantic category / applicability / proposed action
     ↓
-Student-facing output policy check where applicable
+Server resolves effective Parent setting and enforces final visible response
 ```
 
-The implementation must not require an additional expensive LLM call for every message if deterministic routing or a lower-cost classifier can enforce the policy reliably.
-
-Prompt instructions may reinforce the decision, but the Tutor prompt is not the policy source of truth.
+The normal Tutor path must not add a second classifier or model call for Parent Boundary applicability. The typed Tutor metadata is not policy authority: the server-owned effective setting wins, and redirect wording is server-composed from bounded fragments or a deterministic fallback.
 
 ---
 
@@ -208,8 +203,8 @@ Changes requiring Product Owner approval:
 
 Implementation details that may evolve without changing the policy contract:
 
-- classifier/model/provider,
-- deterministic routing implementation,
+- same-call semantic metadata/provider parsing,
+- deterministic hard-baseline implementation,
 - UI layout,
 - exact wording of safe redirects,
 - internal logging mechanics.

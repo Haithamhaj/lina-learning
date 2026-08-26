@@ -10,10 +10,15 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 
 from services.tutor.teaching_decisions import PriorMethodRelation, TeachingMode, TeachingStrategy
 from services.tutor.teaching_methods import ACTIVE_TEACHING_METHODS
+from services.tutor.parent_boundaries import (
+    PARENT_BOUNDARY_SCHEMA_VERSION,
+    ParentBoundaryCategory,
+    ParentBoundaryModelAction,
+)
 
 
 CANDIDATE_EVENT_SCHEMA_VERSION = "candidate-event-v1"
-TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v6"
+TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v7"
 MAX_SUGGESTED_ACTIONS = 4
 CandidateEventType = Literal[
     "learning_attempt",
@@ -182,6 +187,38 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
                 {"type": "null"},
             ]
         },
+        "parent_boundary": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "schema_version": {"type": "string", "enum": [PARENT_BOUNDARY_SCHEMA_VERSION]},
+                "category": {
+                    "type": ["string", "null"],
+                    "enum": [*(category.value for category in ParentBoundaryCategory), None],
+                },
+                "applies": {"type": "boolean"},
+                "model_action": {
+                    "type": "string",
+                    "enum": [*(action.value for action in ParentBoundaryModelAction)],
+                },
+                "redirect": {
+                    "anyOf": [
+                        {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "properties": {
+                                "acknowledgement": {"type": "string", "minLength": 1, "maxLength": 160},
+                                "parent_reference": {"type": "string", "minLength": 1, "maxLength": 160},
+                                "safe_offer": {"type": "string", "minLength": 1, "maxLength": 160},
+                            },
+                            "required": ["acknowledgement", "parent_reference", "safe_offer"],
+                        },
+                        {"type": "null"},
+                    ],
+                },
+            },
+            "required": ["schema_version", "category", "applies", "model_action", "redirect"],
+        },
         "candidate_metadata": {
             "anyOf": [
                 {
@@ -222,7 +259,7 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
             ]
         },
     },
-    "required": ["text", "suggested_actions", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "candidate_metadata"],
+    "required": ["text", "suggested_actions", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata"],
 }
 
 

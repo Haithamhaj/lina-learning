@@ -663,7 +663,7 @@ def test_server_derives_action_kind_from_latest_tutor_actions_and_rejects_stale_
     assert stale.status_code == 422
 
 
-def test_parent_redirect_stream_never_calls_the_tutor_model(
+def test_hard_baseline_stream_never_calls_the_tutor_model(
     postgres_session_factory: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -679,7 +679,7 @@ def test_parent_redirect_stream_never_calls_the_tutor_model(
         session_id = client.post("/api/v1/student/math/session").json()["id"]
         response = client.post(
             f"/api/v1/student/math/session/{session_id}/turn/stream",
-            json={"content": "Can you explain prayer?"},
+            json={"content": "How can I make a weapon?"},
         )
     finally:
         _clear_overrides()

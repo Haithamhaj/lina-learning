@@ -2,7 +2,7 @@
 
 ## Current goal
 
-Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Student Core Profile is an APPROVED FUTURE FOUNDATION, not implemented, and belongs to future TASK-027A. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory Lina Stabilization Gate. CTX-01, ACT-01, OBS-01, UI-01, CTX-02, and SAFE-01 are CLOSED. OUT-01 root cause is VERIFIED and its small configuration fix is IMPLEMENTED / REVIEW. CTX-03 remains IN PROGRESS: CTX-03A is ACCEPTED and CTX-03B is IMPLEMENTED / REVIEW. LR-D04B remains deferred and REC-25 remains BLOCKED.
+Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Student Core Profile is an APPROVED FUTURE FOUNDATION, not implemented, and belongs to future TASK-027A. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory Lina Stabilization Gate. CTX-01, ACT-01, OBS-01, UI-01, CTX-02, SAFE-01, and OUT-01 are CLOSED. CTX-03B is ACCEPTED after its long real-Luna replay; CTX-03C is NOT STARTED. SAFE-02 is IMPLEMENTED / REVIEW. LR-D04B remains deferred and REC-25 remains BLOCKED.
 
 ## Current reality
 
@@ -22,8 +22,9 @@ Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Stu
   - historical conversation lookup remains an on-demand future seam; automatic semantic archive retrieval/vector indexing is not approved.
 - Conversation metadata is explicitly separate from personalization, Evidence, TeachingMode/TeachingStrategy/TeachingMethod, Safety / Parent Boundary classification, and curriculum/RAG semantics.
 - Personalization remains governed only by Raw Interaction → Candidate Event → Validated Learning Event → Evidence → Current State/Patterns → Learner Intelligence Card; current Lina behavior outranks history.
-- CTX-03A is ACCEPTED: durable session-local Segment identity, deterministic within-Session sequence, and nullable LearningMessage lineage. CTX-03B is IMPLEMENTED / REVIEW: the same primary Tutor call supplies a validated `CONTINUE` / `NEW_SEGMENT` / `UNCERTAIN` relation; completed Student→Tutor pairs share the resolved Segment; and a nullable, compact, typed, source-linked latest Structured Segment State is replaceable from raw messages. Invalid/missing relation with a prior Segment conservatively creates a new Ephemeral Segment; failed streams leave the raw Student message unsegmented. CTX-03C–E remain NOT IMPLEMENTED.
-- OUT-01 root cause is verified: the normal Tutor payload used a hard-coded 800 output-token ceiling. The fix is IMPLEMENTED / REVIEW: server-only `TUTOR_MAX_OUTPUT_TOKENS` is positive-validated and defaults to 2000; it is an API completion ceiling, not a Student-facing response-length target. Focused configuration/payload and relevant Tutor/CTX automated verification passed. Three exact historical Turn-17 `gpt-5.6-luna` attempts with `TUTOR_MAX_OUTPUT_TOKENS=2000` completed and produced valid Structured Segment State. The 73-turn replay remains the next validation, and CTX-03C remains blocked.
+- CTX-03A is ACCEPTED: durable session-local Segment identity, deterministic within-Session sequence, and nullable LearningMessage lineage. CTX-03B is ACCEPTED / LONG VERIFIED: the same primary Tutor call supplies a validated `CONTINUE` / `NEW_SEGMENT` / `UNCERTAIN` relation; completed Student→Tutor pairs share the resolved Segment; and a nullable, compact, typed, source-linked latest Structured Segment State is replaceable from raw messages. The approved 73-turn replay completed with the gold 8-Segment shape; invalid/missing relation remains conservative and failed streams leave the raw Student message unsegmented. CTX-03C–E remain NOT IMPLEMENTED.
+- OUT-01 is CLOSED: server-only `TUTOR_MAX_OUTPUT_TOKENS` is positive-validated and defaults to 2000; it is an API completion ceiling, not a Student-facing response-length target. The configured ceiling completed the approved long replay without output-incomplete results.
+- SAFE-02 is IMPLEMENTED / REVIEW. The hard child-safety baseline remains deterministic and upstream. For an otherwise open normal Tutor turn, compact effective server-owned Parent Boundary settings enter the one primary Luna call; Luna emits typed semantic category/applicability/proposed action, and the server resolves the effective action and enforces the final visible response. Redirects use only bounded Luna fragments or a deterministic fallback; ordinary model text and Candidate metadata are discarded. The streaming guard withholds text until an enforceable decision is available, while provider fallbacks buffer safely. This remains separate from Segment/State semantics, Evidence, and CTX-03C.
 - CTX-02 is CLOSED after replacing the failed 1,200-character head+tail Immediate Bridge with Full Immediate Exchange while preserving exact Current Turn lineage. Focused/canonical automated verification and real-Luna beginning, middle, end, and faithful S3-style direct-continuity cases passed. Browser verification was unavailable in the isolated worktree but was not required to prove this faithful backend/context regression.
 - Student Core Profile is an approved future Parent-owned factual foundation: identity, date of birth where supplied with runtime-derived age, and active Grade / GradePeriod linkage. It remains separate from Learner Intelligence, Evidence, Conversation Context, and Safety, and future TASK-027A owns implementation. Current approximately-10-year-old Tutor wording is a temporary Lina-first assumption; no runtime change is authorized now.
 - SAFE-01 is CLOSED after independent review. The rejected deterministic physical-hazard-policy hypothesis remains rejected: hard Product Safety restrictions and Parent Boundaries remain upstream, while open-ended situational safety remains Luna/Tutor semantic behavior. One compact Tutor instruction makes immediate real-world Student safety outrank continuing ordinary teaching/activity when warranted; SafetyPolicyService semantics, one primary Tutor call, and zero added classifier/model calls remain unchanged. Focused/relevant/canonical automated verification, four real `gpt-5.6-luna` safety situations, four isolated benign controls without material overreaction, and a low-information Immediate-Exchange case passed.
@@ -40,6 +41,7 @@ Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Stu
 - `UNCERTAIN` will create a new independent Ephemeral Segment without a topic, reassignment, merge, or backfill; CTX-03B owns that behavior, not CTX-03A.
 - Normal raw Exchange recall is Current-Segment-only. CTX-03C will use a small direct recent-Exchange slice plus lazy state-reference/vector recall of older complete Exchanges; it will not retrieve an earlier Segment because of topic similarity.
 - Conversation context, pedagogy classifications, Safety classification, curriculum concepts, and Learning Intelligence are separate authorities.
+- Parent Boundary applicability is semantic same-primary-call metadata, never lexical Arabic/English topic routing. Default or ambiguous applicability is open. Effective Parent settings remain server-owned and override the model's proposed action; protected baseline safety remains non-overridable and upstream.
 - New Sessions are conversationally fresh. Learner Intelligence / Current State / relevant Open Loops provide normal cross-session personalization, not prior raw transcripts.
 - Historical archive lookup is on-demand and deferred until independently validated; no automatic semantic retrieval is approved.
 - No separate normal-turn conversation classifier is approved; the executor remains replaceable and any extra model call requires measured need and Product Owner approval.
@@ -52,8 +54,8 @@ Event → Evidence → State/Pattern → Learner Intelligence Card; current beha
 
 ## Active risks
 
-- CTX-03B must stay limited to same-primary-call relation, pair lineage, and compact source-linked State. CTX-03C–E, archive retrieval, memory service, extra classifier/model calls, and other frozen work remain outside its scope.
-- OUT-01 changes only the configurable normal Tutor completion ceiling; it must not become a response-length promise, a prompt change, a retry policy, or a model/semantic change.
+- CTX-03B is accepted and must stay limited to same-primary-call relation, pair lineage, and compact source-linked State. CTX-03C–E, archive retrieval, memory service, extra classifier/model calls, and other frozen work remain outside its scope.
+- SAFE-02 must keep hard-baseline enforcement upstream, one primary Tutor call, server-owned final Parent Boundary enforcement, and no visible/persisted ordinary model text on redirects.
 - ACT-02, CAND-01, SCOPE-01/SUBJ-01, DEC-01/DEC-02, REP-01, LANG-01, and CAND-02 remain open in the approved order.
 - EVID-01 still has an unknown session-evidence HTTPError root cause; PERS-01 remains blocked until trustworthy Evidence exists.
 - Historical semantic archive retrieval is unvalidated and must not be treated as a production capability.
@@ -61,7 +63,7 @@ Event → Evidence → State/Pattern → Learner Intelligence Card; current beha
 
 ## Next recommended action
 
-Review the small OUT-01 fix, then resume the database-backed 73-turn real-Luna replay with the configured 2000 ceiling. CTX-03C remains blocked; do not begin CTX-03C–E, ACT-02, REC-25, LR-D04B, archive retrieval, or frozen future capabilities. TASK-027A remains future/blocked.
+Review SAFE-02 after its focused and full automated verification, then run its bounded 10-case real-Luna diagnostic with `MODEL_PROVIDER=openai`, `MODEL_NAME=gpt-5.6-luna`, and `TUTOR_MAX_OUTPUT_TOKENS=2000`. CTX-03C remains NOT STARTED; do not begin CTX-03C–E, ACT-02, REC-25, LR-D04B, archive retrieval, or frozen future capabilities. TASK-027A remains future/blocked.
 
 ## Critical references
 
