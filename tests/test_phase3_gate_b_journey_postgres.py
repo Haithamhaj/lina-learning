@@ -206,7 +206,7 @@ def _runtime(session: Session, *, provider: _TutorProvider, retrieval: _Retrieva
         context_builder=TutorContextBuilder(
             session,
             retrieval_service=retrieval,  # type: ignore[arg-type]
-            budget=ContextBudget(recent_message_count=4, session_characters=120, retrieval_characters=1400, intelligence_characters=600),
+            budget=ContextBudget(retrieval_characters=1400, intelligence_characters=600),
         ),
         safety_policy=safety,  # type: ignore[arg-type]
         gateway=ModelGateway(

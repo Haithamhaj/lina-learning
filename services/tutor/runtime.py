@@ -25,7 +25,7 @@ from services.platform.config import get_settings
 from services.platform.db.models import CandidateEvent, LearningMessage, LearningSegment, LearningSession, ModelTask
 from services.platform.safety import ParentBoundaryResolution, SafetyAction, SafetyPolicyService
 from services.retrieval.service import RetrievalService
-from services.tutor.context import TutorContext, TutorContextBuilder
+from services.tutor.context import SessionContextMessage, TutorContext, TutorContextBuilder
 from services.tutor.candidate_events import (
     CandidateEventContractError,
     CandidateEventMetadata,
@@ -161,7 +161,8 @@ def build_tutor_model_payload(
     intelligence: list[str] | None = None,
     safety_directive: str | None = None,
     immediate_exchange: list[dict[str, object]] | None = None,
-    session_messages: list[dict[str, str]] | None = None,
+    recent_exchanges: list[list[dict[str, object]]] | None = None,
+    semantic_recall_exchanges: list[list[dict[str, object]]] | None = None,
     candidate_source_message_id: UUID | None = None,
     prior_method: PriorTeachingMethodContext | None = None,
     suggested_action_source: LearningMessage | None = None,
@@ -177,9 +178,14 @@ def build_tutor_model_payload(
     immediate_exchange_context = "\n".join(
         _format_lineage_message(message) for message in (immediate_exchange or [])
     ) or "No immediate exchange was selected."
-    session_context = "\n".join(
-        f"{message['role']}: {message['content']}" for message in (session_messages or [])
-    ) or "No older current-session continuity was selected."
+    recent_exchange_context = "\n\n".join(
+        "\n".join(_format_lineage_message(message) for message in exchange)
+        for exchange in (recent_exchanges or [])
+    ) or "No recent raw complete Exchanges were selected."
+    semantic_recall_context = "\n\n".join(
+        "\n".join(_format_lineage_message(message) for message in exchange)
+        for exchange in (semantic_recall_exchanges or [])
+    ) or "No relevant older complete Exchanges from this Segment were selected."
     safety_context = f"\n\nAge-handling directive:\n{safety_directive}" if safety_directive else ""
     candidate_context = (
         "\n\nHidden Candidate Event source link:\n"
@@ -242,8 +248,9 @@ def build_tutor_model_payload(
     return {
         "instructions": TUTOR_SHARED_INSTRUCTIONS,
         "input": (
-            f"Current Turn:\nStudent question:\n{question}{current_turn_source_context}\n\nImmediate exchange:\n{immediate_exchange_context}\n\n"
-            f"Bounded older current-session continuity:\n{session_context}\n\n"
+            f"Current Turn:\nStudent question:\n{question}{current_turn_source_context}\n\nImmediate Exchange:\n{immediate_exchange_context}\n\n"
+            f"Recent raw complete Exchanges:\n{recent_exchange_context}\n\n"
+            f"Relevant older complete Exchanges from current Segment:\n{semantic_recall_context}\n\n"
             f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}{segment_context}{segment_state_context}{parent_boundary_context}"
         ),
         "max_output_tokens": get_settings().tutor_max_output_tokens,
@@ -468,7 +475,7 @@ class TutorRuntime:
             segment=resolved_segment.segment,
             state_value=result.output.get("structured_segment_state"),
             current_student_message=student_message,
-            immediate_exchange=context.immediate_exchange,
+            immediate_exchange=_exchange_messages(context.immediate_exchange),
             prior_segment_state=prior_segment_state,
         )
         self._merge_student_conversation_metadata(
@@ -779,12 +786,12 @@ class TutorRuntime:
                     if context.debug.current_turn_message_id is not None
                     else None
                 ),
-                "immediate_exchange_message_ids": [
-                    str(identifier) for identifier in context.debug.immediate_exchange_message_ids
-                ],
+                "immediate_exchange_message_ids": [str(identifier) for identifier in context.debug.immediate_exchange_message_ids],
                 "older_continuity_message_ids": [
                     str(identifier) for identifier in context.debug.older_continuity_message_ids
                 ],
+                "recent_exchange_message_ids": [str(identifier) for identifier in context.debug.recent_exchange_message_ids],
+                "semantic_recall_exchange_message_ids": [str(identifier) for identifier in context.debug.semantic_recall_exchange_message_ids],
                 "session_message_ids": [str(identifier) for identifier in context.debug.session_message_ids],
                 "retrieval_source_refs": list(context.debug.retrieval_source_refs),
                 "intelligence_source_ids": [str(identifier) for identifier in context.debug.intelligence_source_ids],
@@ -820,14 +827,9 @@ def _payload_from_context(
         sources=[{"ref": block.source_ref, "text": block.text} for block in context.retrieval],
         intelligence=[item.text for item in context.intelligence],
         safety_directive=safety.tutor_directive,
-        immediate_exchange=[
-            {"message_id": str(message.message_id), "role": message.role, "content": message.content}
-            for message in context.immediate_exchange
-        ],
-        session_messages=[
-            {"role": message.role, "content": message.content}
-            for message in context.session_messages
-        ],
+        immediate_exchange=_exchange_payload(context.immediate_exchange),
+        recent_exchanges=[_exchange_payload(exchange) for exchange in context.recent_exchanges],
+        semantic_recall_exchanges=[_exchange_payload(exchange) for exchange in context.semantic_recall_exchanges],
         candidate_source_message_id=candidate_source_message_id,
         prior_method=prior_method,
         suggested_action_source=suggested_action_source,
@@ -845,6 +847,31 @@ def _format_lineage_message(message: dict[str, object]) -> str:
     if isinstance(message_id, (str, UUID)):
         return f"{role} message [{message_id}]:\n{content}"
     return f"{role}: {content}"
+
+
+def _exchange_messages(exchange: object) -> tuple[SessionContextMessage, ...]:
+    """Normalize the CTX-03C exchange object while tolerating old test seams."""
+
+    if exchange is None:
+        return ()
+    if isinstance(exchange, tuple):
+        return tuple(message for message in exchange if isinstance(message, SessionContextMessage))
+    values = (
+        ("student_message_id", "student", "student_content"),
+        ("tutor_message_id", "tutor", "tutor_content"),
+    )
+    return tuple(
+        SessionContextMessage(getattr(exchange, identifier), role, getattr(exchange, content))
+        for identifier, role, content in values
+        if isinstance(getattr(exchange, identifier, None), UUID)
+    )
+
+
+def _exchange_payload(exchange: object) -> list[dict[str, object]]:
+    return [
+        {"message_id": str(message.message_id), "role": message.role, "content": message.content}
+        for message in _exchange_messages(exchange)
+    ]
 
 
 @dataclass(frozen=True)

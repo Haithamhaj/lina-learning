@@ -582,6 +582,51 @@ class LearningMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
+class LearningExchangeEmbedding(Base):
+    """Temporary vector index for one completed, source-authoritative exchange."""
+
+    __tablename__ = "learning_exchange_embeddings"
+    __table_args__ = (
+        UniqueConstraint(
+            "student_message_id",
+            "tutor_message_id",
+            "embedding_model",
+            name="uq_learning_exchange_embedding_exchange_model",
+        ),
+        Index("ix_learning_exchange_embeddings_session_segment", "session_id", "segment_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    session_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("learning_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    segment_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("learning_segments.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    student_message_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("learning_messages.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    tutor_message_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("learning_messages.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    embedding: Mapped[list[float]] = mapped_column(Vector(1536), nullable=False)
+    embedding_model: Mapped[str] = mapped_column(String(128), nullable=False)
+    dimensions: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1536, server_default="1536")
+    ai_execution_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("ai_executions.id", ondelete="SET NULL"),
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class CandidateEvent(Base):
     __tablename__ = "candidate_events"
     __table_args__ = (Index("ix_candidate_events_session", "session_id"),)

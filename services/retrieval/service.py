@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 import re
 from uuid import UUID
 
@@ -26,6 +27,38 @@ class CurrentFocus:
     unit_key: str | None = None
     lesson_key: str | None = None
     concept_key: str | None = None
+
+
+class QueryEmbeddingState(str, Enum):
+    NOT_SUPPLIED = "NOT_SUPPLIED"
+    AVAILABLE = "AVAILABLE"
+    UNAVAILABLE = "UNAVAILABLE"
+
+
+@dataclass(frozen=True)
+class QueryEmbedding:
+    """Typed handoff that prevents a failed shared embedding from being retried."""
+
+    state: QueryEmbeddingState
+    vector: list[float] | None = None
+
+    @classmethod
+    def not_supplied(cls) -> "QueryEmbedding":
+        return cls(QueryEmbeddingState.NOT_SUPPLIED)
+
+    @classmethod
+    def available(cls, vector: list[float]) -> "QueryEmbedding":
+        if len(vector) != 1536 or not all(isinstance(value, (float, int)) for value in vector):
+            raise ValueError("Query embedding must contain exactly 1536 numeric dimensions.")
+        return cls(QueryEmbeddingState.AVAILABLE, [float(value) for value in vector])
+
+    @classmethod
+    def unavailable(cls) -> "QueryEmbedding":
+        return cls(QueryEmbeddingState.UNAVAILABLE)
+
+    @property
+    def allows_generation(self) -> bool:
+        return self.state is QueryEmbeddingState.NOT_SUPPLIED
 
 
 @dataclass(frozen=True)
@@ -105,6 +138,7 @@ class RetrievalService:
         focus: CurrentFocus | None = None,
         limit: int = 4,
         character_budget: int = 2400,
+        query_embedding: QueryEmbedding = QueryEmbedding.not_supplied(),
     ) -> list[RetrievedBlock]:
         """Compatibility convenience returning only the selected context blocks."""
         return self.retrieve_with_debug(
@@ -115,6 +149,7 @@ class RetrievalService:
             focus=focus,
             block_limit=limit,
             character_budget=character_budget,
+            query_embedding=query_embedding,
         ).blocks
 
     def retrieve_with_debug(
@@ -128,6 +163,7 @@ class RetrievalService:
         candidate_limit: int = 20,
         block_limit: int = 4,
         character_budget: int = 2400,
+        query_embedding: QueryEmbedding = QueryEmbedding.not_supplied(),
     ) -> RetrievalContext:
         if not question.strip():
             raise ValueError("A retrieval question is required.")
@@ -139,7 +175,13 @@ class RetrievalService:
         if index_run_id is None:
             return RetrievalContext(UUID(int=0), [], RetrievalDebug((), (), ()))
         semantic_types = _semantic_type_hints(question)
-        query_embedding = self._query_embedding(question, student_id=student_id)
+        vector = (
+            query_embedding.vector
+            if query_embedding.state is QueryEmbeddingState.AVAILABLE
+            else self._query_embedding(question, student_id=student_id)
+            if query_embedding.allows_generation
+            else None
+        )
         lexical_ids = self._lexical_candidate_ids(
             index_run_id=index_run_id,
             question=question,
@@ -150,7 +192,7 @@ class RetrievalService:
         )
         vector_ids = self._vector_candidate_ids(
             index_run_id=index_run_id,
-            embedding=query_embedding,
+            embedding=vector,
             grade_level=grade_level,
             subject=subject,
             focus=None,
@@ -176,7 +218,7 @@ class RetrievalService:
             focused_ids.update(
                 self._vector_candidate_ids(
                     index_run_id=index_run_id,
-                    embedding=query_embedding,
+                    embedding=vector,
                     grade_level=grade_level,
                     subject=subject,
                     focus=focus,

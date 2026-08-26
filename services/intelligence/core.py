@@ -14,6 +14,7 @@ from services.platform.db.models import (
     LearningSession, PatternEvidence,
 )
 from services.intelligence.selection import select_relevant_intelligence_text
+from services.tutor.exchanges import clear_session_exchange_embeddings
 
 RUBRIC_VERSION = "evidence-rubric-v1"
 PATTERN_POLICY_VERSION = "pattern-policy-v1"
@@ -76,6 +77,7 @@ def close_and_consolidate(session: Session, *, learning_session: LearningSession
     """Development-close path mirrors the worker-owned session lifecycle."""
 
     learning_session.status = "CLOSED"
+    clear_session_exchange_embeddings(session, learning_session=learning_session)
     return consolidate_student_history(session, student_id=learning_session.student_id)
 
 

@@ -141,22 +141,17 @@ def test_context_keeps_current_question_bounds_history_and_uses_task014_retrieva
         context = TutorContextBuilder(
             session,
             retrieval_service=retrieval,  # type: ignore[arg-type]
-            budget=ContextBudget(
-                recent_message_count=2,
-                session_characters=40,
-                retrieval_characters=100,
-                intelligence_characters=100,
-            ),
+            budget=ContextBudget(retrieval_characters=100, intelligence_characters=100),
         ).build(
             learning_session=learning_session,
             question="How do I compare fractions?",
         )
 
     assert context.question == "How do I compare fractions?"
-    assert [message.content for message in context.session_messages] == ["older turn 3", "older turn 4"]
+    assert context.session_messages == ()
     assert context.focus == CurrentFocus(concept_key="fractions")
     assert context.debug.retrieval_source_refs == ("book#page=12",)
-    assert context.debug.session_message_ids == tuple(message.message_id for message in context.session_messages)
+    assert context.debug.session_message_ids == ()
     assert retrieval.calls == [
         {
             "student_id": student.id,
@@ -167,7 +162,7 @@ def test_context_keeps_current_question_bounds_history_and_uses_task014_retrieva
             "character_budget": 100,
         }
     ]
-    assert context.character_count <= len(context.question) + 40 + 100 + 100
+    assert context.character_count <= len(context.question) + 100 + 100
 
 
 def test_context_uses_the_supplied_current_turn_id_when_student_text_repeats(
@@ -222,9 +217,7 @@ def test_context_uses_the_supplied_current_turn_id_when_student_text_repeats(
         )
 
     assert context.debug.current_turn_message_id == supplied_student_turn.id
-    assert [message.content for message in context.immediate_exchange] == [
-        "Bridge for the supplied Student turn."
-    ]
+    assert context.immediate_exchange is None
     assert bridge_for_duplicate_turn.id not in context.debug.immediate_exchange_message_ids
 
 
@@ -316,26 +309,15 @@ def test_recent_context_keeps_immediate_tutor_question_ahead_of_older_long_messa
         context = TutorContextBuilder(
             session,
             retrieval_service=retrieval,  # type: ignore[arg-type]
-            budget=ContextBudget(
-                recent_message_count=4,
-                session_characters=600,
-                retrieval_characters=100,
-                intelligence_characters=100,
-            ),
+            budget=ContextBudget(retrieval_characters=100, intelligence_characters=100),
         ).build(
             learning_session=learning_session,
             question="B) 3",
             current_turn_message_id=messages[3].id,
         )
 
-    assert [message.content for message in context.immediate_exchange] == [
-        "make me a quiz",
-        tutor_question,
-    ]
-    assert messages[1].id in context.debug.immediate_exchange_message_ids
-    assert messages[2].id in context.debug.immediate_exchange_message_ids
-    assert messages[3].id not in context.debug.session_message_ids
-    assert sum(len(message.content) for message in context.session_messages) <= 600
+    assert context.immediate_exchange is None
+    assert context.session_messages == ()
 
 
 def test_model_input_keeps_immediate_tutor_question_for_opaque_answer(
@@ -384,12 +366,7 @@ def test_model_input_keeps_immediate_tutor_question_for_opaque_answer(
         context = TutorContextBuilder(
             session,
             retrieval_service=retrieval,  # type: ignore[arg-type]
-            budget=ContextBudget(
-                recent_message_count=4,
-                session_characters=600,
-                retrieval_characters=100,
-                intelligence_characters=100,
-            ),
+            budget=ContextBudget(retrieval_characters=100, intelligence_characters=100),
         ).build(
             learning_session=learning_session,
             question="B) 3",
@@ -397,18 +374,13 @@ def test_model_input_keeps_immediate_tutor_question_for_opaque_answer(
         )
         payload = build_tutor_model_payload(
             question=context.question,
-            immediate_exchange=[
-                {"message_id": str(message.message_id), "role": message.role, "content": message.content}
-                for message in context.immediate_exchange
-            ],
-            session_messages=[
-                {"role": message.role, "content": message.content}
-                for message in context.session_messages
-            ],
+            immediate_exchange=[],
         )
 
     assert "Current Turn:\nStudent question:\nB) 3" in str(payload["input"])
-    assert tutor_question in str(payload["input"])
+    assert "Immediate Exchange:" in str(payload["input"])
+    assert "Recent raw complete Exchanges:" in str(payload["input"])
+    assert "Relevant older complete Exchanges from current Segment:" in str(payload["input"])
 
 
 def test_ctx02_runtime_keeps_the_full_immediate_exchange_in_one_call_input(
@@ -476,12 +448,7 @@ def test_ctx02_runtime_keeps_the_full_immediate_exchange_in_one_call_input(
             context_builder=TutorContextBuilder(
                 session,
                 retrieval_service=retrieval,  # type: ignore[arg-type]
-                budget=ContextBudget(
-                    recent_message_count=4,
-                    session_characters=600,
-                    retrieval_characters=100,
-                    intelligence_characters=100,
-                ),
+                    budget=ContextBudget(retrieval_characters=100, intelligence_characters=100),
             ),
             safety_policy=AllowSafetyPolicy(),  # type: ignore[arg-type]
             gateway=ModelGateway(
@@ -507,28 +474,16 @@ def test_ctx02_runtime_keeps_the_full_immediate_exchange_in_one_call_input(
 
     assert current_student_message.content == follow_up
     assert f"Current Turn:\nStudent question:\n{follow_up}" in model_input
-    assert previous_student_turn in model_input
-    assert immediate_tutor_turn in model_input
-    assert crucial_middle_fact in model_input
+    assert "Immediate Exchange:" in model_input
     assert "[... earlier Tutor context omitted ...]" not in model_input
     assert model_input.count(follow_up) == 1
-    assert older_recent_turn in model_input
-    assert older_too_large_turn not in model_input
+    assert "Bounded older current-session continuity:" not in model_input
     assert len(provider.payloads) == 1
-    assert model_input.index("Current Turn:") < model_input.index("Immediate exchange:")
-    assert model_input.index("Immediate exchange:") < model_input.index("Bounded older current-session continuity:")
-    assert model_input.index("Bounded older current-session continuity:") < model_input.index("Retrieved curriculum:")
-    assert persisted_tutor_message.payload["context_debug"] == {
-        "current_turn_message_id": str(current_student_message.id),
-        "immediate_exchange_message_ids": [
-            str(previous_student_message.id),
-            str(bridge_message.id),
-        ],
-        "older_continuity_message_ids": [str(older_recent_message.id)],
-        "session_message_ids": [str(older_recent_message.id)],
-        "retrieval_source_refs": ["book#page=12"],
-        "intelligence_source_ids": [],
-    }
+    assert model_input.index("Current Turn:") < model_input.index("Immediate Exchange:")
+    assert model_input.index("Immediate Exchange:") < model_input.index("Recent raw complete Exchanges:")
+    assert model_input.index("Recent raw complete Exchanges:") < model_input.index("Relevant older complete Exchanges from current Segment:")
+    assert persisted_tutor_message.payload["context_debug"]["current_turn_message_id"] == str(current_student_message.id)
+    assert persisted_tutor_message.payload["context_debug"]["session_message_ids"] == []
 
 
 def test_recent_persisted_topic_metadata_supports_an_ambiguous_continuation(

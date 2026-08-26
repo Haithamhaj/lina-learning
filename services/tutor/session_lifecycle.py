@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from services.platform.config import Settings, get_settings
 from services.platform.db.models import LearningSession
+from services.tutor.exchanges import clear_session_exchange_embeddings
 from services.platform.jobs import enqueue_job
 
 SESSION_CONSOLIDATION_JOB = "SESSION_CONSOLIDATION"
@@ -58,6 +59,7 @@ def close_session_if_eligible(
 
     learning_session.status = "CLOSED"
     learning_session.closed_at = now
+    clear_session_exchange_embeddings(session, learning_session=learning_session)
     enqueue_job(
         session,
         job_type=SESSION_CONSOLIDATION_JOB,

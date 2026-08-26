@@ -100,16 +100,15 @@ def test_language_switching_uses_current_turn_language_without_losing_recent_con
 
     payload = build_tutor_model_payload(
         question="Can I try another equivalent-fractions example?",
-        session_messages=[
-            {"role": "student", "content": "ممكن تشرحي الكسور المتكافئة؟"},
-            {"role": "tutor", "content": "نعم، 1/2 = 2/4."},
-            {"role": "student", "content": "فهمت الآن"},
-        ],
+        recent_exchanges=[[
+            {"message_id": "student-ar", "role": "student", "content": "ممكن تشرحي الكسور المتكافئة؟"},
+            {"message_id": "tutor-ar", "role": "tutor", "content": "نعم، 1/2 = 2/4."},
+        ]],
     )
 
     assert "Student question:\nCan I try another equivalent-fractions example?" in payload["input"]
     assert "ممكن تشرحي الكسور المتكافئة؟" in payload["input"]
-    assert "فهمت الآن" in payload["input"]
+    assert "فهمت الآن" not in payload["input"]
     assert "current message on every turn" in TUTOR_SHARED_INSTRUCTIONS
     assert "language switch" in TUTOR_SHARED_INSTRUCTIONS
     assert "separate learner profiles" in TUTOR_SHARED_INSTRUCTIONS
