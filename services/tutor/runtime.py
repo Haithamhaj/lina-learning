@@ -218,7 +218,7 @@ def build_tutor_model_payload(
             f"Bounded older current-session continuity:\n{session_context}\n\n"
             f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}{segment_context}{segment_state_context}"
         ),
-        "max_output_tokens": 800,
+        "max_output_tokens": get_settings().tutor_max_output_tokens,
         "question": question,
         "sources": sources or [],
         "intelligence": intelligence or [],

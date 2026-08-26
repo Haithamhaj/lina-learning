@@ -118,6 +118,7 @@ class Settings(BaseSettings):
     model_name: str = "mock"
     model_base_url: str | None = None
     model_api_key: SecretStr | None = None
+    tutor_max_output_tokens: int = Field(default=2000, gt=0)
     embedding_model_name: str = "text-embedding-3-small"
     embedding_dimensions: int = Field(default=1536, ge=1)
 

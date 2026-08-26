@@ -10,23 +10,30 @@ import pytest
 from services.model_gateway.factory import create_tutor_gateway
 from services.model_gateway.gateway import ModelResult, ModelRoute, StaticModelProvider, StreamComplete, StreamDelta
 from services.model_gateway.openai_provider import OpenAIResponsesProvider
-from services.platform.config import Settings
+from services.platform.config import Settings, reset_settings_cache
 from services.platform.db.models import ModelTask
 
 
-def test_tutor_runtime_exposes_a_provider_neutral_model_payload() -> None:
+def test_tutor_runtime_exposes_a_provider_neutral_model_payload(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Tutor supplies grounding and compact context without knowing the provider."""
 
-    module = importlib.import_module("services.tutor.runtime")
-    assert hasattr(module, "build_tutor_model_payload")
-    payload = module.build_tutor_model_payload(
-        question="How does 4.2 × 10 change the decimal point?",
-        sources=[{"ref": "Eureka#page=16", "text": "Use a place value chart."}],
-        intelligence=["Recent support need: place value × 10."],
-        safety_directive="Use simple framing and avoid adult-level detail.",
-    )
+    monkeypatch.setenv("TUTOR_MAX_OUTPUT_TOKENS", "2400")
+    reset_settings_cache()
+    try:
+        module = importlib.import_module("services.tutor.runtime")
+        assert hasattr(module, "build_tutor_model_payload")
+        payload = module.build_tutor_model_payload(
+            question="How does 4.2 × 10 change the decimal point?",
+            sources=[{"ref": "Eureka#page=16", "text": "Use a place value chart."}],
+            intelligence=["Recent support need: place value × 10."],
+            safety_directive="Use simple framing and avoid adult-level detail.",
+        )
+    finally:
+        reset_settings_cache()
 
-    assert payload["max_output_tokens"] == 800
+    assert payload["max_output_tokens"] == 2400
     assert payload["instructions"] == module.TUTOR_SHARED_INSTRUCTIONS
     assert "4.2 × 10" not in payload["instructions"]
     assert "Eureka#page=16" not in payload["instructions"]

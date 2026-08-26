@@ -18,6 +18,23 @@ def test_development_configuration_has_safe_defaults(
     assert settings.allowed_origins == ["http://localhost:5000"]
     assert settings.session_secret is None
     assert settings.s3_multipart_threshold_bytes == 8 * 1024 * 1024
+    assert settings.tutor_max_output_tokens == 2000
+
+
+def test_tutor_output_ceiling_reads_a_positive_environment_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TUTOR_MAX_OUTPUT_TOKENS", "2400")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.tutor_max_output_tokens == 2400
+
+
+@pytest.mark.parametrize("value", [0, -1])
+def test_tutor_output_ceiling_rejects_non_positive_values(value: int) -> None:
+    with pytest.raises(ValidationError, match="tutor_max_output_tokens"):
+        Settings(_env_file=None, tutor_max_output_tokens=value)
 
 
 def test_allowed_origins_accepts_explicit_list() -> None:
