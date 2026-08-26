@@ -696,16 +696,18 @@ def test_parent_redirect_discards_all_ordinary_stream_text_and_persists_only_ser
         "model_action": "REDIRECT_TO_PARENT",
         "effective_action": "REDIRECT_TO_PARENT",
         "boundary_source": "DEFAULT_BOUNDARY",
+        "reason_code": "SEMANTIC_TOPIC_REDIRECT_TO_PARENT",
+        "policy_version": 1,
         "enforced": True,
         "response_origin": "server_composed_redirect",
     }
     assert provider.calls == 1
 
 
-def test_allow_releases_buffered_text_only_after_semantic_parent_decision() -> None:
+def test_allow_releases_buffered_text_and_persists_complete_parent_boundary_audit() -> None:
     """SAFE-02 streaming guard preserves ALLOW streaming after the decision arrives."""
 
-    runtime, provider, _ = _semantic_runtime(applies=False)
+    runtime, provider, session = _semantic_runtime(applies=False)
     events = list(runtime.stream_turn(
         learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), last_activity_at=None),
         question="Why does air cool at high altitude?",
@@ -716,6 +718,18 @@ def test_allow_releases_buffered_text_only_after_semantic_parent_decision() -> N
     ]
     assert isinstance(events[-1], TutorTurn)
     assert events[-1].text == "ORDINARY MODEL TEXT MUST NOT LEAK"
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    assert tutor_message.payload["parent_boundary"] == {
+        "semantic_category": None,
+        "applies": False,
+        "model_action": "ALLOW",
+        "effective_action": "ALLOW",
+        "boundary_source": "DEFAULT_OPEN",
+        "reason_code": "SEMANTIC_NOT_APPLICABLE",
+        "policy_version": 1,
+        "enforced": False,
+        "response_origin": "model_text",
+    }
     assert provider.calls == 1
 
 

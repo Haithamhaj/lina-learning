@@ -915,6 +915,8 @@ def _parent_boundary_audit_metadata(
         "model_action": decision.model_action.value if decision is not None else ParentBoundaryModelAction.ALLOW.value,
         "effective_action": resolution.action.value,
         "boundary_source": resolution.policy_source,
+        "reason_code": resolution.reason_code,
+        "policy_version": resolution.policy_version,
         "enforced": False,
         "response_origin": response_origin,
     }

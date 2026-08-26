@@ -17,7 +17,7 @@ from services.platform.safety import (
     SafetyPolicyService,
     TopicCategory,
 )
-from services.platform.db.models import SafetyAudit, Student, User
+from services.platform.db.models import SafetyAudit, Student, StudentTopicBoundary, User
 from services.tutor.parent_boundaries import (
     PARENT_BOUNDARY_SCHEMA_VERSION,
     ParentBoundaryCategory,
@@ -338,3 +338,45 @@ def test_default_open_and_ambiguous_semantic_decision_stay_open(
     assert resolution.action is SafetyAction.ALLOW
     assert resolution.category is None
     assert resolution.policy_source == "DEFAULT_OPEN"
+
+
+@pytest.mark.parametrize(
+    "legacy_state",
+    [
+        BoundaryState.ALLOW,
+        BoundaryState.AGE_APPROPRIATE_ONLY,
+        BoundaryState.REDIRECT_TO_PARENT,
+    ],
+)
+def test_legacy_human_reproduction_setting_never_changes_new_sexual_content_default(
+    postgres_session_factory: sessionmaker[Session],
+    legacy_state: BoundaryState,
+) -> None:
+    """Catches a migration or resolver that silently reinterprets Parent intent."""
+
+    with postgres_session_factory.begin() as session:
+        student_id = make_student(session)
+        session.add(
+            StudentTopicBoundary(
+                student_id=student_id,
+                category="HUMAN_REPRODUCTION",
+                state=legacy_state.value,
+                policy_version=9,
+            )
+        )
+        session.flush()
+        resolution = SafetyPolicyService(session).resolve_parent_boundary(
+            student_id=student_id,
+            decision=ParentBoundaryDecision(
+                schema_version=PARENT_BOUNDARY_SCHEMA_VERSION,
+                category=ParentBoundaryCategory.SEXUAL_CONTENT,
+                applies=True,
+                model_action=ParentBoundaryModelAction.ALLOW,
+                redirect=None,
+            ),
+        )
+
+    assert resolution.action is SafetyAction.REDIRECT_TO_PARENT
+    assert resolution.policy_source == "DEFAULT_BOUNDARY"
+    assert resolution.policy_version == 1
+    assert resolution.reason_code == "SEMANTIC_TOPIC_REDIRECT_TO_PARENT"
