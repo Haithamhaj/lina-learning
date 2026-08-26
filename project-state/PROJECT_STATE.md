@@ -11,8 +11,8 @@ Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Stu
 - Structural-first content processing and PostgreSQL lexical + pgvector retrieval remain the approved grounding path; educational semantics remain optional enrichment.
 - REC-35.2 is implemented but remains REVIEW until the ordered Stabilization Gate is completed.
 - Closed stabilization items: CTX-01, ACT-01, OBS-01, UI-01. Open critical-path order remains A → B → C → D, with MATH-01 and ID-01 independent.
-- Hybrid Segment Context is the approved governing architecture; its full production runtime is not yet implemented:
-  - a logical Multimodal Turn may contain text, transcript, and original asset references;
+- Hybrid Segment Context's current text-based runtime is implemented and technically verified; future Multimodal Turn inputs such as Voice, Vision, and original assets remain frozen future capability and do not reopen CTX-03:
+  - a logical Multimodal Turn may eventually contain text, transcript, and original asset references;
   - Learning Thread = session-local contiguous Segment (`thread_id`), with no third Thread entity;
   - Segments are EPHEMERAL by default;
   - optional Durable Conversation Topics are Grade-scoped navigation metadata only;
@@ -63,7 +63,7 @@ Event → Evidence → State/Pattern → Learner Intelligence Card; current beha
 
 ## Next recommended action
 
-Await explicit Product Owner direction after CTX-03E-A. Real-Lina validation is deferred. Do not begin ACT-02, REC-25, LR-D04B, archive retrieval, or frozen future capabilities. TASK-027A remains future/blocked.
+ACT-02 — NAVIGATION vs ANSWER_CHOICE Semantic Misuse. Real-Lina validation remains deferred and is required before any final CORE LEARNING RUNTIME STABILIZED declaration. Do not begin REC-25, LR-D04B, archive retrieval, or frozen future capabilities. TASK-027A remains future/blocked.
 
 ## Critical references
 
