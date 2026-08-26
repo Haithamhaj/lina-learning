@@ -118,16 +118,30 @@ def apply_context_capacity_guardrail(
         kept_context=_context_metadata(working),
         dropped_context=tuple(dropped),
     )
-    return GuardrailedTutorContext(context=working, payload=payload, lineage=lineage)
+    return GuardrailedTutorContext(
+        context=_with_final_context_debug(working),
+        payload=payload,
+        lineage=lineage,
+    )
 
 
 def _drop_next_optional_unit(context: TutorContext) -> tuple[TutorContext, DroppedContextUnit | None]:
     """Apply CTX-03D's deterministic layer order without changing upstream relevance."""
 
     if context.semantic_recall_exchanges:
-        exchange = context.semantic_recall_exchanges[0]
+        exchange = _lowest_priority_semantic_exchange(context)
         return (
-            replace(context, semantic_recall_exchanges=context.semantic_recall_exchanges[1:]),
+            replace(
+                context,
+                semantic_recall_exchanges=tuple(
+                    item for item in context.semantic_recall_exchanges if item != exchange
+                ),
+                semantic_recall_priority_message_ids=tuple(
+                    message_ids
+                    for message_ids in context.semantic_recall_priority_message_ids
+                    if message_ids != exchange.message_ids
+                ),
+            ),
             _exchange_drop("SEMANTIC_RECALL_EXCHANGE", exchange),
         )
     if context.recent_exchanges:
@@ -155,6 +169,19 @@ def _exchange_drop(kind: str, exchange: ConversationExchangeContext) -> DroppedC
     return DroppedContextUnit(kind, source_ids=tuple(_exchange_ids(exchange)))
 
 
+def _lowest_priority_semantic_exchange(context: TutorContext) -> ConversationExchangeContext:
+    """Use CTX-03C's stored priority; presentation order is never a removal signal."""
+
+    if len(context.semantic_recall_exchanges) == 1:
+        return context.semantic_recall_exchanges[0]
+    by_message_ids = {exchange.message_ids: exchange for exchange in context.semantic_recall_exchanges}
+    for message_ids in reversed(context.semantic_recall_priority_message_ids):
+        exchange = by_message_ids.get(message_ids)
+        if exchange is not None:
+            return exchange
+    raise ValueError("Semantic Recall Exchanges require CTX-03C priority lineage before capacity reduction.")
+
+
 def _context_metadata(context: TutorContext) -> dict[str, object]:
     """Record identifiers and refs only; raw hidden prompt text stays out of lineage."""
 
@@ -179,6 +206,32 @@ def _context_metadata(context: TutorContext) -> dict[str, object]:
             "learner_intelligence_entries": len(context.intelligence),
         },
     }
+
+
+def _with_final_context_debug(context: TutorContext) -> TutorContext:
+    """Keep persisted debug metadata aligned with the final model-facing context only."""
+
+    recent_message_ids = _raw_exchange_ids(context.recent_exchanges)
+    semantic_message_ids = _raw_exchange_ids(context.semantic_recall_exchanges)
+    return replace(
+        context,
+        debug=replace(
+            context.debug,
+            older_continuity_message_ids=(*recent_message_ids, *semantic_message_ids),
+            recent_exchange_message_ids=recent_message_ids,
+            semantic_recall_exchange_message_ids=semantic_message_ids,
+            retrieval_source_refs=tuple(block.source_ref for block in context.retrieval),
+            intelligence_source_ids=tuple(item.source_id for item in context.intelligence),
+        ),
+    )
+
+
+def _raw_exchange_ids(exchanges: tuple[ConversationExchangeContext, ...]) -> tuple[object, ...]:
+    return tuple(
+        identifier
+        for exchange in exchanges
+        for identifier in getattr(exchange, "message_ids", ())
+    )
 
 
 def _exchange_ids(exchange: object | None) -> list[str]:

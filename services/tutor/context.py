@@ -65,6 +65,7 @@ class TutorContext:
     immediate_exchange: ConversationExchangeContext | None = None
     recent_exchanges: tuple[ConversationExchangeContext, ...] = ()
     semantic_recall_exchanges: tuple[ConversationExchangeContext, ...] = ()
+    semantic_recall_priority_message_ids: tuple[tuple[UUID, ...], ...] = ()
 
     @property
     def character_count(self) -> int:
@@ -144,7 +145,7 @@ class TutorContextBuilder:
             if not set(exchange.message_ids).intersection(immediate_ids | recent_ids)
         )
         latest_state = latest_valid_structured_segment_state(self._session, segment=segment)
-        semantic_recall, shared_query = self._semantic_recall(
+        semantic_recall, semantic_recall_priority, shared_query = self._semantic_recall(
             learning_session=learning_session,
             current_turn=current_turn,
             segment_id=segment.id if segment is not None else None,
@@ -189,6 +190,9 @@ class TutorContextBuilder:
             immediate_exchange=immediate_exchange,
             recent_exchanges=recent_exchanges,
             semantic_recall_exchanges=semantic_recall,
+            semantic_recall_priority_message_ids=tuple(
+                exchange.message_ids for exchange in semantic_recall_priority
+            ),
             session_messages=(),
             retrieval=retrieval,
             intelligence=intelligence,
@@ -239,12 +243,17 @@ class TutorContextBuilder:
         candidates: tuple[ConversationExchangeContext, ...],
         state_source_ids: set[UUID],
         question: str,
-    ) -> tuple[tuple[ConversationExchangeContext, ...], QueryEmbedding]:
+    ) -> tuple[
+        tuple[ConversationExchangeContext, ...],
+        tuple[ConversationExchangeContext, ...],
+        QueryEmbedding,
+    ]:
         if segment_id is None or not candidates:
-            return (), QueryEmbedding.not_supplied()
+            return (), (), QueryEmbedding.not_supplied()
         pinned = tuple(exchange for exchange in candidates if set(exchange.message_ids).intersection(state_source_ids))
         if self._embedding_gateway is None:
-            return pinned[: self._budget.semantic_recall_exchange_count], QueryEmbedding.unavailable()
+            selected = pinned[: self._budget.semantic_recall_exchange_count]
+            return selected, selected, QueryEmbedding.unavailable()
         route = self._embedding_gateway.route_for(ModelTask.EMBEDDING)
         candidate_by_student_id = {exchange.student_message_id: exchange for exchange in candidates}
         candidate_student_ids = list(candidate_by_student_id)
@@ -297,7 +306,8 @@ class TutorContextBuilder:
                 )
                 stored[exchange.student_message_id] = row
         except Exception:
-            return pinned[: self._budget.semantic_recall_exchange_count], QueryEmbedding.unavailable()
+            selected = pinned[: self._budget.semantic_recall_exchange_count]
+            return selected, selected, QueryEmbedding.unavailable()
         distance = LearningExchangeEmbedding.embedding.cosine_distance(query.vector).label("distance")
         ranked_rows = self._session.execute(
             select(LearningExchangeEmbedding.student_message_id, distance)
@@ -318,7 +328,11 @@ class TutorContextBuilder:
             if student_message_id not in pinned_ids
         ]
         selected = [*sorted(pinned, key=lambda exchange: (exchange.tutor_created_at, str(exchange.tutor_message_id)), reverse=True), *semantic]
-        return tuple(sorted(selected[: self._budget.semantic_recall_exchange_count], key=lambda item: (item.student_created_at, str(item.student_message_id)))), query
+        priority = tuple(selected[: self._budget.semantic_recall_exchange_count])
+        presentation = tuple(
+            sorted(priority, key=lambda item: (item.student_created_at, str(item.student_message_id)))
+        )
+        return presentation, priority, query
 
     def _session_focus(self, session_id: UUID) -> CurrentFocus | None:
         """Use recent persisted topic metadata only as conversational continuity."""

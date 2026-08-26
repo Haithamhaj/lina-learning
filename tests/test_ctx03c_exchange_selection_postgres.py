@@ -290,6 +290,72 @@ def test_existing_oldest_vector_remains_eligible_beyond_missing_embedding_batch_
     assert [exchange.student_content for exchange in context.semantic_recall_exchanges] == ["Student 0"]
 
 
+def test_semantic_priority_lineage_keeps_state_pin_ahead_of_chronological_presentation(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches CTX-03D receiving Luna display order instead of CTX-03C's State-first priority."""
+
+    class Provider:
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            del route
+            inputs = payload["input"]
+            assert isinstance(inputs, list) and inputs == ["Current"]
+            return ModelResult(output={"embeddings": [[1.0] + [0.0] * 1535]})
+
+    with factory.begin() as session:
+        learning_session, segment = _session_and_segment(session)
+        base = datetime(2026, 8, 26, tzinfo=UTC)
+        pinned_student = _student(session, learning_session, segment, "State-pinned older", base)
+        pinned_tutor = _tutor_for(session, learning_session, segment, pinned_student, "Pinned reply", base + timedelta(seconds=1))
+        ordinary_student = _student(session, learning_session, segment, "Ordinary newer", base + timedelta(seconds=2))
+        ordinary_tutor = _tutor_for(session, learning_session, segment, ordinary_student, "Ordinary reply", base + timedelta(seconds=3))
+        recent_student = _student(session, learning_session, segment, "Recent", base + timedelta(seconds=4))
+        _tutor_for(session, learning_session, segment, recent_student, "Recent reply", base + timedelta(seconds=5))
+        immediate_student = _student(session, learning_session, segment, "Immediate", base + timedelta(seconds=6))
+        _tutor_for(session, learning_session, segment, immediate_student, "Immediate reply", base + timedelta(seconds=7))
+        current = _student(session, learning_session, segment, "Current", base + timedelta(seconds=8))
+        segment.structured_state = {
+            "schema_version": "structured-segment-state-v1",
+            "active_goal": "Keep the State-pinned exchange available.",
+            "unresolved_point": None,
+            "active_references": [],
+            "established_facts": [],
+            "source_message_ids": [str(pinned_student.id)],
+        }
+        persist_exchange_embedding(
+            session,
+            student_message=pinned_student,
+            tutor_message=pinned_tutor,
+            embedding=[0.0, 1.0] + [0.0] * 1534,
+            embedding_model="text-embedding-3-small",
+        )
+        persist_exchange_embedding(
+            session,
+            student_message=ordinary_student,
+            tutor_message=ordinary_tutor,
+            embedding=[1.0] + [0.0] * 1535,
+            embedding_model="text-embedding-3-small",
+        )
+        gateway = ModelGateway(
+            session,
+            routes={ModelTask.EMBEDDING: ModelRoute("fixture", "text-embedding-3-small")},
+            providers={"fixture": Provider()},
+        )
+        context = TutorContextBuilder(
+            session,
+            retrieval_service=RetrievalService(session, embedding_gateway=gateway),
+        ).build(learning_session=learning_session, question="Current", current_turn_message_id=current.id)
+
+    assert [exchange.student_content for exchange in context.semantic_recall_exchanges] == [
+        "State-pinned older",
+        "Ordinary newer",
+    ]
+    assert context.semantic_recall_priority_message_ids == (
+        (pinned_student.id, pinned_tutor.id),
+        (ordinary_student.id, ordinary_tutor.id),
+    )
+
+
 def test_zero_similarity_does_not_force_an_older_exchange_into_semantic_recall(
     factory: sessionmaker[Session],
 ) -> None:

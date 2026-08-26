@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -20,7 +21,7 @@ from services.tutor.runtime import build_tutor_model_payload
 from services.tutor.segments import StructuredSegmentState
 
 
-def _exchange(label: str) -> ConversationExchangeContext:
+def _exchange(label: str, *, created_at: datetime | None = None) -> ConversationExchangeContext:
     return ConversationExchangeContext(
         session_id=uuid4(),
         segment_id=uuid4(),
@@ -28,8 +29,8 @@ def _exchange(label: str) -> ConversationExchangeContext:
         tutor_message_id=uuid4(),
         student_content=f"{label} student " + "s" * 120,
         tutor_content=f"{label} tutor " + "t" * 120,
-        student_created_at=None,
-        tutor_created_at=None,
+        student_created_at=created_at,
+        tutor_created_at=created_at + timedelta(seconds=1) if created_at is not None else None,
     )
 
 
@@ -53,8 +54,12 @@ def _context() -> TutorContext:
     current_id = uuid4()
     immediate = _exchange("immediate")
     recent = _exchange("recent")
-    semantic_a = _exchange("semantic-a")
-    semantic_b = _exchange("semantic-b")
+    semantic_a = _exchange("older-higher-relevance", created_at=datetime(2026, 8, 1, tzinfo=UTC))
+    semantic_b = _exchange("newer-lower-relevance", created_at=datetime(2026, 8, 2, tzinfo=UTC))
+    intelligence = (
+        RelevantIntelligence("STATE", uuid4(), "intelligence-a " + "i" * 120, None, 2),
+        RelevantIntelligence("STATE", uuid4(), "intelligence-b " + "i" * 120, None, 1),
+    )
     return TutorContext(
         question="Current Student turn " + "q" * 160,
         subject="MATH",
@@ -62,14 +67,23 @@ def _context() -> TutorContext:
         focus=None,
         session_messages=(),
         retrieval=(_block("retrieval-a"), _block("retrieval-b")),
-        intelligence=(
-            RelevantIntelligence("STATE", uuid4(), "intelligence-a " + "i" * 120, None, 2),
-            RelevantIntelligence("STATE", uuid4(), "intelligence-b " + "i" * 120, None, 1),
+        intelligence=intelligence,
+        debug=TutorContextDebug(
+            None,
+            (),
+            ("book#retrieval-a", "book#retrieval-b"),
+            tuple(item.source_id for item in intelligence),
+            (),
+            current_turn_message_id=current_id,
+            immediate_exchange_message_ids=immediate.message_ids,
+            older_continuity_message_ids=(*recent.message_ids, *semantic_a.message_ids, *semantic_b.message_ids),
+            recent_exchange_message_ids=recent.message_ids,
+            semantic_recall_exchange_message_ids=(*semantic_a.message_ids, *semantic_b.message_ids),
         ),
-        debug=TutorContextDebug(None, (), ("book#retrieval-a", "book#retrieval-b"), (), (), current_turn_message_id=current_id),
         immediate_exchange=immediate,
         recent_exchanges=(recent,),
         semantic_recall_exchanges=(semantic_a, semantic_b),
+        semantic_recall_priority_message_ids=(semantic_a.message_ids, semantic_b.message_ids),
     )
 
 
@@ -118,8 +132,8 @@ def test_under_or_exact_capacity_keeps_every_selected_unit() -> None:
         assert result.lineage.capacity_policy_version == TUTOR_CONTEXT_CAPACITY_POLICY_VERSION
 
 
-def test_over_capacity_drops_whole_optional_units_in_deterministic_layer_order() -> None:
-    """Catches positional slicing or cross-domain score comparisons during capacity reduction."""
+def test_capacity_drops_lowest_priority_semantic_exchange_not_first_chronological_exchange() -> None:
+    """Catches capacity treating Luna's chronological presentation as CTX-03C relevance order."""
 
     context = _context()
     full_size = serialized_model_request_characters(_payload(context))
@@ -127,16 +141,83 @@ def test_over_capacity_drops_whole_optional_units_in_deterministic_layer_order()
 
     assert result.context.immediate_exchange == context.immediate_exchange
     assert result.context.question == context.question
-    assert result.context.semantic_recall_exchanges == (context.semantic_recall_exchanges[1],)
+    assert result.context.semantic_recall_exchanges == (context.semantic_recall_exchanges[0],)
     assert result.lineage.dropped_context[0].kind == "SEMANTIC_RECALL_EXCHANGE"
-    assert result.lineage.dropped_context[0].source_ids == tuple(str(identifier) for identifier in context.semantic_recall_exchanges[0].message_ids)
-    assert context.semantic_recall_exchanges[0].student_content not in str(result.payload["input"])
-    assert context.semantic_recall_exchanges[0].tutor_content not in str(result.payload["input"])
+    assert result.lineage.dropped_context[0].source_ids == tuple(str(identifier) for identifier in context.semantic_recall_exchanges[1].message_ids)
+    assert context.semantic_recall_exchanges[1].student_content not in str(result.payload["input"])
+    assert context.semantic_recall_exchanges[1].tutor_content not in str(result.payload["input"])
+    assert context.semantic_recall_exchanges[0].student_content in str(result.payload["input"])
     assert context.immediate_exchange.student_content in str(result.payload["input"])
     assert context.immediate_exchange.tutor_content in str(result.payload["input"])
     assert "Safety directive must remain." in str(result.payload["input"])
     assert "Effective Parent Boundary settings" in str(result.payload["input"])
     assert result.lineage == apply_context_capacity_guardrail(context, capacity_limit=full_size - 1, payload_builder=_payload).lineage
+
+
+def test_capacity_drops_ordinary_semantic_exchange_before_state_pinned_exchange() -> None:
+    """Catches capacity pressure removing an existing CTX-03C State pin before ordinary recall."""
+
+    context = _context()
+    pinned, ordinary = context.semantic_recall_exchanges
+    full_size = serialized_model_request_characters(_payload(context))
+
+    result = apply_context_capacity_guardrail(context, capacity_limit=full_size - 1, payload_builder=_payload)
+
+    assert result.context.semantic_recall_exchanges == (pinned,)
+    assert result.lineage.dropped_context[0].source_ids == tuple(str(identifier) for identifier in ordinary.message_ids)
+
+
+def test_capacity_final_debug_and_lineage_describe_the_same_guarded_context() -> None:
+    """Catches persisted debug IDs/refs claiming capacity-dropped units were sent to Luna."""
+
+    context = _context()
+    protected = TutorContext(
+        question=context.question,
+        subject=context.subject,
+        grade_level=context.grade_level,
+        focus=context.focus,
+        session_messages=context.session_messages,
+        retrieval=(),
+        intelligence=(),
+        debug=context.debug,
+        immediate_exchange=context.immediate_exchange,
+    )
+    result = apply_context_capacity_guardrail(
+        context,
+        capacity_limit=serialized_model_request_characters(_payload(protected)),
+        payload_builder=_payload,
+    )
+
+    debug = result.context.debug
+    selected = result.lineage.selected_context
+    kept = result.lineage.kept_context
+    dropped = result.lineage.dropped_context
+    assert debug.current_turn_message_id == context.debug.current_turn_message_id
+    assert debug.immediate_exchange_message_ids == context.debug.immediate_exchange_message_ids
+    assert debug.recent_exchange_message_ids == ()
+    assert debug.semantic_recall_exchange_message_ids == ()
+    assert debug.retrieval_source_refs == ()
+    assert debug.intelligence_source_ids == ()
+    assert kept["recent_exchange_message_ids"] == []
+    assert kept["semantic_recall_exchange_message_ids"] == []
+    assert kept["curriculum_refs"] == []
+    assert kept["intelligence_source_ids"] == []
+    assert selected["semantic_recall_exchange_message_ids"]
+    assert selected["recent_exchange_message_ids"]
+    assert selected["curriculum_refs"]
+    assert selected["intelligence_source_ids"]
+    dropped_source_ids = {source_id for item in dropped for source_id in item.source_ids}
+    dropped_source_refs = {source_ref for item in dropped for source_ref in item.source_refs}
+    assert set(selected["recent_exchange_message_ids"]).issubset(dropped_source_ids)
+    assert set(selected["semantic_recall_exchange_message_ids"]).issubset(dropped_source_ids)
+    assert set(selected["intelligence_source_ids"]).issubset(dropped_source_ids)
+    assert set(selected["curriculum_refs"]).issubset(dropped_source_refs)
+    assert {item.kind for item in dropped} == {
+        "SEMANTIC_RECALL_EXCHANGE",
+        "RECENT_RAW_EXCHANGE",
+        "CURRICULUM_BLOCK",
+        "LEARNER_INTELLIGENCE",
+    }
 
 
 def test_capacity_reduction_exhausts_layers_in_the_approved_deterministic_order() -> None:
@@ -160,7 +241,16 @@ def test_capacity_reduction_exhausts_layers_in_the_approved_deterministic_order(
         payload_builder=_payload,
     )
 
-    assert result.context == protected
+    assert result.context.question == protected.question
+    assert result.context.immediate_exchange == protected.immediate_exchange
+    assert result.context.recent_exchanges == ()
+    assert result.context.semantic_recall_exchanges == ()
+    assert result.context.retrieval == ()
+    assert result.context.intelligence == ()
+    assert result.context.debug.recent_exchange_message_ids == ()
+    assert result.context.debug.semantic_recall_exchange_message_ids == ()
+    assert result.context.debug.retrieval_source_refs == ()
+    assert result.context.debug.intelligence_source_ids == ()
     assert [item.kind for item in result.lineage.dropped_context] == [
         "SEMANTIC_RECALL_EXCHANGE",
         "SEMANTIC_RECALL_EXCHANGE",
