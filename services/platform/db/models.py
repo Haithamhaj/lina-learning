@@ -550,6 +550,7 @@ class LearningSegment(Base):
         nullable=False,
     )
     sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    structured_state: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 

@@ -5,14 +5,16 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
+import json
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.model_gateway.factory import create_tutor_gateway
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
 from services.platform.config import get_settings
-from services.platform.db.models import CandidateEvent, LearningMessage, LearningSession, ModelTask
+from services.platform.db.models import CandidateEvent, LearningMessage, LearningSegment, LearningSession, ModelTask
 from services.platform.safety import SafetyPolicyService
 from services.retrieval.service import RetrievalService
 from services.tutor.context import TutorContext, TutorContextBuilder
@@ -26,6 +28,18 @@ from services.tutor.candidate_events import (
     parse_candidate_event_metadata,
 )
 from services.tutor.safety import TutorSafetyRuntime, consume_safety_decision
+from services.tutor.segments import (
+    SEGMENT_RELATION_SCHEMA_VERSION,
+    SEGMENT_STATE_SCHEMA_VERSION,
+    SegmentRelation,
+    StructuredSegmentState,
+    StructuredSegmentStateError,
+    assign_message_to_segment,
+    create_next_segment,
+    latest_segment_for_session,
+    latest_valid_structured_segment_state,
+    parse_structured_segment_state,
+)
 from services.tutor.student_sessions import append_student_message, latest_prior_tutor_teaching_method
 from services.tutor.teaching_decisions import (
     PRIOR_METHOD_RELATION_DEFINITIONS,
@@ -63,6 +77,13 @@ class TutorTurn:
     mode: TeachingMode | None
     strategy: TeachingStrategy | None
     safety: dict[str, str | int]
+
+
+@dataclass(frozen=True)
+class _ResolvedSegmentRelation:
+    segment: LearningSegment
+    relation: str | None
+    relation_source: str
 
 
 class TutorModelStreamFailure(Exception):
@@ -130,6 +151,7 @@ def build_tutor_model_payload(
     candidate_source_message_id: UUID | None = None,
     prior_method: PriorTeachingMethodContext | None = None,
     suggested_action_source: LearningMessage | None = None,
+    latest_segment_state: StructuredSegmentState | None = None,
 ) -> dict[str, object]:
     """Build bounded model input from the project-owned Tutor context only."""
 
@@ -168,12 +190,26 @@ def build_tutor_model_payload(
         if suggested_action_source is not None
         else ""
     )
+    segment_state_context = (
+        "\n\nLatest confirmed Segment State (hidden conversational orientation, not learner intelligence):\n"
+        f"{json.dumps(latest_segment_state.model_dump(mode='json'), ensure_ascii=False)}\n"
+        "For an updated State, source_message_ids may cite the Current Student message ID or prior source IDs already listed here."
+        if latest_segment_state is not None
+        else "\n\nNo valid latest Segment State is available."
+    )
+    segment_context = (
+        "\n\nHidden Segment relation:\n"
+        "Choose segment_relation for the Current Student Turn only: CONTINUE when it belongs to the latest confirmed session Segment; "
+        "NEW_SEGMENT for a meaningful transition; UNCERTAIN when you cannot confidently choose. "
+        "Do not split one coherent topic into a new Segment for every question or explanation, and do not treat an Arabic/English language switch alone as a topic change. "
+        "structured_segment_state is an optional compact, source-linked conversational orientation only. It is never Evidence, learner intelligence, mastery, a learner profile, Safety, or curriculum authority."
+    )
     return {
         "instructions": TUTOR_SHARED_INSTRUCTIONS,
         "input": (
             f"Current Turn:\nStudent question:\n{question}\n\nImmediate exchange:\n{immediate_exchange_context}\n\n"
             f"Bounded older current-session continuity:\n{session_context}\n\n"
-            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}"
+            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}{segment_context}{segment_state_context}"
         ),
         "max_output_tokens": 800,
         "question": question,
@@ -247,12 +283,18 @@ class TutorRuntime:
             question=content,
             current_turn_message_id=student_message.id,
         )
+        latest_segment = latest_segment_for_session(self._session, session_id=learning_session.id)
+        latest_segment_state = latest_valid_structured_segment_state(
+            self._session,
+            segment=latest_segment,
+        )
         payload = _payload_from_context(
             context,
             safety=safety,
             candidate_source_message_id=student_message.id,
             prior_method=prior_method,
             suggested_action_source=suggested_action_source,
+            latest_segment_state=latest_segment_state,
         )
         model_stream = self._gateway.stream(
             ModelTask.TUTOR,
@@ -333,6 +375,27 @@ class TutorRuntime:
         safety: TutorSafetyRuntime,
         prior_method: PriorTeachingMethodContext | None,
     ) -> TutorTurn:
+        resolved_segment = self._resolve_segment_relation(
+            learning_session=learning_session,
+            relation_value=result.output.get("segment_relation"),
+        )
+        assign_message_to_segment(
+            self._session,
+            message=student_message,
+            segment=resolved_segment.segment,
+        )
+        state, state_status = self._validated_segment_state(
+            segment=resolved_segment.segment,
+            state_value=result.output.get("structured_segment_state"),
+        )
+        self._merge_student_conversation_metadata(
+            student_message=student_message,
+            segment=resolved_segment.segment,
+            relation=resolved_segment.relation,
+            relation_source=resolved_segment.relation_source,
+            state=state,
+            state_status=state_status,
+        )
         teaching_decision = _validate_teaching_decision(
             mode_value=result.output.get("teaching_mode"),
             strategy_value=result.output.get("teaching_strategy"),
@@ -346,7 +409,7 @@ class TutorRuntime:
             result=result,
             prior_method=prior_method,
         )
-        return self._persist_turn(
+        turn = self._persist_turn(
             learning_session,
             str(result.output.get("text")),
             normalize_suggested_actions(result.output.get("suggested_actions")),
@@ -361,7 +424,96 @@ class TutorRuntime:
             candidate_metadata_status=candidate_metadata_status,
             candidate_metadata_error=candidate_metadata_error,
             ai_execution_id=result.execution_id,
+            segment_id=resolved_segment.segment.id,
         )
+        if state is not None:
+            resolved_segment.segment.structured_state = state.model_dump(mode="json")
+            self._session.flush()
+        return turn
+
+    def _resolve_segment_relation(
+        self,
+        *,
+        learning_session: LearningSession,
+        relation_value: object,
+    ) -> "_ResolvedSegmentRelation":
+        """Resolve Luna's same-call semantic decision without inventing topic meaning."""
+
+        latest = latest_segment_for_session(self._session, session_id=learning_session.id)
+        try:
+            relation = SegmentRelation(relation_value) if isinstance(relation_value, str) else None
+        except ValueError:
+            relation = None
+        if latest is None:
+            return _ResolvedSegmentRelation(
+                segment=create_next_segment(self._session, learning_session=learning_session),
+                relation=None,
+                relation_source="STRUCTURAL_FIRST_SEGMENT",
+            )
+        if relation is SegmentRelation.CONTINUE:
+            return _ResolvedSegmentRelation(segment=latest, relation=relation.value, relation_source="LUNA")
+        if relation in {SegmentRelation.NEW_SEGMENT, SegmentRelation.UNCERTAIN}:
+            return _ResolvedSegmentRelation(
+                segment=create_next_segment(self._session, learning_session=learning_session),
+                relation=relation.value,
+                relation_source="LUNA",
+            )
+        return _ResolvedSegmentRelation(
+            segment=create_next_segment(self._session, learning_session=learning_session),
+            relation=SegmentRelation.UNCERTAIN.value,
+            relation_source="FALLBACK",
+        )
+
+    def _validated_segment_state(
+        self,
+        *,
+        segment: LearningSegment,
+        state_value: object,
+    ) -> tuple[StructuredSegmentState | None, str]:
+        if state_value is None:
+            return None, "absent"
+        source_ids = self._segment_source_message_ids(segment_id=segment.id)
+        try:
+            return parse_structured_segment_state(
+                state_value,
+                allowed_source_message_ids=source_ids,
+            ), "persisted"
+        except StructuredSegmentStateError:
+            return None, "invalid"
+
+    def _segment_source_message_ids(self, *, segment_id: UUID) -> set[UUID]:
+        if hasattr(self._session, "scalars"):
+            return set(self._session.scalars(
+                select(LearningMessage.id).where(LearningMessage.segment_id == segment_id)
+            ))
+        return {
+            row.id for row in getattr(self._session, "rows", ())
+            if isinstance(row, LearningMessage) and row.segment_id == segment_id
+        }
+
+    def _merge_student_conversation_metadata(
+        self,
+        *,
+        student_message: LearningMessage,
+        segment: LearningSegment,
+        relation: str | None,
+        relation_source: str,
+        state: StructuredSegmentState | None,
+        state_status: str,
+    ) -> None:
+        payload = dict(student_message.payload) if isinstance(student_message.payload, dict) else {}
+        conversation = dict(payload.get("conversation")) if isinstance(payload.get("conversation"), dict) else {}
+        conversation.update({
+            "relation_schema_version": SEGMENT_RELATION_SCHEMA_VERSION,
+            "segment_relation": relation,
+            "relation_source": relation_source,
+            "segment_id": str(segment.id),
+            "state_schema_version": SEGMENT_STATE_SCHEMA_VERSION if state is not None else None,
+            "state_status": state_status,
+        })
+        payload["conversation"] = conversation
+        student_message.payload = payload
+        self._session.flush()
 
     def _persist_candidates(
         self,
@@ -446,6 +598,7 @@ class TutorRuntime:
         decision_status: str = "valid",
         candidate_metadata_error: str | None = None,
         ai_execution_id: UUID | None = None,
+        segment_id: UUID | None = None,
     ) -> TutorTurn:
         sources = _source_metadata(context)
         intelligence = [item.text for item in context.intelligence] if context else []
@@ -491,6 +644,7 @@ class TutorRuntime:
                 content=text,
                 payload=payload,
                 ai_execution_id=ai_execution_id,
+                segment_id=segment_id,
                 created_at=datetime.now(UTC),
             )
         )
@@ -506,6 +660,7 @@ def _payload_from_context(
     candidate_source_message_id: UUID,
     prior_method: PriorTeachingMethodContext | None = None,
     suggested_action_source: LearningMessage | None = None,
+    latest_segment_state: StructuredSegmentState | None = None,
 ) -> dict[str, object]:
     return build_tutor_model_payload(
         question=context.question,
@@ -523,6 +678,7 @@ def _payload_from_context(
         candidate_source_message_id=candidate_source_message_id,
         prior_method=prior_method,
         suggested_action_source=suggested_action_source,
+        latest_segment_state=latest_segment_state,
     )
 
 

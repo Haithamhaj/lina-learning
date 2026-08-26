@@ -13,7 +13,7 @@ from services.tutor.teaching_methods import ACTIVE_TEACHING_METHODS
 
 
 CANDIDATE_EVENT_SCHEMA_VERSION = "candidate-event-v1"
-TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v5"
+TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v6"
 MAX_SUGGESTED_ACTIONS = 4
 CandidateEventType = Literal[
     "learning_attempt",
@@ -163,6 +163,25 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
         "teaching_strategy": {"type": ["string", "null"], "enum": [*(strategy.value for strategy in TeachingStrategy), None]},
         "teaching_method_id": {"type": ["string", "null"], "enum": [*(method.value for method in ACTIVE_TEACHING_METHODS), None]},
         "prior_method_relation": {"type": ["string", "null"], "enum": [*(relation.value for relation in PriorMethodRelation), None]},
+        "segment_relation": {"type": ["string", "null"], "enum": ["CONTINUE", "NEW_SEGMENT", "UNCERTAIN", None]},
+        "structured_segment_state": {
+            "anyOf": [
+                {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "schema_version": {"type": "string", "enum": ["structured-segment-state-v1"]},
+                        "active_goal": {"type": ["string", "null"], "maxLength": 500},
+                        "unresolved_point": {"type": ["string", "null"], "maxLength": 500},
+                        "active_references": {"type": "array", "maxItems": 6, "items": {"type": "string", "maxLength": 500}},
+                        "established_facts": {"type": "array", "maxItems": 6, "items": {"type": "string", "maxLength": 500}},
+                        "source_message_ids": {"type": "array", "minItems": 1, "maxItems": 8, "items": {"type": "string"}},
+                    },
+                    "required": ["schema_version", "active_goal", "unresolved_point", "active_references", "established_facts", "source_message_ids"],
+                },
+                {"type": "null"},
+            ]
+        },
         "candidate_metadata": {
             "anyOf": [
                 {
@@ -203,7 +222,7 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
             ]
         },
     },
-    "required": ["text", "suggested_actions", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "candidate_metadata"],
+    "required": ["text", "suggested_actions", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "candidate_metadata"],
 }
 
 

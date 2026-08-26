@@ -13,15 +13,23 @@ from services.tutor.teaching_decisions import PriorMethodRelation, TeachingMode,
 from services.tutor.teaching_methods import ACTIVE_TEACHING_METHODS
 
 
-def test_tutor_turn_v5_requires_nullable_luna_owned_decisions_without_changing_candidate_metadata() -> None:
-    """Catches a structured-output upgrade that omits actions or rewrites Candidate metadata."""
+def test_tutor_turn_v6_requires_segment_metadata_without_changing_candidate_metadata() -> None:
+    """Catches a response-contract upgrade that omits hidden Segment metadata or rewrites Candidates."""
 
-    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v5"
-    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "candidate_metadata"]
+    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v6"
+    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "candidate_metadata"]
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_mode"] == {"type": ["string", "null"], "enum": [*(mode.value for mode in TeachingMode), None]}
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_strategy"] == {"type": ["string", "null"], "enum": [*(strategy.value for strategy in TeachingStrategy), None]}
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_method_id"] == {"type": ["string", "null"], "enum": [*(method.value for method in ACTIVE_TEACHING_METHODS), None]}
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["prior_method_relation"] == {"type": ["string", "null"], "enum": [*(relation.value for relation in PriorMethodRelation), None]}
+    assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["segment_relation"] == {
+        "type": ["string", "null"],
+        "enum": ["CONTINUE", "NEW_SEGMENT", "UNCERTAIN", None],
+    }
+    state_schema = TUTOR_OUTPUT_JSON_SCHEMA["properties"]["structured_segment_state"]["anyOf"][0]
+    assert state_schema["required"] == ["schema_version", "active_goal", "unresolved_point", "active_references", "established_facts", "source_message_ids"]
+    assert state_schema["additionalProperties"] is False
+    assert state_schema["properties"]["schema_version"]["enum"] == ["structured-segment-state-v1"]
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["suggested_actions"] == {
         "type": "array",
         "maxItems": 4,

@@ -236,9 +236,16 @@ def _normalize_output(
 
 
 def _teaching_decision_output(parsed: dict[str, object]) -> dict[str, object]:
-    """Preserve supplied v5 semantic decisions without fabricating absent values."""
+    """Preserve supplied v6 semantic metadata without fabricating absent values."""
 
-    fields = ("teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation")
+    fields = (
+        "teaching_mode",
+        "teaching_strategy",
+        "teaching_method_id",
+        "prior_method_relation",
+        "segment_relation",
+        "structured_segment_state",
+    )
     return {field: parsed[field] for field in fields if field in parsed}
 
 
