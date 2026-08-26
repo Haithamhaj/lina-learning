@@ -217,7 +217,9 @@ def test_context_uses_the_supplied_current_turn_id_when_student_text_repeats(
         )
 
     assert context.debug.current_turn_message_id == supplied_student_turn.id
-    assert context.immediate_exchange is None
+    assert context.immediate_exchange is not None
+    assert context.immediate_exchange.message_ids == (bridge_for_supplied_turn.id,)
+    assert context.immediate_exchange.tutor_content == "Bridge for the supplied Student turn."
     assert bridge_for_duplicate_turn.id not in context.debug.immediate_exchange_message_ids
 
 
@@ -316,7 +318,10 @@ def test_recent_context_keeps_immediate_tutor_question_ahead_of_older_long_messa
             current_turn_message_id=messages[3].id,
         )
 
-    assert context.immediate_exchange is None
+    assert context.immediate_exchange is not None
+    assert context.immediate_exchange.message_ids == (messages[1].id, messages[2].id)
+    assert context.immediate_exchange.student_content == "make me a quiz"
+    assert context.immediate_exchange.tutor_content == tutor_question
     assert context.session_messages == ()
 
 

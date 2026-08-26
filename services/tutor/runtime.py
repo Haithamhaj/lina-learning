@@ -863,7 +863,7 @@ def _exchange_messages(exchange: object) -> tuple[SessionContextMessage, ...]:
     return tuple(
         SessionContextMessage(getattr(exchange, identifier), role, getattr(exchange, content))
         for identifier, role, content in values
-        if isinstance(getattr(exchange, identifier, None), UUID)
+        if isinstance(getattr(exchange, identifier, None), UUID) and isinstance(getattr(exchange, content, None), str)
     )
 
 

@@ -7,15 +7,15 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from services.platform.db.connection import normalize_database_url
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute
-from services.platform.db.models import AIExecution, LearningMessage, LearningSegment, LearningSession, ModelTask, Student, User
+from services.platform.db.models import AIExecution, LearningExchangeEmbedding, LearningMessage, LearningSegment, LearningSession, ModelTask, Student, User
 from services.retrieval.service import RetrievedBlock, RetrievalService
-from services.tutor.context import TutorContextBuilder
-from services.tutor.exchanges import complete_exchanges_for_segment, serialize_exchange
+from services.tutor.context import ContextBudget, TutorContextBuilder
+from services.tutor.exchanges import complete_exchanges_for_segment, persist_exchange_embedding, serialize_exchange
 
 
 pytestmark = pytest.mark.skipif(
@@ -132,6 +132,82 @@ def test_context_uses_disjoint_complete_exchange_groups_from_latest_segment(
     assert len(all_ids) == len(set(all_ids))
 
 
+def test_immediate_exchange_uses_the_latest_session_pair_even_when_safety_has_no_segment(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches CTX-03C deriving CTX-02 Immediate Exchange from Segment lineage."""
+
+    class Retrieval:
+        def retrieve(self, **_: object) -> list[RetrievedBlock]:
+            return []
+
+    with factory.begin() as session:
+        learning_session, segment = _session_and_segment(session)
+        base = datetime(2026, 8, 26, tzinfo=UTC)
+        normal_student = _student(session, learning_session, segment, "normal Segment Student", base)
+        _tutor_for(session, learning_session, segment, normal_student, "normal Segment Tutor", base + timedelta(seconds=1))
+        safety_student = LearningMessage(
+            session_id=learning_session.id,
+            role="student",
+            content="I am in immediate danger",
+            created_at=base + timedelta(seconds=2),
+        )
+        safety_tutor = LearningMessage(
+            session_id=learning_session.id,
+            role="tutor",
+            content="Move away and get a trusted grown-up now.",
+            created_at=base + timedelta(seconds=3),
+        )
+        current = LearningMessage(
+            session_id=learning_session.id,
+            role="student",
+            content="I am safe now",
+            created_at=base + timedelta(seconds=4),
+        )
+        session.add_all([safety_student, safety_tutor, current])
+        session.flush()
+
+        context = TutorContextBuilder(session, retrieval_service=Retrieval()).build(
+            learning_session=learning_session,
+            question=current.content,
+            current_turn_message_id=current.id,
+        )
+
+    assert context.immediate_exchange is not None
+    assert context.immediate_exchange.message_ids == (safety_student.id, safety_tutor.id)
+    assert context.immediate_exchange.student_content == safety_student.content
+    assert context.immediate_exchange.tutor_content == safety_tutor.content
+    assert normal_student.id not in context.debug.immediate_exchange_message_ids
+
+
+def test_immediate_exchange_preserves_tutor_only_session_history(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches a CTX-03C assumption that every visible Tutor reply has a Student pair."""
+
+    class Retrieval:
+        def retrieve(self, **_: object) -> list[RetrievedBlock]:
+            return []
+
+    with factory.begin() as session:
+        learning_session, _ = _session_and_segment(session)
+        base = datetime(2026, 8, 26, tzinfo=UTC)
+        tutor = LearningMessage(session_id=learning_session.id, role="tutor", content="Tutor-only safety response", created_at=base)
+        current = LearningMessage(session_id=learning_session.id, role="student", content="next", created_at=base + timedelta(seconds=1))
+        session.add_all([tutor, current])
+        session.flush()
+        context = TutorContextBuilder(session, retrieval_service=Retrieval()).build(
+            learning_session=learning_session,
+            question=current.content,
+            current_turn_message_id=current.id,
+        )
+
+    assert context.immediate_exchange is not None
+    assert context.immediate_exchange.message_ids == (tutor.id,)
+    assert context.immediate_exchange.student_content is None
+    assert context.immediate_exchange.tutor_content == tutor.content
+
+
 def test_context_batches_current_question_with_missing_older_exchange_embedding_once(
     factory: sessionmaker[Session],
 ) -> None:
@@ -169,3 +245,134 @@ def test_context_batches_current_question_with_missing_older_exchange_embedding_
     assert len(provider.inputs) == 1
     assert provider.inputs[0] == ["Current", "Student:\nStudent 0\n\nTutor:\nTutor 0"]
     assert [exchange.student_content for exchange in context.semantic_recall_exchanges] == ["Student 0"]
+
+
+def test_existing_oldest_vector_remains_eligible_beyond_missing_embedding_batch_limit(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches semantic recall treating the lazy-indexing batch as its candidate pool."""
+
+    class Provider:
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            del route
+            values = payload["input"]
+            assert isinstance(values, list)
+            return ModelResult(
+                output={"embeddings": [[1.0] + [0.0] * 1535, *([[0.0, 1.0] + [0.0] * 1534] * (len(values) - 1))]}
+            )
+
+    with factory.begin() as session:
+        learning_session, segment = _session_and_segment(session)
+        base = datetime(2026, 8, 26, tzinfo=UTC)
+        pairs: list[tuple[LearningMessage, LearningMessage]] = []
+        for index in range(11):
+            student = _student(session, learning_session, segment, f"Student {index}", base + timedelta(seconds=index * 2))
+            tutor = _tutor_for(session, learning_session, segment, student, f"Tutor {index}", base + timedelta(seconds=index * 2 + 1))
+            pairs.append((student, tutor))
+        persist_exchange_embedding(
+            session,
+            student_message=pairs[0][0],
+            tutor_message=pairs[0][1],
+            embedding=[1.0] + [0.0] * 1535,
+            embedding_model="text-embedding-3-small",
+        )
+        current = _student(session, learning_session, segment, "Current", base + timedelta(seconds=23))
+        gateway = ModelGateway(
+            session,
+            routes={ModelTask.EMBEDDING: ModelRoute("fixture", "text-embedding-3-small")},
+            providers={"fixture": Provider()},
+        )
+        context = TutorContextBuilder(
+            session,
+            retrieval_service=RetrievalService(session, embedding_gateway=gateway),
+        ).build(learning_session=learning_session, question="Current", current_turn_message_id=current.id)
+
+    assert [exchange.student_content for exchange in context.semantic_recall_exchanges] == ["Student 0"]
+
+
+def test_zero_similarity_does_not_force_an_older_exchange_into_semantic_recall(
+    factory: sessionmaker[Session],
+) -> None:
+    """The recall cutoff is a calibration boundary, not a nearest-neighbour fallback."""
+
+    class Provider:
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            del route, payload
+            return ModelResult(output={"embeddings": [[1.0] + [0.0] * 1535]})
+
+    with factory.begin() as session:
+        learning_session, segment = _session_and_segment(session)
+        base = datetime(2026, 8, 26, tzinfo=UTC)
+        oldest = _student(session, learning_session, segment, "irrelevant older exchange", base)
+        oldest_tutor = _tutor_for(session, learning_session, segment, oldest, "irrelevant reply", base + timedelta(seconds=1))
+        middle = _student(session, learning_session, segment, "recent exchange", base + timedelta(seconds=2))
+        _tutor_for(session, learning_session, segment, middle, "recent reply", base + timedelta(seconds=3))
+        latest = _student(session, learning_session, segment, "immediate exchange", base + timedelta(seconds=4))
+        _tutor_for(session, learning_session, segment, latest, "immediate reply", base + timedelta(seconds=5))
+        persist_exchange_embedding(
+            session,
+            student_message=oldest,
+            tutor_message=oldest_tutor,
+            embedding=[0.0, 1.0] + [0.0] * 1534,
+            embedding_model="text-embedding-3-small",
+        )
+        current = _student(session, learning_session, segment, "Current", base + timedelta(seconds=6))
+        gateway = ModelGateway(
+            session,
+            routes={ModelTask.EMBEDDING: ModelRoute("fixture", "text-embedding-3-small")},
+            providers={"fixture": Provider()},
+        )
+        context = TutorContextBuilder(
+            session,
+            retrieval_service=RetrievalService(session, embedding_gateway=gateway),
+        ).build(learning_session=learning_session, question="Current", current_turn_message_id=current.id)
+
+    assert context.semantic_recall_exchanges == ()
+
+
+def test_missing_embedding_backlog_progresses_oldest_first_across_turns(
+    factory: sessionmaker[Session],
+) -> None:
+    """A small per-turn batch must eventually index every older eligible exchange."""
+
+    class Provider:
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            del route
+            values = payload["input"]
+            assert isinstance(values, list)
+            return ModelResult(output={"embeddings": [[1.0] + [0.0] * 1535 for _ in values]})
+
+    with factory.begin() as session:
+        learning_session, segment = _session_and_segment(session)
+        base = datetime(2026, 8, 26, tzinfo=UTC)
+        students: list[LearningMessage] = []
+        for index in range(4):
+            student = _student(session, learning_session, segment, f"Student {index}", base + timedelta(seconds=index * 2))
+            _tutor_for(session, learning_session, segment, student, f"Tutor {index}", base + timedelta(seconds=index * 2 + 1))
+            students.append(student)
+        first_current = _student(session, learning_session, segment, "Current 1", base + timedelta(seconds=8))
+        gateway = ModelGateway(
+            session,
+            routes={ModelTask.EMBEDDING: ModelRoute("fixture", "text-embedding-3-small")},
+            providers={"fixture": Provider()},
+        )
+        builder = TutorContextBuilder(
+            session,
+            retrieval_service=RetrievalService(session, embedding_gateway=gateway),
+            budget=ContextBudget(embedding_batch_limit=1),
+        )
+        builder.build(learning_session=learning_session, question=first_current.content, current_turn_message_id=first_current.id)
+        _tutor_for(session, learning_session, segment, first_current, "Tutor Current 1", base + timedelta(seconds=9))
+        second_current = _student(session, learning_session, segment, "Current 2", base + timedelta(seconds=10))
+        builder.build(learning_session=learning_session, question=second_current.content, current_turn_message_id=second_current.id)
+        stored_ids = set(
+            session.scalars(
+                select(LearningExchangeEmbedding.student_message_id).where(
+                    LearningExchangeEmbedding.session_id == learning_session.id,
+                    LearningExchangeEmbedding.segment_id == segment.id,
+                )
+            )
+        )
+
+    assert students[0].id in stored_ids
+    assert students[1].id in stored_ids

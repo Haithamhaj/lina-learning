@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from services.platform.db.models import AIExecution, LearningExchangeEmbedding, LearningMessage, LearningSegment, LearningSession
@@ -23,23 +23,81 @@ class ConversationExchangeContext:
     """One exact, completed Student→Tutor exchange from a single Segment."""
 
     session_id: UUID
-    segment_id: UUID
-    student_message_id: UUID
+    segment_id: UUID | None
+    student_message_id: UUID | None
     tutor_message_id: UUID
-    student_content: str
+    student_content: str | None
     tutor_content: str
-    student_created_at: datetime
+    student_created_at: datetime | None
     tutor_created_at: datetime
 
     @property
-    def message_ids(self) -> tuple[UUID, UUID]:
-        return (self.student_message_id, self.tutor_message_id)
+    def message_ids(self) -> tuple[UUID, ...]:
+        return tuple(
+            identifier
+            for identifier in (self.student_message_id, self.tutor_message_id)
+            if identifier is not None
+        )
 
 
 def serialize_exchange(exchange: ConversationExchangeContext) -> str:
     """Return the exact approved embedding representation, without metadata."""
 
+    if exchange.student_content is None:
+        raise ValueError("Only complete Student→Tutor Exchanges may be embedded.")
     return f"Student:\n{exchange.student_content}\n\nTutor:\n{exchange.tutor_content}"
+
+
+def immediate_exchange_for_current_turn(
+    session: Session,
+    *,
+    learning_session: LearningSession,
+    current_turn: LearningMessage | None,
+) -> ConversationExchangeContext | None:
+    """Resolve CTX-02 immediate continuity independently of Segment/model lineage."""
+
+    if current_turn is None:
+        return None
+    before_current = or_(
+        LearningMessage.created_at < current_turn.created_at,
+        (LearningMessage.created_at == current_turn.created_at) & (LearningMessage.id < current_turn.id),
+    )
+    tutor = session.scalar(
+        select(LearningMessage)
+        .where(
+            LearningMessage.session_id == learning_session.id,
+            LearningMessage.role == "tutor",
+            before_current,
+        )
+        .order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())
+        .limit(1)
+    )
+    if tutor is None:
+        return None
+    before_tutor = or_(
+        LearningMessage.created_at < tutor.created_at,
+        (LearningMessage.created_at == tutor.created_at) & (LearningMessage.id < tutor.id),
+    )
+    student = session.scalar(
+        select(LearningMessage)
+        .where(
+            LearningMessage.session_id == learning_session.id,
+            LearningMessage.role == "student",
+            before_tutor,
+        )
+        .order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())
+        .limit(1)
+    )
+    return ConversationExchangeContext(
+        session_id=learning_session.id,
+        segment_id=tutor.segment_id if student is None else student.segment_id if student.segment_id == tutor.segment_id else None,
+        student_message_id=student.id if student is not None else None,
+        tutor_message_id=tutor.id,
+        student_content=student.content if student is not None else None,
+        tutor_content=tutor.content,
+        student_created_at=student.created_at if student is not None else None,
+        tutor_created_at=tutor.created_at,
+    )
 
 
 def persist_exchange_embedding(

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import sqrt
 from uuid import UUID
 
 from sqlalchemy import select
@@ -15,7 +14,7 @@ from services.model_gateway.factory import create_embedding_gateway
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
 from services.platform.db.models import LearningExchangeEmbedding, LearningMessage, LearningSession, ModelTask
 from services.retrieval.service import CurrentFocus, QueryEmbedding, RetrievedBlock, RetrievalService
-from services.tutor.exchanges import SEMANTIC_RECALL_MIN_COSINE_SIMILARITY, ConversationExchangeContext, complete_exchanges_for_segment, persist_exchange_embedding, serialize_exchange
+from services.tutor.exchanges import SEMANTIC_RECALL_MIN_COSINE_SIMILARITY, ConversationExchangeContext, complete_exchanges_for_segment, immediate_exchange_for_current_turn, persist_exchange_embedding, serialize_exchange
 from services.tutor.segments import latest_segment_for_session, latest_valid_structured_segment_state
 
 
@@ -128,11 +127,18 @@ class TutorContextBuilder:
             if segment is not None
             else ()
         )
-        immediate_exchange = exchanges[-1] if exchanges else None
-        remaining = exchanges[:-1] if immediate_exchange is not None else exchanges
+        immediate_exchange = immediate_exchange_for_current_turn(
+            self._session,
+            learning_session=learning_session,
+            current_turn=current_turn,
+        )
+        immediate_ids = set(immediate_exchange.message_ids) if immediate_exchange is not None else set()
+        remaining = tuple(
+            exchange for exchange in exchanges
+            if not set(exchange.message_ids).intersection(immediate_ids)
+        )
         recent_exchanges = tuple(remaining[-self._budget.recent_exchange_count :])
         recent_ids = {message_id for exchange in recent_exchanges for message_id in exchange.message_ids}
-        immediate_ids = set(immediate_exchange.message_ids) if immediate_exchange is not None else set()
         older = tuple(
             exchange for exchange in remaining
             if not set(exchange.message_ids).intersection(immediate_ids | recent_ids)
@@ -239,18 +245,26 @@ class TutorContextBuilder:
         pinned = tuple(exchange for exchange in candidates if set(exchange.message_ids).intersection(state_source_ids))
         if self._embedding_gateway is None:
             return pinned[: self._budget.semantic_recall_exchange_count], QueryEmbedding.unavailable()
-        candidate_limit = max(self._budget.embedding_batch_limit, self._budget.semantic_recall_exchange_count)
-        eligible = tuple(dict.fromkeys((*pinned, *candidates[-candidate_limit:])))
+        route = self._embedding_gateway.route_for(ModelTask.EMBEDDING)
+        candidate_by_student_id = {exchange.student_message_id: exchange for exchange in candidates}
+        candidate_student_ids = list(candidate_by_student_id)
         rows = self._session.execute(
             select(LearningExchangeEmbedding).where(
                 LearningExchangeEmbedding.session_id == learning_session.id,
                 LearningExchangeEmbedding.segment_id == segment_id,
-                LearningExchangeEmbedding.student_message_id.in_([item.student_message_id for item in eligible]),
-                LearningExchangeEmbedding.embedding_model == self._embedding_gateway.route_for(ModelTask.EMBEDDING).model,
+                LearningExchangeEmbedding.student_message_id.in_(candidate_student_ids),
+                LearningExchangeEmbedding.embedding_model == route.model,
             )
         ).scalars()
         stored = {row.student_message_id: row for row in rows}
-        missing = [exchange for exchange in eligible if exchange.student_message_id not in stored]
+        missing = sorted(
+            (exchange for exchange in candidates if exchange.student_message_id not in stored),
+            key=lambda exchange: (
+                0 if exchange in pinned else 1,
+                exchange.tutor_created_at,
+                str(exchange.tutor_message_id),
+            ),
+        )[: self._budget.embedding_batch_limit]
         try:
             result = self._embedding_gateway.execute(
                 ModelTask.EMBEDDING,
@@ -278,26 +292,32 @@ class TutorContextBuilder:
                     student_message=message_rows[exchange.student_message_id],
                     tutor_message=message_rows[exchange.tutor_message_id],
                     embedding=vector,
-                    embedding_model=self._embedding_gateway.route_for(ModelTask.EMBEDDING).model,
+                    embedding_model=route.model,
                     ai_execution_id=result.execution_id,
                 )
                 stored[exchange.student_message_id] = row
         except Exception:
             return pinned[: self._budget.semantic_recall_exchange_count], QueryEmbedding.unavailable()
-        scored = [
-            (exchange, _cosine_similarity(query.vector or [], stored[exchange.student_message_id].embedding))
-            for exchange in eligible
-            if exchange.student_message_id in stored
-        ]
-        selected = [exchange for exchange, score in scored if exchange in pinned or score >= SEMANTIC_RECALL_MIN_COSINE_SIMILARITY]
-        selected.sort(
-            key=lambda exchange: (
-                0 if exchange in pinned else 1,
-                -next(score for item, score in scored if item == exchange),
-                exchange.tutor_created_at,
-                str(exchange.tutor_message_id),
+        distance = LearningExchangeEmbedding.embedding.cosine_distance(query.vector).label("distance")
+        ranked_rows = self._session.execute(
+            select(LearningExchangeEmbedding.student_message_id, distance)
+            .join(LearningMessage, LearningMessage.id == LearningExchangeEmbedding.tutor_message_id)
+            .where(
+                LearningExchangeEmbedding.session_id == learning_session.id,
+                LearningExchangeEmbedding.segment_id == segment_id,
+                LearningExchangeEmbedding.student_message_id.in_(candidate_student_ids),
+                LearningExchangeEmbedding.embedding_model == route.model,
+                distance <= 1.0 - SEMANTIC_RECALL_MIN_COSINE_SIMILARITY,
             )
-        )
+            .order_by(distance, LearningMessage.created_at.desc(), LearningMessage.id.desc())
+        ).all()
+        pinned_ids = {exchange.student_message_id for exchange in pinned}
+        semantic = [
+            candidate_by_student_id[student_message_id]
+            for student_message_id, _ in ranked_rows
+            if student_message_id not in pinned_ids
+        ]
+        selected = [*sorted(pinned, key=lambda exchange: (exchange.tutor_created_at, str(exchange.tutor_message_id)), reverse=True), *semantic]
         return tuple(sorted(selected[: self._budget.semantic_recall_exchange_count], key=lambda item: (item.student_created_at, str(item.student_message_id)))), query
 
     def _session_focus(self, session_id: UUID) -> CurrentFocus | None:
@@ -324,12 +344,5 @@ class TutorContextBuilder:
         return None
 
 
-def _cosine_similarity(left: list[float], right: list[float]) -> float:
-    if len(left) != 1536 or len(right) != 1536:
-        return -1.0
-    denominator = sqrt(sum(value * value for value in left)) * sqrt(sum(value * value for value in right))
-    return sum(first * second for first, second in zip(left, right, strict=True)) / denominator if denominator else -1.0
-
-
 def _exchange_characters(exchange: ConversationExchangeContext | None) -> int:
-    return 0 if exchange is None else len(exchange.student_content) + len(exchange.tutor_content)
+    return 0 if exchange is None else len(exchange.student_content or "") + len(exchange.tutor_content)
