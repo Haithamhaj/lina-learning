@@ -108,6 +108,28 @@ test("records a suggested action delayed EOF separately from the later ready sta
   assert.equal(entries[9].elapsedMs - entries[8].elapsedMs, 300);
 });
 
+test("records a non-terminal EOF as incomplete rather than a successful ready turn", () => {
+  const { createTutorStreamLifecycleTrace } = loadTraceModule();
+  const trace = createTutorStreamLifecycleTrace({
+    storage: new MemoryStorage(),
+    createTraceId: () => "trace-incomplete-eof",
+    now: () => 1000,
+  });
+
+  const attempt = trace.start({ origin: "suggested_action", suggestedActionKind: "NAVIGATION" });
+  attempt.record("submit_attempt");
+  attempt.record("first_delta_received");
+  attempt.record("stream_eof");
+  attempt.record("stream_incomplete");
+
+  assert.deepEqual(trace.read().map((entry) => entry.event), [
+    "submit_attempt",
+    "first_delta_received",
+    "stream_eof",
+    "stream_incomplete",
+  ]);
+});
+
 test("storage failure cannot prevent an in-memory lifecycle trace", () => {
   const { createTutorStreamLifecycleTrace } = loadTraceModule();
   const trace = createTutorStreamLifecycleTrace({

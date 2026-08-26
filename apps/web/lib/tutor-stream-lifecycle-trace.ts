@@ -11,6 +11,7 @@ export type TutorStreamLifecycleEvent =
   | "first_delta_received"
   | "terminal_turn_received"
   | "stream_eof"
+  | "stream_incomplete"
   | "ui_ready"
   | "request_error";
 
@@ -54,6 +55,7 @@ const lifecycleEvents = new Set<TutorStreamLifecycleEvent>([
   "first_delta_received",
   "terminal_turn_received",
   "stream_eof",
+  "stream_incomplete",
   "ui_ready",
   "request_error",
 ]);

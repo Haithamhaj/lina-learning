@@ -9,6 +9,10 @@ import {
   createTutorStreamLifecycleTrace,
   type TutorStreamLifecycleEntry,
 } from "@/lib/tutor-stream-lifecycle-trace";
+import {
+  finalizeTutorStream,
+  type TutorStreamTermination,
+} from "@/lib/tutor-stream-turn-protocol";
 
 type Message = {
   id: string;
@@ -141,11 +145,35 @@ export function StudentMathSession() {
     trace.record("submit_accepted");
     let requestErrorRecorded = false;
     let terminalTurnReceived = false;
+    const tutorId = `local-tutor-${Date.now()}`;
+    const removeProvisionalTutor = (termination: TutorStreamTermination) => {
+      const outcome = finalizeTutorStream({
+        messages: [],
+        provisionalTutorMessageId: tutorId,
+        terminalTurnReceived,
+        termination,
+      });
+      if (outcome.lifecycleEvent === "stream_incomplete") {
+        trace.record("stream_incomplete");
+      } else if (!requestErrorRecorded) {
+        trace.record("request_error");
+      }
+      setLearningSession((current) => current ? {
+        ...current,
+        messages: finalizeTutorStream({
+          messages: current.messages,
+          provisionalTutorMessageId: tutorId,
+          terminalTurnReceived,
+          termination,
+        }).messages,
+      } : current);
+      setError(outcome.error ?? "The Tutor response did not finish. Please try again.");
+      setState(outcome.state);
+    };
     try {
       const token = await getToken();
       const now = new Date().toISOString();
       const studentId = `local-student-${Date.now()}`;
-      const tutorId = `local-tutor-${Date.now()}`;
       setLearningSession((current) => current ? {
         ...current,
         messages: [...current.messages, { id: studentId, role: "student", content, created_at: now, suggested_actions: [] }, { id: tutorId, role: "tutor", content: "", created_at: now, suggested_actions: [] }],
@@ -207,11 +235,10 @@ export function StudentMathSession() {
         }
       }
       trace.record("stream_eof");
-    } catch (reason) {
-      if (!requestErrorRecorded) trace.record("request_error");
+      if (!terminalTurnReceived) removeProvisionalTutor("eof");
+    } catch {
       if (!terminalTurnReceived) {
-        setError(reason instanceof Error ? reason.message : "Your message could not be saved.");
-        setState("error");
+        removeProvisionalTutor("error");
       }
     }
   };

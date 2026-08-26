@@ -72,3 +72,14 @@ def test_student_math_surface_makes_terminal_turn_the_ready_boundary_before_tran
     assert math_session.index('record("terminal_turn_received")', send_message) < math_session.index('setState("ready")', send_message)
     assert math_session.index('setState("ready")', send_message) < math_session.index('record("ui_ready")', send_message)
     assert math_session.index('record("ui_ready")', send_message) < math_session.index('record("stream_eof")', send_message)
+
+
+def test_student_math_surface_discards_only_its_provisional_tutor_message_on_non_terminal_end() -> None:
+    """DATA-01: a streamed but non-durable Tutor bubble must not survive a failed turn."""
+
+    workspace = Path(__file__).parents[1]
+    math_session = (workspace / "apps/web/components/student-math-session.tsx").read_text()
+
+    assert "removeProvisionalTutor" in math_session
+    assert 'record("stream_incomplete")' in math_session
+    assert "terminalTurnReceived" in math_session
