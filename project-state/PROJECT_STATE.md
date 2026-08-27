@@ -2,7 +2,7 @@
 
 ## Current goal
 
-Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Student Core Profile is an APPROVED FUTURE FOUNDATION, not implemented, and belongs to future TASK-027A. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory Lina Stabilization Gate. CTX-01, ACT-01, ACT-02, OBS-01, UI-01, CTX-02, SAFE-01, SAFE-02, OUT-01, and DATA-01 are CLOSED. CTX-03B, CTX-03C, and CTX-03D are ACCEPTED; CTX-03 technical context runtime is VERIFIED and Real-Lina Context validation is DEFERRED. LR-D04B remains deferred and REC-25 remains BLOCKED.
+Hybrid Segment Context is the APPROVED Context v2 architecture. CAND-01 is FIX IMPLEMENTED / VERIFICATION, not CLOSED. Parent-owned Student Core Profile is an APPROVED FUTURE FOUNDATION, not implemented, and belongs to future TASK-027A. REC-35.2 / LR-D04A remains in REVIEW behind the mandatory Lina Stabilization Gate. CTX-01, ACT-01, ACT-02, OBS-01, UI-01, CTX-02, SAFE-01, SAFE-02, OUT-01, and DATA-01 are CLOSED. CTX-03B, CTX-03C, and CTX-03D are ACCEPTED; CTX-03 technical context runtime is VERIFIED and Real-Lina Context validation is DEFERRED. LR-D04B remains deferred and REC-25 remains BLOCKED.
 
 ## Current reality
 
@@ -11,6 +11,7 @@ Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Stu
 - Structural-first content processing and PostgreSQL lexical + pgvector retrieval remain the approved grounding path; educational semantics remain optional enrichment.
 - REC-35.2 is implemented but remains REVIEW until the ordered Stabilization Gate is completed.
 - Closed stabilization items: CTX-01, ACT-01, ACT-02, OBS-01, UI-01. ACT-02 is ACCEPTED / CLOSED: generic Suggested Action and legacy `ANSWER_CHOICE` clicks are non-evidentiary; only a validated latest persisted Guided Learning Check answer with exact choice membership can enter bounded Candidate processing. Forged, stale, cross-session, and non-member responses are rejected, with runtime retaining final authority validation. Configured production build/browser verification was not run because this isolated worktree has no valid Clerk publishable key; this is non-blocking for ACT-02 closure. Critical-path order remains A → B → C → D, with MATH-01 and ID-01 independent.
+- CAND-01 is FIX IMPLEMENTED / VERIFICATION: `misconception_signal` needs `misconception-evidence-v1` with a Luna-proposed incorrect model, exact normalized Student reasoning span, and the current raw Student message ID. Runtime proves only source identity, role, interaction kind, and exact normalized grounding; it filters unsupported misconception Candidates while preserving unrelated valid Candidates. It does not classify educational correctness, alter Evidence/State/Pattern processing, or add a migration. Focused and disposable-PostgreSQL automated verification passed; Real Luna was not configured.
 - Hybrid Segment Context's current text-based runtime is implemented and technically verified; future Multimodal Turn inputs such as Voice, Vision, and original assets remain frozen future capability and do not reopen CTX-03:
   - a logical Multimodal Turn may eventually contain text, transcript, and original asset references;
   - Learning Thread = session-local contiguous Segment (`thread_id`), with no third Thread entity;
@@ -56,14 +57,14 @@ Event → Evidence → State/Pattern → Learner Intelligence Card; current beha
 
 - STATE-01 remains OPEN / NON-BLOCKING: invalid Structured Segment State is safely rejected and must not stop CTX-03C. CTX-03C must remain current-Segment-only and preserve the already accepted CTX-03B relation, pair lineage, and compact source-linked State boundaries.
 - SAFE-02 must keep hard-baseline enforcement upstream, one primary Tutor call, server-owned final Parent Boundary enforcement, and no visible/persisted ordinary model text on redirects.
-- CAND-01, SCOPE-01/SUBJ-01, DEC-01/DEC-02, REP-01, LANG-01, and CAND-02 remain open in the approved order.
+- CAND-01 remains FIX IMPLEMENTED / VERIFICATION; EDU-ERR-01 is APPROVED / NOT STARTED and must follow CAND-01 review before SCOPE-01/SUBJ-01. DEC-01/DEC-02, REP-01, LANG-01, and CAND-02 remain open in the approved order.
 - EVID-01 still has an unknown session-evidence HTTPError root cause; PERS-01 remains blocked until trustworthy Evidence exists.
 - Historical semantic archive retrieval is unvalidated and must not be treated as a production capability.
 - REC-25, LR-D04B, Track B, and other frozen future capabilities remain out of current execution scope.
 
 ## Next recommended action
 
-CAND-01 — Confusion / Ambiguity Is Not Misconception. Real-Lina validation remains deferred and is required before any final CORE LEARNING RUNTIME STABILIZED declaration. Do not begin REC-25, LR-D04B, archive retrieval, or frozen future capabilities. TASK-027A remains future/blocked.
+Review CAND-01 verification. EDU-ERR-01 is approved but must not start until CAND-01 is accepted; then follow the recorded EDU-ERR-01 → SCOPE-01 Product Owner decision → SUBJ-01 order. Real-Lina validation remains deferred and is required before any final CORE LEARNING RUNTIME STABILIZED declaration. Do not begin REC-25, LR-D04B, archive retrieval, or frozen future capabilities. TASK-027A remains future/blocked.
 
 ## Critical references
 

@@ -52,6 +52,30 @@ def test_tutor_turn_v7_requires_parent_boundary_semantics_without_rewriting_othe
     assert parent_boundary["properties"]["model_action"]["enum"] == ["ALLOW", "AGE_APPROPRIATE_ONLY", "REDIRECT_TO_PARENT"]
 
 
+def test_candidate_contract_exposes_bounded_misconception_evidence_for_source_grounding() -> None:
+    """CAND-01: the primary-call contract must ask Luna for auditable Student source grounding."""
+
+    candidate_schema = TUTOR_OUTPUT_JSON_SCHEMA["properties"]["candidate_metadata"]["anyOf"][0]["properties"]["candidates"]["items"]
+    evidence = candidate_schema["properties"]["misconception_evidence"]
+
+    assert evidence == {
+        "anyOf": [
+            {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "version": {"type": "string", "enum": ["misconception-evidence-v1"]},
+                    "incorrect_model": {"type": "string", "minLength": 1, "maxLength": 500},
+                    "explicit_student_reasoning": {"type": "string", "minLength": 1, "maxLength": 500},
+                    "source_message_id": {"type": "string"},
+                },
+                "required": ["version", "incorrect_model", "explicit_student_reasoning", "source_message_id"],
+            },
+            {"type": "null"},
+        ],
+    }
+
+
 def test_one_luna_call_receives_full_definitions_without_preselected_semantic_axes() -> None:
     payload = build_tutor_model_payload(question="Any literal phrase is only context for Luna.")
 
@@ -91,6 +115,8 @@ def test_tutor_instructions_require_calibrated_child_interaction_without_changin
         "normally provide two to four useful actions",
         "not proof of understanding or mastery",
         "source-linked observable learning signal",
+        "confusion is not a misconception",
+        "copy the supporting student reasoning span",
     ):
         assert required_concept in instructions
 

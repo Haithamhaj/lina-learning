@@ -18,6 +18,7 @@ from services.tutor.parent_boundaries import (
 
 
 CANDIDATE_EVENT_SCHEMA_VERSION = "candidate-event-v1"
+MISCONCEPTION_EVIDENCE_SCHEMA_VERSION = "misconception-evidence-v1"
 TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v7"
 MAX_SUGGESTED_ACTIONS = 4
 MAX_GUIDED_CHECK_CHOICES = 4
@@ -95,6 +96,17 @@ class PersistedGuidedLearningCheck(GuidedLearningCheck):
     id: UUID
 
 
+class MisconceptionEvidence(BaseModel):
+    """Auditable Student-source grounding for one proposed misconception Candidate."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    version: Literal[MISCONCEPTION_EVIDENCE_SCHEMA_VERSION]
+    incorrect_model: str = Field(min_length=1, max_length=500)
+    explicit_student_reasoning: str = Field(min_length=1, max_length=500)
+    source_message_id: UUID
+
+
 class CandidateEventMetadataItem(BaseModel):
     """One potential learning signal, not a conclusion about the Student."""
 
@@ -107,6 +119,10 @@ class CandidateEventMetadataItem(BaseModel):
     source_message_ids: list[UUID] = Field(min_length=1, max_length=4)
     school_or_extended: Literal["school", "extended"]
     observed_student_outcome: str | None = Field(default=None, min_length=1, max_length=500)
+    # Keep this raw until the runtime validates it against the current raw Student source.
+    # That allows one invalid misconception candidate to be filtered without rejecting
+    # other valid candidates in the same model metadata envelope.
+    misconception_evidence: Any | None = None
 
     @model_validator(mode="after")
     def strategy_outcomes_require_an_observed_student_result(self) -> "CandidateEventMetadataItem":
@@ -137,11 +153,15 @@ def parse_candidate_event_metadata(
         metadata = CandidateEventMetadata.model_validate(payload)
     except ValidationError as error:
         raise CandidateEventContractError("Candidate metadata violates the contract.") from error
+    candidates: list[CandidateEventMetadataItem] = []
     for candidate in metadata.candidates:
         source_ids = set(candidate.source_message_ids)
         if not source_ids.issubset(allowed_source_message_ids):
+            if candidate.event_type == "misconception_signal":
+                continue
             raise CandidateEventContractError("Candidate metadata references an unavailable raw message.")
-    return metadata
+        candidates.append(candidate)
+    return metadata.model_copy(update={"candidates": candidates})
 
 
 def normalize_suggested_actions(payload: object) -> list[SuggestedAction]:
@@ -321,6 +341,22 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
                                     "source_message_ids": {"type": "array", "items": {"type": "string"}},
                                     "school_or_extended": {"type": "string", "enum": ["school", "extended"]},
                                     "observed_student_outcome": {"type": ["string", "null"]},
+                                    "misconception_evidence": {
+                                        "anyOf": [
+                                            {
+                                                "type": "object",
+                                                "additionalProperties": False,
+                                                "properties": {
+                                                    "version": {"type": "string", "enum": [MISCONCEPTION_EVIDENCE_SCHEMA_VERSION]},
+                                                    "incorrect_model": {"type": "string", "minLength": 1, "maxLength": 500},
+                                                    "explicit_student_reasoning": {"type": "string", "minLength": 1, "maxLength": 500},
+                                                    "source_message_id": {"type": "string"},
+                                                },
+                                                "required": ["version", "incorrect_model", "explicit_student_reasoning", "source_message_id"],
+                                            },
+                                            {"type": "null"},
+                                        ],
+                                    },
                                 },
                                 "required": [
                                     "event_type",

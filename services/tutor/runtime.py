@@ -7,8 +7,10 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 import json
 import logging
+import unicodedata
 from uuid import UUID, uuid4
 
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -35,6 +37,8 @@ from services.tutor.context import SessionContextMessage, TutorContext, TutorCon
 from services.tutor.candidate_events import (
     CandidateEventContractError,
     CandidateEventMetadata,
+    CandidateEventMetadataItem,
+    MisconceptionEvidence,
     PersistedGuidedLearningCheck,
     SuggestedAction,
     SuggestedActionKind,
@@ -164,9 +168,10 @@ TUTOR_SHARED_INSTRUCTIONS = (
     "Student-facing text must be plain text: no Markdown markers, headings, bold, or code fences. Do not use LaTeX or raw LaTeX notation. Use simple Grade-5-readable math notation and put equations on their own line when it improves Arabic/English readability. "
     "The non-overridable hard safety baseline is enforced before this call. Parent Boundary settings are server-owned and the server enforces the final visible response after this call; do not mention internal policies. Return ordinary student-facing reply only in the structured text field. "
     "Return suggested_actions as zero to four short, visible conversational controls with label and kind. Every suggested_action click is non-evidentiary, including any action historically labeled ANSWER_CHOICE. Use NAVIGATION for agency, support preference, or self-report actions. Suggested actions must use the same primary language as the response and contain no URLs, Markdown, or hidden metadata. After an explanatory, help, or confusion turn, normally provide two to four useful actions when that reduces friction or supports agency. "
-    "Use guided_check only for one concrete academic response opportunity: include its exact question prompt and two to four answer choices. Do not use guided_check for navigation, topic selection, support preferences, self-reports, or agency. The server—not you—creates the durable check identity. A selected valid guided_check choice may emit only an existing bounded attempt/correction/misconception type when its raw answer is meaningful; never emit independent success or mastery merely from a click. "
+    "Use guided_check only for one concrete academic response opportunity: include its exact question prompt and two to four answer choices. Do not use guided_check for navigation, topic selection, support preferences, self-reports, or agency. The server—not you—creates the durable check identity. A selected valid guided_check choice may emit only an existing bounded attempt/correction type when its raw answer is meaningful; never emit independent success, mastery, or misconception_signal merely from a click. "
     "Set hidden candidate_metadata to null for greetings, thanks, generic chat, self-reported understanding, generic action selection alone, or when no meaningful observable learning signal occurred. "
     "Emit Candidate Event metadata only for a specific, source-linked observable learning signal such as solving, explaining, applying, self-correcting, or transferring an idea. "
+    "Confusion is not a misconception. Uncertainty, a request for another explanation, a wrong answer without stated reasoning, and a calculation slip are not misconceptions by themselves. When the Student is confused, respond pedagogically and change support or representation when useful. A misconception_signal is allowed only when the Student-authored current raw message explicitly demonstrates a specific incorrect mental model, rule, relationship, or interpretation. When only an answer is wrong without stated reasoning, prefer incorrect_attempt when appropriate. Every misconception_signal must include misconception_evidence with version misconception-evidence-v1, a concise incorrect_model, the current Student source_message_id, and an explicit_student_reasoning field that must copy the supporting Student reasoning span exactly from that raw message; do not paraphrase or use Tutor text. "
     "Never treat a chosen Tutor strategy as an outcome without an observable Student result. Never mention hidden metadata in text."
 )
 
@@ -783,6 +788,11 @@ class TutorRuntime:
             )
         except CandidateEventContractError:
             return "invalid", "candidate_contract_invalid"
+        candidates = _filter_misconception_candidates(
+            metadata.candidates,
+            source_message=source_message,
+        )
+        metadata = metadata.model_copy(update={"candidates": candidates})
         if _is_answer_choice_interaction(source_message):
             metadata = _bounded_answer_choice_metadata(metadata)
             if not metadata.candidates:
@@ -805,6 +815,9 @@ class TutorRuntime:
                 "observed_student_outcome": candidate.observed_student_outcome,
                 "model_route": {"provider": route.provider, "model": route.model},
             }
+            if candidate.event_type == "misconception_signal":
+                evidence = MisconceptionEvidence.model_validate(candidate.misconception_evidence)
+                payload["misconception_evidence"] = evidence.model_dump(mode="json")
             if candidate.event_type == "strategy_outcome" and prior_method is not None:
                 payload.update({
                     "strategy_key": prior_method.teaching_method_id.value,
@@ -1106,10 +1119,43 @@ def _is_answer_choice_interaction(message: LearningMessage) -> bool:
 
 
 def _bounded_answer_choice_metadata(metadata: CandidateEventMetadata) -> CandidateEventMetadata:
-    allowed_event_types = {"learning_attempt", "guided_success", "incorrect_attempt", "misconception_signal"}
+    allowed_event_types = {"learning_attempt", "guided_success", "incorrect_attempt"}
     return metadata.model_copy(
         update={"candidates": [candidate for candidate in metadata.candidates if candidate.event_type in allowed_event_types]}
     )
+
+
+def _filter_misconception_candidates(
+    candidates: list[CandidateEventMetadataItem],
+    *,
+    source_message: LearningMessage,
+) -> list[CandidateEventMetadataItem]:
+    """Keep only misconception Candidates grounded in the current raw Student turn."""
+
+    validated: list[CandidateEventMetadataItem] = []
+    normalized_source = _normalize_grounding_text(source_message.content)
+    for candidate in candidates:
+        if candidate.event_type != "misconception_signal":
+            validated.append(candidate)
+            continue
+        try:
+            evidence = MisconceptionEvidence.model_validate(candidate.misconception_evidence)
+        except ValidationError:
+            continue
+        if evidence.source_message_id != source_message.id:
+            continue
+        if evidence.source_message_id not in candidate.source_message_ids:
+            continue
+        if _normalize_grounding_text(evidence.explicit_student_reasoning) not in normalized_source:
+            continue
+        validated.append(candidate.model_copy(update={"misconception_evidence": evidence}))
+    return validated
+
+
+def _normalize_grounding_text(value: str) -> str:
+    """Apply only Unicode and whitespace normalization before exact span grounding."""
+
+    return " ".join(unicodedata.normalize("NFKC", value).split())
 
 
 def create_tutor_runtime(session: Session) -> TutorRuntime:

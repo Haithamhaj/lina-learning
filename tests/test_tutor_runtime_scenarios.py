@@ -13,6 +13,7 @@ from services.platform.db.models import CandidateEvent, LearningMessage, ModelTa
 from services.platform.safety import ParentBoundaryResolution, SafetyAction, SafetyDecision
 from services.retrieval.service import RetrievedBlock
 from services.tutor.context import SessionContextMessage, TutorContext, TutorContextDebug
+from services.tutor.exchanges import ConversationExchangeContext
 from services.tutor.capacity import TutorContextCapacityExceeded
 from services.tutor.runtime import TutorRuntime, TutorTextDelta, TutorTurn, _compose_parent_redirect
 from services.tutor.teaching_decisions import PriorMethodRelation, TeachingMode, TeachingStrategy
@@ -48,8 +49,9 @@ class _Session:
 
 
 class _ContextBuilder:
-    def __init__(self) -> None:
+    def __init__(self, immediate_exchange: ConversationExchangeContext | None = None) -> None:
         self.calls = 0
+        self.immediate_exchange = immediate_exchange
 
     def build(
         self,
@@ -70,7 +72,17 @@ class _ContextBuilder:
             question=question, subject="MATH", grade_level=5, focus=None,
             session_messages=(SessionContextMessage(message_id, "student", question),),
             retrieval=(block,), intelligence=(),
-            debug=TutorContextDebug(None, (message_id,), ("book#page=12",), (), ()),
+            debug=TutorContextDebug(
+                None,
+                (message_id,),
+                ("book#page=12",),
+                (),
+                (),
+                immediate_exchange_message_ids=(
+                    self.immediate_exchange.message_ids if self.immediate_exchange is not None else ()
+                ),
+            ),
+            immediate_exchange=self.immediate_exchange,
         )
 
 
@@ -142,9 +154,10 @@ def _runtime(
     teaching_mode: object | None = None,
     teaching_strategy: object | None = None,
     prior_method_relation: object | None = None,
+    immediate_exchange: ConversationExchangeContext | None = None,
 ) -> tuple[TutorRuntime, _ContextBuilder, _Provider, _Session]:
     session = _Session()
-    context = _ContextBuilder()
+    context = _ContextBuilder(immediate_exchange)
     provider = _Provider(
         candidate_metadata=candidate_metadata,
         suggested_actions=suggested_actions,
@@ -857,6 +870,282 @@ def _candidate_for_current_message(
     return candidate
 
 
+def _misconception_candidate_for_current_message(
+    session: _Session,
+    *,
+    signal: str,
+    summary: str,
+    misconception_evidence: object | None = None,
+) -> dict[str, object]:
+    """Model-shaped metadata that claims one raw Student turn shows a misconception."""
+
+    student_message = next(
+        row for row in session.rows if isinstance(row, LearningMessage) and row.role == "student"
+    )
+    candidate: dict[str, object] = {
+        "version": "candidate-event-v1",
+        "candidates": [{
+            "event_type": "misconception_signal",
+            "concept_ref": "equivalent_fractions",
+            "summary": summary,
+            "signal": signal,
+            "source_message_ids": [str(student_message.id)],
+            "school_or_extended": "school",
+        }],
+    }
+    if misconception_evidence is not None:
+        candidate["candidates"][0]["misconception_evidence"] = misconception_evidence
+    return candidate
+
+
+def _grounded_misconception_evidence(
+    session: _Session,
+    *,
+    incorrect_model: str,
+    explicit_student_reasoning: str,
+    source_message_id: object | None = None,
+) -> dict[str, object]:
+    student_message = next(
+        row for row in session.rows if isinstance(row, LearningMessage) and row.role == "student"
+    )
+    return {
+        "version": "misconception-evidence-v1",
+        "incorrect_model": incorrect_model,
+        "explicit_student_reasoning": explicit_student_reasoning,
+        "source_message_id": str(source_message_id or student_message.id),
+    }
+
+
+@pytest.mark.parametrize(
+    ("question", "signal", "summary"),
+    [
+        ("I don't understand fractions.", "reported_confusion", "The Student reported confusion about fractions."),
+        ("Why?", "asked_why", "The Student asked a low-information follow-up question."),
+        ("Explain it another way.", "requested_another_explanation", "The Student requested a different explanation."),
+        ("2", "single_wrong_answer", "The Student answered 2 to the division check without explaining why."),
+        ("I added 7 + 8 correctly, then accidentally wrote 16.", "single_arithmetic_slip", "The Student made one arithmetic slip in otherwise correct work."),
+        ("I think the pieces are different.", "ambiguous_statement", "The Student made an ambiguous statement with multiple possible interpretations."),
+    ],
+    ids=[
+        "confusion",
+        "why-with-immediate-exchange",
+        "another-explanation",
+        "one-wrong-answer-without-reasoning",
+        "single-arithmetic-slip",
+        "ambiguous-statement",
+    ],
+)
+def test_non_specific_observations_cannot_persist_a_misconception_signal(
+    question: str,
+    signal: str,
+    summary: str,
+) -> None:
+    """CAND-01 RED: catches the runtime accepting a model claim without a stated incorrect model."""
+
+    session_holder: dict[str, _Session] = {}
+
+    def metadata(_: dict[str, object]) -> dict[str, object]:
+        return _misconception_candidate_for_current_message(
+            session_holder["session"],
+            signal=signal,
+            summary=summary,
+        )
+
+    learning_session = SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None)
+    immediate_exchange = (
+        ConversationExchangeContext(
+            session_id=learning_session.id,
+            segment_id=None,
+            student_message_id=uuid4(),
+            tutor_message_id=uuid4(),
+            student_content="I think 2 is the answer.",
+            tutor_content="6 ÷ 2 asks how many groups of 2 fit into 6.",
+            student_created_at=datetime.now(UTC) - timedelta(seconds=3),
+            tutor_created_at=datetime.now(UTC) - timedelta(seconds=2),
+        )
+        if question == "Why?"
+        else None
+    )
+    runtime, _, provider, session = _runtime(
+        _decision(),
+        metadata,
+        immediate_exchange=immediate_exchange,
+    )
+    session_holder["session"] = session
+
+    list(runtime.stream_turn(learning_session=learning_session, question=question))
+
+    assert provider.calls == 1
+    if immediate_exchange is not None:
+        assert "6 ÷ 2 asks how many groups of 2 fit into 6." in str(provider.payloads[0]["input"])
+    assert not [row for row in session.rows if isinstance(row, CandidateEvent)]
+
+
+@pytest.mark.parametrize(
+    ("question", "signal", "summary"),
+    [
+        (
+            "1/4 is bigger than 1/2 because 4 is bigger than 2.",
+            "denominator_size_means_larger_fraction",
+            "The Student stated that a larger denominator always makes a fraction larger.",
+        ),
+        (
+            "To divide by 10, I add a zero because division always makes numbers bigger.",
+            "division_always_makes_numbers_bigger",
+            "The Student stated a general incorrect division rule and applied it to the problem.",
+        ),
+    ],
+    ids=["fraction-size-model", "division-rule-model"],
+)
+def test_specific_stated_incorrect_reasoning_can_still_persist_a_misconception_signal(
+    question: str,
+    signal: str,
+    summary: str,
+) -> None:
+    """CAND-01 control: do not suppress an explicitly stated incorrect model."""
+
+    session_holder: dict[str, _Session] = {}
+
+    def metadata(_: dict[str, object]) -> dict[str, object]:
+        return _misconception_candidate_for_current_message(
+            session_holder["session"],
+            signal=signal,
+            summary=summary,
+            misconception_evidence=_grounded_misconception_evidence(
+                session_holder["session"],
+                incorrect_model=signal,
+                explicit_student_reasoning=question,
+            ),
+        )
+
+    runtime, _, provider, session = _runtime(_decision(), metadata)
+    session_holder["session"] = session
+    list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        question=question,
+    ))
+
+    candidate = next(row for row in session.rows if isinstance(row, CandidateEvent))
+    assert provider.calls == 1
+    assert candidate.event_type == "misconception_signal"
+    assert candidate.payload["misconception_evidence"] == {
+        "version": "misconception-evidence-v1",
+        "incorrect_model": signal,
+        "explicit_student_reasoning": question,
+        "source_message_id": str(candidate.message_id),
+    }
+
+
+def test_one_wrong_answer_can_remain_an_incorrect_attempt() -> None:
+    """CAND-01 control: an unexplained error can be retained without inventing a misconception."""
+
+    session_holder: dict[str, _Session] = {}
+
+    def metadata(_: dict[str, object]) -> dict[str, object]:
+        return _candidate_for_current_message(
+            session_holder["session"],
+            event_type="incorrect_attempt",
+            signal="single_unexplained_division_error",
+        )
+
+    runtime, _, provider, session = _runtime(_decision(), metadata)
+    session_holder["session"] = session
+    list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        question="2",
+    ))
+
+    candidate = next(row for row in session.rows if isinstance(row, CandidateEvent))
+    assert provider.calls == 1
+    assert candidate.event_type == "incorrect_attempt"
+
+
+@pytest.mark.parametrize(
+    ("evidence", "case"),
+    [
+        (None, "missing"),
+        ({
+            "version": "misconception-evidence-v1",
+            "incorrect_model": "denominator size determines fraction size",
+            "explicit_student_reasoning": "A larger number means a larger fraction.",
+            "source_message_id": None,
+        }, "invented-student-reasoning"),
+        ({
+            "version": "misconception-evidence-v1",
+            "incorrect_model": "denominator size determines fraction size",
+            "explicit_student_reasoning": "1/4 is bigger than 1/2 because 4 is bigger than 2.",
+            "source_message_id": "foreign",
+        }, "foreign-source"),
+        ({
+            "version": "misconception-evidence-v1",
+            "incorrect_model": "denominator size determines fraction size",
+            "explicit_student_reasoning": "A larger denominator makes the fraction smaller.",
+            "source_message_id": None,
+        }, "tutor-authored-text"),
+    ],
+)
+def test_misconception_candidates_require_current_student_source_grounding(
+    evidence: dict[str, object] | None,
+    case: str,
+) -> None:
+    """Catches missing, invented, foreign, or Tutor-authored misconception grounding."""
+
+    session_holder: dict[str, _Session] = {}
+
+    def metadata(_: dict[str, object]) -> dict[str, object]:
+        candidate_evidence = None if evidence is None else dict(evidence)
+        if candidate_evidence is not None and candidate_evidence["source_message_id"] is None:
+            candidate_evidence["source_message_id"] = str(next(
+                row.id for row in session_holder["session"].rows
+                if isinstance(row, LearningMessage) and row.role == "student"
+            ))
+        return _misconception_candidate_for_current_message(
+            session_holder["session"],
+            signal="denominator_size_means_larger_fraction",
+            summary=f"Invalid CAND-01 grounding fixture: {case}.",
+            misconception_evidence=candidate_evidence,
+        )
+
+    runtime, _, _, session = _runtime(_decision(), metadata)
+    session_holder["session"] = session
+    list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        question="1/4 is bigger than 1/2 because 4 is bigger than 2.",
+    ))
+
+    assert not [row for row in session.rows if isinstance(row, CandidateEvent)]
+
+
+def test_invalid_misconception_candidate_does_not_discard_a_valid_other_candidate() -> None:
+    """Catches whole-envelope rejection when only the misconception candidate lacks grounding."""
+
+    session_holder: dict[str, _Session] = {}
+
+    def metadata(_: dict[str, object]) -> dict[str, object]:
+        invalid = _misconception_candidate_for_current_message(
+            session_holder["session"],
+            signal="unsupported_model_claim",
+            summary="The model claimed a misconception without Student reasoning.",
+        )
+        valid = _candidate_for_current_message(
+            session_holder["session"],
+            event_type="learning_attempt",
+            signal="attempted_fraction_comparison",
+        )
+        invalid["candidates"].extend(valid["candidates"])
+        return invalid
+
+    runtime, _, _, session = _runtime(_decision(), metadata)
+    session_holder["session"] = session
+    list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        question="I tried comparing 1/4 and 1/2.",
+    ))
+
+    candidates = [row for row in session.rows if isinstance(row, CandidateEvent)]
+    assert [candidate.event_type for candidate in candidates] == ["learning_attempt"]
+
+
 @pytest.mark.parametrize("question", ["Hello Lina!", "Thank you for helping me."])
 def test_greeting_and_thanks_record_candidate_metadata_absence(question: str) -> None:
     runtime, _, _, session = _runtime(_decision())
@@ -886,7 +1175,19 @@ def test_valid_same_call_candidate_metadata_is_persisted_with_raw_source_linkage
     session_holder: dict[str, _Session] = {}
 
     def metadata(_: dict[str, object]) -> dict[str, object]:
-        return _candidate_for_current_message(session_holder["session"], event_type=event_type, signal=signal, observed_student_outcome=outcome)
+        candidate = _candidate_for_current_message(
+            session_holder["session"],
+            event_type=event_type,
+            signal=signal,
+            observed_student_outcome=outcome,
+        )
+        if event_type == "misconception_signal":
+            candidate["candidates"][0]["misconception_evidence"] = _grounded_misconception_evidence(
+                session_holder["session"],
+                incorrect_model=signal,
+                explicit_student_reasoning="I worked out why one half equals two fourths.",
+            )
+        return candidate
 
     runtime, _, provider, session = _runtime(_decision(), metadata)
     session_holder["session"] = session
@@ -979,11 +1280,18 @@ def test_suggested_action_semantics_control_candidate_persistence(
     session_holder: dict[str, _Session] = {}
 
     def metadata(_: dict[str, object]) -> dict[str, object]:
-        return _candidate_for_current_message(
+        candidate = _candidate_for_current_message(
             session_holder["session"],
             event_type=event_type,
             signal="fixture_action_selection",
         )
+        if event_type == "misconception_signal":
+            candidate["candidates"][0]["misconception_evidence"] = _grounded_misconception_evidence(
+                session_holder["session"],
+                incorrect_model="fixture_action_selection",
+                explicit_student_reasoning=label,
+            )
+        return candidate
 
     runtime, _, _, session = _runtime(_decision(), metadata)
     session_holder["session"] = session
@@ -1231,6 +1539,52 @@ def test_answer_choice_never_persists_independent_success_from_the_click_alone()
         created_at=datetime.now(UTC) - timedelta(seconds=1),
     )
     session.add(source)
+    list(runtime.stream_turn(
+        learning_session=learning_session,
+        question="2/4",
+        guided_check_id=guided_check_id,
+        guided_check_source_tutor_message_id=source.id,
+    ))
+
+    tutor_message = [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor"][-1]
+    assert not [row for row in session.rows if isinstance(row, CandidateEvent)]
+    assert tutor_message.payload["candidate_metadata_status"] == "answer_choice_filtered"
+
+
+def test_answer_choice_never_persists_a_misconception_signal_from_the_click_alone() -> None:
+    """CAND-01: a bound guided choice remains an attempt, never misconception evidence by itself."""
+
+    session_holder: dict[str, _Session] = {}
+
+    def metadata(_: dict[str, object]) -> dict[str, object]:
+        return _misconception_candidate_for_current_message(
+            session_holder["session"],
+            signal="choice_claimed_as_misconception",
+            summary="The model attempted to classify one guided choice as a misconception.",
+            misconception_evidence=_grounded_misconception_evidence(
+                session_holder["session"],
+                incorrect_model="choice_claimed_as_misconception",
+                explicit_student_reasoning="2/4",
+            ),
+        )
+
+    runtime, _, _, session = _runtime(_decision(), metadata)
+    session_holder["session"] = session
+    learning_session = SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None)
+    guided_check_id = uuid4()
+    source = LearningMessage(
+        session_id=learning_session.id,
+        role="tutor",
+        content="Which fraction equals one half?",
+        payload={"guided_check": {
+            "id": str(guided_check_id),
+            "prompt": "Which fraction equals one half?",
+            "choices": [{"label": "1/4"}, {"label": "2/4"}, {"label": "3/4"}],
+        }},
+        created_at=datetime.now(UTC) - timedelta(seconds=1),
+    )
+    session.add(source)
+
     list(runtime.stream_turn(
         learning_session=learning_session,
         question="2/4",

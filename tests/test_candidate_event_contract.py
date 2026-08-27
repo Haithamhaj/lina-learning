@@ -60,6 +60,17 @@ def test_new_tutor_candidate_metadata_rejects_deprecated_current_focus_signal() 
         parse_candidate_event_metadata(payload, allowed_source_message_ids=source_ids)
 
 
+def test_foreign_misconception_candidate_source_is_filtered_without_rejecting_the_envelope() -> None:
+    """CAND-01: an unavailable source can invalidate only its proposed misconception."""
+
+    payload, source_ids = _metadata(event_type="misconception_signal", observed_student_outcome=None)
+    payload["candidates"][0]["source_message_ids"] = [str(uuid4())]
+
+    metadata = parse_candidate_event_metadata(payload, allowed_source_message_ids=source_ids)
+
+    assert metadata.candidates == []
+
+
 def test_historical_current_focus_signal_remains_readable_by_evidence_consolidation() -> None:
     """Keep historical raw Candidate Event lineage auditable and reprocessable."""
 
