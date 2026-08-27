@@ -31,7 +31,7 @@ from services.platform.db.models import (
 )
 from services.platform.db.session import get_session
 from services.platform.config import Settings
-from services.model_gateway.gateway import ModelGateway, ModelRoute, StreamDelta
+from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
 from services.platform.db.models import ModelTask
 from services.platform.safety import SafetyPolicyService
 from services.retrieval.service import RetrievalService
@@ -161,6 +161,52 @@ class _DeltaThenFailureTutorProvider:
         del route, payload
         yield StreamDelta("A partial Tutor response.")
         raise RuntimeError("fixture stream failure")
+
+
+class _CandidateMetadataTutorProvider:
+    """One primary-call fixture that attempts to turn a clicked action into an attempt Candidate."""
+
+    def stream(self, route: ModelRoute, payload: dict[str, object]):
+        del route
+        source_message_id = str(payload["candidate_source_message_id"])
+        result = ModelResult(
+            output={
+                "text": "Okay, let’s continue.",
+                "suggested_actions": [],
+                "teaching_mode": None,
+                "teaching_strategy": None,
+                "teaching_method_id": None,
+                "prior_method_relation": None,
+                "candidate_metadata": {
+                    "version": "candidate-event-v1",
+                    "candidates": [{
+                        "event_type": "learning_attempt",
+                        "concept_ref": "decimals",
+                        "summary": "The Student selected a decimals action.",
+                        "signal": "selected_decimals_action",
+                        "source_message_ids": [source_message_id],
+                        "school_or_extended": "school",
+                    }],
+                },
+            },
+            input_tokens=4,
+            output_tokens=3,
+        )
+        yield StreamDelta("Okay, let’s continue.")
+        yield StreamComplete(result)
+
+
+def _candidate_metadata_runtime(session: Session) -> TutorRuntime:
+    return TutorRuntime(
+        session,
+        context_builder=TutorContextBuilder(session, retrieval_service=RetrievalService(session)),
+        safety_policy=SafetyPolicyService(session),
+        gateway=ModelGateway(
+            session,
+            routes={ModelTask.TUTOR: ModelRoute("fixture-candidate", "fixture-candidate-model")},
+            providers={"fixture-candidate": _CandidateMetadataTutorProvider()},
+        ),
+    )
 
 
 def _delta_then_failure_runtime(session: Session) -> TutorRuntime:
@@ -592,6 +638,7 @@ def test_zero_content_student_tutor_turn_uses_empty_retrieval_and_persists_respo
     assert json.loads(final_event) == {
         "text": "Let’s work on this step by step. Explain equivalent fractions.",
         "suggested_actions": [],
+        "guided_check": None,
     }
     with postgres_session_factory() as session:
         messages = session.query(LearningMessage).filter_by(session_id=UUID(session_id)).order_by(LearningMessage.created_at, LearningMessage.id).all()
@@ -703,7 +750,7 @@ def test_server_derives_action_kind_from_latest_tutor_actions_and_rejects_stale_
     assert valid.status_code == 200
     with postgres_session_factory() as session:
         student_message = session.query(LearningMessage).filter_by(session_id=session_id, role="student").one()
-        assert student_message.payload["input_kind"] == "suggested_action_answer_choice"
+        assert student_message.payload["input_kind"] == "suggested_action"
         assert student_message.payload["suggested_action_source_tutor_message_id"] == str(source_message.id)
 
     with postgres_session_factory.begin() as session:
@@ -726,6 +773,196 @@ def test_server_derives_action_kind_from_latest_tutor_actions_and_rejects_stale_
         _clear_overrides()
 
     assert stale.status_code == 422
+
+
+def test_semantic_navigation_mislabeled_as_answer_choice_never_persists_a_candidate(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ACT-02: a persisted model kind cannot make topic navigation into learning evidence."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-one")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session.add(
+            LearningMessage(
+                session_id=learning_session.id,
+                role="tutor",
+                content="What would you like to do next?",
+                payload={"suggested_actions": [{
+                    "label": "Let's learn decimals instead",
+                    "kind": "ANSWER_CHOICE",
+                }]},
+            )
+        )
+        session_id = learning_session.id
+
+    from apps.api.routes import student as student_routes
+    from services.tutor import runtime as tutor_runtime
+
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _candidate_metadata_runtime)
+    monkeypatch.setattr(tutor_runtime, "get_settings", lambda: Settings(_env_file=None, model_provider="mock"))
+    client = _client(postgres_session_factory, subject="student-one")
+    try:
+        response = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": "Let's learn decimals instead", "suggested_action": True},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    with postgres_session_factory() as session:
+        student_message = session.query(LearningMessage).filter_by(session_id=session_id, role="student").one()
+        assert student_message.payload["input_kind"] == "suggested_action"
+        assert session.query(CandidateEvent).filter_by(session_id=session_id).count() == 0
+
+
+def test_valid_persisted_guided_check_choice_can_persist_a_bounded_attempt_candidate(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ACT-02: the server grants click eligibility only after exact persisted check membership validates."""
+
+    guided_check_id = UUID(int=31)
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-one")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session.add(
+            LearningMessage(
+                session_id=learning_session.id,
+                role="tutor",
+                content="6 ÷ 2 = ?",
+                payload={"guided_check": {
+                    "id": str(guided_check_id),
+                    "prompt": "6 ÷ 2 = ?",
+                    "choices": [{"label": "A) 2"}, {"label": "B) 3"}, {"label": "C) 4"}],
+                }},
+            )
+        )
+        session_id = learning_session.id
+
+    from apps.api.routes import student as student_routes
+    from services.tutor import runtime as tutor_runtime
+
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _candidate_metadata_runtime)
+    monkeypatch.setattr(tutor_runtime, "get_settings", lambda: Settings(_env_file=None, model_provider="mock"))
+    client = _client(postgres_session_factory, subject="student-one")
+    try:
+        response = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": "B) 3", "guided_check_id": str(guided_check_id)},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    with postgres_session_factory() as session:
+        student_message = session.query(LearningMessage).filter_by(session_id=session_id, role="student").one()
+        assert student_message.payload["input_kind"] == "guided_learning_check_answer"
+        assert student_message.payload["guided_check_id"] == str(guided_check_id)
+        assert session.query(CandidateEvent).filter_by(session_id=session_id).count() == 1
+
+
+@pytest.mark.parametrize(
+    ("submitted_check_id", "content"),
+    [
+        (UUID(int=32), "B) 3"),
+        (UUID(int=31), "D) 5"),
+    ],
+    ids=["forged-check-id", "choice-outside-persisted-check"],
+)
+def test_unbound_or_forged_guided_check_click_is_rejected_before_candidate_persistence(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    submitted_check_id: UUID,
+    content: str,
+) -> None:
+    """ACT-02: a request cannot forge a check identity or choose outside its exact persisted choices."""
+
+    persisted_check_id = UUID(int=31)
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-one")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session.add(
+            LearningMessage(
+                session_id=learning_session.id,
+                role="tutor",
+                content="6 ÷ 2 = ?",
+                payload={"guided_check": {
+                    "id": str(persisted_check_id),
+                    "prompt": "6 ÷ 2 = ?",
+                    "choices": [{"label": "A) 2"}, {"label": "B) 3"}, {"label": "C) 4"}],
+                }},
+            )
+        )
+        session_id = learning_session.id
+
+    from apps.api.routes import student as student_routes
+    from services.tutor import runtime as tutor_runtime
+
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _candidate_metadata_runtime)
+    monkeypatch.setattr(tutor_runtime, "get_settings", lambda: Settings(_env_file=None, model_provider="mock"))
+    client = _client(postgres_session_factory, subject="student-one")
+    try:
+        response = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": content, "guided_check_id": str(submitted_check_id)},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 422
+    with postgres_session_factory() as session:
+        assert session.query(LearningMessage).filter_by(session_id=session_id, role="student").count() == 0
+        assert session.query(CandidateEvent).filter_by(session_id=session_id).count() == 0
+
+
+def test_guided_check_from_another_session_is_rejected_before_candidate_persistence(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """ACT-02: a check identity is bound to its Tutor message and cannot cross session boundaries."""
+
+    guided_check_id = UUID(int=31)
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-one")
+        target_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        foreign_session = LearningSession(student_id=student.id, subject="MATH", status="CLOSED")
+        session.add_all([target_session, foreign_session])
+        session.flush()
+        session.add(
+            LearningMessage(
+                session_id=foreign_session.id,
+                role="tutor",
+                content="6 ÷ 2 = ?",
+                payload={"guided_check": {
+                    "id": str(guided_check_id),
+                    "prompt": "6 ÷ 2 = ?",
+                    "choices": [{"label": "A) 2"}, {"label": "B) 3"}, {"label": "C) 4"}],
+                }},
+            )
+        )
+        target_session_id = target_session.id
+
+    client = _client(postgres_session_factory, subject="student-one")
+    try:
+        response = client.post(
+            f"/api/v1/student/math/session/{target_session_id}/turn/stream",
+            json={"content": "B) 3", "guided_check_id": str(guided_check_id)},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 422
+    with postgres_session_factory() as session:
+        assert session.query(LearningMessage).filter_by(session_id=target_session_id, role="student").count() == 0
+        assert session.query(CandidateEvent).filter_by(session_id=target_session_id).count() == 0
 
 
 def test_hard_baseline_stream_never_calls_the_tutor_model(

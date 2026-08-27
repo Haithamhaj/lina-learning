@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 import json
 import logging
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -35,11 +35,14 @@ from services.tutor.context import SessionContextMessage, TutorContext, TutorCon
 from services.tutor.candidate_events import (
     CandidateEventContractError,
     CandidateEventMetadata,
+    PersistedGuidedLearningCheck,
     SuggestedAction,
     SuggestedActionKind,
     TUTOR_OUTPUT_RESPONSE_SCHEMA,
+    normalize_guided_learning_check,
     normalize_suggested_actions,
     parse_candidate_event_metadata,
+    persisted_guided_learning_check,
 )
 from services.tutor.parent_boundaries import (
     ParentBoundaryDecision,
@@ -98,6 +101,7 @@ class TutorTurn:
     mode: TeachingMode | None
     strategy: TeachingStrategy | None
     safety: dict[str, str | int]
+    guided_check: PersistedGuidedLearningCheck | None = None
 
 
 @dataclass(frozen=True)
@@ -120,6 +124,7 @@ class LocalTutorProvider:
             output={
                 "text": f"Let’s work on this step by step. {payload['question']}",
                 "suggested_actions": [],
+                "guided_check": None,
                 "teaching_mode": None,
                 "teaching_strategy": None,
                 "teaching_method_id": None,
@@ -154,8 +159,9 @@ TUTOR_SHARED_INSTRUCTIONS = (
     "Praise only specific observed effort, reasoning, correction, or persistence; avoid automatic or exaggerated praise. Use zero to three emojis only when they add warmth or meaning, never on every sentence. "
     "Student-facing text must be plain text: no Markdown markers, headings, bold, or code fences. Do not use LaTeX or raw LaTeX notation. Use simple Grade-5-readable math notation and put equations on their own line when it improves Arabic/English readability. "
     "The non-overridable hard safety baseline is enforced before this call. Parent Boundary settings are server-owned and the server enforces the final visible response after this call; do not mention internal policies. Return ordinary student-facing reply only in the structured text field. "
-    "Return suggested_actions as zero to four short, visible objects with label and kind. Kind must be NAVIGATION for agency, support preference, or self-report actions, and ANSWER_CHOICE only for a guided answer choice. Suggested actions must use the same primary language as the response and contain no URLs, Markdown, or hidden metadata. After an explanatory, help, or confusion turn, normally provide two to four useful actions when that reduces friction or supports agency. Do not force buttons when a natural free response is pedagogically better, the Student needs to explain in their own words, generic chat/thanks does not benefit, or Safety produces a deterministic response. "
-    "Set hidden candidate_metadata to null for greetings, thanks, generic chat, self-reported understanding, navigation/action selection alone, or when no meaningful observable learning signal occurred. A guided ANSWER_CHOICE may emit only an existing bounded attempt/correction/misconception type when its raw answer is meaningful; never emit independent success or mastery merely from a click. "
+    "Return suggested_actions as zero to four short, visible conversational controls with label and kind. Every suggested_action click is non-evidentiary, including any action historically labeled ANSWER_CHOICE. Use NAVIGATION for agency, support preference, or self-report actions. Suggested actions must use the same primary language as the response and contain no URLs, Markdown, or hidden metadata. After an explanatory, help, or confusion turn, normally provide two to four useful actions when that reduces friction or supports agency. "
+    "Use guided_check only for one concrete academic response opportunity: include its exact question prompt and two to four answer choices. Do not use guided_check for navigation, topic selection, support preferences, self-reports, or agency. The server—not you—creates the durable check identity. A selected valid guided_check choice may emit only an existing bounded attempt/correction/misconception type when its raw answer is meaningful; never emit independent success or mastery merely from a click. "
+    "Set hidden candidate_metadata to null for greetings, thanks, generic chat, self-reported understanding, generic action selection alone, or when no meaningful observable learning signal occurred. "
     "Emit Candidate Event metadata only for a specific, source-linked observable learning signal such as solving, explaining, applying, self-correcting, or transferring an idea. "
     "Never treat a chosen Tutor strategy as an outcome without an observable Student result. Never mention hidden metadata in text."
 )
@@ -286,6 +292,8 @@ class TutorRuntime:
         question: str,
         suggested_action_kind: SuggestedActionKind | str | None = None,
         suggested_action_source_tutor_message_id: UUID | None = None,
+        guided_check_id: UUID | None = None,
+        guided_check_source_tutor_message_id: UUID | None = None,
     ) -> Iterator[TutorTextDelta | TutorTurn]:
         content = question.strip()
         if not content:
@@ -296,9 +304,22 @@ class TutorRuntime:
             learning_session=learning_session,
             source_tutor_message_id=suggested_action_source_tutor_message_id,
         )
+        guided_check_source = self._guided_check_source(
+            learning_session=learning_session,
+            guided_check_id=guided_check_id,
+            source_tutor_message_id=guided_check_source_tutor_message_id,
+        )
+        if action_kind is not None and guided_check_source is not None:
+            raise ValueError("A Student interaction cannot be both a suggested action and a guided check choice.")
         interaction_payload = None
-        if action_kind is not None:
-            interaction_payload = {"input_kind": f"suggested_action_{action_kind.value.lower()}"}
+        if guided_check_source is not None and guided_check_id is not None:
+            interaction_payload = {
+                "input_kind": "guided_learning_check_answer",
+                "guided_check_id": str(guided_check_id),
+                "guided_check_source_tutor_message_id": str(guided_check_source.id),
+            }
+        elif action_kind is not None:
+            interaction_payload = {"input_kind": "suggested_action"}
             if suggested_action_source is not None:
                 interaction_payload["suggested_action_source_tutor_message_id"] = str(suggested_action_source.id)
         student_message = append_student_message(
@@ -347,7 +368,7 @@ class TutorRuntime:
                     safety=safety,
                     candidate_source_message_id=student_message.id,
                     prior_method=prior_method,
-                    suggested_action_source=suggested_action_source,
+                    suggested_action_source=guided_check_source or suggested_action_source,
                     latest_segment_state=latest_segment_state,
                     effective_parent_boundaries=effective_parent_boundaries,
                 ),
@@ -465,6 +486,27 @@ class TutorRuntime:
             raise ValueError("Suggested action source is unavailable for this learning session.")
         return message
 
+    def _guided_check_source(
+        self,
+        *,
+        learning_session: LearningSession,
+        guided_check_id: UUID | None,
+        source_tutor_message_id: UUID | None,
+    ) -> LearningMessage | None:
+        if guided_check_id is None and source_tutor_message_id is None:
+            return None
+        if guided_check_id is None or source_tutor_message_id is None:
+            raise ValueError("Guided learning check binding is incomplete.")
+        message = self._suggested_action_source(
+            learning_session=learning_session,
+            source_tutor_message_id=source_tutor_message_id,
+        )
+        payload = message.payload if isinstance(message.payload, dict) else {}
+        guided_check = persisted_guided_learning_check(payload.get("guided_check"))
+        if guided_check is None or guided_check.id != guided_check_id:
+            raise ValueError("Guided learning check source is unavailable for this learning session.")
+        return message
+
     def _persist_completed_turn(
         self,
         *,
@@ -553,6 +595,12 @@ class TutorRuntime:
             result=result,
             prior_method=prior_method,
         )
+        proposed_guided_check = normalize_guided_learning_check(result.output.get("guided_check"))
+        guided_check = (
+            PersistedGuidedLearningCheck(id=uuid4(), **proposed_guided_check.model_dump())
+            if proposed_guided_check is not None
+            else None
+        )
         turn = self._persist_turn(
             learning_session,
             str(result.output.get("text")),
@@ -571,6 +619,7 @@ class TutorRuntime:
             segment_id=resolved_segment.segment.id,
             parent_boundary=parent_audit,
             capacity_lineage=capacity_lineage,
+            guided_check=guided_check,
         )
         if state is not None:
             resolved_segment.segment.structured_state = state.model_dump(mode="json")
@@ -782,6 +831,7 @@ class TutorRuntime:
         segment_id: UUID | None = None,
         parent_boundary: dict[str, object] | None = None,
         capacity_lineage: TutorContextCapacityLineage | None = None,
+        guided_check: PersistedGuidedLearningCheck | None = None,
     ) -> TutorTurn:
         sources = _source_metadata(context)
         intelligence = [item.text for item in context.intelligence] if context else []
@@ -796,6 +846,7 @@ class TutorRuntime:
             "teaching_decision_status": decision_status,
             "candidate_metadata_status": candidate_metadata_status,
             "suggested_actions": [action.model_dump() for action in suggested_actions],
+            "guided_check": guided_check.model_dump(mode="json") if guided_check is not None else None,
         }
         if selected_method is not None:
             payload["teaching_method_registry_version"] = TEACHING_METHOD_REGISTRY_VERSION
@@ -837,7 +888,7 @@ class TutorRuntime:
         )
         learning_session.last_activity_at = datetime.now(UTC)
         self._session.flush()
-        return TutorTurn(text, suggested_actions, sources, intelligence, mode, strategy, safety.audit_metadata())
+        return TutorTurn(text, suggested_actions, sources, intelligence, mode, strategy, safety.audit_metadata(), guided_check)
 
 
 def _payload_from_context(
@@ -1021,7 +1072,7 @@ def _contains_arabic(value: str) -> bool:
 
 def _is_non_evidentiary_interaction(message: LearningMessage) -> bool:
     payload = message.payload if isinstance(message.payload, dict) else {}
-    if payload.get("input_kind") == "suggested_action_navigation":
+    if payload.get("input_kind") in {"suggested_action", "suggested_action_navigation", "suggested_action_answer_choice"}:
         return True
     self_report = message.content.casefold().strip(" .!؟?👍✨✍️")
     return self_report in {
@@ -1037,7 +1088,7 @@ def _is_non_evidentiary_interaction(message: LearningMessage) -> bool:
 
 def _is_answer_choice_interaction(message: LearningMessage) -> bool:
     payload = message.payload if isinstance(message.payload, dict) else {}
-    return payload.get("input_kind") == "suggested_action_answer_choice"
+    return payload.get("input_kind") == "guided_learning_check_answer"
 
 
 def _bounded_answer_choice_metadata(metadata: CandidateEventMetadata) -> CandidateEventMetadata:

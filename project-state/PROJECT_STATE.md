@@ -10,7 +10,7 @@ Hybrid Segment Context is the APPROVED Context v2 architecture. Parent-owned Stu
 - The authenticated Student Tutor path works with zero content, persists messages, streams one primary Tutor response, and uses optional question-driven grounding.
 - Structural-first content processing and PostgreSQL lexical + pgvector retrieval remain the approved grounding path; educational semantics remain optional enrichment.
 - REC-35.2 is implemented but remains REVIEW until the ordered Stabilization Gate is completed.
-- Closed stabilization items: CTX-01, ACT-01, OBS-01, UI-01. Open critical-path order remains A → B → C → D, with MATH-01 and ID-01 independent.
+- Closed stabilization items: CTX-01, ACT-01, OBS-01, UI-01. ACT-02 is implemented: generic Suggested Actions are non-evidentiary and only validated, persisted Guided Learning Check choices can enter bounded Candidate processing. Its configured production build/browser verification remains pending because this isolated worktree has no valid Clerk publishable key. Critical-path order remains A → B → C → D, with MATH-01 and ID-01 independent.
 - Hybrid Segment Context's current text-based runtime is implemented and technically verified; future Multimodal Turn inputs such as Voice, Vision, and original assets remain frozen future capability and do not reopen CTX-03:
   - a logical Multimodal Turn may eventually contain text, transcript, and original asset references;
   - Learning Thread = session-local contiguous Segment (`thread_id`), with no third Thread entity;
@@ -56,14 +56,14 @@ Event → Evidence → State/Pattern → Learner Intelligence Card; current beha
 
 - STATE-01 remains OPEN / NON-BLOCKING: invalid Structured Segment State is safely rejected and must not stop CTX-03C. CTX-03C must remain current-Segment-only and preserve the already accepted CTX-03B relation, pair lineage, and compact source-linked State boundaries.
 - SAFE-02 must keep hard-baseline enforcement upstream, one primary Tutor call, server-owned final Parent Boundary enforcement, and no visible/persisted ordinary model text on redirects.
-- ACT-02, CAND-01, SCOPE-01/SUBJ-01, DEC-01/DEC-02, REP-01, LANG-01, and CAND-02 remain open in the approved order.
+- ACT-02 needs configured production build/browser verification before closure; CAND-01, SCOPE-01/SUBJ-01, DEC-01/DEC-02, REP-01, LANG-01, and CAND-02 remain open in the approved order.
 - EVID-01 still has an unknown session-evidence HTTPError root cause; PERS-01 remains blocked until trustworthy Evidence exists.
 - Historical semantic archive retrieval is unvalidated and must not be treated as a production capability.
 - REC-25, LR-D04B, Track B, and other frozen future capabilities remain out of current execution scope.
 
 ## Next recommended action
 
-ACT-02 — NAVIGATION vs ANSWER_CHOICE Semantic Misuse. Real-Lina validation remains deferred and is required before any final CORE LEARNING RUNTIME STABILIZED declaration. Do not begin REC-25, LR-D04B, archive retrieval, or frozen future capabilities. TASK-027A remains future/blocked.
+Complete ACT-02 configured production build/browser verification with valid Clerk configuration, then close ACT-02 and begin CAND-01. Real-Lina validation remains deferred and is required before any final CORE LEARNING RUNTIME STABILIZED declaration. Do not begin REC-25, LR-D04B, archive retrieval, or frozen future capabilities. TASK-027A remains future/blocked.
 
 ## Critical references
 

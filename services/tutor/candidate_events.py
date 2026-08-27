@@ -20,6 +20,7 @@ from services.tutor.parent_boundaries import (
 CANDIDATE_EVENT_SCHEMA_VERSION = "candidate-event-v1"
 TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v7"
 MAX_SUGGESTED_ACTIONS = 4
+MAX_GUIDED_CHECK_CHOICES = 4
 CandidateEventType = Literal[
     "learning_attempt",
     "independent_success",
@@ -58,6 +59,40 @@ class SuggestedAction(BaseModel):
 
     label: str = Field(min_length=1, max_length=120)
     kind: SuggestedActionKind
+
+
+class GuidedLearningCheckChoice(BaseModel):
+    """One visible answer choice for a concrete Tutor learning check."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    label: str = Field(min_length=1, max_length=120)
+
+
+class GuidedLearningCheck(BaseModel):
+    """Model-proposed check content; the durable identity remains server-owned."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    prompt: str = Field(min_length=1, max_length=500)
+    choices: list[GuidedLearningCheckChoice] = Field(min_length=2, max_length=MAX_GUIDED_CHECK_CHOICES)
+
+    @model_validator(mode="after")
+    def choices_are_unique_and_safe(self) -> "GuidedLearningCheck":
+        labels = [choice.label.casefold() for choice in self.choices]
+        if len(set(labels)) != len(labels):
+            raise ValueError("Guided learning check choices must be unique.")
+        if _contains_action_markup_or_url(self.prompt) or any(
+            _contains_action_markup_or_url(choice.label) for choice in self.choices
+        ):
+            raise ValueError("Guided learning check contains unsupported markup or URL content.")
+        return self
+
+
+class PersistedGuidedLearningCheck(GuidedLearningCheck):
+    """A validated check with an application-generated durable identity."""
+
+    id: UUID
 
 
 class CandidateEventMetadataItem(BaseModel):
@@ -128,6 +163,28 @@ def normalize_suggested_actions(payload: object) -> list[SuggestedAction]:
     return actions
 
 
+def normalize_guided_learning_check(payload: object) -> GuidedLearningCheck | None:
+    """Accept only one compact, concrete model-proposed check structure."""
+
+    if payload is None:
+        return None
+    try:
+        return GuidedLearningCheck.model_validate(payload)
+    except ValidationError:
+        return None
+
+
+def persisted_guided_learning_check(payload: object) -> PersistedGuidedLearningCheck | None:
+    """Read a server-generated check binding from a persisted Tutor message."""
+
+    if not isinstance(payload, dict):
+        return None
+    try:
+        return PersistedGuidedLearningCheck.model_validate(payload)
+    except ValidationError:
+        return None
+
+
 def _contains_action_markup_or_url(action: str) -> bool:
     normalized = action.casefold()
     return (
@@ -163,6 +220,30 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
                 },
                 "required": ["label", "kind"],
             },
+        },
+        "guided_check": {
+            "anyOf": [
+                {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "prompt": {"type": "string", "minLength": 1, "maxLength": 500},
+                        "choices": {
+                            "type": "array",
+                            "minItems": 2,
+                            "maxItems": MAX_GUIDED_CHECK_CHOICES,
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": False,
+                                "properties": {"label": {"type": "string", "minLength": 1, "maxLength": 120}},
+                                "required": ["label"],
+                            },
+                        },
+                    },
+                    "required": ["prompt", "choices"],
+                },
+                {"type": "null"},
+            ],
         },
         "teaching_mode": {"type": ["string", "null"], "enum": [*(mode.value for mode in TeachingMode), None]},
         "teaching_strategy": {"type": ["string", "null"], "enum": [*(strategy.value for strategy in TeachingStrategy), None]},
@@ -259,7 +340,7 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
             ]
         },
     },
-    "required": ["text", "suggested_actions", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata"],
+    "required": ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata"],
 }
 
 

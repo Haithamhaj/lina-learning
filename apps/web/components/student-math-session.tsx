@@ -20,11 +20,18 @@ type Message = {
   content: string;
   created_at: string;
   suggested_actions: SuggestedAction[];
+  guided_check?: GuidedLearningCheck | null;
 };
 
 type SuggestedAction = {
   label: string;
   kind: "NAVIGATION" | "ANSWER_CHOICE";
+};
+
+type GuidedLearningCheck = {
+  id: string;
+  prompt: string;
+  choices: Array<{ label: string }>;
 };
 
 type MathSession = {
@@ -37,6 +44,7 @@ type MathSession = {
 type TutorTurn = {
   text: string;
   suggested_actions: SuggestedAction[];
+  guided_check?: GuidedLearningCheck | null;
 };
 
 type TutorLifecycleDebugWindow = Window & {
@@ -127,9 +135,11 @@ export function StudentMathSession() {
     {
       suggestedAction = false,
       suggestedActionKind,
+      guidedCheckId,
     }: {
       suggestedAction?: boolean;
       suggestedActionKind?: SuggestedAction["kind"];
+      guidedCheckId?: string;
     } = {},
   ) => {
     const content = nextContent.trim();
@@ -186,7 +196,7 @@ export function StudentMathSession() {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ content, suggested_action: suggestedAction }),
+        body: JSON.stringify({ content, suggested_action: suggestedAction, guided_check_id: guidedCheckId }),
       });
       trace.record("response_headers_received", { httpStatus: response.status });
       if (!response.ok) {
@@ -226,7 +236,7 @@ export function StudentMathSession() {
             const turn = payload as TutorTurn;
             setLearningSession((current) => current ? {
               ...current,
-              messages: current.messages.map((message) => message.id === tutorId ? { ...message, content: turn.text, suggested_actions: turn.suggested_actions } : message),
+              messages: current.messages.map((message) => message.id === tutorId ? { ...message, content: turn.text, suggested_actions: turn.suggested_actions, guided_check: turn.guided_check ?? null } : message),
             } : current);
             terminalTurnReceived = true;
             setState("ready");
@@ -301,6 +311,21 @@ export function StudentMathSession() {
                     >
                       <span dir="auto">{action.label}</span>
                     </Button>)}
+                  </div> : null}
+                  {isTutor && message.id === latestTutorMessage?.id && message.guided_check ? <div className="mt-3 rounded-2xl border border-[#b8ddd6] bg-white p-3" aria-label="Tutor learning check">
+                    <p dir="auto" className="text-sm font-semibold text-[#245b55]">{message.guided_check.prompt}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {message.guided_check.choices.map((choice) => <Button
+                        className="h-auto min-h-10 rounded-full border border-[#78b8ad] bg-[#e2f3ef] px-3 py-2 text-left text-sm text-[#163b3b] hover:bg-[#d3ebe5]"
+                        disabled={state === "sending"}
+                        key={`${message.guided_check?.id}:${choice.label}`}
+                        onClick={() => void sendMessage(choice.label, { guidedCheckId: message.guided_check?.id })}
+                        type="button"
+                        variant="secondary"
+                      >
+                        <span dir="auto">{choice.label}</span>
+                      </Button>)}
+                    </div>
                   </div> : null}
                 </div>
                 {!isTutor ? <ChatAvatar participant="Lina" /> : null}

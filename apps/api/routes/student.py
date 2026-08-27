@@ -16,9 +16,15 @@ from sqlalchemy.orm import Session
 from services.platform.auth import AuthenticatedPrincipal, UserRole, require_role
 from services.platform.db.models import LearningMessage, LearningSession
 from services.platform.db.session import get_session
-from services.tutor.candidate_events import SuggestedAction, normalize_suggested_actions
+from services.tutor.candidate_events import (
+    PersistedGuidedLearningCheck,
+    SuggestedAction,
+    normalize_suggested_actions,
+    persisted_guided_learning_check,
+)
 from services.tutor.student_sessions import (
     append_student_message,
+    latest_tutor_guided_check_choice,
     latest_tutor_suggested_action,
     open_or_resume_math_session,
     ordered_messages,
@@ -35,6 +41,7 @@ router = APIRouter(prefix="/api/v1/student", tags=["student"])
 class StudentMessageRequest(BaseModel):
     content: str = Field(min_length=1, max_length=4000)
     suggested_action: bool = False
+    guided_check_id: UUID | None = None
 
 
 class StudentMessageResponse(BaseModel):
@@ -43,6 +50,7 @@ class StudentMessageResponse(BaseModel):
     content: str
     created_at: datetime
     suggested_actions: list[SuggestedAction] = Field(default_factory=list)
+    guided_check: PersistedGuidedLearningCheck | None = None
 
     @classmethod
     def from_model(cls, message: LearningMessage) -> "StudentMessageResponse":
@@ -53,6 +61,7 @@ class StudentMessageResponse(BaseModel):
             content=message.content,
             created_at=message.created_at,
             suggested_actions=normalize_suggested_actions(payload.get("suggested_actions")) if message.role == "tutor" else [],
+            guided_check=persisted_guided_learning_check(payload.get("guided_check")) if message.role == "tutor" else None,
         )
 
 
@@ -151,7 +160,22 @@ def stream_math_tutor_turn(
     if not content:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Message content is required.")
     selected_action = None
-    if request.suggested_action:
+    selected_guided_check = None
+    if request.guided_check_id is not None:
+        if request.suggested_action:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="A guided check choice cannot also be a generic suggested action.",
+            )
+        selected_guided_check = latest_tutor_guided_check_choice(
+            session,
+            learning_session=learning_session,
+            guided_check_id=request.guided_check_id,
+            label=content,
+        )
+        if selected_guided_check is None:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Guided check choice is no longer available.")
+    elif request.suggested_action:
         selected_action = latest_tutor_suggested_action(
             session,
             learning_session=learning_session,
@@ -181,6 +205,10 @@ def stream_math_tutor_turn(
                 suggested_action_source_tutor_message_id=(
                     selected_action.source_tutor_message_id if selected_action is not None else None
                 ),
+                guided_check_id=selected_guided_check.guided_check.id if selected_guided_check is not None else None,
+                guided_check_source_tutor_message_id=(
+                    selected_guided_check.source_tutor_message_id if selected_guided_check is not None else None
+                ),
             )
             for event in turn_stream:
                 if isinstance(event, TutorTextDelta):
@@ -190,7 +218,7 @@ def stream_math_tutor_turn(
             stream_session.commit()
             committed = True
             if final_turn is not None:
-                yield f"event: turn\ndata: {json.dumps({'text': final_turn.text, 'suggested_actions': [action.model_dump() for action in final_turn.suggested_actions]})}\n\n"
+                yield f"event: turn\ndata: {json.dumps({'text': final_turn.text, 'suggested_actions': [action.model_dump() for action in final_turn.suggested_actions], 'guided_check': final_turn.guided_check.model_dump(mode='json') if final_turn.guided_check is not None else None})}\n\n"
         except GeneratorExit:
             if turn_stream is not None:
                 turn_stream.close()

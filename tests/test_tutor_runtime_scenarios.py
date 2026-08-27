@@ -88,6 +88,7 @@ class _Provider:
         text: str = "Try one small step.",
         candidate_metadata: object | None = None,
         suggested_actions: object | None = None,
+        guided_check: object | None = None,
         teaching_method_id: object | None = None,
         teaching_mode: object | None = None,
         teaching_strategy: object | None = None,
@@ -98,6 +99,7 @@ class _Provider:
         self.text = text
         self.candidate_metadata = candidate_metadata
         self.suggested_actions = suggested_actions
+        self.guided_check = guided_check
         self.teaching_method_id = teaching_method_id
         self.teaching_mode = teaching_mode
         self.teaching_strategy = teaching_strategy
@@ -113,6 +115,7 @@ class _Provider:
         output: dict[str, object] = {
             "text": self.text,
             "suggested_actions": self.suggested_actions or [],
+            "guided_check": self.guided_check,
             "teaching_method_id": self.teaching_method_id,
             "teaching_mode": self.teaching_mode,
             "teaching_strategy": self.teaching_strategy,
@@ -134,6 +137,7 @@ def _runtime(
     decision: SafetyDecision,
     candidate_metadata: object | None = None,
     suggested_actions: object | None = None,
+    guided_check: object | None = None,
     teaching_method_id: object | None = None,
     teaching_mode: object | None = None,
     teaching_strategy: object | None = None,
@@ -144,6 +148,7 @@ def _runtime(
     provider = _Provider(
         candidate_metadata=candidate_metadata,
         suggested_actions=suggested_actions,
+        guided_check=guided_check,
         teaching_method_id=teaching_method_id,
         teaching_mode=teaching_mode,
         teaching_strategy=teaching_strategy,
@@ -168,7 +173,7 @@ def test_arbitrary_literal_message_persists_luna_semantic_decision_without_runti
     events = list(runtime.stream_turn(learning_session=learning_session, question="violet trapezoid lunar bicycle"))
 
     turn = events[-1]
-    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    tutor_message = [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor"][-1]
     assert isinstance(turn, TutorTurn)
     assert any(isinstance(event, TutorTextDelta) for event in events)
     assert turn.mode is TeachingMode.HOMEWORK
@@ -529,11 +534,35 @@ def test_completed_turn_preserves_only_four_trimmed_typed_suggested_actions() ->
     assert tutor_message.payload["suggested_actions"] == [action.model_dump() for action in turn.suggested_actions]
 
 
+def test_valid_model_guided_check_receives_a_server_generated_persisted_identity() -> None:
+    """ACT-02: Luna proposes only check content; the application owns durable check identity."""
+
+    runtime, _, _, session = _runtime(
+        _decision(),
+        guided_check={
+            "prompt": "6 ÷ 2 = ?",
+            "choices": [{"label": "A) 2"}, {"label": "B) 3"}, {"label": "C) 4"}],
+        },
+    )
+
+    turn = list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        question="Can we try one?",
+    ))[-1]
+
+    tutor_message = [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor"][-1]
+    assert isinstance(turn, TutorTurn)
+    assert turn.guided_check is not None
+    assert turn.guided_check.prompt == "6 ÷ 2 = ?"
+    assert [choice.label for choice in turn.guided_check.choices] == ["A) 2", "B) 3", "C) 4"]
+    assert tutor_message.payload["guided_check"] == turn.guided_check.model_dump(mode="json")
+
+
 @pytest.mark.parametrize(
     ("question", "suggested_action_kind", "expected_input_kind"),
     [
-        ("Show another example", "NAVIGATION", "suggested_action_navigation"),
-        ("B) 3", "ANSWER_CHOICE", "suggested_action_answer_choice"),
+        ("Show another example", "NAVIGATION", "suggested_action"),
+        ("B) 3", "ANSWER_CHOICE", "suggested_action"),
     ],
 )
 def test_suggested_action_source_is_persisted_and_sent_to_the_one_tutor_call_outside_recent_context(
@@ -914,6 +943,116 @@ def test_self_reports_and_suggested_action_clicks_never_persist_mastery_candidat
         assert "suggested_action_source_tutor_message_id" not in student_message.payload
 
 
+@pytest.mark.parametrize(
+    ("label", "persisted_kind", "event_type", "expected_candidate_count"),
+    [
+        ("Explain it another way", "NAVIGATION", "learning_attempt", 0),
+        ("Let me try", "NAVIGATION", "learning_attempt", 0),
+        ("I understand", "NAVIGATION", "learning_attempt", 0),
+        ("Let's learn decimals instead", "ANSWER_CHOICE", "learning_attempt", 0),
+        ("Let's learn decimals instead", "ANSWER_CHOICE", "guided_success", 0),
+        ("Let's learn decimals instead", "ANSWER_CHOICE", "incorrect_attempt", 0),
+        ("Let's learn decimals instead", "ANSWER_CHOICE", "misconception_signal", 0),
+        ("Show me another example", "ANSWER_CHOICE", "learning_attempt", 0),
+        ("B) 3", "ANSWER_CHOICE", "learning_attempt", 0),
+    ],
+    ids=[
+        "correctly-labeled-navigation",
+        "correctly-labeled-agency",
+        "correctly-labeled-self-report",
+        "mislabeled-topic-learning-attempt",
+        "mislabeled-topic-guided-success",
+        "mislabeled-topic-incorrect-attempt",
+        "mislabeled-topic-misconception-signal",
+        "mislabeled-support-preference",
+        "unbound-answer-choice-is-generic",
+    ],
+)
+def test_suggested_action_semantics_control_candidate_persistence(
+    label: str,
+    persisted_kind: str,
+    event_type: str,
+    expected_candidate_count: int,
+) -> None:
+    """ACT-02: action meaning, not a model-produced kind alone, governs click evidence."""
+
+    session_holder: dict[str, _Session] = {}
+
+    def metadata(_: dict[str, object]) -> dict[str, object]:
+        return _candidate_for_current_message(
+            session_holder["session"],
+            event_type=event_type,
+            signal="fixture_action_selection",
+        )
+
+    runtime, _, _, session = _runtime(_decision(), metadata)
+    session_holder["session"] = session
+    learning_session = SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None)
+    source = LearningMessage(
+        session_id=learning_session.id,
+        role="tutor",
+        content="Choose what you want to do next.",
+        payload={"suggested_actions": [{"label": label, "kind": persisted_kind}]},
+        created_at=datetime.now(UTC) - timedelta(seconds=1),
+    )
+    session.add(source)
+
+    list(runtime.stream_turn(
+        learning_session=learning_session,
+        question=label,
+        suggested_action_kind=persisted_kind,
+        suggested_action_source_tutor_message_id=source.id,
+    ))
+
+    candidates = [row for row in session.rows if isinstance(row, CandidateEvent)]
+    assert len(candidates) == expected_candidate_count
+    assert not candidates
+
+
+def test_persisted_guided_learning_check_choice_can_create_a_bounded_attempt_candidate() -> None:
+    """ACT-02: only a server-bound choice from a persisted guided check can enter the click path."""
+
+    session_holder: dict[str, _Session] = {}
+
+    def metadata(_: dict[str, object]) -> dict[str, object]:
+        return _candidate_for_current_message(
+            session_holder["session"],
+            event_type="learning_attempt",
+            signal="selected_division_check_choice",
+        )
+
+    runtime, _, _, session = _runtime(_decision(), metadata)
+    session_holder["session"] = session
+    learning_session = SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None)
+    guided_check_id = uuid4()
+    source = LearningMessage(
+        session_id=learning_session.id,
+        role="tutor",
+        content="6 ÷ 2 = ?",
+        payload={"guided_check": {
+            "id": str(guided_check_id),
+            "prompt": "6 ÷ 2 = ?",
+            "choices": [{"label": "A) 2"}, {"label": "B) 3"}, {"label": "C) 4"}],
+        }},
+        created_at=datetime.now(UTC) - timedelta(seconds=1),
+    )
+    session.add(source)
+
+    list(runtime.stream_turn(
+        learning_session=learning_session,
+        question="B) 3",
+        guided_check_id=guided_check_id,
+        guided_check_source_tutor_message_id=source.id,
+    ))
+
+    candidate = next(row for row in session.rows if isinstance(row, CandidateEvent))
+    student_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "student")
+    assert candidate.event_type == "learning_attempt"
+    assert student_message.payload["input_kind"] == "guided_learning_check_answer"
+    assert student_message.payload["guided_check_id"] == str(guided_check_id)
+    assert student_message.payload["guided_check_source_tutor_message_id"] == str(source.id)
+
+
 def test_answer_choice_can_persist_a_bounded_attempt_but_not_independent_success() -> None:
     """Catches a guided choice becoming an independent/mastery claim while preserving its observable attempt value."""
 
@@ -928,16 +1067,31 @@ def test_answer_choice_can_persist_a_bounded_attempt_but_not_independent_success
 
     runtime, _, _, session = _runtime(_decision(), metadata)
     session_holder["session"] = session
+    learning_session = SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None)
+    guided_check_id = uuid4()
+    source = LearningMessage(
+        session_id=learning_session.id,
+        role="tutor",
+        content="Which fraction equals one half?",
+        payload={"guided_check": {
+            "id": str(guided_check_id),
+            "prompt": "Which fraction equals one half?",
+            "choices": [{"label": "1/4"}, {"label": "2/4"}, {"label": "3/4"}],
+        }},
+        created_at=datetime.now(UTC) - timedelta(seconds=1),
+    )
+    session.add(source)
     list(runtime.stream_turn(
-        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        learning_session=learning_session,
         question="2/4",
-        suggested_action_kind="ANSWER_CHOICE",
+        guided_check_id=guided_check_id,
+        guided_check_source_tutor_message_id=source.id,
     ))
 
     candidate = next(row for row in session.rows if isinstance(row, CandidateEvent))
     student_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "student")
     assert candidate.event_type == "learning_attempt"
-    assert student_message.payload["input_kind"] == "suggested_action_answer_choice"
+    assert student_message.payload["input_kind"] == "guided_learning_check_answer"
 
 
 def test_answer_choice_never_persists_independent_success_from_the_click_alone() -> None:
@@ -954,13 +1108,28 @@ def test_answer_choice_never_persists_independent_success_from_the_click_alone()
 
     runtime, _, _, session = _runtime(_decision(), metadata)
     session_holder["session"] = session
+    learning_session = SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None)
+    guided_check_id = uuid4()
+    source = LearningMessage(
+        session_id=learning_session.id,
+        role="tutor",
+        content="Which fraction equals one half?",
+        payload={"guided_check": {
+            "id": str(guided_check_id),
+            "prompt": "Which fraction equals one half?",
+            "choices": [{"label": "1/4"}, {"label": "2/4"}, {"label": "3/4"}],
+        }},
+        created_at=datetime.now(UTC) - timedelta(seconds=1),
+    )
+    session.add(source)
     list(runtime.stream_turn(
-        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        learning_session=learning_session,
         question="2/4",
-        suggested_action_kind="ANSWER_CHOICE",
+        guided_check_id=guided_check_id,
+        guided_check_source_tutor_message_id=source.id,
     ))
 
-    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    tutor_message = [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor"][-1]
     assert not [row for row in session.rows if isinstance(row, CandidateEvent)]
     assert tutor_message.payload["candidate_metadata_status"] == "answer_choice_filtered"
 
