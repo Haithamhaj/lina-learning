@@ -194,12 +194,25 @@ def latest_tutor_guided_check_choice(
 ) -> ResolvedGuidedLearningCheck | None:
     """Accept only an exact visible choice from the latest persisted Tutor check."""
 
-    latest_tutor_message = session.execute(
-        select(LearningMessage)
-        .where(LearningMessage.session_id == learning_session.id, LearningMessage.role == "tutor")
-        .order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())
-        .limit(1)
-    ).scalar_one_or_none()
+    if hasattr(session, "execute"):
+        latest_tutor_message = session.execute(
+            select(LearningMessage)
+            .where(LearningMessage.session_id == learning_session.id, LearningMessage.role == "tutor")
+            .order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())
+            .limit(1)
+        ).scalar_one_or_none()
+    else:
+        messages = [
+            row for row in getattr(session, "rows", ())
+            if isinstance(row, LearningMessage)
+            and row.session_id == learning_session.id
+            and row.role == "tutor"
+        ]
+        latest_tutor_message = max(
+            messages,
+            key=lambda message: (message.created_at, str(message.id)),
+            default=None,
+        )
     if latest_tutor_message is None:
         return None
     payload = latest_tutor_message.payload if isinstance(latest_tutor_message.payload, dict) else {}

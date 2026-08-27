@@ -63,7 +63,11 @@ from services.tutor.segments import (
     latest_valid_structured_segment_state,
     parse_structured_segment_state,
 )
-from services.tutor.student_sessions import append_student_message, latest_prior_tutor_teaching_method
+from services.tutor.student_sessions import (
+    append_student_message,
+    latest_prior_tutor_teaching_method,
+    latest_tutor_guided_check_choice,
+)
 from services.tutor.teaching_decisions import (
     PRIOR_METHOD_RELATION_DEFINITIONS,
     TEACHING_MODE_DEFINITIONS,
@@ -306,6 +310,7 @@ class TutorRuntime:
         )
         guided_check_source = self._guided_check_source(
             learning_session=learning_session,
+            content=content,
             guided_check_id=guided_check_id,
             source_tutor_message_id=guided_check_source_tutor_message_id,
         )
@@ -490,6 +495,7 @@ class TutorRuntime:
         self,
         *,
         learning_session: LearningSession,
+        content: str,
         guided_check_id: UUID | None,
         source_tutor_message_id: UUID | None,
     ) -> LearningMessage | None:
@@ -504,6 +510,14 @@ class TutorRuntime:
         payload = message.payload if isinstance(message.payload, dict) else {}
         guided_check = persisted_guided_learning_check(payload.get("guided_check"))
         if guided_check is None or guided_check.id != guided_check_id:
+            raise ValueError("Guided learning check source is unavailable for this learning session.")
+        latest = latest_tutor_guided_check_choice(
+            self._session,
+            learning_session=learning_session,
+            guided_check_id=guided_check_id,
+            label=content,
+        )
+        if latest is None or latest.source_tutor_message_id != message.id:
             raise ValueError("Guided learning check source is unavailable for this learning session.")
         return message
 

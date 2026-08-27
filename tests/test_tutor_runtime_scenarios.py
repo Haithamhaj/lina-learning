@@ -1053,6 +1053,115 @@ def test_persisted_guided_learning_check_choice_can_create_a_bounded_attempt_can
     assert student_message.payload["guided_check_source_tutor_message_id"] == str(source.id)
 
 
+def test_runtime_rejects_a_guided_check_answer_outside_the_persisted_choices() -> None:
+    """Catches runtime trusting route validation without proving visible choice membership."""
+
+    runtime, _, provider, session = _runtime(_decision())
+    learning_session = SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None)
+    guided_check_id = uuid4()
+    source = LearningMessage(
+        session_id=learning_session.id,
+        role="tutor",
+        content="6 ÷ 2 = ?",
+        payload={"guided_check": {
+            "id": str(guided_check_id),
+            "prompt": "6 ÷ 2 = ?",
+            "choices": [{"label": "A) 2"}, {"label": "B) 3"}, {"label": "C) 4"}],
+        }},
+        created_at=datetime.now(UTC) - timedelta(seconds=1),
+    )
+    session.add(source)
+
+    with pytest.raises(ValueError, match="Guided learning check source is unavailable"):
+        list(runtime.stream_turn(
+            learning_session=learning_session,
+            question="D) 5",
+            guided_check_id=guided_check_id,
+            guided_check_source_tutor_message_id=source.id,
+        ))
+
+    assert provider.calls == 0
+    assert not [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "student"]
+    assert not [row for row in session.rows if isinstance(row, CandidateEvent)]
+
+
+def test_runtime_rejects_a_guided_check_superseded_by_a_newer_tutor_check() -> None:
+    """Catches a TOCTOU source that stopped being the session's current check before runtime execution."""
+
+    runtime, _, provider, session = _runtime(_decision())
+    learning_session = SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None)
+    stale_check_id = uuid4()
+    current_check_id = uuid4()
+    stale_source = LearningMessage(
+        session_id=learning_session.id,
+        role="tutor",
+        content="6 ÷ 2 = ?",
+        payload={"guided_check": {
+            "id": str(stale_check_id),
+            "prompt": "6 ÷ 2 = ?",
+            "choices": [{"label": "A) 2"}, {"label": "B) 3"}, {"label": "C) 4"}],
+        }},
+        created_at=datetime.now(UTC) - timedelta(seconds=2),
+    )
+    current_source = LearningMessage(
+        session_id=learning_session.id,
+        role="tutor",
+        content="8 ÷ 2 = ?",
+        payload={"guided_check": {
+            "id": str(current_check_id),
+            "prompt": "8 ÷ 2 = ?",
+            "choices": [{"label": "A) 2"}, {"label": "B) 4"}, {"label": "C) 6"}],
+        }},
+        created_at=datetime.now(UTC) - timedelta(seconds=1),
+    )
+    session.add(stale_source)
+    session.add(current_source)
+
+    with pytest.raises(ValueError, match="Guided learning check source is unavailable"):
+        list(runtime.stream_turn(
+            learning_session=learning_session,
+            question="B) 3",
+            guided_check_id=stale_check_id,
+            guided_check_source_tutor_message_id=stale_source.id,
+        ))
+
+    assert provider.calls == 0
+    assert not [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "student"]
+    assert not [row for row in session.rows if isinstance(row, CandidateEvent)]
+
+
+def test_runtime_rejects_a_guided_check_source_from_another_session() -> None:
+    """Catches a direct runtime call that bypasses the route's session ownership check."""
+
+    runtime, _, provider, session = _runtime(_decision())
+    learning_session = SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None)
+    guided_check_id = uuid4()
+    source = LearningMessage(
+        session_id=uuid4(),
+        role="tutor",
+        content="6 ÷ 2 = ?",
+        payload={"guided_check": {
+            "id": str(guided_check_id),
+            "prompt": "6 ÷ 2 = ?",
+            "choices": [{"label": "A) 2"}, {"label": "B) 3"}, {"label": "C) 4"}],
+        }},
+        created_at=datetime.now(UTC) - timedelta(seconds=1),
+    )
+    session.add(source)
+
+    with pytest.raises(ValueError, match="Suggested action source is unavailable"):
+        list(runtime.stream_turn(
+            learning_session=learning_session,
+            question="B) 3",
+            guided_check_id=guided_check_id,
+            guided_check_source_tutor_message_id=source.id,
+        ))
+
+    assert provider.calls == 0
+    assert not [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "student"]
+    assert not [row for row in session.rows if isinstance(row, CandidateEvent)]
+
+
 def test_answer_choice_can_persist_a_bounded_attempt_but_not_independent_success() -> None:
     """Catches a guided choice becoming an independent/mastery claim while preserving its observable attempt value."""
 
