@@ -29,6 +29,7 @@ from services.platform.db.models import (
     LearnerPattern,
     LearningEvidence,
     LearningEvent,
+    Job,
     LearningMessage,
     LearningSegment,
     LearningSession,
@@ -708,6 +709,70 @@ def test_worker_claims_b_request_and_completes_staged_review(factory: sessionmak
     with factory() as session:
         review = session.query(SegmentLearningReview).filter_by(segment_id=segment_id).one()
         assert review.status == "COMPLETED"
+
+
+def test_review_settlement_and_repeated_completed_job_enqueue_finalization_once(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches missing settlement notification and duplicate finalization jobs."""
+
+    from services.tutor.session_lifecycle import SESSION_INTELLIGENCE_FINALIZE_JOB
+
+    closed_at = datetime(2026, 8, 29, 12, tzinfo=UTC)
+    with factory.begin() as session:
+        student, learning_session, segment = _lineage(session)
+        _message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            role="student",
+            content="Two fourths equals one half.",
+        )
+        payload = {
+            "segment_id": str(segment.id),
+            "session_id": str(learning_session.id),
+            "student_id": str(student.id),
+            "review_request_version": SEGMENT_REVIEW_REQUEST_VERSION,
+            "closed_at": segment.closed_at.isoformat(),
+            "closure_reason": segment.closure_reason,
+        }
+        enqueue_job(
+            session,
+            job_type=SEGMENT_LEARNING_REVIEW_JOB,
+            payload=payload,
+            idempotency_key=f"settlement:{segment.id}",
+            run_after=closed_at - timedelta(minutes=2),
+        )
+
+    provider = _Provider(_output())
+    registry = JobHandlerRegistry()
+    register_intelligence_handlers(
+        registry,
+        session_factory=factory,
+        segment_evidence_gateway_factory=lambda session: _gateway(session, provider),
+    )
+    assert run_once(factory, registry, worker_id="fixture-worker", now=closed_at).value == "COMPLETED"
+
+    with factory.begin() as session:
+        final_jobs = session.query(Job).filter_by(job_type=SESSION_INTELLIGENCE_FINALIZE_JOB).all()
+        assert len(final_jobs) == 1
+        final_jobs[0].run_after = closed_at + timedelta(hours=1)
+        enqueue_job(
+            session,
+            job_type=SEGMENT_LEARNING_REVIEW_JOB,
+            payload=payload,
+            idempotency_key=f"settlement-repeat:{segment.id}",
+            run_after=closed_at - timedelta(minutes=1),
+        )
+
+    assert run_once(factory, registry, worker_id="fixture-worker", now=closed_at).value == "COMPLETED"
+
+    with factory() as session:
+        reviews = session.query(SegmentLearningReview).filter_by(segment_id=segment.id).all()
+        final_jobs = session.query(Job).filter_by(job_type=SESSION_INTELLIGENCE_FINALIZE_JOB).all()
+        assert len(reviews) == 1
+        assert len(final_jobs) == 1
+        assert provider.calls == 1
 
 
 def test_worker_preserves_failed_review_before_retrying_the_same_identity(

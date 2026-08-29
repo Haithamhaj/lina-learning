@@ -24,6 +24,7 @@ from services.platform.db.models import (
     DecisionView,
     IntelligenceProcessingRun,
     IntelligenceSessionAuthority,
+    Job,
     LearnerPattern,
     LearningEvidence,
     LearningEvent,
@@ -35,6 +36,14 @@ from services.platform.db.models import (
     Student,
     User,
 )
+from services.platform.jobs import enqueue_job
+from services.tutor.session_lifecycle import (
+    SESSION_CONSOLIDATION_JOB,
+    SESSION_INTELLIGENCE_FINALIZE_JOB,
+    enqueue_session_intelligence_finalization_if_ready,
+)
+from workers.intelligence_handlers import register_intelligence_handlers
+from workers.job_worker import JobHandlerRegistry, run_once
 
 
 PRIOR_REVISION = "e7b1f3c9a2d4"
@@ -64,7 +73,7 @@ def factory() -> sessionmaker[Session]:
     with engine.begin() as connection:
         connection.execute(
             text(
-                "TRUNCATE learning_evidence, learning_events, candidate_events, learning_messages, "
+                "TRUNCATE jobs, learning_evidence, learning_events, candidate_events, learning_messages, "
                 "learning_segments, segment_learning_reviews, intelligence_session_authorities, "
                 "intelligence_reprocess_sessions, intelligence_reprocess_runs, "
                 "intelligence_processing_runs, learning_sessions, students, users CASCADE"
@@ -742,6 +751,145 @@ def test_downstream_failure_rolls_back_the_entire_finalization_savepoint(
             module.finalize_closed_session(session, learning_session=learning_session)
 
         _assert_no_activation(session)
+
+
+def test_finalization_worker_validates_lineage_and_activates_without_a_model_call(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches the deterministic finalization job being unregistered or model-gated."""
+
+    with factory.begin() as session:
+        student, learning_session, [(segment, message)] = _closed_lineage(session)
+        _review(
+            session,
+            student=student,
+            learning_session=learning_session,
+            segment=segment,
+            findings=[_finding(message)],
+        )
+        job = enqueue_session_intelligence_finalization_if_ready(
+            session,
+            learning_session=learning_session,
+        )
+        assert job is not None
+        job_id = job.id
+
+    gateway_calls: list[str] = []
+
+    def forbidden_gateway(session: Session) -> object:
+        del session
+        gateway_calls.append("called")
+        raise AssertionError("finalization must not create a model gateway")
+
+    registry = JobHandlerRegistry()
+    register_intelligence_handlers(
+        registry,
+        session_factory=factory,
+        evidence_gateway_factory=forbidden_gateway,  # type: ignore[arg-type]
+    )
+
+    assert run_once(factory, registry, worker_id="finalization-worker").value == "COMPLETED"
+
+    with factory() as session:
+        persisted = session.get(Job, job_id)
+        assert persisted is not None
+        processing_run_id = session.query(IntelligenceProcessingRun.id).scalar()
+        assert persisted.result == {
+            "session_id": str(learning_session.id),
+            "processing_run_id": str(processing_run_id),
+            "event_count": session.query(LearningEvent).count(),
+            "evidence_count": session.query(LearningEvidence).count(),
+            "withheld_finding_count": 0,
+            "current_state_count": session.query(CurrentLearningState).count(),
+            "pattern_count": session.query(LearnerPattern).count(),
+            "decision_view_count": session.query(DecisionView).count(),
+            "reused": False,
+        }
+        assert session.query(IntelligenceSessionAuthority).count() == 1
+        assert gateway_calls == []
+
+
+@pytest.mark.parametrize("invalid_kind", ("wrong_student", "wrong_pipeline", "missing_review"))
+def test_finalization_worker_refuses_early_or_invalid_payload_without_partial_activation(
+    factory: sessionmaker[Session],
+    invalid_kind: str,
+) -> None:
+    """Catches a forged or early job bypassing finalization readiness."""
+
+    with factory.begin() as session:
+        student, learning_session, [(segment, message)] = _closed_lineage(session)
+        if invalid_kind != "missing_review":
+            _review(
+                session,
+                student=student,
+                learning_session=learning_session,
+                segment=segment,
+                findings=[_finding(message)],
+            )
+        payload = {
+            "session_id": str(learning_session.id),
+            "student_id": str(uuid4()) if invalid_kind == "wrong_student" else str(student.id),
+            "intelligence_pipeline": (
+                "legacy-session-evidence-v1"
+                if invalid_kind == "wrong_pipeline"
+                else "segment-finalization-v1"
+            ),
+        }
+        job = enqueue_job(
+            session,
+            job_type=SESSION_INTELLIGENCE_FINALIZE_JOB,
+            payload=payload,
+            idempotency_key=f"invalid-finalization:{invalid_kind}:{learning_session.id}",
+        )
+        job_id = job.id
+
+    registry = JobHandlerRegistry()
+    register_intelligence_handlers(registry, session_factory=factory)
+
+    assert run_once(factory, registry, worker_id="finalization-worker").value == "PENDING"
+
+    with factory() as session:
+        failed = session.get(Job, job_id)
+        assert failed is not None and failed.attempt_count == 1
+        _assert_no_activation(session)
+
+
+def test_legacy_consolidation_handler_refuses_new_pipeline_without_calling_gateway(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches a stale legacy job executing against a segment-finalization Session."""
+
+    with factory.begin() as session:
+        _, learning_session, _ = _closed_lineage(session)
+        job = enqueue_job(
+            session,
+            job_type=SESSION_CONSOLIDATION_JOB,
+            payload={"session_id": str(learning_session.id)},
+            idempotency_key=f"stale-legacy:{learning_session.id}",
+        )
+        job_id = job.id
+
+    gateway_calls: list[str] = []
+
+    def forbidden_gateway(session: Session) -> object:
+        del session
+        gateway_calls.append("called")
+        raise AssertionError("legacy gateway must not be created")
+
+    registry = JobHandlerRegistry()
+    register_intelligence_handlers(
+        registry,
+        session_factory=factory,
+        evidence_gateway_factory=forbidden_gateway,  # type: ignore[arg-type]
+    )
+
+    assert run_once(factory, registry, worker_id="legacy-worker").value == "PENDING"
+
+    with factory() as session:
+        failed = session.get(Job, job_id)
+        assert failed is not None and failed.attempt_count == 1
+        _assert_no_activation(session)
+        assert gateway_calls == []
 
 
 def test_legacy_session_is_refused_without_changing_legacy_authority(

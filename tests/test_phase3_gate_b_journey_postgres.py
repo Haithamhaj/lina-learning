@@ -228,6 +228,7 @@ def test_gate_b_math_journey_reaches_bounded_later_tutor_context(factory: sessio
     with factory.begin() as session:
         student = _student(session)
         first_session = open_or_resume_math_session(session, student_id=student.id, now=clock, lifecycle_policy=_policy())
+        first_session.intelligence_pipeline = "legacy-session-evidence-v1"
         runtime = _runtime(session, provider=tutor_provider, retrieval=retrieval, safety=_AllowPolicy())
         first_turn = list(runtime.stream_turn(
             learning_session=first_session,

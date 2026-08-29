@@ -82,6 +82,7 @@ def _closed_session(session: Session) -> LearningSession:
         student_id=student.id,
         subject="MATH",
         status="CLOSED",
+        intelligence_pipeline="legacy-session-evidence-v1",
         closed_at=datetime(2026, 8, 21, 12, tzinfo=UTC),
     )
     session.add(learning_session)

@@ -25,8 +25,10 @@ from services.platform.db.models import (
 )
 from services.tutor.session_lifecycle import (
     SESSION_CONSOLIDATION_JOB,
+    SESSION_INTELLIGENCE_FINALIZE_JOB,
     SessionLifecyclePolicy,
     close_inactive_sessions,
+    enqueue_session_intelligence_finalization_if_ready,
     session_lifecycle_policy,
 )
 from services.tutor.student_sessions import append_student_message, open_or_resume_math_session
@@ -78,7 +80,7 @@ def _policy() -> SessionLifecyclePolicy:
 def _jobs_for(session: Session, learning_session: LearningSession) -> list[Job]:
     return list(
         session.query(Job)
-        .filter_by(job_type=SESSION_CONSOLIDATION_JOB)
+        .filter_by(job_type=SESSION_INTELLIGENCE_FINALIZE_JOB)
         .filter(Job.payload["session_id"].astext == str(learning_session.id))
         .all()
     )
@@ -104,7 +106,7 @@ def test_session_remains_open_during_configured_grace_window(
         assert learning_session.status == "OPEN"
 
 
-def test_recent_open_session_stays_open_without_a_consolidation_job(
+def test_recent_open_session_stays_open_without_a_finalization_job(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
     now = datetime(2026, 8, 21, 12, tzinfo=UTC)
@@ -184,12 +186,12 @@ def test_inactivity_plus_grace_closes_once_and_next_student_entry_creates_new_se
         assert len(jobs) == 1
         assert jobs[0].payload == {
             "session_id": str(original.id),
-            "lifecycle_policy_version": "fixture-v1",
-            "closed_at": now.isoformat(),
+            "student_id": str(original.student_id),
+            "intelligence_pipeline": "segment-finalization-v1",
         }
 
 
-def test_repeated_lifecycle_scans_close_once_and_enqueue_one_consolidation_job(
+def test_repeated_lifecycle_scans_close_once_and_enqueue_one_finalization_job(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
     now = datetime(2026, 8, 21, 12, tzinfo=UTC)
@@ -302,3 +304,95 @@ def test_closure_leaves_candidate_and_all_derived_learning_records_untouched(
         assert session.query(LearningEvidence).count() == 0
         assert session.query(CurrentLearningState).count() == 0
         assert session.query(LearnerPattern).count() == 0
+
+
+def test_new_pipeline_close_waits_for_all_required_reviews_then_enqueues_once(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Catches finalization polling, partial readiness, and duplicate scheduling."""
+
+    from services.intelligence.consolidation import EVIDENCE_RUBRIC_VERSION
+    from services.intelligence.segment_reviews import (
+        SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
+        SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+        SEGMENT_REVIEW_POLICY_VERSION,
+    )
+    from services.platform.db.models import LearningMessage, LearningSegment, SegmentLearningReview
+
+    now = datetime(2026, 8, 29, 12, tzinfo=UTC)
+    with postgres_session_factory.begin() as session:
+        learning_session = _open_session(
+            session,
+            last_activity_at=now - timedelta(minutes=16),
+        )
+        segment = LearningSegment(session_id=learning_session.id, sequence=1)
+        session.add(segment)
+        session.flush()
+        session.add(
+            LearningMessage(
+                session_id=learning_session.id,
+                segment_id=segment.id,
+                role="student",
+                content="Two fourths equals one half.",
+            )
+        )
+        session.flush()
+
+        assert close_inactive_sessions(session, now=now, policy=_policy()) == [learning_session]
+        assert session.query(Job).filter_by(job_type=SESSION_CONSOLIDATION_JOB).count() == 0
+        assert _jobs_for(session, learning_session) == []
+
+        session.add(
+            SegmentLearningReview(
+                student_id=learning_session.student_id,
+                session_id=learning_session.id,
+                segment_id=segment.id,
+                schema_version=SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+                prompt_version=SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
+                rubric_version=EVIDENCE_RUBRIC_VERSION,
+                review_policy_version=SEGMENT_REVIEW_POLICY_VERSION,
+                provider="fixture",
+                model="fixture-model",
+                status="COMPLETED",
+                output={"version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION, "findings": []},
+                completed_at=now,
+            )
+        )
+        session.flush()
+
+        first = enqueue_session_intelligence_finalization_if_ready(
+            session,
+            learning_session=learning_session,
+        )
+        second = enqueue_session_intelligence_finalization_if_ready(
+            session,
+            learning_session=learning_session,
+        )
+
+        assert first is not None and second is not None and first.id == second.id
+        assert len(_jobs_for(session, learning_session)) == 1
+
+
+def test_persisted_legacy_pipeline_keeps_legacy_consolidation_on_close(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Catches routing historical Sessions by current defaults or incidental state."""
+
+    now = datetime(2026, 8, 29, 12, tzinfo=UTC)
+    with postgres_session_factory.begin() as session:
+        learning_session = _open_session(
+            session,
+            last_activity_at=now - timedelta(minutes=16),
+        )
+        learning_session.intelligence_pipeline = "legacy-session-evidence-v1"
+
+        assert close_inactive_sessions(session, now=now, policy=_policy()) == [learning_session]
+
+        legacy_jobs = session.query(Job).filter_by(job_type=SESSION_CONSOLIDATION_JOB).all()
+        assert len(legacy_jobs) == 1
+        assert legacy_jobs[0].payload == {
+            "session_id": str(learning_session.id),
+            "lifecycle_policy_version": "fixture-v1",
+            "closed_at": now.isoformat(),
+        }
+        assert _jobs_for(session, learning_session) == []

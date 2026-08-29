@@ -6,13 +6,25 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from services.intelligence.consolidation import EVIDENCE_RUBRIC_VERSION
+from services.intelligence.segment_reviews import (
+    SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
+    SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+    SEGMENT_REVIEW_POLICY_VERSION,
+)
 from services.platform.config import Settings, get_settings
-from services.platform.db.models import LearningSession
+from services.platform.db.models import Job, LearningSegment, LearningSession, SegmentLearningReview
 from services.tutor.exchanges import clear_session_exchange_embeddings
-from services.tutor.segment_lifecycle import reconcile_segments_for_session_close
+from services.tutor.segment_lifecycle import (
+    is_segment_structurally_reviewable,
+    reconcile_segments_for_session_close,
+)
 from services.platform.jobs import enqueue_job
 
+LEGACY_SESSION_EVIDENCE_PIPELINE = "legacy-session-evidence-v1"
+SESSION_FINALIZATION_PIPELINE = "segment-finalization-v1"
 SESSION_CONSOLIDATION_JOB = "SESSION_CONSOLIDATION"
+SESSION_INTELLIGENCE_FINALIZE_JOB = "SESSION_INTELLIGENCE_FINALIZE"
 
 
 @dataclass(frozen=True)
@@ -66,18 +78,89 @@ def close_session_if_eligible(
     learning_session.status = "CLOSED"
     learning_session.closed_at = now
     clear_session_exchange_embeddings(session, learning_session=learning_session)
-    enqueue_job(
-        session,
-        job_type=SESSION_CONSOLIDATION_JOB,
-        payload={
-            "session_id": str(learning_session.id),
-            "lifecycle_policy_version": policy.version,
-            "closed_at": now.isoformat(),
-        },
-        idempotency_key=f"session-consolidation:{learning_session.id}",
-    )
+    if learning_session.intelligence_pipeline == LEGACY_SESSION_EVIDENCE_PIPELINE:
+        enqueue_job(
+            session,
+            job_type=SESSION_CONSOLIDATION_JOB,
+            payload={
+                "session_id": str(learning_session.id),
+                "lifecycle_policy_version": policy.version,
+                "closed_at": now.isoformat(),
+            },
+            idempotency_key=f"session-consolidation:{learning_session.id}",
+        )
+    elif learning_session.intelligence_pipeline == SESSION_FINALIZATION_PIPELINE:
+        enqueue_session_intelligence_finalization_if_ready(
+            session,
+            learning_session=learning_session,
+        )
+    else:
+        raise ValueError(
+            f"Unsupported Session intelligence pipeline {learning_session.intelligence_pipeline!r}."
+        )
     session.flush()
     return True
+
+
+def enqueue_session_intelligence_finalization_if_ready(
+    session: Session,
+    *,
+    learning_session: LearningSession,
+) -> Job | None:
+    """Queue one deterministic finalization job only for a complete Review set."""
+
+    if (
+        learning_session.intelligence_pipeline != SESSION_FINALIZATION_PIPELINE
+        or learning_session.status != "CLOSED"
+        or learning_session.closed_at is None
+    ):
+        return None
+
+    required_segment_ids = [
+        segment.id
+        for segment in session.scalars(
+            select(LearningSegment)
+            .where(LearningSegment.session_id == learning_session.id)
+            .order_by(LearningSegment.sequence, LearningSegment.id)
+        )
+        if is_segment_structurally_reviewable(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+        )
+    ]
+    if required_segment_ids:
+        completed_segment_ids = set(
+            session.scalars(
+                select(SegmentLearningReview.segment_id)
+                .where(
+                    SegmentLearningReview.segment_id.in_(required_segment_ids),
+                    SegmentLearningReview.student_id == learning_session.student_id,
+                    SegmentLearningReview.session_id == learning_session.id,
+                    SegmentLearningReview.status == "COMPLETED",
+                    SegmentLearningReview.schema_version
+                    == SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+                    SegmentLearningReview.prompt_version
+                    == SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
+                    SegmentLearningReview.rubric_version == EVIDENCE_RUBRIC_VERSION,
+                    SegmentLearningReview.review_policy_version
+                    == SEGMENT_REVIEW_POLICY_VERSION,
+                )
+            )
+        )
+        if any(segment_id not in completed_segment_ids for segment_id in required_segment_ids):
+            return None
+
+    return enqueue_job(
+        session,
+        job_type=SESSION_INTELLIGENCE_FINALIZE_JOB,
+        payload={
+            "session_id": str(learning_session.id),
+            "student_id": str(learning_session.student_id),
+            "intelligence_pipeline": SESSION_FINALIZATION_PIPELINE,
+        },
+        idempotency_key=f"session-intelligence-finalize:{learning_session.id}",
+    )
 
 
 def close_inactive_sessions(

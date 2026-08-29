@@ -12,6 +12,7 @@ from services.intelligence.consolidation import consolidate_closed_session
 from services.intelligence.current_state import apply_processing_run_current_state
 from services.intelligence.decisions import apply_processing_run_decision_views
 from services.intelligence.patterns import apply_processing_run_patterns
+from services.intelligence.session_finalization import finalize_closed_session
 from services.model_gateway.factory import create_session_evidence_gateway
 from services.model_gateway.factory import create_segment_evidence_gateway
 from services.model_gateway.gateway import ModelGateway
@@ -23,7 +24,13 @@ from services.intelligence.reprocess import (
     process_intelligence_reprocess_session,
     record_reprocess_session_failure,
 )
-from services.tutor.session_lifecycle import SESSION_CONSOLIDATION_JOB
+from services.tutor.session_lifecycle import (
+    LEGACY_SESSION_EVIDENCE_PIPELINE,
+    SESSION_CONSOLIDATION_JOB,
+    SESSION_FINALIZATION_PIPELINE,
+    SESSION_INTELLIGENCE_FINALIZE_JOB,
+    enqueue_session_intelligence_finalization_if_ready,
+)
 from services.tutor.segment_lifecycle import (
     SEGMENT_LEARNING_REVIEW_JOB,
     SEGMENT_REVIEW_REQUEST_VERSION,
@@ -54,6 +61,10 @@ def register_intelligence_handlers(
             learning_session = session.get(LearningSession, UUID(session_id), with_for_update=True)
             if learning_session is None:
                 raise LookupError(f"Learning session {session_id!r} does not exist.")
+            if learning_session.intelligence_pipeline != LEGACY_SESSION_EVIDENCE_PIPELINE:
+                raise ValueError(
+                    "SESSION_CONSOLIDATION is only valid for legacy-session-evidence-v1 Sessions."
+                )
             try:
                 outcome = consolidate_closed_session(
                     session,
@@ -86,6 +97,49 @@ def register_intelligence_handlers(
             }
 
     registry.register(SESSION_CONSOLIDATION_JOB, handle_consolidation)
+
+    def handle_session_finalization(job: Job) -> dict[str, object]:
+        """Activate a complete Segment Review set without any model execution."""
+
+        payload = job.payload if isinstance(job.payload, dict) else {}
+        raw_session_id = payload.get("session_id")
+        raw_student_id = payload.get("student_id")
+        if not isinstance(raw_session_id, str) or not isinstance(raw_student_id, str):
+            raise ValueError("SESSION_INTELLIGENCE_FINALIZE requires Session lineage.")
+        if payload.get("intelligence_pipeline") != SESSION_FINALIZATION_PIPELINE:
+            raise ValueError("Unsupported Session finalization pipeline contract.")
+        try:
+            session_id = UUID(raw_session_id)
+            student_id = UUID(raw_student_id)
+        except ValueError as error:
+            raise ValueError("SESSION_INTELLIGENCE_FINALIZE has invalid Session lineage.") from error
+
+        with session_factory() as session:
+            learning_session = session.get(LearningSession, session_id, with_for_update=True)
+            if (
+                learning_session is None
+                or learning_session.student_id != student_id
+                or learning_session.intelligence_pipeline != SESSION_FINALIZATION_PIPELINE
+            ):
+                raise ValueError("SESSION_INTELLIGENCE_FINALIZE Session lineage does not match.")
+            outcome = finalize_closed_session(
+                session,
+                learning_session=learning_session,
+            )
+            session.commit()
+            return {
+                "session_id": raw_session_id,
+                "processing_run_id": str(outcome.processing_run.id),
+                "event_count": outcome.event_count,
+                "evidence_count": outcome.evidence_count,
+                "withheld_finding_count": outcome.withheld_finding_count,
+                "current_state_count": outcome.current_state_count,
+                "pattern_count": outcome.pattern_count,
+                "decision_view_count": outcome.decision_view_count,
+                "reused": outcome.reused,
+            }
+
+    registry.register(SESSION_INTELLIGENCE_FINALIZE_JOB, handle_session_finalization)
 
     def handle_segment_review(job: Job) -> dict[str, object]:
         """Execute only B's exact staged Segment Review request contract."""
@@ -123,6 +177,10 @@ def register_intelligence_handlers(
                     learning_session=learning_session,
                     segment=segment,
                     gateway=segment_evidence_gateway_factory(session),
+                )
+                enqueue_session_intelligence_finalization_if_ready(
+                    session,
+                    learning_session=learning_session,
                 )
             except Exception:
                 # Preserve the Review's own safe FAILED marker before the Job

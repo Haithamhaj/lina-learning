@@ -268,6 +268,7 @@ def test_session_close_reconciles_open_segments_and_keeps_legacy_consolidation(
     now = datetime(2026, 8, 29, 12, tzinfo=UTC)
     with factory.begin() as session:
         _, learning_session = _lineage(session, last_activity_at=now - timedelta(minutes=16))
+        learning_session.intelligence_pipeline = "legacy-session-evidence-v1"
         first = _segment(session, learning_session, sequence=1)
         second = _segment(session, learning_session, sequence=2)
         third = _segment(session, learning_session, sequence=3)
