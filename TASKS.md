@@ -464,7 +464,7 @@ implementation code changed.
 
 ## Full-System Acceptance — Learning Intelligence
 **Status:** IN_PROGRESS
-**Dependencies:** SEG-EVID-01A–C accepted; SEG-EVID-01D–F completed in order.
+**Dependencies:** SEG-EVID-01A–C accepted; SEG-EVID-01D implemented and pending independent review; SEG-EVID-01E–F completed in order.
 **Purpose:** Prove the governed path from raw conversation through real Segment
 Review, Session-authorized learning memory, and a later real Tutor
 personalization on an isolated acceptance database, then prove the same path
@@ -473,9 +473,9 @@ from a clean fresh start.
 `docs/FULL_SYSTEM_ACCEPTANCE_EXECUTION_SPEC.md`. This objective preserves raw
 source authority, requires real `openai / gpt-5.6-luna` Model Gateway evidence
 for AI-powered acceptance work, and protects the source database from writes.
-**Stages:** SEG-EVID-01D, SEG-EVID-01E, and SEG-EVID-01F are ordered
-implementation/verification stages serving this Full-System Acceptance
-objective;
+**Stages:** SEG-EVID-01D is implemented and pending independent review;
+SEG-EVID-01E and SEG-EVID-01F remain ordered blocked implementation/verification
+stages serving this Full-System Acceptance objective;
 they are not independent product goals. Accepted SEG-EVID-01A/B/C records and
 all deferred/frozen work remain unchanged.
 **Completion gate:** Historical isolated-database and separate fresh-start
@@ -593,12 +593,26 @@ REPRESENTATIVE SCENARIOS VERIFIED` are CODEX-REPORTED; `REAL-LINA VERIFIED =
 NO`. No GitHub CI status is available.
 
 ## SEG-EVID-01D — Session Finalization & Intelligence Activation
-**Status:** READY
+**Status:** REVIEW
 **Dependencies:** SEG-EVID-01C
 **Purpose:** Implement completeness/version gates, deterministic finalization,
 Event/Evidence materialization, and Current State / Pattern / Decision
 activation with no semantic Session call by default, as Stage D of Full-System
 Acceptance.
+**Implementation / verification:** Candidate-free, strict Review-grounded
+`strategy_outcome` Findings now resolve their exact current-contract Finding by
+Review ID and Finding index before downstream use. Valid Candidate-free method
+outcomes use the grounded TeachingMethod identity for
+strategy-effectiveness Patterns and Decision Views; malformed/mismatched Review
+provenance fails closed. Legacy Candidate-backed behavior is preserved and no
+Candidate-free misconception recurrence key is invented. Codex-reported focused
+PostgreSQL finalization/pattern/decision coverage passed (`74 passed`) and the
+canonical Python suite passed (`682 passed, 6 skipped`). A deterministic replay
+on a copied isolated database from persisted real-Luna Reviews produced 34
+Event/Evidence rows, 11 Patterns, 20 Decision Views, 6
+strategy-effectiveness Patterns, and 5 non-insufficient strategy-effectiveness
+Decision Views. This is Codex-reported acceptance evidence, not independent
+acceptance; no new model call, browser, or Real-Lina verification was performed.
 
 ## SEG-EVID-01E — Reprocessing & Authority Compatibility
 **Status:** BLOCKED

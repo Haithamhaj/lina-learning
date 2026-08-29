@@ -11,17 +11,20 @@ from sqlalchemy.orm import Session
 
 from services.intelligence.current_state import CURRENT_STATE_POLICY_VERSION
 from services.intelligence.patterns import PATTERN_POLICY_VERSION
+from services.intelligence.segment_review_provenance import (
+    resolve_segment_review_finding,
+)
+from services.intelligence.segment_reviews import SegmentReviewFinding
 from services.platform.db.models import (
     CandidateEvent,
     CurrentLearningState,
     DecisionView,
     IntelligenceProcessingRun,
     LearnerPattern,
-    LearningEvidence,
     LearningEvent,
+    LearningEvidence,
     LearningSession,
 )
-
 
 DECISION_VIEW_POLICY_VERSION = "decision-view-policy-v1"
 SUPPORTED_DECISION_VIEW_POLICY_VERSIONS = frozenset({DECISION_VIEW_POLICY_VERSION})
@@ -49,6 +52,7 @@ class _EvidenceItem:
     evidence: LearningEvidence
     event: LearningEvent
     candidate: CandidateEvent | None
+    segment_review_finding: SegmentReviewFinding | None
     observed_at: datetime
 
     @property
@@ -72,7 +76,12 @@ class _EvidenceItem:
             if self.candidate is not None and isinstance(self.candidate.payload, dict)
             else {}
         )
-        return isinstance(payload.get("observed_student_outcome"), str)
+        return isinstance(payload.get("observed_student_outcome"), str) or (
+            self.candidate is None
+            and self.event.event_type == "strategy_outcome"
+            and self.segment_review_finding is not None
+            and self.segment_review_finding.teaching_method_id is not None
+        )
 
 
 def derive_decision_views(
@@ -288,6 +297,11 @@ def _evidence_items(
             evidence=evidence,
             event=event,
             candidate=candidate,
+            segment_review_finding=resolve_segment_review_finding(
+                session,
+                event=event,
+                evidence=evidence,
+            ),
             observed_at=(
                 (candidate.created_at if candidate is not None else None)
                 or learning_session.closed_at

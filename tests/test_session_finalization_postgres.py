@@ -184,6 +184,8 @@ def _finding(
     summary: str = "The Student explained an equivalent-fractions relationship.",
     dimensions: dict[str, str] | None = None,
     relationship: str = "supports",
+    teaching_method_id: str | None = None,
+    teaching_method_source_tutor_message_id: str | None = None,
 ) -> dict[str, object]:
     return {
         "validated_event_type": event_type,
@@ -197,8 +199,8 @@ def _finding(
         "dimensions": dimensions or _dimensions(),
         "relationship": relationship,
         "subject_alignment": alignment,
-        "teaching_method_id": None,
-        "teaching_method_source_tutor_message_id": None,
+        "teaching_method_id": teaching_method_id,
+        "teaching_method_source_tutor_message_id": teaching_method_source_tutor_message_id,
         "misconception_evidence": None,
     }
 
@@ -658,6 +660,171 @@ def test_candidate_free_finding_reaches_authority_projections_and_runtime_card(
         assert len(views) == 4
         assert all(str(evidence.id) in view.evidence_ids for view in views)
         assert state.id in card.debug.selected_source_ids
+
+
+def test_candidate_free_grounded_strategy_outcome_reaches_pattern_and_decision_view(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches Review-authorized method outcomes being lost without a Candidate."""
+
+    finalize, _, _ = _finalization_api()
+    with factory.begin() as session:
+        student, learning_session, [(segment, message)] = _closed_lineage(session)
+        tutor = LearningMessage(
+            session_id=learning_session.id,
+            segment_id=segment.id,
+            role="tutor",
+            content="Try matching both fractions to the same concrete parts.",
+            payload={
+                "teaching_method_id": "CONCRETE_EXAMPLE",
+                "teaching_method_registry_version": "teaching-method-registry-v1",
+            },
+            created_at=message.created_at - timedelta(seconds=1),
+        )
+        session.add(tutor)
+        session.flush()
+        _review(
+            session,
+            student=student,
+            learning_session=learning_session,
+            segment=segment,
+            findings=[
+                _finding(
+                    message,
+                    event_type="strategy_outcome",
+                    summary="After the concrete-parts explanation, the Student matched the fractions.",
+                    dimensions=_dimensions(
+                        understanding="demonstrated",
+                        independence="light_support",
+                        strategy_effectiveness="helped",
+                    ),
+                    teaching_method_id="CONCRETE_EXAMPLE",
+                    teaching_method_source_tutor_message_id=str(tutor.id),
+                )
+            ],
+        )
+
+        outcome = finalize(session, learning_session=learning_session)
+        event = session.query(LearningEvent).one()
+        evidence = session.query(LearningEvidence).one()
+        pattern = session.query(LearnerPattern).filter_by(
+            pattern_type="strategy_effectiveness",
+            pattern_key="strategy:concrete_example",
+        ).one()
+        view = session.query(DecisionView).filter_by(
+            concept_ref="equivalent_fractions",
+            view_type="strategy_effectiveness",
+        ).one()
+
+        assert outcome.event_count == outcome.evidence_count == 1
+        assert event.candidate_event_id is None
+        assert event.candidate_event_ids == []
+        assert evidence.dimensions["strategy_effectiveness"] == "helped"
+        assert pattern.support_count == 1
+        assert str(evidence.id) in view.evidence_ids
+        assert view.conclusion == "DEVELOPING"
+
+
+def test_mismatched_candidate_free_review_provenance_is_excluded_downstream(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches a stale Finding index becoming strategy authority after activation."""
+
+    from services.intelligence.decisions import apply_processing_run_decision_views
+    from services.intelligence.patterns import apply_processing_run_patterns
+    from services.intelligence.segment_review_provenance import (
+        resolve_segment_review_finding,
+    )
+
+    finalize, _, _ = _finalization_api()
+    with factory.begin() as session:
+        student, learning_session, [(segment, message)] = _closed_lineage(session)
+        tutor = LearningMessage(
+            session_id=learning_session.id,
+            segment_id=segment.id,
+            role="tutor",
+            content="Use concrete fraction parts.",
+            payload={
+                "teaching_method_id": "CONCRETE_EXAMPLE",
+                "teaching_method_registry_version": "teaching-method-registry-v1",
+            },
+            created_at=message.created_at - timedelta(seconds=1),
+        )
+        session.add(tutor)
+        session.flush()
+        _review(
+            session,
+            student=student,
+            learning_session=learning_session,
+            segment=segment,
+            findings=[
+                _finding(
+                    message,
+                    event_type="strategy_outcome",
+                    dimensions=_dimensions(strategy_effectiveness="helped"),
+                    teaching_method_id="CONCRETE_EXAMPLE",
+                    teaching_method_source_tutor_message_id=str(tutor.id),
+                )
+            ],
+        )
+        outcome = finalize(session, learning_session=learning_session)
+        event = session.query(LearningEvent).one()
+        evidence = session.query(LearningEvidence).one()
+        event.segment_review_finding_index = 99
+        session.query(PatternEvidence).delete()
+        session.query(LearnerPattern).delete()
+        session.query(DecisionView).delete()
+        session.flush()
+
+        assert resolve_segment_review_finding(session, event=event, evidence=evidence) is None
+        apply_processing_run_patterns(session, processing_run_id=outcome.processing_run.id)
+        views = apply_processing_run_decision_views(
+            session,
+            processing_run_id=outcome.processing_run.id,
+        )
+
+        strategy_view = next(view for view in views if view.view_type == "strategy_effectiveness")
+        assert strategy_view.conclusion == "INSUFFICIENT_EVIDENCE"
+        assert session.query(LearnerPattern).filter_by(pattern_type="strategy_effectiveness").count() == 0
+
+
+def test_candidate_free_misconception_does_not_invent_a_recurrence_key(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches a Review Finding being converted into an invented Candidate identity."""
+
+    finalize, _, _ = _finalization_api()
+    with factory.begin() as session:
+        student, learning_session, [(segment, message)] = _closed_lineage(session)
+        message.content = "I think 1/2 equals 1/3 because both have a 1."
+        finding = _finding(
+            message,
+            event_type="misconception_signal",
+            summary="The Student treated equal numerators as equal fractions.",
+            dimensions=_dimensions(
+                understanding="not_demonstrated",
+                independence="light_support",
+            ),
+        )
+        finding["misconception_evidence"] = {
+            "version": "misconception-evidence-v1",
+            "incorrect_model": "Fractions with the same numerator are equal.",
+            "explicit_student_reasoning": "1/2 equals 1/3 because both have a 1",
+            "source_message_id": str(message.id),
+        }
+        _review(
+            session,
+            student=student,
+            learning_session=learning_session,
+            segment=segment,
+            findings=[finding],
+        )
+
+        finalize(session, learning_session=learning_session)
+
+        assert session.query(LearnerPattern).filter_by(
+            pattern_type="misconception_recurrence"
+        ).count() == 0
 
 
 def test_candidate_free_concept_patterns_never_promote_an_invented_context(

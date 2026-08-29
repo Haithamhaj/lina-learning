@@ -9,7 +9,7 @@ isolated acceptance database, then prove the same path from a clean fresh
 start. CTX-03 remains the approved, technically verified Context v2 direction.
 SEG-EVID-01 is the approved Learning Intelligence semantic architecture.
 CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A/B/C are DONE / ACCEPTED;
-SEG-EVID-01D is READY as the first implementation stage of this acceptance,
+SEG-EVID-01D is implemented and in REVIEW pending independent acceptance,
 while SEG-EVID-01E–F remain BLOCKED by their ordered dependencies.
 EDU-ERR-01 remains blocked by SEG-EVID-01F.
 
@@ -75,9 +75,27 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
   clean `git diff --check` is Codex-reported. No GitHub CI status is available.
 - Candidate Events are provisional hints. Staged Segment findings do not update
   current-session personalization; Pattern counters/lifecycle are unchanged.
-- Existing `SESSION_EVIDENCE` remains the current/legacy live durable authority
-  until the SEG-EVID-01D transition is implemented and accepted. Historical
-  Evidence remains valid, auditable, and rebuildable.
+- SEG-EVID-01D deterministically finalizes a complete, current-contract Review
+  set into Event/Evidence and derived State/Pattern/Decision projections; no
+  semantic Session call is made. For Segment-review-backed Evidence, downstream
+  candidate-free `strategy_outcome` handling resolves and verifies the exact
+  Finding through Review ID/index, contract version, raw lineage, and materialized
+  Event/Evidence provenance. A valid grounded TeachingMethod can therefore
+  reach strategy-effectiveness Patterns and Decision Views without a Candidate.
+  Malformed provenance is excluded, legacy Candidate-backed behavior remains,
+  and Candidate-free misconception recurrence remains conservative with no
+  fabricated identity. `SESSION_EVIDENCE` remains the operational legacy path
+  for legacy sessions; historical Evidence remains valid, auditable, and
+  rebuildable.
+- Codex-reported D verification: focused PostgreSQL finalization/pattern/decision
+  coverage `74 passed`; canonical Python `682 passed, 6 skipped`; clean
+  `git diff --check`. A deterministic replay on a copied isolated acceptance
+  database, using persisted real-Luna Review artifacts without a new model call,
+  produced 34 Event/Evidence rows, 16 Current State rows, 11 Patterns, 20
+  Decision Views, 6 strategy-effectiveness Patterns, and 5 non-insufficient
+  strategy-effectiveness Decision Views from 8 Candidate-free strategy outcomes.
+  This is Codex-reported acceptance evidence, not independent acceptance or
+  Real-Lina/browser verification.
 - Full-System Acceptance is governed by
   `docs/FULL_SYSTEM_ACCEPTANCE_EXECUTION_SPEC.md`. It requires a copied,
   isolated acceptance database with the source database untouched; actual
@@ -151,11 +169,11 @@ and RAG/curriculum remain separate authorities.
 
 ## Next recommended action
 
-Execute Full-System Learning Intelligence Acceptance beginning with
-SEG-EVID-01D — Session Finalization & Intelligence Activation.
+Independently review SEG-EVID-01D — Session Finalization & Intelligence
+Activation, including the Candidate-free TeachingMethod downstream correction.
 
 CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A–C are DONE / ACCEPTED;
-SEG-EVID-01D is READY as the first acceptance stage; SEG-EVID-01E–F remain
+SEG-EVID-01D is REVIEW pending independent acceptance; SEG-EVID-01E–F remain
 BLOCKED; EDU-ERR-01 remains blocked by SEG-EVID-01F;
 SCOPE-01,
 SUBJ-01, REC-25, LR-D04B, archive retrieval, and frozen future capabilities

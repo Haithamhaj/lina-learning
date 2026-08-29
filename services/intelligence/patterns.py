@@ -2,25 +2,28 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-import json
 from typing import Literal
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from services.intelligence.segment_review_provenance import (
+    resolve_segment_review_finding,
+)
+from services.intelligence.segment_reviews import SegmentReviewFinding
 from services.platform.db.models import (
     CandidateEvent,
     IntelligenceProcessingRun,
     LearnerPattern,
-    LearningEvidence,
     LearningEvent,
+    LearningEvidence,
     LearningSession,
     PatternEvidence,
 )
-
 
 PATTERN_POLICY_VERSION = "pattern-policy-v1"
 SUPPORTED_PATTERN_POLICY_VERSIONS = frozenset({PATTERN_POLICY_VERSION})
@@ -60,6 +63,7 @@ class _EvidenceContext:
     evidence: LearningEvidence
     event: LearningEvent
     candidate: CandidateEvent | None
+    segment_review_finding: SegmentReviewFinding | None
     learning_session: LearningSession
     run: IntelligenceProcessingRun
     observed_at: datetime
@@ -264,6 +268,11 @@ def _load_validated_evidence(session: Session, *, evidence_id: UUID) -> _Evidenc
         evidence=evidence,
         event=event,
         candidate=candidate,
+        segment_review_finding=resolve_segment_review_finding(
+            session,
+            event=event,
+            evidence=evidence,
+        ),
         learning_session=learning_session,
         run=run,
         observed_at=observed_at,
@@ -313,6 +322,21 @@ def _pattern_targets(
     strategy_key = _normalized_token(candidate_payload.get("strategy_key"), fallback="")
     strategy_outcome = candidate_payload.get("observed_student_outcome")
     if item.event.event_type == "strategy_outcome" and strategy_key and isinstance(strategy_outcome, str):
+        effectiveness = dimensions.get("strategy_effectiveness")
+        if effectiveness in {"helped", "enabled_independent_success"}:
+            targets.append(("strategy_effectiveness", f"strategy:{strategy_key}", "supports"))
+        elif effectiveness == "ineffective":
+            targets.append(("strategy_effectiveness", f"strategy:{strategy_key}", "contradicts"))
+    elif (
+        item.event.event_type == "strategy_outcome"
+        and item.candidate is None
+        and item.segment_review_finding is not None
+        and item.segment_review_finding.teaching_method_id is not None
+    ):
+        strategy_key = _normalized_token(
+            item.segment_review_finding.teaching_method_id.value,
+            fallback="",
+        )
         effectiveness = dimensions.get("strategy_effectiveness")
         if effectiveness in {"helped", "enabled_independent_success"}:
             targets.append(("strategy_effectiveness", f"strategy:{strategy_key}", "supports"))
@@ -615,6 +639,7 @@ def _broaden_supported_scope(
                     evidence=evidence,
                     event=event,
                     candidate=candidate,
+                    segment_review_finding=None,
                     learning_session=item.learning_session,
                     run=run,
                     observed_at=link.observed_at,
@@ -664,6 +689,7 @@ def _broaden_supported_scope(
                 evidence=evidence,
                 event=event,
                 candidate=candidate,
+                segment_review_finding=None,
                 learning_session=item.learning_session,
                 run=run,
                 observed_at=link.observed_at,
@@ -752,6 +778,7 @@ def _any_pattern_source(
         evidence=evidence,
         event=event,
         candidate=candidate,
+        segment_review_finding=None,
         learning_session=learning_session,
         run=run,
         observed_at=link.observed_at,
