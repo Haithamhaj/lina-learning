@@ -7,8 +7,8 @@ SEG-EVID-01 is the approved Learning Intelligence semantic architecture; its
 first two slices are complete in code, while current durable intelligence still
 uses legacy Session Evidence. CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A is
 DONE and independently accepted; SEG-EVID-01B is DONE and independently
-accepted; SEG-EVID-01C is implemented and awaiting independent review.
-EDU-ERR-01 remains blocked by SEG-EVID-01F.
+accepted; SEG-EVID-01C is DONE / ACCEPTED; SEG-EVID-01D is READY.
+SEG-EVID-01E–F remain BLOCKED; EDU-ERR-01 remains blocked by SEG-EVID-01F.
 
 ## Current reality
 
@@ -36,7 +36,8 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
   operational. Codex-reported, not independently re-executed: focused
   B/runtime/lifecycle PostgreSQL coverage (45 passed) and canonical Python
   coverage (552 passed, 5 skipped). No GitHub CI status is available.
-- SEG-EVID-01C is REVIEW: `SEGMENT_EVIDENCE` performs one strict,
+- SEG-EVID-01C is independently **CODE REVIEW VERIFIED / ACCEPTED**:
+  `SEGMENT_EVIDENCE` performs one strict,
   versioned semantic review of a durably closed Segment through the Model
   Gateway. AI determines educational meaning from complete ordered raw Segment
   input plus optional validated Candidate hints and available validated
@@ -44,7 +45,11 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
   failure refuses the complete request rather than truncating it. Review
   output is staged only, source-grounded in its own raw Student messages, and
   safely persists failure before a Job retry; completed Review identity is
-  idempotent.
+  idempotent. It uses `segment-learning-review-v1`,
+  `segment-learning-review-prompt-v1`, `evidence-rubric-v1`, and
+  `segment-review-policy-v1`; the actual `SEGMENT_LEARNING_REVIEW` worker
+  handler persists safe FAILED state before retry and never enqueues Session
+  Finalization.
 - C v1 has no automatic historical retrieval. Retention is always
   `not_tested`, including no `retention_failure` relationship; cross-subject
   findings remain staged/fail-closed. Invalid, stale, unsupported, or
@@ -55,15 +60,19 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
 - Codex-reported verification: focused C/structured-provider 24 passed;
   Candidate/CAND-01/TeachingMethod/worker/structured-output/legacy Session
   Evidence 87 passed; canonical Python 577 passed, 6 skipped. Controlled
-  synthetic real `openai / gpt-5.6-luna`
-  testing completed six strict-schema representative Segment cases. This is
-  real-model transport and representative-scenario verification, not
-  independent re-execution or Real-Lina validation.
+  synthetic real `openai / gpt-5.6-luna` testing completed six strict-schema
+  representative Segment cases: casual 0 Findings, Candidate-free learning
+  explanation, bare-answer incorrect attempt without misconception,
+  misconception plus self-correction, grounded `CONCRETE_EXAMPLE` strategy
+  outcome, and `POSSIBLE_CROSS_SUBJECT`. `REAL LUNA SEGMENT REVIEW TRANSPORT
+  VERIFIED` and representative scenarios are CODEX-REPORTED, not independently
+  re-executed or Real-Lina validation. Correction RED was 6 failed, 17 passed;
+  clean `git diff --check` is Codex-reported. No GitHub CI status is available.
 - Candidate Events are provisional hints. Staged Segment findings do not update
   current-session personalization; Pattern counters/lifecycle are unchanged.
-- Existing Session Evidence remains the current/legacy live durable authority
-  until SEG-EVID-01D. Historical Evidence remains valid, auditable, and
-  rebuildable.
+- Existing `SESSION_EVIDENCE` remains the current/legacy live durable authority
+  until the SEG-EVID-01D transition is implemented and accepted. Historical
+  Evidence remains valid, auditable, and rebuildable.
 - Track A is COMPLETE / ACCEPTED; the authenticated Tutor works with zero
   content, uses optional question-driven grounding, and remains safety-first.
 - CTX-03 preserves current-Segment-only context. `CONTINUE` stays in the
@@ -89,7 +98,8 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
 
 ## Active decisions
 
-- Segment = semantic review unit; Session = durable intelligence authority.
+- Segment interprets. Session commits. Segment = semantic review unit; Session
+  = durable intelligence activation authority.
 - Segment review is asynchronous/background; Session Finalization is
   deterministic by default with no semantic Session call after Reviews.
 - Raw interaction outranks Candidate metadata; Candidate is provisional.
@@ -124,10 +134,11 @@ and RAG/curriculum remain separate authorities.
 
 ## Next recommended action
 
-Independently review SEG-EVID-01C. If accepted → unblock SEG-EVID-01D.
+Begin SEG-EVID-01D — Session Finalization & Intelligence Activation.
 
-CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01B is DONE; SEG-EVID-01C is REVIEW;
-SEG-EVID-01D–F remain BLOCKED; EDU-ERR-01 remains blocked by SEG-EVID-01F;
+CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A–C are DONE / ACCEPTED;
+SEG-EVID-01D is READY; SEG-EVID-01E–F remain BLOCKED; EDU-ERR-01 remains
+blocked by SEG-EVID-01F;
 SCOPE-01,
 SUBJ-01, REC-25, LR-D04B, archive retrieval, and frozen future capabilities
 remain deferred. Real-Lina validation remains deferred.

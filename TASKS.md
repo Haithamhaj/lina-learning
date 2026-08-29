@@ -507,7 +507,7 @@ B/runtime/lifecycle coverage (45 passed) and canonical Python (552 passed,
 5 skipped). No GitHub CI status is available.
 
 ## SEG-EVID-01C — Segment Semantic Reviewer
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** SEG-EVID-01B
 **Purpose:** Implement the `segment_evidence` ModelTask with complete raw
 Segment input, optional Candidate hints, Guided Check / TeachingMethod lineage
@@ -539,11 +539,35 @@ Controlled synthetic
 real `openai / gpt-5.6-luna` verification completed six representative
 Segment scenarios through the strict Gateway path (1 passed); this is real
 model transport/representative-scenario verification, not Real-Lina testing
-or independent re-execution. Independent review is required before C can be
-accepted or SEG-EVID-01D can become eligible.
+or independent re-execution.
+**Acceptance:** Independently **CODE REVIEW VERIFIED / ACCEPTED**. C provides
+`ModelTask.SEGMENT_EVIDENCE`, a provider-neutral Gateway, strict
+`segment-learning-review-v1`, prompt `segment-learning-review-prompt-v1`,
+`evidence-rubric-v1`, and `segment-review-policy-v1`. The complete ordered raw
+Segment remains semantic source authority; Findings require exact same-Segment
+Student grounding, with validated Guided Check/TeachingMethod context where
+available. Candidate hints remain optional/non-authoritative and invalid,
+stale, or historical hints are excluded without suppressing raw Review.
+Retention is fully closed in C v1 (`not_tested` dimension/context and no
+`retention_failure`); there is no automatic historical retrieval. Cross-subject
+Findings remain staged as `SAME_AS_SESSION`, `POSSIBLE_CROSS_SUBJECT`, or
+`UNCERTAIN`; `findings=[]` is valid. Versioned Reviews are idempotent, persist
+safe FAILED state before retry, and C has the actual
+`SEGMENT_LEARNING_REVIEW` handler. No Session Finalization enqueue or durable
+intelligence activation was introduced. Codex-reported, not independently
+re-executed: correction RED (6 failed, 17 passed), focused (24 passed),
+relevant regression group (87 passed), canonical Python (577 passed, 6
+skipped), and clean `git diff --check`. Controlled synthetic real-model
+verification was Codex-reported: `openai / gpt-5.6-luna` produced casual 0
+findings, Candidate-free learning explanation, bare-answer incorrect attempt
+without misconception, misconception plus self-correction, grounded
+`CONCRETE_EXAMPLE` strategy outcome, and `POSSIBLE_CROSS_SUBJECT`. `REAL LUNA
+SEGMENT REVIEW TRANSPORT VERIFIED` and `REAL LUNA SEGMENT REVIEW
+REPRESENTATIVE SCENARIOS VERIFIED` are CODEX-REPORTED; `REAL-LINA VERIFIED =
+NO`. No GitHub CI status is available.
 
 ## SEG-EVID-01D — Session Finalization & Intelligence Activation
-**Status:** BLOCKED
+**Status:** READY
 **Dependencies:** SEG-EVID-01C
 **Purpose:** Implement completeness/version gates, deterministic finalization,
 Event/Evidence materialization, and Current State / Pattern / Decision
@@ -1007,8 +1031,8 @@ expansion remain frozen.
 - **Lifecycle:** UI-01 is **CLOSED** following real S3 browser use with no hang
   and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
-**Next action:** Independently review SEG-EVID-01C. If accepted, unblock
-SEG-EVID-01D. Do not begin SEG-EVID-01D–F, EDU-ERR-01, SCOPE-01, SUBJ-01,
+**Next action:** Begin SEG-EVID-01D — Session Finalization & Intelligence
+Activation. Do not begin SEG-EVID-01E–F, EDU-ERR-01, SCOPE-01, SUBJ-01,
 REC-25, LR-D04B, archive retrieval, or frozen future capabilities.
 
 ---
