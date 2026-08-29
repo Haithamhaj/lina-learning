@@ -6,7 +6,8 @@ CTX-03 remains the approved, technically verified Context v2 direction.
 SEG-EVID-01 is the approved Learning Intelligence semantic architecture, but
 is not implemented. Current code still uses legacy Session Evidence.
 CAND-01 strict Structured Output compatibility correction is FIX IMPLEMENTED /
-VERIFICATION before SEG-EVID-01A; EDU-ERR-01 is blocked by SEG-EVID-01F.
+VERIFICATION and independently CODE REVIEW VERIFIED; SEG-EVID-01A is READY.
+EDU-ERR-01 is blocked by SEG-EVID-01F.
 
 ## Current reality
 
@@ -24,13 +25,14 @@ VERIFICATION before SEG-EVID-01A; EDU-ERR-01 is blocked by SEG-EVID-01F.
 - One primary Tutor call, safety-first policy enforcement, question-driven RAG,
   and separation of Safety, context, RAG, Student Core Profile, and learner
   intelligence remain protected.
-- The strict Tutor schema defect is corrected: nullable Candidate
-  `misconception_evidence` is now required for strict Structured Outputs.
-  Focused/relevant and canonical Python verification passed (529 passed, 5
-  skipped). Real Luna remains NOT VERIFIED because this isolated worktree has
-  only `mock/mock` routing and no model API key or base URL. EVID-01 remains an
-  open legacy HTTPError defect but is off the new critical path. PERS-01 is
-  absorbed into SEG-EVID-01F.
+- The strict Tutor schema defect is corrected and independently CODE REVIEW
+  VERIFIED at `8efa6d5388c4d2e8599ea2a21cac0766a677e9b1`: nullable Candidate
+  `misconception_evidence` is required for strict Structured Outputs.
+  Automated execution is Codex-reported (focused/relevant and canonical Python:
+  529 passed, 5 skipped). Real Luna remains NOT VERIFIED because this isolated
+  worktree has no configured provider credentials. Turn-level misconception
+  remains provisional under SEG-EVID. EVID-01 remains an open legacy HTTPError
+  defect but is off the new critical path. PERS-01 is absorbed into SEG-EVID-01F.
 
 ## Active decisions
 
@@ -65,16 +67,17 @@ and RAG/curriculum remain separate authorities.
 - **SEG-EVID-R3 — Cross-Subject Attribution — 5**
 - **SEG-EVID-R4 — Legacy/New Authority Coexistence — 5**
 - **SEG-EVID-R5 — Semantic Review Cost — 3**
-- **CAND-01-SCHEMA — Strict Structured Output incompatibility — 5**
+- **CAND-01-REAL-LUNA — Real provider transport verification unavailable — 3**
 - **STATE-01 — Structured Segment State lineage reliability — OPEN / NON-BLOCKING**
 
 ## Next recommended action
 
-Independently review the CAND-01 schema correction → if accepted, unblock
-SEG-EVID-01A. CAND-01 remains FIX IMPLEMENTED / VERIFICATION, not closed;
-SEG-EVID-01A remains blocked until independent review. Do not start
-EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, LR-D04B, archive retrieval, or frozen
-future capabilities.
+Begin SEG-EVID-01A — Governing Contracts & Persistence.
+
+CAND-01 remains FIX IMPLEMENTED / VERIFICATION, not closed, pending Real Luna
+transport verification. EDU-ERR-01 remains blocked by SEG-EVID-01F; SCOPE-01,
+SUBJ-01, REC-25, LR-D04B, archive retrieval, and frozen future capabilities
+remain deferred.
 
 ## Critical references
 
