@@ -463,12 +463,16 @@ contradictions are removed; historical Session Evidence is preserved; and no
 implementation code changed.
 
 ## SEG-EVID-01A — Governing Contracts & Persistence
-**Status:** READY
+**Status:** REVIEW
 **Dependencies:** CAND-01 strict schema compatibility correction committed and independently reviewed.
 **Purpose:** Implement explicit Segment completion persistence, versioned
 `SegmentLearningReview`, Segment Review contract/version identity,
 LearningEvent Segment lineage, multi-message provenance, and backward-compatible
 legacy handling. No runtime intelligence activation yet.
+**Verification:** Focused persistence/migration contracts, relevant database and
+unchanged-Tutor regression coverage, and canonical Python verification passed
+(540 passed, 5 skipped). No Segment Review execution, job, ModelTask, Session
+Finalization, or Evidence activation was added.
 
 ## SEG-EVID-01B — Segment Completion & Review Jobs
 **Status:** BLOCKED
@@ -949,10 +953,10 @@ expansion remain frozen.
 - **Lifecycle:** UI-01 is **CLOSED** following real S3 browser use with no hang
   and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
-**Next action:** Begin SEG-EVID-01A — Governing Contracts & Persistence.
-CAND-01 remains FIX IMPLEMENTED / VERIFICATION pending Real Luna transport
-verification; do not begin EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, LR-D04B,
-archive retrieval, or frozen future capabilities.
+**Next action:** Independently review SEG-EVID-01A. If accepted → unblock
+SEG-EVID-01B. CAND-01 remains FIX IMPLEMENTED / VERIFICATION pending Real Luna
+transport verification; do not begin EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25,
+LR-D04B, archive retrieval, or frozen future capabilities.
 
 ---
 

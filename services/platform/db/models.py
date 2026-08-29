@@ -542,7 +542,15 @@ class LearningSegment(Base):
     """Contiguous session-local conversation segment; raw messages remain authoritative."""
 
     __tablename__ = "learning_segments"
-    __table_args__ = (UniqueConstraint("session_id", "sequence", name="uq_learning_segments_session_sequence"),)
+    __table_args__ = (
+        UniqueConstraint("session_id", "sequence", name="uq_learning_segments_session_sequence"),
+        CheckConstraint(
+            "(closed_at IS NULL AND closure_reason IS NULL) OR "
+            "(closed_at IS NOT NULL AND closure_reason IS NOT NULL AND "
+            "closure_reason IN ('NEXT_SEGMENT_CREATED', 'SESSION_CLOSED'))",
+            name="ck_learning_segments_closure_state",
+        ),
+    )
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     session_id: Mapped[UUID] = mapped_column(
         PostgreSQLUUID(as_uuid=True),
@@ -552,6 +560,58 @@ class LearningSegment(Base):
     sequence: Mapped[int] = mapped_column(Integer, nullable=False)
     structured_state: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    closure_reason: Mapped[str | None] = mapped_column(String(32))
+
+
+class SegmentLearningReview(Base):
+    """Versioned semantic-review artifact; raw messages remain source authority."""
+
+    __tablename__ = "segment_learning_reviews"
+    __table_args__ = (
+        UniqueConstraint(
+            "segment_id",
+            "schema_version",
+            "prompt_version",
+            "rubric_version",
+            "review_policy_version",
+            "provider",
+            "model",
+            name="uq_segment_learning_review_identity",
+        ),
+        CheckConstraint(
+            "status IN ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED')",
+            name="ck_segment_learning_reviews_status",
+        ),
+        Index("ix_segment_learning_reviews_session", "session_id"),
+        Index("ix_segment_learning_reviews_student", "student_id"),
+        Index("ix_segment_learning_reviews_status", "status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="RESTRICT"), nullable=False
+    )
+    session_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("learning_sessions.id", ondelete="RESTRICT"), nullable=False
+    )
+    segment_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("learning_segments.id", ondelete="RESTRICT"), nullable=False
+    )
+    schema_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    rubric_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    review_policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    model: Mapped[str] = mapped_column(String(128), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="PENDING", server_default="PENDING")
+    output: Mapped[dict[str, object] | None] = mapped_column(JSONB)
+    ai_execution_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("ai_executions.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    failure_detail: Mapped[str | None] = mapped_column(Text)
 
 
 class LearningMessage(Base):
@@ -714,7 +774,21 @@ class LearningEvent(Base):
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("intelligence_processing_runs.id", ondelete="CASCADE"), nullable=False)
     session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("learning_sessions.id", ondelete="CASCADE"), nullable=False)
-    candidate_event_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("candidate_events.id", ondelete="CASCADE"), nullable=False)
+    candidate_event_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("candidate_events.id", ondelete="SET NULL")
+    )
+    segment_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("learning_segments.id", ondelete="SET NULL")
+    )
+    segment_review_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("segment_learning_reviews.id", ondelete="SET NULL")
+    )
+    candidate_event_ids: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default="[]"
+    )
+    source_message_ids: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default="[]"
+    )
     subject: Mapped[str] = mapped_column(String(32), nullable=False)
     concept_ref: Mapped[str | None] = mapped_column(String(128))
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)

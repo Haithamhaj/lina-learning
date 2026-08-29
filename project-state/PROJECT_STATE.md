@@ -6,13 +6,16 @@ CTX-03 remains the approved, technically verified Context v2 direction.
 SEG-EVID-01 is the approved Learning Intelligence semantic architecture, but
 is not implemented. Current code still uses legacy Session Evidence.
 CAND-01 strict Structured Output compatibility correction is FIX IMPLEMENTED /
-VERIFICATION and independently CODE REVIEW VERIFIED; SEG-EVID-01A is READY.
-EDU-ERR-01 is blocked by SEG-EVID-01F.
+VERIFICATION and independently CODE REVIEW VERIFIED. SEG-EVID-01A persistence
+contracts are implemented and awaiting independent review; EDU-ERR-01 is
+blocked by SEG-EVID-01F.
 
 ## Current reality
 
-- Segment semantic review is approved, asynchronous, and not implemented;
-  Session remains the durable Evidence authority.
+- SEG-EVID-01A persists Segment closure facts, versioned Segment Learning
+  Reviews, and backward-compatible Event provenance. It does not execute a
+  Review, enqueue work, alter Tutor behavior, or activate intelligence; Session
+  remains the durable Evidence authority.
 - Candidate Events are provisional hints. Staged Segment findings do not update
   current-session personalization; Pattern counters/lifecycle are unchanged.
 - Existing Session Evidence remains the current/legacy implementation until
@@ -72,7 +75,8 @@ and RAG/curriculum remain separate authorities.
 
 ## Next recommended action
 
-Begin SEG-EVID-01A — Governing Contracts & Persistence.
+Independently review SEG-EVID-01A.
+If accepted → unblock SEG-EVID-01B.
 
 CAND-01 remains FIX IMPLEMENTED / VERIFICATION, not closed, pending Real Luna
 transport verification. EDU-ERR-01 remains blocked by SEG-EVID-01F; SCOPE-01,
