@@ -39,19 +39,23 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
 - SEG-EVID-01C is REVIEW: `SEGMENT_EVIDENCE` performs one strict,
   versioned semantic review of a durably closed Segment through the Model
   Gateway. AI determines educational meaning from complete ordered raw Segment
-  input plus optional provisional Candidate hints and available validated
+  input plus optional validated Candidate hints and available validated
   Guided Check/TeachingMethod provenance; `findings=[]` is valid. Capacity
   failure refuses the complete request rather than truncating it. Review
   output is staged only, source-grounded in its own raw Student messages, and
   safely persists failure before a Job retry; completed Review identity is
   idempotent.
 - C v1 has no automatic historical retrieval. Retention is always
-  `not_tested`; cross-subject findings remain staged/fail-closed. It creates no
+  `not_tested`, including no `retention_failure` relationship; cross-subject
+  findings remain staged/fail-closed. Invalid, stale, unsupported, or
+  ungrounded Candidate hints are excluded before AI input while raw Segment
+  Review continues. It creates no
   LearningEvent, LearningEvidence, Current State, Pattern, Decision View,
   Card, Session Finalization, or personalization activation.
-- Codex-reported verification: focused C/structured-provider 20 passed;
-  C plus Gate-B/legacy Session Evidence 45 passed; canonical Python 569
-  passed, 6 skipped. Controlled synthetic real `openai / gpt-5.6-luna`
+- Codex-reported verification: focused C/structured-provider 24 passed;
+  Candidate/CAND-01/TeachingMethod/worker/structured-output/legacy Session
+  Evidence 87 passed; canonical Python 577 passed, 6 skipped. Controlled
+  synthetic real `openai / gpt-5.6-luna`
   testing completed six strict-schema representative Segment cases. This is
   real-model transport and representative-scenario verification, not
   independent re-execution or Real-Lina validation.

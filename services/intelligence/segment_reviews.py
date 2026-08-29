@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 import json
-from typing import Literal
+from typing import Literal, get_args
 import unicodedata
 from uuid import NAMESPACE_URL, UUID, uuid5
 
@@ -17,7 +17,14 @@ from services.intelligence.consolidation import EvidenceDimensions, EvidenceRela
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
 from services.platform.config import Settings, get_settings
 from services.platform.db.models import CandidateEvent, LearningMessage, LearningSegment, LearningSession, ModelTask, SegmentLearningReview, Student
-from services.tutor.candidate_events import MISCONCEPTION_EVIDENCE_SCHEMA_VERSION, MisconceptionEvidence, persisted_guided_learning_check
+from services.tutor.candidate_events import (
+    CANDIDATE_EVENT_SCHEMA_VERSION,
+    MISCONCEPTION_EVIDENCE_SCHEMA_VERSION,
+    CandidateEventMetadataItem,
+    CandidateEventType,
+    MisconceptionEvidence,
+    persisted_guided_learning_check,
+)
 from services.tutor.teaching_methods import TEACHING_METHOD_REGISTRY_VERSION, TeachingMethod, is_supported_teaching_method
 
 
@@ -33,6 +40,7 @@ SegmentReviewEventType = Literal[
 ]
 TransferContext = Literal["not_tested", "near_identical", "meaningfully_changed"]
 SubjectAlignment = Literal["SAME_AS_SESSION", "POSSIBLE_CROSS_SUBJECT", "UNCERTAIN"]
+_SUPPORTED_SEGMENT_CANDIDATE_TYPES = frozenset(get_args(CandidateEventType)) - {"retention_check"}
 
 
 class SegmentReviewError(RuntimeError):
@@ -280,9 +288,120 @@ def _candidate_source_ids(candidate: CandidateEvent) -> set[UUID]:
 
 
 def _valid_candidate_hints(session: Session, *, learning_session: LearningSession, messages: list[LearningMessage]) -> list[CandidateEvent]:
-    message_ids = {message.id for message in messages}
+    messages_by_id = {message.id: message for message in messages}
     candidates = list(session.scalars(select(CandidateEvent).where(CandidateEvent.session_id == learning_session.id).order_by(CandidateEvent.created_at, CandidateEvent.id)))
-    return [candidate for candidate in candidates if candidate.message_id in message_ids and _candidate_source_ids(candidate) and _candidate_source_ids(candidate).issubset(message_ids)]
+    return [
+        candidate
+        for candidate in candidates
+        if _is_safe_segment_candidate_hint(
+            candidate,
+            learning_session=learning_session,
+            messages_by_id=messages_by_id,
+        )
+    ]
+
+
+def _is_safe_segment_candidate_hint(
+    candidate: CandidateEvent,
+    *,
+    learning_session: LearningSession,
+    messages_by_id: dict[UUID, LearningMessage],
+) -> bool:
+    """Allow only structurally valid, optional Candidate hints into AI input."""
+
+    payload = candidate.payload if isinstance(candidate.payload, dict) else {}
+    source_ids = _candidate_source_ids(candidate)
+    source = messages_by_id.get(candidate.message_id)
+    if (
+        candidate.session_id != learning_session.id
+        or candidate.event_type not in _SUPPORTED_SEGMENT_CANDIDATE_TYPES
+        or payload.get("candidate_schema_version") != CANDIDATE_EVENT_SCHEMA_VERSION
+        or candidate.message_id is None
+        or source is None
+        or source.role != "student"
+        or source_ids != {candidate.message_id}
+        or any(messages_by_id.get(source_id) is None or messages_by_id[source_id].role != "student" for source_id in source_ids)
+    ):
+        return False
+    try:
+        CandidateEventMetadataItem.model_validate(
+            {
+                "event_type": candidate.event_type,
+                "concept_ref": candidate.concept_ref,
+                "summary": payload.get("summary"),
+                "signal": candidate.signal,
+                "source_message_ids": [str(source_id) for source_id in source_ids],
+                "school_or_extended": payload.get("school_or_extended"),
+                "observed_student_outcome": payload.get("observed_student_outcome"),
+                "misconception_evidence": payload.get("misconception_evidence"),
+            }
+        )
+    except ValidationError:
+        return False
+    if candidate.event_type == "misconception_signal":
+        return _has_valid_candidate_misconception(payload, source=source, source_ids=source_ids)
+    if candidate.event_type == "strategy_outcome":
+        return _has_valid_candidate_strategy_outcome(
+            payload,
+            learning_session=learning_session,
+            student_source=source,
+            messages_by_id=messages_by_id,
+        )
+    return True
+
+
+def _has_valid_candidate_misconception(
+    payload: dict[str, object],
+    *,
+    source: LearningMessage,
+    source_ids: set[UUID],
+) -> bool:
+    try:
+        evidence = MisconceptionEvidence.model_validate(payload.get("misconception_evidence"))
+    except ValidationError:
+        return False
+    return (
+        evidence.version == MISCONCEPTION_EVIDENCE_SCHEMA_VERSION
+        and evidence.source_message_id == source.id
+        and evidence.source_message_id in source_ids
+        and _normalize_grounding_text(evidence.explicit_student_reasoning)
+        in _normalize_grounding_text(source.content)
+    )
+
+
+def _has_valid_candidate_strategy_outcome(
+    payload: dict[str, object],
+    *,
+    learning_session: LearningSession,
+    student_source: LearningMessage,
+    messages_by_id: dict[UUID, LearningMessage],
+) -> bool:
+    method = is_supported_teaching_method(
+        payload.get("strategy_key"),
+        registry_version=payload.get("strategy_registry_version"),
+    )
+    if method is None or payload.get("strategy_registry_version") != TEACHING_METHOD_REGISTRY_VERSION:
+        return False
+    try:
+        tutor_id = UUID(str(payload.get("strategy_source_tutor_message_id")))
+    except (TypeError, ValueError):
+        return False
+    tutor = messages_by_id.get(tutor_id)
+    tutor_payload = tutor.payload if tutor is not None and isinstance(tutor.payload, dict) else {}
+    persisted_method = is_supported_teaching_method(
+        tutor_payload.get("teaching_method_id"),
+        registry_version=tutor_payload.get("teaching_method_registry_version"),
+    )
+    return (
+        tutor is not None
+        and tutor.session_id == learning_session.id
+        and tutor.role == "tutor"
+        and (tutor.created_at, tutor.id) < (student_source.created_at, student_source.id)
+        and persisted_method is method
+        and tutor_payload.get("teaching_method_registry_version") == payload.get("strategy_registry_version")
+        and isinstance(payload.get("observed_student_outcome"), str)
+        and bool(payload["observed_student_outcome"].strip())
+    )
 
 
 def _model_payload(*, learning_session: LearningSession, segment: LearningSegment, messages: list[LearningMessage], candidates: list[CandidateEvent]) -> dict[str, object]:
@@ -323,7 +442,7 @@ _PROMPT = (
     "Return findings=[] when no supported learning occurrence exists. Casual greetings, navigation, preferences, and Tutor explanation without observable Student outcome may have no finding. "
     "Confusion, a bare wrong answer, and an arithmetic slip are not misconception by themselves; explicit Student wrong reasoning may support one. "
     "When a later Student message corrects earlier reasoning, preserve both observations when supported and emit a separate self_correction Finding grounded in the correction; set self_correction to prompted or self_initiated only on that self_correction Finding. Set self_correction to not_observed on every other event type. "
-    "Do not infer independence after full teaching, transfer from near-identical practice, retention without supplied anchors, or TeachingMethod identity. "
+    "Do not infer independence after full teaching, transfer from near-identical practice, retention without supplied anchors, or TeachingMethod identity. Do not use relationship=retention_failure because C v1 supplies no authoritative historical retention anchors. "
     "Evaluate method effectiveness only with supplied method lineage and a later Student outcome; express it only in a strategy_outcome Finding and set strategy_effectiveness to not_evaluable on every other event type. Do not emit psychological, personality, or intelligence labels, mastery percentages, or numeric confidence. "
     "Every Finding must cite exact supplied raw IDs and include at least one Student message ID; Tutor messages alone cannot support a Finding. Distinguish possible cross-subject learning."
 )
@@ -352,7 +471,11 @@ def _validate_finding(finding: SegmentReviewFinding, *, messages_by_id: dict[UUI
         raise SegmentReviewValidationError("SegmentReviewValidationError")
     if any(candidate_id not in candidates_by_id for candidate_id in finding.candidate_event_ids):
         raise SegmentReviewValidationError("SegmentReviewValidationError")
-    if finding.dimensions.retention != "not_tested" or finding.retention_context != "not_tested":
+    if (
+        finding.dimensions.retention != "not_tested"
+        or finding.retention_context != "not_tested"
+        or finding.relationship == "retention_failure"
+    ):
         raise SegmentReviewValidationError("SegmentReviewValidationError")
     if finding.dimensions.transfer != "not_tested" and (finding.validated_event_type != "transfer_attempt" or finding.transfer_context != "meaningfully_changed"):
         raise SegmentReviewValidationError("SegmentReviewValidationError")

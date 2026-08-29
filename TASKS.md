@@ -526,9 +526,16 @@ failure state before Job retry, and are idempotent after completion. C creates
 no LearningEvent, LearningEvidence, Current State, Pattern, Decision View,
 Card, Session Finalization, or automatic historical retrieval. Retention is
 always `not_tested` in C v1; cross-subject findings remain staged/fail-closed.
+The integrity correction validates Candidate hints before AI input: only
+current `candidate-event-v1`, exact Student-source, supported-event,
+grounded-misconception, and server-owned strategy-lineage Candidates may be
+shown as optional hints. Invalid or historical hints are excluded while raw
+Segment review continues. `relationship=retention_failure` is also rejected
+for C v1.
 **Verification:** Codex-reported: focused C and structured-provider coverage
-(20 passed); focused C plus Gate-B/legacy Session Evidence regression coverage
-(45 passed); canonical Python (569 passed, 6 skipped). Controlled synthetic
+(24 passed); Candidate/CAND-01/TeachingMethod/worker/structured-output/legacy
+Session Evidence coverage (87 passed); canonical Python (577 passed, 6 skipped).
+Controlled synthetic
 real `openai / gpt-5.6-luna` verification completed six representative
 Segment scenarios through the strict Gateway path (1 passed); this is real
 model transport/representative-scenario verification, not Real-Lina testing

@@ -42,6 +42,7 @@ from services.tutor.segment_lifecycle import (
     SEGMENT_LEARNING_REVIEW_JOB,
     SEGMENT_REVIEW_REQUEST_VERSION,
 )
+from services.tutor.candidate_events import CANDIDATE_EVENT_SCHEMA_VERSION
 from workers.intelligence_handlers import register_intelligence_handlers
 from workers.job_worker import JobHandlerRegistry, run_once
 
@@ -176,6 +177,25 @@ def _finding(student_message: LearningMessage, **overrides: object) -> dict[str,
 
 def _output(*findings: dict[str, object]) -> dict[str, object]:
     return {"version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION, "findings": list(findings)}
+
+
+def _candidate_payload(
+    student: LearningMessage,
+    *,
+    source_message_ids: list[str] | None = None,
+    **overrides: object,
+) -> dict[str, object]:
+    """Mirror the persisted runtime Candidate shape without invoking its parser."""
+
+    payload: dict[str, object] = {
+        "candidate_schema_version": CANDIDATE_EVENT_SCHEMA_VERSION,
+        "source_message_ids": source_message_ids or [str(student.id)],
+        "summary": "A provisional raw-source hint.",
+        "school_or_extended": "school",
+        "observed_student_outcome": None,
+    }
+    payload.update(overrides)
+    return payload
 
 
 def test_empty_segment_review_completes_without_downstream_intelligence(factory: sessionmaker[Session]) -> None:
@@ -342,6 +362,150 @@ def test_transfer_and_retention_contracts_fail_closed_without_authoritative_hist
             review_completed_segment(session, learning_session=learning_session, segment=segment, gateway=_gateway(session, _Provider(_output(retention))))
 
 
+def test_retention_failure_relationship_is_rejected_without_historical_anchors(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches C v1 accepting the shared retention_failure backdoor."""
+
+    with factory.begin() as session:
+        _, learning_session, segment = _lineage(session)
+        student = _message(session, learning_session=learning_session, segment=segment, role="student", content="I remember equivalent fractions.")
+        finding = _finding(student, relationship="retention_failure")
+
+        with pytest.raises(SegmentReviewValidationError):
+            review_completed_segment(
+                session,
+                learning_session=learning_session,
+                segment=segment,
+                gateway=_gateway(session, _Provider(_output(finding))),
+            )
+
+        review = session.query(SegmentLearningReview).one()
+        assert (review.status, review.output) == ("FAILED", None)
+
+
+@pytest.mark.parametrize(
+    ("invalid_kind", "event_type", "candidate_on", "payload_overrides"),
+    [
+        ("tutor_only_source", "learning_attempt", "tutor", {}),
+        ("current_focus_signal", "current_focus_signal", "student", {}),
+        ("missing_schema", "learning_attempt", "student", {"candidate_schema_version": None}),
+        ("unknown_schema", "learning_attempt", "student", {"candidate_schema_version": "candidate-event-v0"}),
+        ("malformed_misconception", "misconception_signal", "student", {}),
+        (
+            "invalid_strategy_lineage",
+            "strategy_outcome",
+            "student",
+            {
+                "observed_student_outcome": "The Student used the representation.",
+                "strategy_key": "CONCRETE_EXAMPLE",
+                "strategy_registry_version": "teaching-method-registry-v0",
+                "strategy_source_tutor_message_id": str(uuid4()),
+            },
+        ),
+    ],
+)
+def test_invalid_candidate_hint_is_excluded_while_raw_segment_review_continues(
+    factory: sessionmaker[Session],
+    invalid_kind: str,
+    event_type: str,
+    candidate_on: str,
+    payload_overrides: dict[str, object],
+) -> None:
+    """Catches stale or malformed Candidate metadata influencing the Reviewer."""
+
+    with factory.begin() as session:
+        _, learning_session, segment = _lineage(session)
+        student = _message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            role="student",
+            content="Two fourths equals one half because both cover the same amount.",
+        )
+        tutor = _message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            role="tutor",
+            content="Explain your fraction reasoning.",
+        )
+        source = tutor if candidate_on == "tutor" else student
+        session.add(
+            CandidateEvent(
+                session_id=learning_session.id,
+                message_id=source.id,
+                event_type=event_type,
+                signal=f"invalid-{invalid_kind}",
+                payload=_candidate_payload(source, **payload_overrides),
+            )
+        )
+        session.flush()
+        provider = _Provider(_output(_finding(student)))
+
+        outcome = review_completed_segment(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            gateway=_gateway(session, provider),
+        )
+
+        request = json.loads(str(provider.payloads[0]["input"]))
+        assert outcome.review.status == "COMPLETED"
+        assert request["candidate_hints"] == []
+
+
+def test_valid_current_and_misconception_candidates_are_optional_safe_hints(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches the CAND-01 grounding contract being lost before AI input."""
+
+    with factory.begin() as session:
+        _, learning_session, segment = _lineage(session)
+        student = _message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            role="student",
+            content="One fourth is bigger than one half because 4 is bigger than 2.",
+        )
+        current = CandidateEvent(
+            session_id=learning_session.id,
+            message_id=student.id,
+            event_type="incorrect_attempt",
+            signal="current",
+            payload=_candidate_payload(student),
+        )
+        misconception = CandidateEvent(
+            session_id=learning_session.id,
+            message_id=student.id,
+            event_type="misconception_signal",
+            signal="grounded-misconception",
+            payload=_candidate_payload(
+                student,
+                misconception_evidence={
+                    "version": "misconception-evidence-v1",
+                    "incorrect_model": "A larger denominator makes a fraction larger.",
+                    "explicit_student_reasoning": "4 is bigger than 2",
+                    "source_message_id": str(student.id),
+                },
+            ),
+        )
+        session.add_all([current, misconception])
+        session.flush()
+        provider = _Provider(_output(_finding(student)))
+
+        review_completed_segment(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            gateway=_gateway(session, provider),
+        )
+
+        request = json.loads(str(provider.payloads[0]["input"]))
+        assert {hint["candidate_id"] for hint in request["candidate_hints"]} == {str(current.id), str(misconception.id)}
+
+
 def test_candidate_hint_can_be_reinterpreted_but_foreign_candidate_is_rejected(
     factory: sessionmaker[Session],
 ) -> None:
@@ -356,7 +520,7 @@ def test_candidate_hint_can_be_reinterpreted_but_foreign_candidate_is_rejected(
             event_type="incorrect_attempt",
             concept_ref="fractions",
             signal="candidate-hint",
-            payload={"source_message_ids": [str(student.id)], "summary": "A provisional hint."},
+            payload=_candidate_payload(student, summary="A provisional hint."),
         )
         session.add(candidate)
         session.flush()

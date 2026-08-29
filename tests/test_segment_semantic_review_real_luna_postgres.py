@@ -107,8 +107,9 @@ def test_real_luna_segment_reviewer_representative_cases(factory: sessionmaker[S
                 ("tutor", "Think about how large each equal piece is when the denominator is larger.", None),
                 ("student", "Oh, I see. One half is bigger because each half is a larger piece than each fourth.", None),
             ],
-            lambda output: all(
-                finding["validated_event_type"] != "misconception_signal" or finding["misconception_evidence"] is not None
+            lambda output: any(
+                finding["validated_event_type"] == "misconception_signal"
+                and finding["misconception_evidence"] is not None
                 for finding in output["findings"]
             ) and any(
                 finding["validated_event_type"] == "self_correction"
@@ -125,10 +126,13 @@ def test_real_luna_segment_reviewer_representative_cases(factory: sessionmaker[S
                     "Use these fraction circles to compare the pieces.",
                     {"teaching_method_id": "CONCRETE_EXAMPLE", "teaching_method_registry_version": "teaching-method-registry-v1"},
                 ),
-                ("student", "The circles show that one half is larger than one fourth.", None),
+                ("student", "Using the fraction circles helped me see that one half is larger than one fourth.", None),
             ],
-            lambda output: all(
-                finding["teaching_method_id"] in {None, "CONCRETE_EXAMPLE"} for finding in output["findings"]
+            lambda output: any(
+                finding["validated_event_type"] == "strategy_outcome"
+                and finding["teaching_method_id"] == "CONCRETE_EXAMPLE"
+                and finding["dimensions"]["strategy_effectiveness"] != "not_evaluable"
+                for finding in output["findings"]
             ),
         ),
         (
@@ -138,7 +142,7 @@ def test_real_luna_segment_reviewer_representative_cases(factory: sessionmaker[S
                 ("tutor", "What causes the moon phases?", None),
                 ("student", "They change because the Sun lights different parts of the Moon as it moves around Earth.", None),
             ],
-            lambda output: all(
+            lambda output: len(output["findings"]) >= 1 and any(
                 finding["subject_alignment"] in {"POSSIBLE_CROSS_SUBJECT", "UNCERTAIN"} for finding in output["findings"]
             ),
         ),
