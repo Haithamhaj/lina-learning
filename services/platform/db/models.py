@@ -47,6 +47,7 @@ class ModelTask(str, Enum):
 
     TUTOR = "tutor"
     SESSION_EVIDENCE = "session_evidence"
+    SEGMENT_EVIDENCE = "segment_evidence"
     CURRICULUM_SEMANTICS = "curriculum_semantics"
     EMBEDDING = "embedding"
 

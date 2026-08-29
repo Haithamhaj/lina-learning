@@ -122,6 +122,9 @@ class Settings(BaseSettings):
     # CTX-03D implementation calibration, measured as deterministic serialized
     # request characters rather than provider/model tokens.
     tutor_context_capacity: int = Field(default=64000, gt=0)
+    # SEG-EVID-01C implementation calibration: deterministic serialized
+    # Segment Review request characters, never a silent raw-history truncation.
+    segment_review_context_capacity: int = Field(default=64000, gt=0)
     embedding_model_name: str = "text-embedding-3-small"
     embedding_dimensions: int = Field(default=1536, ge=1)
 

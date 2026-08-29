@@ -237,7 +237,11 @@ def _normalize_output(
                 "candidate_metadata_error": "structured_output_invalid_json",
             }
         raise ValueError("OpenAI structured Tutor output is not valid JSON.") from None
-    if not isinstance(parsed, dict) or not isinstance(parsed.get("text"), str) or not parsed["text"].strip():
+    if not isinstance(parsed, dict):
+        raise ValueError("OpenAI structured output must be a JSON object.")
+    if not _is_tutor_response_schema(payload):
+        return parsed
+    if not isinstance(parsed.get("text"), str) or not parsed["text"].strip():
         raise ValueError("OpenAI structured Tutor output has no student-facing text.")
     if "candidate_metadata" not in parsed:
         return {
@@ -253,6 +257,11 @@ def _normalize_output(
         "candidate_metadata": parsed["candidate_metadata"],
         **_teaching_decision_output(parsed),
     }
+
+
+def _is_tutor_response_schema(payload: dict[str, object]) -> bool:
+    response_schema = payload.get("response_schema")
+    return isinstance(response_schema, dict) and response_schema.get("name") == "tutor_turn_v7"
 
 
 def _teaching_decision_output(parsed: dict[str, object]) -> dict[str, object]:

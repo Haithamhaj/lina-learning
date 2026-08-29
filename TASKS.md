@@ -507,13 +507,33 @@ B/runtime/lifecycle coverage (45 passed) and canonical Python (552 passed,
 5 skipped). No GitHub CI status is available.
 
 ## SEG-EVID-01C — Segment Semantic Reviewer
-**Status:** READY
+**Status:** REVIEW
 **Dependencies:** SEG-EVID-01B
 **Purpose:** Implement the `segment_evidence` ModelTask with complete raw
 Segment input, optional Candidate hints, Guided Check / TeachingMethod lineage
 where present, strict structured semantic output, source/provenance validation,
 versioned `SegmentLearningReview`, and staged findings only. No Card/Pattern
 activation.
+**Implementation note:** `SEGMENT_EVIDENCE` now reviews a durably closed
+Segment through the Model Gateway using the strict
+`segment-learning-review-v1` contract. Complete ordered raw Segment messages
+are retained with a 64,000-character capacity refusal rather than truncation;
+Candidate hints are optional and non-authoritative; Guided Check and
+TeachingMethod lineage are supplied only when server-validated; and every
+accepted Finding is source-grounded in at least one raw Student message in the
+same Segment. `findings=[]` is valid. Reviews are versioned, persist safe
+failure state before Job retry, and are idempotent after completion. C creates
+no LearningEvent, LearningEvidence, Current State, Pattern, Decision View,
+Card, Session Finalization, or automatic historical retrieval. Retention is
+always `not_tested` in C v1; cross-subject findings remain staged/fail-closed.
+**Verification:** Codex-reported: focused C and structured-provider coverage
+(20 passed); focused C plus Gate-B/legacy Session Evidence regression coverage
+(45 passed); canonical Python (569 passed, 6 skipped). Controlled synthetic
+real `openai / gpt-5.6-luna` verification completed six representative
+Segment scenarios through the strict Gateway path (1 passed); this is real
+model transport/representative-scenario verification, not Real-Lina testing
+or independent re-execution. Independent review is required before C can be
+accepted or SEG-EVID-01D can become eligible.
 
 ## SEG-EVID-01D — Session Finalization & Intelligence Activation
 **Status:** BLOCKED
@@ -980,9 +1000,9 @@ expansion remain frozen.
 - **Lifecycle:** UI-01 is **CLOSED** following real S3 browser use with no hang
   and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
-**Next action:** Begin SEG-EVID-01C — Segment Semantic Reviewer. Do not begin
-SEG-EVID-01D–F, EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, LR-D04B, archive
-retrieval, or frozen future capabilities.
+**Next action:** Independently review SEG-EVID-01C. If accepted, unblock
+SEG-EVID-01D. Do not begin SEG-EVID-01D–F, EDU-ERR-01, SCOPE-01, SUBJ-01,
+REC-25, LR-D04B, archive retrieval, or frozen future capabilities.
 
 ---
 

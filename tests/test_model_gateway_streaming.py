@@ -74,3 +74,24 @@ def test_malformed_structured_tutor_fallback_does_not_invent_semantic_decisions(
 
     assert output["text"] == "Try one small step."
     assert not {"teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state"} & output.keys()
+
+
+def test_strict_non_tutor_schema_returns_its_complete_parsed_envelope() -> None:
+    """Catches the OpenAI adapter assuming every strict task is a Tutor turn."""
+
+    output = _normalize_output(
+        '{"version":"segment-learning-review-v1","findings":[]}',
+        {
+            "response_schema": {
+                "name": "segment_learning_review_v1",
+                "schema": {
+                    "type": "object",
+                    "properties": {"version": {"type": "string"}, "findings": {"type": "array"}},
+                    "required": ["version", "findings"],
+                    "additionalProperties": False,
+                },
+            }
+        },
+    )
+
+    assert output == {"version": "segment-learning-review-v1", "findings": []}

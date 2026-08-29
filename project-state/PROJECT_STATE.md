@@ -7,7 +7,8 @@ SEG-EVID-01 is the approved Learning Intelligence semantic architecture; its
 first two slices are complete in code, while current durable intelligence still
 uses legacy Session Evidence. CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A is
 DONE and independently accepted; SEG-EVID-01B is DONE and independently
-accepted; SEG-EVID-01C is READY. EDU-ERR-01 remains blocked by SEG-EVID-01F.
+accepted; SEG-EVID-01C is implemented and awaiting independent review.
+EDU-ERR-01 remains blocked by SEG-EVID-01F.
 
 ## Current reality
 
@@ -35,13 +36,30 @@ accepted; SEG-EVID-01C is READY. EDU-ERR-01 remains blocked by SEG-EVID-01F.
   operational. Codex-reported, not independently re-executed: focused
   B/runtime/lifecycle PostgreSQL coverage (45 passed) and canonical Python
   coverage (552 passed, 5 skipped). No GitHub CI status is available.
-- SEG-EVID-01C is READY: AI determines educational meaning from complete raw
-  Segment input, optional hints, and available provenance. `findings=[]` is
-  valid; staged findings do not activate durable intelligence.
+- SEG-EVID-01C is REVIEW: `SEGMENT_EVIDENCE` performs one strict,
+  versioned semantic review of a durably closed Segment through the Model
+  Gateway. AI determines educational meaning from complete ordered raw Segment
+  input plus optional provisional Candidate hints and available validated
+  Guided Check/TeachingMethod provenance; `findings=[]` is valid. Capacity
+  failure refuses the complete request rather than truncating it. Review
+  output is staged only, source-grounded in its own raw Student messages, and
+  safely persists failure before a Job retry; completed Review identity is
+  idempotent.
+- C v1 has no automatic historical retrieval. Retention is always
+  `not_tested`; cross-subject findings remain staged/fail-closed. It creates no
+  LearningEvent, LearningEvidence, Current State, Pattern, Decision View,
+  Card, Session Finalization, or personalization activation.
+- Codex-reported verification: focused C/structured-provider 20 passed;
+  C plus Gate-B/legacy Session Evidence 45 passed; canonical Python 569
+  passed, 6 skipped. Controlled synthetic real `openai / gpt-5.6-luna`
+  testing completed six strict-schema representative Segment cases. This is
+  real-model transport and representative-scenario verification, not
+  independent re-execution or Real-Lina validation.
 - Candidate Events are provisional hints. Staged Segment findings do not update
   current-session personalization; Pattern counters/lifecycle are unchanged.
-- Existing Session Evidence remains the current/legacy implementation until
-  SEG-EVID-01D. Historical Evidence remains valid, auditable, and rebuildable.
+- Existing Session Evidence remains the current/legacy live durable authority
+  until SEG-EVID-01D. Historical Evidence remains valid, auditable, and
+  rebuildable.
 - Track A is COMPLETE / ACCEPTED; the authenticated Tutor works with zero
   content, uses optional question-driven grounding, and remains safety-first.
 - CTX-03 preserves current-Segment-only context. `CONTINUE` stays in the
@@ -102,9 +120,9 @@ and RAG/curriculum remain separate authorities.
 
 ## Next recommended action
 
-Begin SEG-EVID-01C — Segment Semantic Reviewer.
+Independently review SEG-EVID-01C. If accepted → unblock SEG-EVID-01D.
 
-CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01B is DONE; SEG-EVID-01C is READY;
+CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01B is DONE; SEG-EVID-01C is REVIEW;
 SEG-EVID-01D–F remain BLOCKED; EDU-ERR-01 remains blocked by SEG-EVID-01F;
 SCOPE-01,
 SUBJ-01, REC-25, LR-D04B, archive retrieval, and frozen future capabilities

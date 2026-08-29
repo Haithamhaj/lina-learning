@@ -13,8 +13,9 @@ from services.intelligence.current_state import apply_processing_run_current_sta
 from services.intelligence.decisions import apply_processing_run_decision_views
 from services.intelligence.patterns import apply_processing_run_patterns
 from services.model_gateway.factory import create_session_evidence_gateway
+from services.model_gateway.factory import create_segment_evidence_gateway
 from services.model_gateway.gateway import ModelGateway
-from services.platform.db.models import Job, LearningSession
+from services.platform.db.models import Job, LearningSegment, LearningSession
 from services.platform.db.models import IntelligenceReprocessRun
 from services.intelligence.reprocess import (
     INTELLIGENCE_REPROCESS_JOB,
@@ -23,6 +24,14 @@ from services.intelligence.reprocess import (
     record_reprocess_session_failure,
 )
 from services.tutor.session_lifecycle import SESSION_CONSOLIDATION_JOB
+from services.tutor.segment_lifecycle import (
+    SEGMENT_LEARNING_REVIEW_JOB,
+    SEGMENT_REVIEW_REQUEST_VERSION,
+)
+from services.intelligence.segment_reviews import (
+    SegmentReviewLineageError,
+    review_completed_segment,
+)
 
 if TYPE_CHECKING:
     from workers.job_worker import JobHandlerRegistry
@@ -33,6 +42,7 @@ def register_intelligence_handlers(
     *,
     session_factory: sessionmaker[Session],
     evidence_gateway_factory: Callable[[Session], ModelGateway] = create_session_evidence_gateway,
+    segment_evidence_gateway_factory: Callable[[Session], ModelGateway] | None = None,
 ) -> None:
     """Register only the approved closed-session evidence job for TASK-021."""
 
@@ -76,6 +86,60 @@ def register_intelligence_handlers(
             }
 
     registry.register(SESSION_CONSOLIDATION_JOB, handle_consolidation)
+
+    def handle_segment_review(job: Job) -> dict[str, object]:
+        """Execute only B's exact staged Segment Review request contract."""
+
+        payload = job.payload if isinstance(job.payload, dict) else {}
+        if segment_evidence_gateway_factory is None:
+            raise LookupError("Segment Review handler is not configured.")
+        if payload.get("review_request_version") != SEGMENT_REVIEW_REQUEST_VERSION:
+            raise ValueError("UnsupportedSegmentReviewContract")
+        raw_ids = {field: payload.get(field) for field in ("student_id", "session_id", "segment_id")}
+        if not all(isinstance(value, str) for value in raw_ids.values()):
+            raise ValueError("SegmentReviewLineageError")
+        try:
+            student_id = UUID(str(raw_ids["student_id"]))
+            session_id = UUID(str(raw_ids["session_id"]))
+            segment_id = UUID(str(raw_ids["segment_id"]))
+        except ValueError as error:
+            raise ValueError("SegmentReviewLineageError") from error
+        with session_factory() as session:
+            learning_session = session.get(LearningSession, session_id, with_for_update=True)
+            segment = session.get(LearningSegment, segment_id, with_for_update=True)
+            if (
+                learning_session is None
+                or segment is None
+                or learning_session.student_id != student_id
+                or segment.session_id != learning_session.id
+                or not isinstance(payload.get("closed_at"), str)
+                or payload.get("closed_at") != (segment.closed_at.isoformat() if segment.closed_at else None)
+                or payload.get("closure_reason") != segment.closure_reason
+            ):
+                raise SegmentReviewLineageError("SegmentReviewLineageError")
+            try:
+                outcome = review_completed_segment(
+                    session,
+                    learning_session=learning_session,
+                    segment=segment,
+                    gateway=segment_evidence_gateway_factory(session),
+                )
+            except Exception:
+                # Preserve the Review's own safe FAILED marker before the Job
+                # worker records and retries its separate operational failure.
+                session.commit()
+                raise
+            session.commit()
+            return {
+                "segment_id": str(segment.id),
+                "segment_review_id": str(outcome.review.id),
+                "review_status": outcome.review.status,
+                "finding_count": outcome.finding_count,
+                "model_called": outcome.model_called,
+            }
+
+    if segment_evidence_gateway_factory is not None:
+        registry.register(SEGMENT_LEARNING_REVIEW_JOB, handle_segment_review)
 
     def handle_reprocess(job: Job) -> dict[str, object]:
         raw_run_id = job.payload.get("reprocess_run_id")

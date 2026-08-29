@@ -120,6 +120,41 @@ def create_session_evidence_gateway(
     )
 
 
+def create_segment_evidence_gateway(
+    session: Session,
+    *,
+    local_provider: ModelProvider | None = None,
+    settings: Settings | None = None,
+    openai_provider: ModelProvider | None = None,
+) -> ModelGateway:
+    """Route one completed-Segment semantic Review through the Gateway."""
+
+    configured = settings or get_settings()
+    if configured.model_provider == "openai":
+        provider = openai_provider
+        if provider is None:
+            if configured.model_api_key is None:
+                raise ValueError("MODEL_API_KEY is required for the OpenAI Segment Review route.")
+            provider = OpenAIResponsesProvider(
+                api_key=configured.model_api_key.get_secret_value(),
+                base_url=configured.model_base_url,
+            )
+        return ModelGateway(
+            session,
+            routes={ModelTask.SEGMENT_EVIDENCE: ModelRoute("openai", configured.model_name)},
+            providers={"openai": provider},
+        )
+
+    safe_empty_provider = local_provider or StaticModelProvider(
+        ModelResult(output={"version": "segment-learning-review-v1", "findings": []})
+    )
+    return ModelGateway(
+        session,
+        routes={ModelTask.SEGMENT_EVIDENCE: ModelRoute("local-demo", configured.model_name)},
+        providers={"local-demo": safe_empty_provider},
+    )
+
+
 def create_embedding_gateway(session: Session, *, local_provider: ModelProvider | None = None, settings: Settings | None = None, openai_provider: ModelProvider | None = None) -> ModelGateway:
     """Route embeddings through the same provider-neutral gateway."""
     configured = settings or get_settings()
