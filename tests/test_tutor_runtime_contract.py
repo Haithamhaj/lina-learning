@@ -76,6 +76,14 @@ def test_candidate_contract_exposes_bounded_misconception_evidence_for_source_gr
     }
 
 
+def test_candidate_contract_requires_nullable_misconception_evidence_for_strict_structured_outputs() -> None:
+    """CAND-01: every Candidate property must be required; nullable means null is valid."""
+
+    candidate_schema = TUTOR_OUTPUT_JSON_SCHEMA["properties"]["candidate_metadata"]["anyOf"][0]["properties"]["candidates"]["items"]
+
+    assert set(candidate_schema["required"]) == set(candidate_schema["properties"])
+
+
 def test_one_luna_call_receives_full_definitions_without_preselected_semantic_axes() -> None:
     payload = build_tutor_model_payload(question="Any literal phrase is only context for Luna.")
 

@@ -464,7 +464,7 @@ implementation code changed.
 
 ## SEG-EVID-01A — Governing Contracts & Persistence
 **Status:** BLOCKED
-**Dependencies:** CAND-01 strict schema compatibility correction committed.
+**Dependencies:** CAND-01 strict schema compatibility correction committed and independently reviewed.
 **Purpose:** Implement explicit Segment completion persistence, versioned
 `SegmentLearningReview`, Segment Review contract/version identity,
 LearningEvent Segment lineage, multi-message provenance, and backward-compatible
@@ -826,7 +826,7 @@ closed, or used to start REC-25 or LR-D04B.
 | **DATA-01** — Historical Tutor Message Persistence Gap | 5 | CLOSED / CURRENT DEFECT FIX ACCEPTED | Historical gap is high-confidence failed-stream behavior; the exact provider trigger remains unknown. Tutor deltas are provisional until terminal `event: turn`; reader error or non-terminal EOF removes only the current provisional Tutor bubble while retaining the durable Student message. Failed/partial Tutor output is never persisted as authoritative conversation. | Closed. Browser verification was unavailable without Clerk configuration; automated terminal-protocol verification passed. |
 | **CTX-03** — Hybrid Segment Context Runtime | 5 | TECHNICAL CONTEXT RUNTIME VERIFIED / REAL-LINA VALIDATION DEFERRED | Current-Segment-only runtime: session-local Segment lineage and compact Structured Segment State are accepted; CTX-03C supplies complete immediate/recent/raw-semantic Exchange context from the latest Segment only, with temporary PostgreSQL/pgvector indexing and a shared query embedding. CTX-03D adds only a final deterministic capacity guardrail and private operational lineage; it does not re-rank relevance. Excludes prior-Segment reopening, prior-session/archive retrieval, memory service, retro-linking, extra classifier/summarizer calls, and external vector databases. | CTX-03E-A verified the technical runtime with real `gpt-5.6-luna` and `text-embedding-3-small`; Real-Lina validation remains deferred. |
 | **ACT-02** — NAVIGATION vs ANSWER_CHOICE Semantic Misuse | 4 | ACCEPTED / CLOSED | Generic Suggested Action clicks and legacy `ANSWER_CHOICE` clicks are non-evidentiary. Only a validated latest persisted Guided Learning Check answer with exact choice membership can enter bounded Candidate processing; forged, stale, cross-session, and non-member responses are rejected. Runtime owns final authority validation. Configured production build/browser verification was not run because this isolated worktree has no valid Clerk publishable key; it is non-blocking for this backend Evidence-authority closure. | CTX-03E-A technical gate is complete; Real-Lina validation is deferred and does not block Stabilization Track B. |
-| **CAND-01** — Confusion / Ambiguity Is Not Misconception | 4 | FIX IMPLEMENTED / VERIFICATION | The current source-grounded provisional misconception protection remains useful; Turn-level misconception Candidate remains provisional and Segment Review becomes durable semantic authority. Current Real-Luna verification is BLOCKED before inference by a verified strict JSON-schema defect. | Next action is only the provider-compatible strict schema transport correction. Not CLOSED. |
+| **CAND-01** — Confusion / Ambiguity Is Not Misconception | 4 | FIX IMPLEMENTED / VERIFICATION | The strict Structured Output transport defect is corrected: nullable `misconception_evidence` is now required under Candidate, and focused/relevant plus canonical Python verification passed (529 passed, 5 skipped). Turn-level misconception Candidate remains provisional; Segment Review becomes durable semantic authority. Real Luna was not verified because this isolated worktree is configured only for `mock/mock` with no model API key or base URL. | Independently review this correction; then unblock SEG-EVID-01A. Not CLOSED. |
 | **EDU-ERR-01** — Educational Error Classification Foundation | 4 | APPROVED / BLOCKED BY SEG-EVID-01F | Future versioned domain-general plus domain-specific Educational Error Registry: Raw Segment → Segment Review → confirmed educational-error classification → Session-authorized Evidence → existing support/counter Pattern lifecycle → Learner Intelligence. No Error Memory subsystem and no new counters. | After SEG-EVID-01F; then SCOPE-01/SUBJ-01. Do not implement in this commit. |
 | **SCOPE-01** — Science / Explore Inside Math Session | 3 | OPEN / PRODUCT POLICY DECISION REQUIRED | Cross-subject exploration policy is a Product Owner decision, not an engineering decision. | Product Owner decision before SUBJ-01. |
 | **SUBJ-01** — Cross-Subject Candidate Attribution | 4 | OPEN | S3 persisted a moon-phases Candidate with subject MATH / school; Evidence must not silently contaminate the wrong subject/thread. | SCOPE-01 decision first. |
@@ -949,11 +949,9 @@ expansion remain frozen.
 - **Lifecycle:** UI-01 is **CLOSED** following real S3 browser use with no hang
   and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
-**Next action:** Complete SEG-EVID-00 governing documentation alignment, then
-independently review and perform only the CAND-01 strict Structured Output
-compatibility correction before SEG-EVID-01A. Real-Lina validation remains
-deferred and is required before any final CORE LEARNING RUNTIME STABILIZED
-declaration; do not begin EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, or LR-D04B.
+**Next action:** Independently review the CAND-01 schema correction → if
+accepted, unblock SEG-EVID-01A. CAND-01 remains FIX IMPLEMENTED /
+VERIFICATION; do not begin EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, or LR-D04B.
 
 ---
 

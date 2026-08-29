@@ -5,8 +5,8 @@
 CTX-03 remains the approved, technically verified Context v2 direction.
 SEG-EVID-01 is the approved Learning Intelligence semantic architecture, but
 is not implemented. Current code still uses legacy Session Evidence.
-CAND-01 strict Structured Output compatibility correction is next before
-SEG-EVID-01A; EDU-ERR-01 is blocked by SEG-EVID-01F.
+CAND-01 strict Structured Output compatibility correction is FIX IMPLEMENTED /
+VERIFICATION before SEG-EVID-01A; EDU-ERR-01 is blocked by SEG-EVID-01F.
 
 ## Current reality
 
@@ -24,9 +24,13 @@ SEG-EVID-01A; EDU-ERR-01 is blocked by SEG-EVID-01F.
 - One primary Tutor call, safety-first policy enforcement, question-driven RAG,
   and separation of Safety, context, RAG, Student Core Profile, and learner
   intelligence remain protected.
-- The current strict Tutor schema defect blocks real-Luna inference before
-  CAND-01 verification. EVID-01 remains an open legacy HTTPError defect but is
-  off the new critical path. PERS-01 is absorbed into SEG-EVID-01F.
+- The strict Tutor schema defect is corrected: nullable Candidate
+  `misconception_evidence` is now required for strict Structured Outputs.
+  Focused/relevant and canonical Python verification passed (529 passed, 5
+  skipped). Real Luna remains NOT VERIFIED because this isolated worktree has
+  only `mock/mock` routing and no model API key or base URL. EVID-01 remains an
+  open legacy HTTPError defect but is off the new critical path. PERS-01 is
+  absorbed into SEG-EVID-01F.
 
 ## Active decisions
 
@@ -66,11 +70,11 @@ and RAG/curriculum remain separate authorities.
 
 ## Next recommended action
 
-Fix only the verified CAND-01 strict Structured Output compatibility defect
-→ independently review that correction → SEG-EVID-01A. CAND-01 is not closed;
-SEG-EVID-01A remains blocked until that correction is committed/reviewed. Do
-not start EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, LR-D04B, archive retrieval,
-or frozen future capabilities.
+Independently review the CAND-01 schema correction → if accepted, unblock
+SEG-EVID-01A. CAND-01 remains FIX IMPLEMENTED / VERIFICATION, not closed;
+SEG-EVID-01A remains blocked until independent review. Do not start
+EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, LR-D04B, archive retrieval, or frozen
+future capabilities.
 
 ## Critical references
 

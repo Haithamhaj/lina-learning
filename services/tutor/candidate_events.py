@@ -366,6 +366,7 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
                                     "source_message_ids",
                                     "school_or_extended",
                                     "observed_student_outcome",
+                                    "misconception_evidence",
                                 ],
                             },
                         },
