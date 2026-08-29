@@ -6,6 +6,9 @@ cloning and real-model reconstruction require separate explicit flags, while
 credentials stay out of command arguments, errors, and generated artifacts.
 """
 
+# This standalone tool intentionally bootstraps the repository root before
+# importing project modules.
+
 from __future__ import annotations
 
 import argparse
@@ -17,7 +20,7 @@ import sys
 import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
@@ -27,12 +30,14 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import ArgumentError, SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
+from services.intelligence.consolidation import EVIDENCE_RUBRIC_VERSION
+from services.intelligence.segment_reviews import (
+    SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
+    SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+    SEGMENT_REVIEW_POLICY_VERSION,
+)
 from services.model_gateway.factory import create_segment_evidence_gateway
 from services.model_gateway.gateway import (
     AIExecutionLineage,
@@ -43,15 +48,42 @@ from services.platform.config import Settings
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
     AIExecution,
+    CurrentLearningState,
+    DecisionView,
+    IntelligenceProcessingRun,
+    IntelligenceSessionAuthority,
+    Job,
+    JobStatus,
+    LearnerIntelligenceCard,
+    LearnerPattern,
+    LearningEvent,
+    LearningEvidence,
     LearningMessage,
     LearningSegment,
     LearningSession,
     ModelTask,
+    SegmentLearningReview,
 )
+from services.tutor.segment_lifecycle import (
+    SEGMENT_LEARNING_REVIEW_JOB,
+    is_segment_structurally_reviewable,
+    reconcile_segments_for_session_close,
+)
+from services.tutor.session_lifecycle import (
+    SESSION_FINALIZATION_PIPELINE,
+    SESSION_INTELLIGENCE_FINALIZE_JOB,
+    SessionLifecyclePolicy,
+    close_session_if_eligible,
+    enqueue_session_intelligence_finalization_if_ready,
+)
+from workers.intelligence_handlers import register_intelligence_handlers
+from workers.job_worker import JobHandlerRegistry, run_once
 
+ROOT = Path(__file__).resolve().parents[1]
 HISTORICAL_SESSION_ID = UUID("8b1b647c-91ec-427e-b455-0adbca831101")
 ACCEPTANCE_RECONSTRUCTION_VERSION = "acceptance-segment-reconstruction-v1"
 ACCEPTANCE_RECONSTRUCTION_OPERATION = "full_system_acceptance_segment_reconstruction"
+HISTORICAL_ACCEPTANCE_OPERATION = "full_system_historical_intelligence_acceptance"
 ACCEPTANCE_PIPELINE = "segment-finalization-v1"
 CANONICAL_TEST_DATABASE_NAME = "lina_learning_test"
 DEFAULT_SOURCE_DATABASE_ENV_VAR = "LINA_ACCEPTANCE_SOURCE_DATABASE_URL"
@@ -1352,7 +1384,7 @@ def execute_real_reconstruction(
             ) from None
     except AcceptanceSafetyError:
         raise
-    except Exception:  # noqa: BLE001 -- provider/DB errors are redacted at this fail-closed CLI boundary.
+    except Exception:  # noqa: BLE001 -- redact all provider/DB failures at the operator boundary.
         raise AcceptanceSafetyError(
             "Real reconstruction failed; provider/database details suppressed."
         ) from None
@@ -1401,6 +1433,1267 @@ def _persist_reconstructed_segments(
     learning_session.intelligence_pipeline = ACCEPTANCE_PIPELINE
     session.flush()
     return segment_ids
+
+
+def _historical_acceptance_operation_id() -> UUID:
+    """Return the stable identity for the fixed historical acceptance journey."""
+
+    return uuid5(
+        NAMESPACE_URL,
+        f"{HISTORICAL_ACCEPTANCE_OPERATION}:{HISTORICAL_SESSION_ID}",
+    )
+
+
+def _validate_historical_active_job_scope(
+    jobs: Sequence[object], *, session_id: UUID
+) -> None:
+    """Refuse a scoped worker if it could claim the same job type for another Session."""
+
+    for job in jobs:
+        status = getattr(job, "status", None)
+        payload = getattr(job, "payload", None)
+        if status not in {JobStatus.PENDING.value, JobStatus.RUNNING.value}:
+            continue
+        raw_session_id = payload.get("session_id") if isinstance(payload, dict) else None
+        if raw_session_id != str(session_id):
+            raise AcceptanceSafetyError(
+                "Historical worker scope contains claimable jobs for other Sessions."
+            )
+
+
+def _validate_completed_review_sources(
+    review: object,
+    *,
+    segment_message_roles: Mapping[UUID, str],
+) -> int:
+    """Verify persisted Finding source IDs are exact raw members of one Segment."""
+
+    if getattr(review, "status", None) != "COMPLETED":
+        raise AcceptanceSafetyError(
+            "Historical Segment Review is not durably COMPLETED."
+        )
+    output = getattr(review, "output", None)
+    findings = output.get("findings") if isinstance(output, dict) else None
+    if (
+        not isinstance(output, dict)
+        or output.get("version") != SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION
+        or not isinstance(findings, list)
+    ):
+        raise AcceptanceSafetyError(
+            "Historical Segment Review output is not the accepted strict schema."
+        )
+    for finding in findings:
+        raw_ids = finding.get("source_message_ids") if isinstance(finding, dict) else None
+        if not isinstance(raw_ids, list) or not raw_ids:
+            raise AcceptanceSafetyError(
+                "Historical Segment Review Finding has invalid source lineage."
+            )
+        try:
+            source_ids = [UUID(str(value)) for value in raw_ids]
+        except (TypeError, ValueError):
+            raise AcceptanceSafetyError(
+                "Historical Segment Review Finding has invalid source lineage."
+            ) from None
+        if (
+            len(set(source_ids)) != len(source_ids)
+            or any(source_id not in segment_message_roles for source_id in source_ids)
+            or not any(
+                segment_message_roles[source_id].casefold() == "student"
+                for source_id in source_ids
+            )
+        ):
+            raise AcceptanceSafetyError(
+                "Historical Segment Review Finding has invalid source lineage."
+            )
+    return len(findings)
+
+
+def _validate_segment_review_execution(
+    review: object,
+    *,
+    execution: object,
+    expected_student_id: UUID,
+    expected_segment_id: UUID,
+) -> object:
+    """Require the exact production Model Gateway lineage for one Review."""
+
+    review_id = getattr(review, "id", None)
+    expected_operation_id = (
+        uuid5(NAMESPACE_URL, f"segment-learning-review:{review_id}")
+        if isinstance(review_id, UUID)
+        else None
+    )
+    if (
+        expected_operation_id is None
+        or getattr(review, "student_id", None) != expected_student_id
+        or getattr(review, "session_id", None) != HISTORICAL_SESSION_ID
+        or getattr(review, "segment_id", None) != expected_segment_id
+        or getattr(review, "ai_execution_id", None) != getattr(execution, "id", None)
+        or getattr(execution, "success", None) is not True
+        or getattr(execution, "task", None) != ModelTask.SEGMENT_EVIDENCE.value
+        or getattr(execution, "provider", None) != "openai"
+        or getattr(execution, "model", None) != "gpt-5.6-luna"
+        or getattr(execution, "student_id", None) != expected_student_id
+        or getattr(execution, "learning_session_id", None)
+        != HISTORICAL_SESSION_ID
+        or getattr(execution, "operation_type", None) != "segment_learning_review"
+        or getattr(execution, "operation_id", None) != expected_operation_id
+    ):
+        raise AcceptanceSafetyError(
+            "Historical Review execution ledger lineage does not match the exact production Segment Review."
+        )
+    return execution
+
+
+def _derive_historical_atomicity(
+    snapshot: Mapping[str, object],
+) -> dict[str, object]:
+    """Derive an activation verdict only from explicitly inspected durable rows."""
+
+    authorities = snapshot.get("authorities")
+    runs = snapshot.get("processing_runs")
+    counts = snapshot.get("derived_counts")
+    if (
+        not isinstance(authorities, list)
+        or not isinstance(runs, list)
+        or not isinstance(counts, dict)
+        or any(
+            not isinstance(counts.get(name), int)
+            for name in (
+                "events",
+                "evidence",
+                "current_states",
+                "patterns",
+                "decision_views",
+                "cards",
+            )
+        )
+    ):
+        return {
+            "atomicity_verdict": "INSPECTION_INCOMPLETE",
+            "partial_session_activation_detected": None,
+            "selected_processing_run_id": None,
+        }
+    derived_total = sum(int(value) for value in counts.values())
+    if not authorities and not runs and derived_total == 0:
+        return {
+            "atomicity_verdict": "NO_SESSION_ACTIVATION",
+            "partial_session_activation_detected": False,
+            "selected_processing_run_id": None,
+        }
+    if len(authorities) != 1:
+        return {
+            "atomicity_verdict": "INCONSISTENT_OR_PARTIAL_ACTIVATION",
+            "partial_session_activation_detected": True,
+            "selected_processing_run_id": None,
+        }
+    authority = authorities[0]
+    selected_id = (
+        authority.get("evidence_processing_run_id")
+        if isinstance(authority, dict)
+        else None
+    )
+    matching = [
+        run
+        for run in runs
+        if isinstance(run, dict) and run.get("id") == selected_id
+    ]
+    if (
+        not isinstance(authority, dict)
+        or authority.get("reprocess_run_id") is not None
+        or not isinstance(selected_id, str)
+        or len(runs) != 1
+        or len(matching) != 1
+        or matching[0].get("status") != "COMPLETED"
+        or matching[0].get("pipeline") != SESSION_FINALIZATION_PIPELINE
+        or counts.get("events") != counts.get("evidence")
+    ):
+        return {
+            "atomicity_verdict": "INCONSISTENT_OR_PARTIAL_ACTIVATION",
+            "partial_session_activation_detected": True,
+            "selected_processing_run_id": selected_id,
+        }
+    return {
+        "atomicity_verdict": "COMPLETE_SESSION_ACTIVATION_PRESENT",
+        "partial_session_activation_detected": False,
+        "selected_processing_run_id": selected_id,
+    }
+
+
+def _historical_artifact_paths(directory: Path) -> tuple[Path, Path]:
+    operation_id = _historical_acceptance_operation_id()
+    stem = f"historical-intelligence-acceptance.{operation_id}"
+    return directory / f"{stem}.json", directory / f"{stem}.md"
+
+
+def _historical_acceptance_markdown(report: Mapping[str, object]) -> str:
+    durable_state = report.get("durable_state")
+    durable_state = durable_state if isinstance(durable_state, dict) else {}
+    review_rows = report.get("segment_reviews")
+    if not isinstance(review_rows, list):
+        durable_reviews = durable_state.get("reviews")
+        review_rows = durable_reviews if isinstance(durable_reviews, list) else []
+    review_count = sum(
+        isinstance(review, dict) and review.get("status") == "COMPLETED"
+        for review in review_rows
+    )
+    review_statuses = durable_state.get("review_status_counts")
+    if not isinstance(review_statuses, dict):
+        review_statuses = {}
+        for review in review_rows:
+            status = review.get("status") if isinstance(review, dict) else None
+            if isinstance(status, str):
+                review_statuses[status] = int(review_statuses.get(status, 0)) + 1
+    staged_findings = durable_state.get("staged_finding_count")
+    if not isinstance(staged_findings, int):
+        staged_findings = sum(
+            int(review.get("finding_count", 0))
+            for review in review_rows
+            if isinstance(review, dict)
+            and isinstance(review.get("finding_count", 0), int)
+        )
+    finalization = report.get("finalization")
+    finalization = finalization if isinstance(finalization, dict) else {}
+    derived_counts = durable_state.get("derived_counts")
+    derived_counts = derived_counts if isinstance(derived_counts, dict) else {}
+    event_count = finalization.get("event_count", derived_counts.get("events"))
+    evidence_count = finalization.get(
+        "evidence_count", derived_counts.get("evidence")
+    )
+    withheld_count = finalization.get(
+        "withheld_finding_count",
+        durable_state.get("withheld_finding_count"),
+    )
+    selected_run_id = finalization.get(
+        "processing_run_id", durable_state.get("selected_processing_run_id")
+    )
+    activation_verdict = durable_state.get("atomicity_verdict")
+    if activation_verdict is None and report.get("database_end_to_end_verified") is True:
+        activation_verdict = "COMPLETE_SESSION_ACTIVATION_PRESENT"
+    job_status_counts: dict[str, int] = {}
+    jobs = durable_state.get("jobs")
+    if isinstance(jobs, list):
+        for job in jobs:
+            if not isinstance(job, dict):
+                continue
+            job_type = job.get("job_type")
+            status = job.get("status")
+            if isinstance(job_type, str) and isinstance(status, str):
+                key = f"{job_type}:{status}"
+                job_status_counts[key] = job_status_counts.get(key, 0) + 1
+    else:
+        for key, job_type in (
+            ("review_jobs", SEGMENT_LEARNING_REVIEW_JOB),
+            ("finalization_job", SESSION_INTELLIGENCE_FINALIZE_JOB),
+        ):
+            job_rows = report.get(key)
+            if not isinstance(job_rows, list):
+                continue
+            for job in job_rows:
+                status = job.get("status") if isinstance(job, dict) else None
+                if isinstance(status, str):
+                    summary_key = f"{job_type}:{status}"
+                    job_status_counts[summary_key] = (
+                        job_status_counts.get(summary_key, 0) + 1
+                    )
+    job_summary = ", ".join(
+        f"{key}={count}" for key, count in sorted(job_status_counts.items())
+    ) or "not separately inventoried"
+    real_luna_verified = report.get("real_luna_verified") is True
+    execution_taxonomy = (
+        str(report.get("execution_taxonomy", "CODEX_REPORTED_REAL_MODEL_VERIFICATION"))
+        if real_luna_verified
+        else "NOT VERIFIED"
+    )
+    authorities = durable_state.get("authorities")
+    authority_count = (
+        len(authorities)
+        if isinstance(authorities, list)
+        else (1 if finalization.get("authority_id") is not None else None)
+    )
+    current_state_count = finalization.get(
+        "current_state_count", derived_counts.get("current_states")
+    )
+    pattern_count = finalization.get(
+        "pattern_count", derived_counts.get("patterns")
+    )
+    decision_count = finalization.get(
+        "decision_view_count", derived_counts.get("decision_views")
+    )
+    card_count = finalization.get("card_count", derived_counts.get("cards"))
+    return (
+        "# Historical Full-System Intelligence Acceptance\n\n"
+        f"- Session: `{report.get('historical_session_id')}`\n"
+        f"- Status: `{report.get('status')}`\n"
+        f"- Durable Segment Reviews completed: `{review_count}`\n"
+        f"- Review statuses: `{json.dumps(review_statuses, sort_keys=True)}`\n"
+        f"- Staged / withheld Findings: `{staged_findings} / {withheld_count}`\n"
+        f"- Job statuses: `{job_summary}`\n"
+        f"- Session authorities: `{authority_count}`\n"
+        f"- Processing run: `{selected_run_id}`\n"
+        f"- Events / Evidence: `{event_count} / {evidence_count}`\n"
+        f"- Current State / Pattern / Decision / Card: `"
+        f"{current_state_count} / {pattern_count} / {decision_count} / {card_count}`\n"
+        f"- Activation verdict: `{activation_verdict}`\n"
+        f"- Real Luna verified: `{str(real_luna_verified).lower()}`\n"
+        f"- Database end-to-end verified: `"
+        f"{str(report.get('database_end_to_end_verified') is True).lower()}`\n"
+        f"- Execution taxonomy: `{execution_taxonomy}`\n"
+        "- Raw Student/Tutor content: omitted from this artifact.\n"
+        f"- Real-Lina validation: `"
+        f"{'VERIFIED' if report.get('real_lina_verified') is True else 'NOT VERIFIED'}`.\n"
+    )
+
+
+def _publish_historical_acceptance_report(
+    directory: Path, report: Mapping[str, object]
+) -> dict[str, object]:
+    _preflight_artifact_directory(directory)
+    json_path, markdown_path = _historical_artifact_paths(directory)
+    serializable = dict(report)
+    _atomic_write_text(
+        json_path,
+        json.dumps(serializable, indent=2, sort_keys=True, default=str) + "\n",
+    )
+    _atomic_write_text(markdown_path, _historical_acceptance_markdown(serializable))
+    serializable["artifact_json"] = str(json_path)
+    serializable["artifact_markdown"] = str(markdown_path)
+    return serializable
+
+
+def _load_committed_reconstruction_audit(
+    configuration: AcceptanceConfiguration,
+    *,
+    session: Session,
+    learning_session: LearningSession,
+    segments: Sequence[LearningSegment],
+) -> dict[str, object]:
+    operation_id = _required_reconstruction_operation_id(learning_session.id)
+    stage = _audit_stage_paths(configuration.artifact_directory, operation_id)
+    if stage.pending_json_path.exists() or not stage.final_json_path.is_file():
+        raise AcceptanceSafetyError(
+            "Committed historical reconstruction audit is unavailable."
+        )
+    try:
+        audit = json.loads(stage.final_json_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        raise AcceptanceSafetyError(
+            "Committed historical reconstruction audit is unreadable."
+        ) from None
+    if not isinstance(audit, dict) or audit.get("publication_state") != "COMMITTED":
+        raise AcceptanceSafetyError(
+            "Committed historical reconstruction audit is invalid."
+        )
+    try:
+        execution_id = UUID(str(audit["ai_execution_id"]))
+    except (KeyError, TypeError, ValueError):
+        raise AcceptanceSafetyError(
+            "Committed historical reconstruction audit has invalid ledger lineage."
+        ) from None
+    _verified_reconstruction_execution(
+        session.get(AIExecution, execution_id),
+        learning_session=learning_session,
+        operation_id=operation_id,
+    )
+    reported_segments = audit.get("segment_ids")
+    expected_segments = {
+        str(segment.sequence): str(segment.id) for segment in segments
+    }
+    if reported_segments != expected_segments:
+        raise AcceptanceSafetyError(
+            "Committed historical reconstruction audit does not match target Segments."
+        )
+    return {
+        "operation_id": str(operation_id),
+        "ai_execution_id": str(execution_id),
+        "provider": "openai",
+        "model": "gpt-5.6-luna",
+        "segment_count": len(segments),
+        "publication_state": "COMMITTED",
+    }
+
+
+def _preflight_historical_intelligence_target(
+    configuration: AcceptanceConfiguration,
+) -> tuple[dict[str, object], HistoricalSnapshot]:
+    boundary = validate_database_boundary(
+        configuration.source_database_url,
+        configuration.target_database_url,
+    )
+    source_snapshot = _historical_snapshot(configuration.source_database_url)
+    validate_historical_counts(source_snapshot.counts, location="historical-source")
+    target_snapshot = _historical_snapshot(configuration.target_database_url)
+    validate_historical_snapshots(
+        source_snapshot,
+        target_snapshot,
+        location="historical-target",
+    )
+    revision = _target_alembic_revision(configuration.target_database_url)
+    engine = create_engine(
+        normalize_database_url(configuration.target_database_url), pool_pre_ping=True
+    )
+    try:
+        with Session(engine) as session:
+            session.execute(text("SET TRANSACTION READ ONLY"))
+            learning_session, messages, _ = _ordered_messages(session)
+            if learning_session.intelligence_pipeline != SESSION_FINALIZATION_PIPELINE:
+                raise AcceptanceSafetyError(
+                    "Historical target is not on segment-finalization-v1."
+                )
+            segments = list(
+                session.scalars(
+                    select(LearningSegment)
+                    .where(LearningSegment.session_id == learning_session.id)
+                    .order_by(LearningSegment.sequence, LearningSegment.id)
+                )
+            )
+            if (
+                not segments
+                or any(message.segment_id is None for message in messages)
+                or any(segment.closed_at is None for segment in segments)
+                or len({message.segment_id for message in messages}) != len(segments)
+            ):
+                raise AcceptanceSafetyError(
+                    "Historical target reconstruction is incomplete."
+                )
+            reconstruction = _load_committed_reconstruction_audit(
+                configuration,
+                session=session,
+                learning_session=learning_session,
+                segments=segments,
+            )
+    except AcceptanceSafetyError:
+        raise
+    except (OSError, SQLAlchemyError, TypeError, ValueError):
+        raise AcceptanceSafetyError(
+            "Historical target readiness inspection failed; details suppressed."
+        ) from None
+    finally:
+        engine.dispose()
+    return (
+        {
+            "source_database": boundary.source_identity.safe_label,
+            "target_database": boundary.target_identity.safe_label,
+            "target_alembic_revision": revision,
+            "source_snapshot": _snapshot_report(source_snapshot),
+            "target_snapshot": _snapshot_report(target_snapshot),
+            "reconstruction": reconstruction,
+            "source_write_operations": 0,
+        },
+        source_snapshot,
+    )
+
+
+def _close_and_ensure_historical_review_jobs(
+    session_factory: sessionmaker[Session],
+) -> list[UUID]:
+    """Close only the target Session and idempotently ensure its Review jobs."""
+
+    with session_factory.begin() as session:
+        learning_session = session.get(
+            LearningSession, HISTORICAL_SESSION_ID, with_for_update=True
+        )
+        if learning_session is None:
+            raise AcceptanceSafetyError("Historical target Session is absent.")
+        if learning_session.intelligence_pipeline != SESSION_FINALIZATION_PIPELINE:
+            raise AcceptanceSafetyError(
+                "Historical target Session has an unsupported pipeline."
+            )
+        controlled_policy = SessionLifecyclePolicy(
+            version="full-system-acceptance-historical-v1",
+            inactivity=timedelta(seconds=1),
+            grace=timedelta(0),
+        )
+        controlled_now = max(
+            datetime.now(UTC), controlled_policy.closes_at(learning_session.last_activity_at)
+        )
+        if learning_session.status == "OPEN":
+            if not close_session_if_eligible(
+                session,
+                learning_session=learning_session,
+                now=controlled_now,
+                policy=controlled_policy,
+            ):
+                raise AcceptanceSafetyError(
+                    "Controlled historical Session closure was not eligible."
+                )
+        elif learning_session.status != "CLOSED" or learning_session.closed_at is None:
+            raise AcceptanceSafetyError(
+                "Historical target Session has an unsupported lifecycle state."
+            )
+        reconcile_segments_for_session_close(
+            session,
+            learning_session=learning_session,
+            closed_at=learning_session.closed_at or controlled_now,
+        )
+        segment_ids = [
+            segment.id
+            for segment in session.scalars(
+                select(LearningSegment)
+                .where(LearningSegment.session_id == learning_session.id)
+                .order_by(LearningSegment.sequence, LearningSegment.id)
+            )
+            if is_segment_structurally_reviewable(
+                session,
+                learning_session=learning_session,
+                segment=segment,
+            )
+        ]
+        enqueue_session_intelligence_finalization_if_ready(
+            session,
+            learning_session=learning_session,
+        )
+        jobs = list(
+            session.scalars(
+                select(Job).where(Job.job_type == SEGMENT_LEARNING_REVIEW_JOB)
+            )
+        )
+        _validate_historical_active_job_scope(
+            jobs, session_id=learning_session.id
+        )
+        target_jobs = [
+            job
+            for job in jobs
+            if isinstance(job.payload, dict)
+            and job.payload.get("session_id") == str(learning_session.id)
+        ]
+        try:
+            queued_segment_ids = {
+                UUID(str(job.payload.get("segment_id"))) for job in target_jobs
+            }
+        except (TypeError, ValueError):
+            raise AcceptanceSafetyError(
+                "Historical Segment Review job lineage is invalid."
+            ) from None
+        if queued_segment_ids != set(segment_ids) or len(target_jobs) != len(segment_ids):
+            raise AcceptanceSafetyError(
+                "Historical Segment Review jobs do not exactly cover reviewable Segments."
+            )
+        if any(
+            job.status in {JobStatus.FAILED.value, JobStatus.RUNNING.value}
+            for job in target_jobs
+        ):
+            raise AcceptanceSafetyError(
+                "Historical Segment Review job is failed or already running."
+            )
+        return [job.id for job in target_jobs]
+
+
+def _scoped_registry(
+    full_registry: JobHandlerRegistry, *, job_type: str
+) -> JobHandlerRegistry:
+    handler = full_registry.get(job_type)
+    if handler is None:
+        raise AcceptanceSafetyError(
+            f"Required historical worker handler {job_type!r} is unavailable."
+        )
+    scoped = JobHandlerRegistry()
+    scoped.register(job_type, handler)
+    return scoped
+
+
+def _run_exact_historical_jobs(
+    session_factory: sessionmaker[Session],
+    *,
+    registry: JobHandlerRegistry,
+    job_type: str,
+    expected_job_ids: Sequence[UUID],
+) -> list[dict[str, object]]:
+    """Execute only the prevalidated target jobs through the normal worker."""
+
+    worker_id = f"acceptance-{_historical_acceptance_operation_id()}"
+    expected = set(expected_job_ids)
+    while True:
+        with session_factory() as session:
+            jobs = list(
+                session.scalars(select(Job).where(Job.job_type == job_type))
+            )
+            _validate_historical_active_job_scope(
+                jobs, session_id=HISTORICAL_SESSION_ID
+            )
+            target_jobs = [
+                job
+                for job in jobs
+                if isinstance(job.payload, dict)
+                and job.payload.get("session_id") == str(HISTORICAL_SESSION_ID)
+            ]
+            if {job.id for job in target_jobs} != expected:
+                raise AcceptanceSafetyError(
+                    "Historical worker job set contains unexpected target jobs."
+                )
+            selected = [job for job in jobs if job.id in expected]
+            if len(selected) != len(expected):
+                raise AcceptanceSafetyError(
+                    "Historical worker job set changed after preflight."
+                )
+            failed_or_running = [
+                job
+                for job in selected
+                if job.status in {JobStatus.FAILED.value, JobStatus.RUNNING.value}
+            ]
+            if failed_or_running:
+                raise AcceptanceSafetyError(
+                    "Historical worker encountered a failed or concurrently running job."
+                )
+            pending = [job for job in selected if job.status == JobStatus.PENDING.value]
+            if not pending:
+                return [
+                    {
+                        "job_id": str(job.id),
+                        "status": job.status,
+                        "attempt_count": job.attempt_count,
+                        "result": job.result if isinstance(job.result, dict) else {},
+                    }
+                    for job in selected
+                ]
+        status = run_once(
+            session_factory,
+            registry,
+            worker_id=worker_id,
+            now=datetime.now(UTC),
+        )
+        if status is not JobStatus.COMPLETED:
+            raise AcceptanceSafetyError(
+                f"Historical {job_type} worker execution failed closed."
+            )
+
+
+def _collect_completed_historical_reviews(
+    session_factory: sessionmaker[Session],
+    *,
+    expected_segment_ids: Sequence[UUID],
+) -> list[dict[str, object]]:
+    expected = set(expected_segment_ids)
+    with session_factory() as session:
+        learning_session = session.get(LearningSession, HISTORICAL_SESSION_ID)
+        if learning_session is None:
+            raise AcceptanceSafetyError("Historical target Session is absent.")
+        reviews = list(
+            session.scalars(
+                select(SegmentLearningReview)
+                .where(
+                    SegmentLearningReview.session_id == HISTORICAL_SESSION_ID,
+                    SegmentLearningReview.segment_id.in_(expected),
+                    SegmentLearningReview.schema_version
+                    == SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+                    SegmentLearningReview.prompt_version
+                    == SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
+                    SegmentLearningReview.rubric_version == EVIDENCE_RUBRIC_VERSION,
+                    SegmentLearningReview.review_policy_version
+                    == SEGMENT_REVIEW_POLICY_VERSION,
+                    SegmentLearningReview.provider == "openai",
+                    SegmentLearningReview.model == "gpt-5.6-luna",
+                )
+                .order_by(SegmentLearningReview.segment_id)
+            )
+        )
+        if len(reviews) != len(expected) or {review.segment_id for review in reviews} != expected:
+            raise AcceptanceSafetyError(
+                "Completed historical Reviews do not exactly cover required Segments."
+            )
+        report: list[dict[str, object]] = []
+        for review in reviews:
+            segment = session.get(LearningSegment, review.segment_id)
+            if segment is None or segment.session_id != HISTORICAL_SESSION_ID:
+                raise AcceptanceSafetyError(
+                    "Historical Review Segment lineage is unavailable."
+                )
+            messages = list(
+                session.scalars(
+                    select(LearningMessage).where(
+                        LearningMessage.session_id == HISTORICAL_SESSION_ID,
+                        LearningMessage.segment_id == review.segment_id,
+                    )
+                )
+            )
+            finding_count = _validate_completed_review_sources(
+                review,
+                segment_message_roles={message.id: message.role for message in messages},
+            )
+            execution = _validate_segment_review_execution(
+                review,
+                execution=session.get(AIExecution, review.ai_execution_id),
+                expected_student_id=learning_session.student_id,
+                expected_segment_id=segment.id,
+            )
+            report.append(
+                {
+                    "segment_id": str(review.segment_id),
+                    "segment_sequence": segment.sequence,
+                    "segment_review_id": str(review.id),
+                    "status": review.status,
+                    "finding_count": finding_count,
+                    "ai_execution_id": str(execution.id),
+                    "operation_id": (
+                        str(execution.operation_id)
+                        if execution.operation_id is not None
+                        else None
+                    ),
+                    "operation": execution.operation_type,
+                    "task": execution.task,
+                    "provider": execution.provider,
+                    "model": execution.model,
+                    "execution_success": execution.success,
+                    "source_lineage_valid": True,
+                }
+            )
+        return report
+
+
+def _collect_historical_finalization(
+    session_factory: sessionmaker[Session],
+) -> dict[str, object]:
+    with session_factory() as session:
+        authorities = list(
+            session.scalars(
+                select(IntelligenceSessionAuthority).where(
+                    IntelligenceSessionAuthority.session_id == HISTORICAL_SESSION_ID
+                )
+            )
+        )
+        if len(authorities) != 1:
+            raise AcceptanceSafetyError(
+                "Historical finalization did not produce exactly one Session authority."
+            )
+        authority = authorities[0]
+        run = session.get(
+            IntelligenceProcessingRun, authority.evidence_processing_run_id
+        )
+        if run is None or run.status != "COMPLETED":
+            raise AcceptanceSafetyError(
+                "Historical authority does not select one completed processing run."
+            )
+        scope = run.scope if isinstance(run.scope, dict) else {}
+        if (
+            scope.get("session_id") != str(HISTORICAL_SESSION_ID)
+            or scope.get("intelligence_pipeline") != SESSION_FINALIZATION_PIPELINE
+        ):
+            raise AcceptanceSafetyError(
+                "Historical processing run scope does not match the Session pipeline."
+            )
+        events = list(
+            session.scalars(
+                select(LearningEvent).where(
+                    LearningEvent.processing_run_id == run.id,
+                    LearningEvent.session_id == HISTORICAL_SESSION_ID,
+                )
+            )
+        )
+        evidence_count = int(
+            session.scalar(
+                select(func.count())
+                .select_from(LearningEvidence)
+                .join(LearningEvent, LearningEvent.id == LearningEvidence.event_id)
+                .where(LearningEvent.processing_run_id == run.id)
+            )
+            or 0
+        )
+        reviews = {
+            review.id: review
+            for review in session.scalars(
+                select(SegmentLearningReview).where(
+                    SegmentLearningReview.session_id == HISTORICAL_SESSION_ID
+                )
+            )
+        }
+        withheld = 0
+        for review in reviews.values():
+            findings = review.output.get("findings") if isinstance(review.output, dict) else []
+            if isinstance(findings, list):
+                withheld += sum(
+                    isinstance(finding, dict)
+                    and finding.get("subject_alignment") != "SAME_AS_SESSION"
+                    for finding in findings
+                )
+        for event in events:
+            review = reviews.get(event.segment_review_id)
+            findings = review.output.get("findings") if review is not None and isinstance(review.output, dict) else None
+            index = event.segment_review_finding_index
+            if (
+                not isinstance(findings, list)
+                or not isinstance(index, int)
+                or index < 0
+                or index >= len(findings)
+                or event.segment_id != review.segment_id
+            ):
+                raise AcceptanceSafetyError(
+                    "Historical Event provenance does not resolve to its Review Finding."
+                )
+            finding = findings[index]
+            if (
+                not isinstance(finding, dict)
+                or finding.get("source_message_ids") != event.source_message_ids
+                or finding.get("candidate_event_ids") != event.candidate_event_ids
+            ):
+                raise AcceptanceSafetyError(
+                    "Historical Event source provenance differs from its Review Finding."
+                )
+        return {
+            "authority_id": str(authority.id),
+            "processing_run_id": str(run.id),
+            "processing_run_status": run.status,
+            "event_count": len(events),
+            "evidence_count": evidence_count,
+            "current_state_count": int(
+                session.scalar(
+                    select(func.count()).select_from(CurrentLearningState).where(
+                        CurrentLearningState.processing_run_id == run.id
+                    )
+                )
+                or 0
+            ),
+            "pattern_count": int(
+                session.scalar(
+                    select(func.count()).select_from(LearnerPattern).where(
+                        LearnerPattern.processing_run_id == run.id
+                    )
+                )
+                or 0
+            ),
+            "decision_view_count": int(
+                session.scalar(
+                    select(func.count()).select_from(DecisionView).where(
+                        DecisionView.processing_run_id == run.id
+                    )
+                )
+                or 0
+            ),
+            "card_count": int(
+                session.scalar(
+                    select(func.count()).select_from(LearnerIntelligenceCard).where(
+                        LearnerIntelligenceCard.processing_run_id == run.id
+                    )
+                )
+                or 0
+            ),
+            "withheld_finding_count": withheld,
+            "candidate_free_event_count": sum(
+                not event.candidate_event_ids for event in events
+            ),
+            "event_review_provenance_valid": True,
+        }
+
+
+def _historical_durable_state(
+    session_factory: sessionmaker[Session],
+) -> dict[str, object]:
+    """Return non-secret durable/staged state after a fail-closed attempt."""
+
+    try:
+        with session_factory() as session:
+            learning_session = session.get(LearningSession, HISTORICAL_SESSION_ID)
+            if learning_session is None:
+                return {
+                    "inspection": "COMPLETE",
+                    "historical_session_present": False,
+                    "atomicity_verdict": "NO_HISTORICAL_SESSION",
+                    "partial_session_activation_detected": None,
+                    "selected_processing_run_id": None,
+                }
+            reviews = list(
+                session.scalars(
+                    select(SegmentLearningReview)
+                    .where(SegmentLearningReview.session_id == HISTORICAL_SESSION_ID)
+                    .order_by(SegmentLearningReview.created_at, SegmentLearningReview.id)
+                )
+            )
+            review_rows: list[dict[str, object]] = []
+            review_status_counts: dict[str, int] = {}
+            staged_finding_count = 0
+            withheld_finding_count = 0
+            for review in reviews:
+                findings = (
+                    review.output.get("findings")
+                    if isinstance(review.output, dict)
+                    else None
+                )
+                finding_count = len(findings) if isinstance(findings, list) else 0
+                withheld_count = (
+                    sum(
+                        isinstance(finding, dict)
+                        and finding.get("subject_alignment") != "SAME_AS_SESSION"
+                        for finding in findings
+                    )
+                    if isinstance(findings, list)
+                    else 0
+                )
+                review_status_counts[review.status] = (
+                    review_status_counts.get(review.status, 0) + 1
+                )
+                staged_finding_count += finding_count
+                withheld_finding_count += withheld_count
+                review_rows.append(
+                    {
+                        "id": str(review.id),
+                        "segment_id": str(review.segment_id),
+                        "status": review.status,
+                        "finding_count": finding_count,
+                        "withheld_finding_count": withheld_count,
+                        "ai_execution_id": (
+                            str(review.ai_execution_id)
+                            if review.ai_execution_id is not None
+                            else None
+                        ),
+                    }
+                )
+            authorities = list(
+                session.scalars(
+                    select(IntelligenceSessionAuthority).where(
+                        IntelligenceSessionAuthority.session_id
+                        == HISTORICAL_SESSION_ID
+                    )
+                )
+            )
+            authority_rows = [
+                {
+                    "id": str(authority.id),
+                    "evidence_processing_run_id": str(
+                        authority.evidence_processing_run_id
+                    ),
+                    "reprocess_run_id": (
+                        str(authority.reprocess_run_id)
+                        if authority.reprocess_run_id is not None
+                        else None
+                    ),
+                }
+                for authority in authorities
+            ]
+            events = list(
+                session.scalars(
+                    select(LearningEvent).where(
+                        LearningEvent.session_id == HISTORICAL_SESSION_ID
+                    )
+                )
+            )
+            referenced_run_ids = {event.processing_run_id for event in events} | {
+                authority.evidence_processing_run_id for authority in authorities
+            }
+            student_runs = list(
+                session.scalars(
+                    select(IntelligenceProcessingRun).where(
+                        IntelligenceProcessingRun.student_id
+                        == learning_session.student_id
+                    )
+                )
+            )
+            runs = [
+                run
+                for run in student_runs
+                if (
+                    isinstance(run.scope, dict)
+                    and run.scope.get("session_id") == str(HISTORICAL_SESSION_ID)
+                )
+                or run.id in referenced_run_ids
+            ]
+            run_ids = {run.id for run in runs}
+            evidence = (
+                list(
+                    session.scalars(
+                        select(LearningEvidence).where(
+                            LearningEvidence.event_id.in_([event.id for event in events])
+                        )
+                    )
+                )
+                if events
+                else []
+            )
+            states = (
+                list(
+                    session.scalars(
+                        select(CurrentLearningState).where(
+                            CurrentLearningState.processing_run_id.in_(run_ids)
+                        )
+                    )
+                )
+                if run_ids
+                else []
+            )
+            patterns = (
+                list(
+                    session.scalars(
+                        select(LearnerPattern).where(
+                            LearnerPattern.processing_run_id.in_(run_ids)
+                        )
+                    )
+                )
+                if run_ids
+                else []
+            )
+            decisions = (
+                list(
+                    session.scalars(
+                        select(DecisionView).where(
+                            DecisionView.processing_run_id.in_(run_ids)
+                        )
+                    )
+                )
+                if run_ids
+                else []
+            )
+            cards = (
+                list(
+                    session.scalars(
+                        select(LearnerIntelligenceCard).where(
+                            LearnerIntelligenceCard.processing_run_id.in_(run_ids)
+                        )
+                    )
+                )
+                if run_ids
+                else []
+            )
+            jobs = list(
+                session.scalars(
+                    select(Job).where(
+                        Job.job_type.in_(
+                            (
+                                SEGMENT_LEARNING_REVIEW_JOB,
+                                SESSION_INTELLIGENCE_FINALIZE_JOB,
+                            )
+                        )
+                    )
+                )
+            )
+            job_rows = [
+                {
+                    "id": str(job.id),
+                    "job_type": job.job_type,
+                    "status": job.status,
+                    "attempt_count": job.attempt_count,
+                }
+                for job in jobs
+                if isinstance(job.payload, dict)
+                and job.payload.get("session_id") == str(HISTORICAL_SESSION_ID)
+            ]
+            derived_counts = {
+                "events": len(events),
+                "evidence": len(evidence),
+                "current_states": len(states),
+                "patterns": len(patterns),
+                "decision_views": len(decisions),
+                "cards": len(cards),
+            }
+            snapshot: dict[str, object] = {
+                "inspection": "COMPLETE",
+                "historical_session_present": True,
+                "reviews": review_rows,
+                "review_status_counts": review_status_counts,
+                "staged_finding_count": staged_finding_count,
+                "withheld_finding_count": withheld_finding_count,
+                "jobs": job_rows,
+                "authorities": authority_rows,
+                "processing_runs": [
+                    {
+                        "id": str(run.id),
+                        "status": run.status,
+                        "pipeline": (
+                            run.scope.get("intelligence_pipeline")
+                            if isinstance(run.scope, dict)
+                            else None
+                        ),
+                    }
+                    for run in runs
+                ],
+                "derived_counts": derived_counts,
+                "derived_rows": {
+                    "events": [
+                        {
+                            "id": str(event.id),
+                            "processing_run_id": str(event.processing_run_id),
+                            "segment_review_id": (
+                                str(event.segment_review_id)
+                                if event.segment_review_id is not None
+                                else None
+                            ),
+                            "segment_review_finding_index": event.segment_review_finding_index,
+                        }
+                        for event in events
+                    ],
+                    "evidence_ids": [str(row.id) for row in evidence],
+                    "current_state_ids": [str(row.id) for row in states],
+                    "pattern_ids": [str(row.id) for row in patterns],
+                    "decision_view_ids": [str(row.id) for row in decisions],
+                    "card_ids": [str(row.id) for row in cards],
+                },
+            }
+            snapshot.update(_derive_historical_atomicity(snapshot))
+            return snapshot
+    except Exception:  # noqa: BLE001 -- failure-state inspection is deliberately best effort.
+        return {
+            "inspection": "UNAVAILABLE",
+            "atomicity_verdict": "INSPECTION_INCOMPLETE",
+            "partial_session_activation_detected": None,
+            "selected_processing_run_id": None,
+        }
+
+
+def run_historical_intelligence_acceptance(
+    configuration: AcceptanceConfiguration,
+    *,
+    environment: Mapping[str, str] = os.environ,
+) -> dict[str, object]:
+    """Run real historical Reviews and deterministic activation on the isolated target."""
+
+    _preflight_artifact_directory(configuration.artifact_directory)
+    preflight, source_before = _preflight_historical_intelligence_target(configuration)
+    settings = _provider_settings(configuration.target_database_url, environment)
+    timeout_seconds = _acceptance_model_timeout_seconds(environment)
+    engine = create_engine(
+        normalize_database_url(configuration.target_database_url), pool_pre_ping=True
+    )
+    session_factory = sessionmaker(engine, expire_on_commit=False)
+    try:
+        segment_ids = _close_and_ensure_historical_review_jobs(session_factory)
+
+        def segment_gateway_factory(session: Session) -> ModelGateway:
+            provider = OpenAIResponsesProvider(
+                api_key=settings.model_api_key.get_secret_value(),
+                base_url=settings.model_base_url,
+                timeout_seconds=timeout_seconds,
+            )
+            return create_segment_evidence_gateway(
+                session,
+                settings=settings,
+                openai_provider=provider,
+            )
+
+        full_registry = JobHandlerRegistry()
+        register_intelligence_handlers(
+            full_registry,
+            session_factory=session_factory,
+            segment_evidence_gateway_factory=segment_gateway_factory,
+        )
+        with session_factory() as session:
+            review_jobs = list(
+                session.scalars(
+                    select(Job).where(
+                        Job.job_type == SEGMENT_LEARNING_REVIEW_JOB,
+                        Job.payload["session_id"].astext == str(HISTORICAL_SESSION_ID),
+                    )
+                )
+            )
+        review_job_report = _run_exact_historical_jobs(
+            session_factory,
+            registry=_scoped_registry(
+                full_registry, job_type=SEGMENT_LEARNING_REVIEW_JOB
+            ),
+            job_type=SEGMENT_LEARNING_REVIEW_JOB,
+            expected_job_ids=[job.id for job in review_jobs],
+        )
+        review_report = _collect_completed_historical_reviews(
+            session_factory,
+            expected_segment_ids=segment_ids,
+        )
+        with session_factory.begin() as session:
+            learning_session = session.get(
+                LearningSession, HISTORICAL_SESSION_ID, with_for_update=True
+            )
+            if learning_session is None:
+                raise AcceptanceSafetyError("Historical target Session is absent.")
+            final_job = enqueue_session_intelligence_finalization_if_ready(
+                session,
+                learning_session=learning_session,
+            )
+            if final_job is None:
+                raise AcceptanceSafetyError(
+                    "Historical finalization job is not ready after completed Reviews."
+                )
+            final_job_id = final_job.id
+        with session_factory() as session:
+            final_jobs = list(
+                session.scalars(
+                    select(Job).where(Job.job_type == SESSION_INTELLIGENCE_FINALIZE_JOB)
+                )
+            )
+            _validate_historical_active_job_scope(
+                final_jobs, session_id=HISTORICAL_SESSION_ID
+            )
+        final_job_report = _run_exact_historical_jobs(
+            session_factory,
+            registry=_scoped_registry(
+                full_registry, job_type=SESSION_INTELLIGENCE_FINALIZE_JOB
+            ),
+            job_type=SESSION_INTELLIGENCE_FINALIZE_JOB,
+            expected_job_ids=[final_job_id],
+        )
+        finalization = _collect_historical_finalization(session_factory)
+        target_after = _historical_snapshot(configuration.target_database_url)
+        validate_historical_snapshots(
+            source_before, target_after, location="historical-target-after"
+        )
+        source_after = _historical_snapshot(configuration.source_database_url)
+        validate_historical_snapshots(
+            source_before, source_after, location="historical-source-after"
+        )
+        return _publish_historical_acceptance_report(
+            configuration.artifact_directory,
+            {
+                "mode": "HISTORICAL_INTELLIGENCE_ACCEPTANCE",
+                "operation_id": str(_historical_acceptance_operation_id()),
+                "historical_session_id": str(HISTORICAL_SESSION_ID),
+                "status": "COMPLETED",
+                "execution_taxonomy": "CODEX_REPORTED_REAL_MODEL_VERIFICATION",
+                "real_luna_verified": bool(review_report)
+                and len(review_report) == len(segment_ids)
+                and all(
+                    review.get("execution_success") is True
+                    and review.get("provider") == "openai"
+                    and review.get("model") == "gpt-5.6-luna"
+                    and review.get("operation") == "segment_learning_review"
+                    for review in review_report
+                ),
+                "database_end_to_end_verified": True,
+                "real_lina_verified": False,
+                "preflight": preflight,
+                "segment_reviews": review_report,
+                "review_jobs": review_job_report,
+                "finalization_job": final_job_report,
+                "finalization": finalization,
+                "raw_message_fields_preserved": True,
+                "source_write_operations": 0,
+            },
+        )
+    except AcceptanceSafetyError as error:
+        failure = {
+            "mode": "HISTORICAL_INTELLIGENCE_ACCEPTANCE",
+            "operation_id": str(_historical_acceptance_operation_id()),
+            "historical_session_id": str(HISTORICAL_SESSION_ID),
+            "status": "FAILED_CLOSED",
+            "failure": str(error),
+            "durable_state": _historical_durable_state(session_factory),
+            "real_luna_verified": False,
+            "database_end_to_end_verified": False,
+            "real_lina_verified": False,
+            "source_write_operations": 0,
+        }
+        artifact = _publish_historical_acceptance_report(
+            configuration.artifact_directory, failure
+        )
+        raise AcceptanceSafetyError(
+            "Historical intelligence acceptance failed closed; durable/staged state was recorded at "
+            f"{artifact['artifact_json']}."
+        ) from None
+    except Exception:  # noqa: BLE001 -- redact unexpected provider/DB details in failure artifacts.
+        failure = {
+            "mode": "HISTORICAL_INTELLIGENCE_ACCEPTANCE",
+            "operation_id": str(_historical_acceptance_operation_id()),
+            "historical_session_id": str(HISTORICAL_SESSION_ID),
+            "status": "FAILED_CLOSED",
+            "failure": "Provider or database operation failed; details suppressed.",
+            "durable_state": _historical_durable_state(session_factory),
+            "real_luna_verified": False,
+            "database_end_to_end_verified": False,
+            "real_lina_verified": False,
+            "source_write_operations": 0,
+        }
+        artifact = _publish_historical_acceptance_report(
+            configuration.artifact_directory, failure
+        )
+        raise AcceptanceSafetyError(
+            "Historical intelligence acceptance failed closed; durable/staged state was recorded at "
+            f"{artifact['artifact_json']}."
+        ) from None
+    finally:
+        engine.dispose()
 
 
 def run_prepared_acceptance(
@@ -1461,6 +2754,14 @@ def _parser() -> argparse.ArgumentParser:
         type=UUID,
         help="Publish a pending post-commit audit after verifying its target ledger lineage.",
     )
+    parser.add_argument(
+        "--run-historical-intelligence",
+        action="store_true",
+        help=(
+            "Process the already reconstructed isolated target through real Segment Review "
+            "jobs and deterministic Session finalization."
+        ),
+    )
     return parser
 
 
@@ -1502,6 +2803,15 @@ def main(
                 args.execute_reconstruction or args.resume_reconstruction
             ),
         )
+        if args.run_historical_intelligence and (
+            args.execute_clone
+            or args.execute_reconstruction
+            or args.resume_reconstruction
+            or args.recover_audit_operation_id
+        ):
+            raise AcceptanceSafetyError(
+                "--run-historical-intelligence is mutually exclusive with clone, reconstruction, resume, and audit recovery modes."
+            )
         if args.resume_reconstruction and (
             args.execute_clone
             or args.execute_reconstruction
@@ -1520,7 +2830,12 @@ def main(
             raise AcceptanceSafetyError(
                 "--execute-reconstruction requires --execute-clone."
             )
-        if args.resume_reconstruction:
+        if args.run_historical_intelligence:
+            report = run_historical_intelligence_acceptance(
+                configuration,
+                environment=environment,
+            )
+        elif args.resume_reconstruction:
             report = resume_real_reconstruction(
                 configuration,
                 environment=environment,

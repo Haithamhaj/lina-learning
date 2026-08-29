@@ -4,13 +4,15 @@ import json
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from uuid import uuid4
+from types import SimpleNamespace
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 import pytest
 
 from scripts.run_full_system_acceptance import (
     ACCEPTANCE_RECONSTRUCTION_OPERATION,
     EXPECTED_HISTORICAL_COUNTS,
+    HISTORICAL_SESSION_ID,
     AcceptanceConfiguration,
     AcceptanceSafetyError,
     AuditStage,
@@ -24,13 +26,19 @@ from scripts.run_full_system_acceptance import (
     _commit_with_staged_audit,
     _create_acceptance_reconstruction_gateway,
     _database_urls_from_environment,
+    _derive_historical_atomicity,
+    _historical_acceptance_markdown,
+    _historical_acceptance_operation_id,
     _migrate_target,
     _parser,
     _provider_settings,
     _publish_staged_audit,
     _required_reconstruction_operation_id,
     _stage_audit_artifact,
+    _validate_completed_review_sources,
+    _validate_historical_active_job_scope,
     _validate_resume_target_state,
+    _validate_segment_review_execution,
     _verified_reconstruction_execution,
     build_clone_commands,
     build_reconstruction_payload,
@@ -180,6 +188,347 @@ def test_resume_mode_is_mutually_exclusive_with_clone_and_recovery(
     assert result == 2
     assert "mutually exclusive" in captured.err
     assert "source-secret" not in captured.err
+
+
+def test_historical_intelligence_mode_is_explicit_and_mutually_exclusive(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    environment = {
+        "LINA_ACCEPTANCE_SOURCE_DATABASE_URL": SOURCE,
+        "LINA_ACCEPTANCE_TARGET_DATABASE_URL": TARGET,
+    }
+
+    assert "--run-historical-intelligence" in _parser().format_help()
+    result = main(
+        [
+            "--artifact-directory",
+            str(tmp_path),
+            "--run-historical-intelligence",
+            "--resume-reconstruction",
+        ],
+        environment=environment,
+    )
+    captured = capsys.readouterr()
+
+    assert result == 2
+    assert "mutually exclusive" in captured.err
+    assert "source-secret" not in captured.out + captured.err
+    assert "target-secret" not in captured.out + captured.err
+
+
+def test_historical_intelligence_mode_routes_to_existing_target_runner_only(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    observed: dict[str, object] = {}
+
+    def run(configuration: AcceptanceConfiguration, **_: object) -> dict[str, object]:
+        observed["configuration"] = configuration
+        return {"mode": "HISTORICAL_INTELLIGENCE_ACCEPTANCE"}
+
+    monkeypatch.setattr(
+        "scripts.run_full_system_acceptance.run_historical_intelligence_acceptance",
+        run,
+    )
+    result = main(
+        ["--artifact-directory", str(tmp_path), "--run-historical-intelligence"],
+        environment={
+            "LINA_ACCEPTANCE_SOURCE_DATABASE_URL": SOURCE,
+            "LINA_ACCEPTANCE_TARGET_DATABASE_URL": TARGET,
+        },
+    )
+    captured = capsys.readouterr()
+
+    assert result == 0
+    configuration = observed["configuration"]
+    assert isinstance(configuration, AcceptanceConfiguration)
+    assert configuration.execute_reconstruction is False
+    assert "HISTORICAL_INTELLIGENCE_ACCEPTANCE" in captured.out
+    assert "source-secret" not in captured.out + captured.err
+    assert "target-secret" not in captured.out + captured.err
+
+
+def test_historical_job_scope_refuses_claimable_jobs_for_other_sessions() -> None:
+    target_session_id = HISTORICAL_SESSION_ID
+    selected = SimpleNamespace(
+        id=uuid4(),
+        status="PENDING",
+        payload={"session_id": str(target_session_id)},
+    )
+    copied_other = SimpleNamespace(
+        id=uuid4(),
+        status="PENDING",
+        payload={"session_id": str(uuid4())},
+    )
+
+    with pytest.raises(AcceptanceSafetyError, match="other Sessions"):
+        _validate_historical_active_job_scope(
+            [selected, copied_other],
+            session_id=target_session_id,
+        )
+
+    copied_other.status = "COMPLETED"
+    _validate_historical_active_job_scope(
+        [selected, copied_other],
+        session_id=target_session_id,
+    )
+
+
+def test_completed_review_sources_must_be_exact_segment_student_lineage() -> None:
+    student_message_id = uuid4()
+    tutor_message_id = uuid4()
+    review = SimpleNamespace(
+        status="COMPLETED",
+        output={
+            "version": "segment-learning-review-v1",
+            "findings": [
+                {
+                    "source_message_ids": [str(student_message_id), str(tutor_message_id)],
+                    "candidate_event_ids": [],
+                    "subject_alignment": "SAME_AS_SESSION",
+                }
+            ],
+        },
+    )
+
+    assert _validate_completed_review_sources(
+        review,
+        segment_message_roles={
+            student_message_id: "student",
+            tutor_message_id: "tutor",
+        },
+    ) == 1
+
+    review.output["findings"][0]["source_message_ids"] = [str(uuid4())]
+    with pytest.raises(AcceptanceSafetyError, match="source lineage"):
+        _validate_completed_review_sources(
+            review,
+            segment_message_roles={student_message_id: "student"},
+        )
+
+    review.output = None
+    with pytest.raises(AcceptanceSafetyError, match="strict schema"):
+        _validate_completed_review_sources(
+            review,
+            segment_message_roles={student_message_id: "student"},
+        )
+
+
+def test_historical_acceptance_operation_identity_is_stable() -> None:
+    assert _historical_acceptance_operation_id() == _historical_acceptance_operation_id()
+
+
+def test_review_execution_requires_exact_production_segment_review_lineage() -> None:
+    student_id = uuid4()
+    segment_id = uuid4()
+    review_id = uuid4()
+    review = SimpleNamespace(
+        id=review_id,
+        student_id=student_id,
+        session_id=HISTORICAL_SESSION_ID,
+        segment_id=segment_id,
+        ai_execution_id=uuid4(),
+    )
+    execution = SimpleNamespace(
+        id=review.ai_execution_id,
+        success=True,
+        task=ModelTask.SEGMENT_EVIDENCE.value,
+        provider="openai",
+        model="gpt-5.6-luna",
+        student_id=student_id,
+        learning_session_id=HISTORICAL_SESSION_ID,
+        operation_type="full_system_acceptance_segment_reconstruction",
+        operation_id=uuid4(),
+    )
+
+    with pytest.raises(AcceptanceSafetyError, match="ledger lineage"):
+        _validate_segment_review_execution(
+            review,
+            execution=execution,
+            expected_student_id=student_id,
+            expected_segment_id=segment_id,
+        )
+
+    execution.operation_type = "segment_learning_review"
+    execution.operation_id = uuid5(
+        NAMESPACE_URL, f"segment-learning-review:{review_id}"
+    )
+    assert (
+        _validate_segment_review_execution(
+            review,
+            execution=execution,
+            expected_student_id=student_id,
+            expected_segment_id=segment_id,
+        )
+        is execution
+    )
+
+
+def test_failed_review_snapshot_proves_no_activation_only_from_exact_rows() -> None:
+    snapshot = {
+        "reviews": [
+            {
+                "id": str(uuid4()),
+                "status": "FAILED",
+                "finding_count": 0,
+                "withheld_finding_count": 0,
+            }
+        ],
+        "jobs": [
+            {
+                "id": str(uuid4()),
+                "job_type": "SEGMENT_LEARNING_REVIEW",
+                "status": "PENDING",
+            }
+        ],
+        "authorities": [],
+        "processing_runs": [],
+        "derived_counts": {
+            "events": 0,
+            "evidence": 0,
+            "current_states": 0,
+            "patterns": 0,
+            "decision_views": 0,
+            "cards": 0,
+        },
+    }
+
+    assert _derive_historical_atomicity(snapshot) == {
+        "atomicity_verdict": "NO_SESSION_ACTIVATION",
+        "partial_session_activation_detected": False,
+        "selected_processing_run_id": None,
+    }
+
+
+def test_post_finalization_reporting_failure_reports_durable_atomic_activation() -> None:
+    run_id = uuid4()
+    snapshot = {
+        "authorities": [
+            {"evidence_processing_run_id": str(run_id), "reprocess_run_id": None}
+        ],
+        "processing_runs": [
+            {
+                "id": str(run_id),
+                "status": "COMPLETED",
+                "pipeline": "segment-finalization-v1",
+            }
+        ],
+        "derived_counts": {
+            "events": 3,
+            "evidence": 3,
+            "current_states": 2,
+            "patterns": 1,
+            "decision_views": 1,
+            "cards": 1,
+        },
+    }
+
+    assert _derive_historical_atomicity(snapshot) == {
+        "atomicity_verdict": "COMPLETE_SESSION_ACTIVATION_PRESENT",
+        "partial_session_activation_detected": False,
+        "selected_processing_run_id": str(run_id),
+    }
+
+
+def test_completed_run_with_wrong_pipeline_is_not_accepted_as_atomic_activation() -> None:
+    run_id = uuid4()
+    snapshot = {
+        "authorities": [
+            {"evidence_processing_run_id": str(run_id), "reprocess_run_id": None}
+        ],
+        "processing_runs": [
+            {
+                "id": str(run_id),
+                "status": "COMPLETED",
+                "pipeline": "legacy-session-evidence-v1",
+            }
+        ],
+        "derived_counts": {
+            "events": 0,
+            "evidence": 0,
+            "current_states": 0,
+            "patterns": 0,
+            "decision_views": 0,
+            "cards": 0,
+        },
+    }
+
+    result = _derive_historical_atomicity(snapshot)
+    assert result["atomicity_verdict"] == "INCONSISTENT_OR_PARTIAL_ACTIVATION"
+    assert result["partial_session_activation_detected"] is True
+
+
+def test_failed_markdown_renders_durable_review_job_and_activation_evidence() -> None:
+    run_id = uuid4()
+    report = {
+        "historical_session_id": str(HISTORICAL_SESSION_ID),
+        "status": "FAILED_CLOSED",
+        "real_luna_verified": False,
+        "database_end_to_end_verified": False,
+        "real_lina_verified": False,
+        "durable_state": {
+            "reviews": [
+                {"id": str(uuid4()), "status": "COMPLETED"},
+                {"id": str(uuid4()), "status": "COMPLETED"},
+                {"id": str(uuid4()), "status": "COMPLETED"},
+                {"id": str(uuid4()), "status": "FAILED"},
+            ],
+            "review_status_counts": {"COMPLETED": 3, "FAILED": 1},
+            "staged_finding_count": 7,
+            "withheld_finding_count": 2,
+            "jobs": [
+                {"job_type": "SEGMENT_LEARNING_REVIEW", "status": "COMPLETED"},
+                {"job_type": "SEGMENT_LEARNING_REVIEW", "status": "PENDING"},
+            ],
+            "authorities": [],
+            "processing_runs": [],
+            "derived_counts": {
+                "events": 0,
+                "evidence": 0,
+                "current_states": 0,
+                "patterns": 0,
+                "decision_views": 0,
+                "cards": 0,
+            },
+            "atomicity_verdict": "NO_SESSION_ACTIVATION",
+            "selected_processing_run_id": None,
+        },
+    }
+
+    markdown = _historical_acceptance_markdown(report)
+
+    assert "Durable Segment Reviews completed: `3`" in markdown
+    assert 'Review statuses: `{"COMPLETED": 3, "FAILED": 1}`' in markdown
+    assert "Staged / withheld Findings: `7 / 2`" in markdown
+    assert "SEGMENT_LEARNING_REVIEW:COMPLETED=1" in markdown
+    assert "SEGMENT_LEARNING_REVIEW:PENDING=1" in markdown
+    assert "Events / Evidence: `0 / 0`" in markdown
+    assert "Activation verdict: `NO_SESSION_ACTIVATION`" in markdown
+    assert "Real Luna verified: `false`" in markdown
+    assert "Execution taxonomy: `NOT VERIFIED`" in markdown
+    assert "Codex-executed real-model verification" not in markdown
+    assert str(run_id) not in markdown
+
+
+def test_orphan_derived_rows_are_reported_as_possible_partial_activation() -> None:
+    snapshot = {
+        "authorities": [],
+        "processing_runs": [{"id": str(uuid4()), "status": "RUNNING"}],
+        "derived_counts": {
+            "events": 1,
+            "evidence": 0,
+            "current_states": 0,
+            "patterns": 0,
+            "decision_views": 0,
+            "cards": 0,
+        },
+    }
+
+    result = _derive_historical_atomicity(snapshot)
+    assert result["atomicity_verdict"] == "INCONSISTENT_OR_PARTIAL_ACTIVATION"
+    assert result["partial_session_activation_detected"] is True
 
 
 def test_resume_preflight_revalidates_snapshots_and_never_runs_clone_commands(
