@@ -534,6 +534,12 @@ class LearningSession(Base):
     student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     subject: Mapped[str] = mapped_column(String(32), nullable=False, default="MATH", server_default="MATH")
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="OPEN", server_default="OPEN")
+    intelligence_pipeline: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        default="segment-finalization-v1",
+        server_default="segment-finalization-v1",
+    )
     opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     last_activity_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -764,7 +770,11 @@ class IntelligenceSessionAuthority(Base):
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("learning_sessions.id", ondelete="CASCADE"), nullable=False)
-    reprocess_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("intelligence_reprocess_runs.id", ondelete="CASCADE"), nullable=False)
+    reprocess_run_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("intelligence_reprocess_runs.id", ondelete="CASCADE"),
+        nullable=True,
+    )
     evidence_processing_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("intelligence_processing_runs.id", ondelete="CASCADE"), nullable=False)
     activated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
@@ -784,6 +794,7 @@ class LearningEvent(Base):
     segment_review_id: Mapped[UUID | None] = mapped_column(
         PostgreSQLUUID(as_uuid=True), ForeignKey("segment_learning_reviews.id", ondelete="RESTRICT")
     )
+    segment_review_finding_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
     candidate_event_ids: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, default=list, server_default="[]"
     )

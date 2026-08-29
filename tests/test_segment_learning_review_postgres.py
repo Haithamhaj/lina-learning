@@ -91,7 +91,7 @@ def _closed_lineage(session: Session) -> tuple[Student, LearningSession, Learnin
     return student, learning_session, segment
 
 
-def _legacy_lineage(session: Session) -> tuple[Student, LearningSession]:
+def _legacy_lineage(session: Session) -> tuple[Student, UUID]:
     """Create only columns available before the SEG-EVID-01A migration."""
 
     user = User(identity_provider="fixture", external_subject=uuid4().hex)
@@ -100,10 +100,15 @@ def _legacy_lineage(session: Session) -> tuple[Student, LearningSession]:
     student = Student(user_id=user.id, display_name="Fixture Student")
     session.add(student)
     session.flush()
-    learning_session = LearningSession(student_id=student.id, subject="MATH")
-    session.add(learning_session)
-    session.flush()
-    return student, learning_session
+    learning_session_id = uuid4()
+    session.execute(
+        text(
+            "INSERT INTO learning_sessions (id, student_id, subject) "
+            "VALUES (:id, :student_id, 'MATH')"
+        ),
+        {"id": learning_session_id, "student_id": student.id},
+    )
+    return student, learning_session_id
 
 
 def _review(
@@ -472,6 +477,7 @@ def test_segment_derived_event_allows_no_candidate_anchor(factory: sessionmaker[
             source_message_ids=[],
             segment_id=segment.id,
             segment_review_id=review.id,
+            segment_review_finding_index=0,
             subject="MATH",
             event_type="supported_learning_occurrence",
             description="A Segment Review may identify a source-supported occurrence without a Candidate hint.",
@@ -483,6 +489,7 @@ def test_segment_derived_event_allows_no_candidate_anchor(factory: sessionmaker[
         assert event.candidate_event_ids == []
         assert event.segment_id == segment.id
         assert event.segment_review_id == review.id
+        assert event.segment_review_finding_index == 0
 
 
 def test_learning_event_preserves_complete_multi_message_provenance(
@@ -590,16 +597,23 @@ def test_segment_review_migration_backfills_legacy_lineage_and_safe_downgrade(
     try:
         command.downgrade(config, PRIOR_REVISION)
         with factory.begin() as session:
-            student, learning_session = _legacy_lineage(session)
+            student, learning_session_id = _legacy_lineage(session)
             processing_run = _processing_run(session, student)
             message = LearningMessage(
-                session_id=learning_session.id,
+                session_id=learning_session_id,
                 role="student",
                 content="One half is the same as two fourths.",
             )
             session.add(message)
             session.flush()
-            candidate = _candidate(session, learning_session, message)
+            candidate = CandidateEvent(
+                session_id=learning_session_id,
+                message_id=message.id,
+                event_type="attempt",
+                signal="fixture-signal",
+            )
+            session.add(candidate)
+            session.flush()
             session.execute(
                 text(
                     "INSERT INTO learning_events "
@@ -609,7 +623,7 @@ def test_segment_review_migration_backfills_legacy_lineage_and_safe_downgrade(
                 {
                     "id": legacy_event_id,
                     "run_id": processing_run.id,
-                    "session_id": learning_session.id,
+                    "session_id": learning_session_id,
                     "candidate_id": candidate.id,
                     "message_id": message.id,
                 },
@@ -625,6 +639,7 @@ def test_segment_review_migration_backfills_legacy_lineage_and_safe_downgrade(
             assert legacy.segment_review_id is None
 
             student, learning_session, segment = _closed_lineage(session)
+            learning_session.intelligence_pipeline = "legacy-session-evidence-v1"
             processing_run = _processing_run(session, student)
             review = _review(student, learning_session, segment)
             session.add(review)
@@ -653,6 +668,13 @@ def test_segment_review_migration_backfills_legacy_lineage_and_safe_downgrade(
             session.execute(
                 text("DELETE FROM learning_events WHERE id = :event_id"),
                 {"event_id": candidate_free_event_id},
+            )
+            session.execute(
+                text(
+                    "UPDATE learning_sessions "
+                    "SET intelligence_pipeline = 'legacy-session-evidence-v1' "
+                    "WHERE intelligence_pipeline = 'segment-finalization-v1'"
+                )
             )
 
         command.downgrade(config, PRIOR_REVISION)
