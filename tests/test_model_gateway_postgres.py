@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from uuid import uuid4
 
@@ -37,6 +38,18 @@ pytestmark = pytest.mark.skipif(
     not os.getenv("DATABASE_URL"),
     reason="PostgreSQL DATABASE_URL is required for Model Gateway tests",
 )
+
+
+@pytest.fixture(autouse=True)
+def preserve_observability_logger_state():
+    """Keep Alembic's logging reconfiguration local to migration tests."""
+
+    logger = logging.getLogger("services.platform.observability.metrics")
+    was_disabled = logger.disabled
+    try:
+        yield
+    finally:
+        logger.disabled = was_disabled
 
 
 @pytest.fixture
