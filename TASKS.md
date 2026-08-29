@@ -471,31 +471,36 @@ LearningEvent Segment lineage, multi-message provenance, and backward-compatible
 legacy handling. No runtime intelligence activation yet.
 
 ## SEG-EVID-01B — Segment Completion & Review Jobs
-**Status:** BLOCKED BY SEG-EVID-01A
+**Status:** BLOCKED
+**Dependencies:** SEG-EVID-01A
 **Purpose:** Implement completion semantics, meaningful eligibility,
 `SEGMENT_LEARNING_REVIEW`, and idempotency while preserving CTX-03
 `UNCERTAIN` behavior.
 
 ## SEG-EVID-01C — Segment Semantic Reviewer
-**Status:** BLOCKED BY SEG-EVID-01B
+**Status:** BLOCKED
+**Dependencies:** SEG-EVID-01B
 **Purpose:** Implement the `segment_evidence` task with complete raw Segment
 input, optional Candidate hints, TeachingMethod lineage, strict structured
 output, source validation, and staged findings. No Card/Pattern activation.
 
 ## SEG-EVID-01D — Session Finalization & Intelligence Activation
-**Status:** BLOCKED BY SEG-EVID-01C
+**Status:** BLOCKED
+**Dependencies:** SEG-EVID-01C
 **Purpose:** Implement completeness/version gates, deterministic finalization,
 Event/Evidence materialization, and Current State / Pattern / Decision
 activation with no semantic Session call by default.
 
 ## SEG-EVID-01E — Reprocessing & Authority Compatibility
-**Status:** BLOCKED BY SEG-EVID-01D
+**Status:** BLOCKED
+**Dependencies:** SEG-EVID-01D
 **Purpose:** Implement legacy/new coexistence, Session-scoped external
 reprocessing, Segment-internal semantic rebuild, atomic activation, and legacy
 Session Evidence handling.
 
 ## SEG-EVID-01F — Real Model & Multi-Session Verification
-**Status:** BLOCKED BY SEG-EVID-01E
+**Status:** BLOCKED
+**Dependencies:** SEG-EVID-01E
 **Purpose:** Verify confusion, bare wrong answer, explicit misconception,
 correction/counter-evidence, TeachingMethod outcome, transfer, retention with
 bounded historical anchors, multi-Session Pattern support/counter and

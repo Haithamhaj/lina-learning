@@ -66,10 +66,11 @@ and RAG/curriculum remain separate authorities.
 
 ## Next recommended action
 
-Complete governing documentation alignment → independently review → fix only
-CAND-01 strict Structured Output compatibility → SEG-EVID-01A. Do not start
-EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, LR-D04B, archive retrieval, or frozen
-future capabilities.
+Fix only the verified CAND-01 strict Structured Output compatibility defect
+→ independently review that correction → SEG-EVID-01A. CAND-01 is not closed;
+SEG-EVID-01A remains blocked until that correction is committed/reviewed. Do
+not start EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, LR-D04B, archive retrieval,
+or frozen future capabilities.
 
 ## Critical references
 
