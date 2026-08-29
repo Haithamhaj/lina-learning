@@ -66,6 +66,7 @@ from services.platform.db.models import (
 )
 from services.tutor.segment_lifecycle import (
     SEGMENT_LEARNING_REVIEW_JOB,
+    SEGMENT_REVIEW_REQUEST_VERSION,
     is_segment_structurally_reviewable,
     reconcile_segments_for_session_close,
 )
@@ -1951,12 +1952,9 @@ def _close_and_ensure_historical_review_jobs(
         _validate_historical_active_job_scope(
             jobs, session_id=learning_session.id
         )
-        target_jobs = [
-            job
-            for job in jobs
-            if isinstance(job.payload, dict)
-            and job.payload.get("session_id") == str(learning_session.id)
-        ]
+        target_jobs = _select_current_historical_review_jobs(
+            jobs, session_id=learning_session.id
+        )
         try:
             queued_segment_ids = {
                 UUID(str(job.payload.get("segment_id"))) for job in target_jobs
@@ -1977,6 +1975,21 @@ def _close_and_ensure_historical_review_jobs(
                 "Historical Segment Review job is failed or already running."
             )
         return [job.id for job in target_jobs]
+
+
+def _select_current_historical_review_jobs(
+    jobs: Sequence[Job], *, session_id: UUID
+) -> list[Job]:
+    """Select only the current immutable Review-request contract for this run."""
+
+    return [
+        job
+        for job in jobs
+        if isinstance(job.payload, dict)
+        and job.payload.get("session_id") == str(session_id)
+        and job.payload.get("review_request_version")
+        == SEGMENT_REVIEW_REQUEST_VERSION
+    ]
 
 
 def _scoped_registry(
@@ -2011,12 +2024,19 @@ def _run_exact_historical_jobs(
             _validate_historical_active_job_scope(
                 jobs, session_id=HISTORICAL_SESSION_ID
             )
-            target_jobs = [
-                job
-                for job in jobs
-                if isinstance(job.payload, dict)
-                and job.payload.get("session_id") == str(HISTORICAL_SESSION_ID)
-            ]
+            target_jobs = (
+                _select_current_historical_review_jobs(
+                    jobs, session_id=HISTORICAL_SESSION_ID
+                )
+                if job_type == SEGMENT_LEARNING_REVIEW_JOB
+                else [
+                    job
+                    for job in jobs
+                    if isinstance(job.payload, dict)
+                    and job.payload.get("session_id")
+                    == str(HISTORICAL_SESSION_ID)
+                ]
+            )
             if {job.id for job in target_jobs} != expected:
                 raise AcceptanceSafetyError(
                     "Historical worker job set contains unexpected target jobs."
@@ -2192,7 +2212,14 @@ def _collect_historical_finalization(
             review.id: review
             for review in session.scalars(
                 select(SegmentLearningReview).where(
-                    SegmentLearningReview.session_id == HISTORICAL_SESSION_ID
+                    SegmentLearningReview.session_id == HISTORICAL_SESSION_ID,
+                    SegmentLearningReview.schema_version
+                    == SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+                    SegmentLearningReview.prompt_version
+                    == SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
+                    SegmentLearningReview.rubric_version == EVIDENCE_RUBRIC_VERSION,
+                    SegmentLearningReview.review_policy_version
+                    == SEGMENT_REVIEW_POLICY_VERSION,
                 )
             )
         }
@@ -2564,13 +2591,17 @@ def run_historical_intelligence_acceptance(
             segment_review_settings=settings,
         )
         with session_factory() as session:
-            review_jobs = list(
-                session.scalars(
-                    select(Job).where(
-                        Job.job_type == SEGMENT_LEARNING_REVIEW_JOB,
-                        Job.payload["session_id"].astext == str(HISTORICAL_SESSION_ID),
+            review_jobs = _select_current_historical_review_jobs(
+                list(
+                    session.scalars(
+                        select(Job).where(
+                            Job.job_type == SEGMENT_LEARNING_REVIEW_JOB,
+                            Job.payload["session_id"].astext
+                            == str(HISTORICAL_SESSION_ID),
+                        )
                     )
-                )
+                ),
+                session_id=HISTORICAL_SESSION_ID,
             )
         review_job_report = _run_exact_historical_jobs(
             session_factory,

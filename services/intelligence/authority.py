@@ -8,12 +8,13 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from services.intelligence.segment_reviews import SEGMENT_LEARNING_REVIEW_PROMPT_VERSION
 from services.platform.db.models import (
     CandidateEvent,
     IntelligenceProcessingRun,
     IntelligenceSessionAuthority,
-    LearningEvidence,
     LearningEvent,
+    LearningEvidence,
     LearningSession,
 )
 
@@ -86,7 +87,8 @@ def is_supported_evidence_run_scope(scope: object) -> bool:
     return (
         scope.get("intelligence_pipeline") == "segment-finalization-v1"
         and scope.get("segment_review_schema_version") == "segment-learning-review-v1"
-        and scope.get("segment_review_prompt_version") == "segment-learning-review-prompt-v1"
+        and scope.get("segment_review_prompt_version")
+        == SEGMENT_LEARNING_REVIEW_PROMPT_VERSION
         and scope.get("segment_review_rubric_version") == "evidence-rubric-v1"
         and scope.get("segment_review_policy_version") == "segment-review-policy-v1"
     )

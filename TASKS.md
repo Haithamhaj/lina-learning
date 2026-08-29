@@ -519,7 +519,10 @@ Session/Segment/Student lineage, and one persisted raw Student
 TeachingMethod, Tutor-response, Exchange-count, concept, keyword, or other
 semantic prerequisites. Each eligible closure idempotently queues exactly one
 `SEGMENT_LEARNING_REVIEW` request at `segment-review-request-v1`, identified by
-Segment/request-version only (not prompt/model/rubric versions). B creates no
+Segment/request-version only (not prompt/model/rubric versions). The current
+strict-grounding correction introduces request `segment-review-request-v2` and
+prompt `segment-learning-review-prompt-v2`; v1 rows remain preserved for
+provenance, while v2 is the current immutable execution contract. B creates no
 `SegmentLearningReview` row or Review handler; `SESSION_CONSOLIDATION` remains
 operational; and no Session Finalization, Evidence, Pattern, Card, or
 personalization activation was introduced.

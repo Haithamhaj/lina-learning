@@ -17,6 +17,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from services.intelligence.authority import authoritative_evidence_ids
+from services.intelligence.segment_reviews import SEGMENT_LEARNING_REVIEW_PROMPT_VERSION
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
     CandidateEvent,
@@ -26,12 +27,12 @@ from services.platform.db.models import (
     IntelligenceSessionAuthority,
     Job,
     LearnerPattern,
-    LearningEvidence,
     LearningEvent,
+    LearningEvidence,
     LearningMessage,
-    PatternEvidence,
     LearningSegment,
     LearningSession,
+    PatternEvidence,
     SegmentLearningReview,
     Student,
     User,
@@ -44,7 +45,6 @@ from services.tutor.session_lifecycle import (
 )
 from workers.intelligence_handlers import register_intelligence_handlers
 from workers.job_worker import JobHandlerRegistry, run_once
-
 
 PRIOR_REVISION = "e7b1f3c9a2d4"
 
@@ -214,7 +214,7 @@ def _review(
     provider: str = "fixture-a",
     model: str = "segment-fixture-a",
     schema_version: str = "segment-learning-review-v1",
-    prompt_version: str = "segment-learning-review-prompt-v1",
+    prompt_version: str = SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
     rubric_version: str = "evidence-rubric-v1",
     review_policy_version: str = "segment-review-policy-v1",
     output: dict[str, object] | None = None,
@@ -288,17 +288,16 @@ def test_live_authority_allows_null_reprocess_lineage_but_remains_unique(
         session.flush()
 
         assert authority.reprocess_run_id is None
-        with pytest.raises(IntegrityError):
-            with session.begin_nested():
-                session.add(
-                    IntelligenceSessionAuthority(
-                        student_id=student.id,
-                        session_id=learning_session.id,
-                        reprocess_run_id=None,
-                        evidence_processing_run_id=second_run.id,
-                    )
+        with pytest.raises(IntegrityError), session.begin_nested():
+            session.add(
+                IntelligenceSessionAuthority(
+                    student_id=student.id,
+                    session_id=learning_session.id,
+                    reprocess_run_id=None,
+                    evidence_processing_run_id=second_run.id,
                 )
-                session.flush()
+            )
+            session.flush()
 
 
 @pytest.mark.parametrize(

@@ -7,14 +7,19 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from services.platform.db.models import Job, LearningMessage, LearningSegment, LearningSession, Student
+from services.platform.db.models import (
+    Job,
+    LearningMessage,
+    LearningSegment,
+    LearningSession,
+    Student,
+)
 from services.platform.jobs import enqueue_job
-
 
 NEXT_SEGMENT_CREATED = "NEXT_SEGMENT_CREATED"
 SESSION_CLOSED = "SESSION_CLOSED"
 SEGMENT_LEARNING_REVIEW_JOB = "SEGMENT_LEARNING_REVIEW"
-SEGMENT_REVIEW_REQUEST_VERSION = "segment-review-request-v1"
+SEGMENT_REVIEW_REQUEST_VERSION = "segment-review-request-v2"
 _CLOSURE_REASONS = frozenset({NEXT_SEGMENT_CREATED, SESSION_CLOSED})
 
 

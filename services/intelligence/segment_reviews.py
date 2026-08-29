@@ -2,21 +2,33 @@
 
 from __future__ import annotations
 
+import json
+import unicodedata
 from dataclasses import dataclass
 from datetime import UTC, datetime
-import json
 from typing import Literal, get_args
-import unicodedata
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from services.intelligence.consolidation import EvidenceDimensions, EvidenceRelationship, EVIDENCE_RUBRIC_VERSION
+from services.intelligence.consolidation import (
+    EVIDENCE_RUBRIC_VERSION,
+    EvidenceDimensions,
+    EvidenceRelationship,
+)
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
 from services.platform.config import Settings, get_settings
-from services.platform.db.models import CandidateEvent, LearningMessage, LearningSegment, LearningSession, ModelTask, SegmentLearningReview, Student
+from services.platform.db.models import (
+    CandidateEvent,
+    LearningMessage,
+    LearningSegment,
+    LearningSession,
+    ModelTask,
+    SegmentLearningReview,
+    Student,
+)
 from services.tutor.candidate_events import (
     CANDIDATE_EVENT_SCHEMA_VERSION,
     MISCONCEPTION_EVIDENCE_SCHEMA_VERSION,
@@ -25,11 +37,14 @@ from services.tutor.candidate_events import (
     MisconceptionEvidence,
     persisted_guided_learning_check,
 )
-from services.tutor.teaching_methods import TEACHING_METHOD_REGISTRY_VERSION, TeachingMethod, is_supported_teaching_method
-
+from services.tutor.teaching_methods import (
+    TEACHING_METHOD_REGISTRY_VERSION,
+    TeachingMethod,
+    is_supported_teaching_method,
+)
 
 SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION = "segment-learning-review-v1"
-SEGMENT_LEARNING_REVIEW_PROMPT_VERSION = "segment-learning-review-prompt-v1"
+SEGMENT_LEARNING_REVIEW_PROMPT_VERSION = "segment-learning-review-prompt-v2"
 SEGMENT_REVIEW_POLICY_VERSION = "segment-review-policy-v1"
 
 SegmentReviewEventType = Literal[
@@ -92,7 +107,7 @@ class SegmentReviewFinding(BaseModel):
     misconception_evidence: MisconceptionEvidence | None = Field(...)
 
     @model_validator(mode="after")
-    def enforce_local_contract(self) -> "SegmentReviewFinding":
+    def enforce_local_contract(self) -> SegmentReviewFinding:
         forbidden = ("visual learner", "learning style", "highly intelligent", "poor attention", "careless", "low motivation", "personality", "adhd")
         if any(label in self.event_summary.casefold() for label in forbidden):
             raise ValueError("Finding summary contains an unsupported learner label.")
@@ -444,7 +459,7 @@ def _model_payload(*, learning_session: LearningSession, segment: LearningSegmen
 _PROMPT = (
     "Review the complete supplied raw Segment only. Raw interaction outranks optional provisional Candidate hints. "
     "Return findings=[] when no supported learning occurrence exists. Casual greetings, navigation, preferences, and Tutor explanation without observable Student outcome may have no finding. "
-    "Confusion, a bare wrong answer, and an arithmetic slip are not misconception by themselves; explicit Student wrong reasoning may support one. "
+    "Confusion, a bare wrong answer, and an arithmetic slip are not misconception by themselves; explicit Student wrong reasoning may support one. For a misconception_signal, misconception_evidence must use version misconception-evidence-v1, cite its Student source within source_message_ids, and copy explicit_student_reasoning as an exact normalized substring of that cited Student message; never paraphrase it. If those conditions are unavailable, omit the misconception Finding. "
     "When a later Student message corrects earlier reasoning, preserve both observations when supported and emit a separate self_correction Finding grounded in the correction; set self_correction to prompted or self_initiated only on that self_correction Finding. Set self_correction to not_observed on every other event type. "
     "Do not infer independence after full teaching, transfer from near-identical practice, retention without supplied anchors, or TeachingMethod identity. Do not use relationship=retention_failure because C v1 supplies no authoritative historical retention anchors. "
     "Evaluate method effectiveness only with supplied method lineage and a later Student outcome; express it only in a strategy_outcome Finding and set strategy_effectiveness to not_evaluable on every other event type. Do not emit psychological, personality, or intelligence labels, mastery percentages, or numeric confidence. "

@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 import json
 import os
-from uuid import UUID, uuid4
+from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from services.intelligence.segment_reviews import (
+    SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
     SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
     SEGMENT_REVIEW_RESPONSE_SCHEMA,
     SegmentReviewCapacityError,
@@ -25,11 +26,11 @@ from services.platform.db.models import (
     CandidateEvent,
     CurrentLearningState,
     DecisionView,
+    Job,
     LearnerIntelligenceCard,
     LearnerPattern,
-    LearningEvidence,
     LearningEvent,
-    Job,
+    LearningEvidence,
     LearningMessage,
     LearningSegment,
     LearningSession,
@@ -39,14 +40,13 @@ from services.platform.db.models import (
     User,
 )
 from services.platform.jobs import enqueue_job
+from services.tutor.candidate_events import CANDIDATE_EVENT_SCHEMA_VERSION
 from services.tutor.segment_lifecycle import (
     SEGMENT_LEARNING_REVIEW_JOB,
     SEGMENT_REVIEW_REQUEST_VERSION,
 )
-from services.tutor.candidate_events import CANDIDATE_EVENT_SCHEMA_VERSION
 from workers.intelligence_handlers import register_intelligence_handlers
 from workers.job_worker import JobHandlerRegistry, run_once
-
 
 pytestmark = pytest.mark.skipif(
     not os.getenv("DATABASE_URL"),
@@ -339,6 +339,35 @@ def test_misconception_requires_exact_student_reasoning_and_accepts_it_when_pres
             gateway=_gateway(session, _Provider(_output(valid))),
         )
         assert outcome.review.status == "COMPLETED"
+
+
+def test_review_prompt_requires_an_exact_cited_student_quote_for_misconception_evidence(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches a semantic paraphrase being emitted where the validator requires a source quote."""
+
+    with factory.begin() as session:
+        _, learning_session, segment = _lineage(session)
+        student = _message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            role="student",
+            content="One fourth is bigger than one half because 4 is bigger than 2.",
+        )
+        provider = _Provider(_output(_finding(student)))
+
+        review_completed_segment(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            gateway=_gateway(session, provider),
+        )
+
+        instructions = str(provider.payloads[0]["instructions"])
+        assert SEGMENT_LEARNING_REVIEW_PROMPT_VERSION == "segment-learning-review-prompt-v2"
+        assert "exact normalized substring" in instructions
+        assert "explicit_student_reasoning" in instructions
 
 
 def test_transfer_and_retention_contracts_fail_closed_without_authoritative_history(

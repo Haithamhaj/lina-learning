@@ -34,7 +34,9 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
   Exchange-count, concept, keyword, or other semantic prerequisites.
 - Each eligible closure idempotently queues the unhandled
   `SEGMENT_LEARNING_REVIEW` request at `segment-review-request-v1`, identified
-  by Segment/request-version only. B creates no `SegmentLearningReview` row,
+  by Segment/request-version only. The current strict-grounding correction
+  preserves v1 audit rows and executes the immutable v2 request/prompt pair:
+  `segment-review-request-v2` / `segment-learning-review-prompt-v2`. B creates no `SegmentLearningReview` row,
   ModelTask, model call, or handler; `SESSION_CONSOLIDATION` remains
   operational. Codex-reported, not independently re-executed: focused
   B/runtime/lifecycle PostgreSQL coverage (45 passed) and canonical Python
@@ -48,7 +50,7 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
   failure refuses the complete request rather than truncating it. Review
   output is staged only, source-grounded in its own raw Student messages, and
   safely persists failure before a Job retry; completed Review identity is
-  idempotent. It uses `segment-learning-review-v1`,
+  idempotent. C was accepted at `segment-learning-review-v1`,
   `segment-learning-review-prompt-v1`, `evidence-rubric-v1`, and
   `segment-review-policy-v1`; the actual `SEGMENT_LEARNING_REVIEW` worker
   handler persists safe FAILED state before retry and never enqueues Session

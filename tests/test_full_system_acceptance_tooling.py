@@ -35,6 +35,7 @@ from scripts.run_full_system_acceptance import (
     _provider_settings,
     _publish_staged_audit,
     _required_reconstruction_operation_id,
+    _select_current_historical_review_jobs,
     _stage_audit_artifact,
     _validate_completed_review_sources,
     _validate_historical_active_job_scope,
@@ -63,6 +64,7 @@ from services.platform.db.models import (
     LearningSession,
     ModelTask,
 )
+from services.tutor.segment_lifecycle import SEGMENT_REVIEW_REQUEST_VERSION
 from workers.intelligence_handlers import register_intelligence_handlers
 from workers.job_worker import JobHandlerRegistry
 
@@ -283,6 +285,28 @@ def test_historical_job_scope_refuses_claimable_jobs_for_other_sessions() -> Non
         [selected, copied_other],
         session_id=target_session_id,
     )
+
+
+def test_historical_job_selection_preserves_prior_request_audit_and_uses_current_request_version() -> None:
+    """Catches v1 review jobs blocking an immutable v2 Review rerun."""
+
+    prior = SimpleNamespace(
+        payload={
+            "session_id": str(HISTORICAL_SESSION_ID),
+            "review_request_version": "segment-review-request-v1",
+        }
+    )
+    current = SimpleNamespace(
+        payload={
+            "session_id": str(HISTORICAL_SESSION_ID),
+            "review_request_version": "segment-review-request-v2",
+        }
+    )
+
+    assert _select_current_historical_review_jobs(
+        [prior, current], session_id=HISTORICAL_SESSION_ID
+    ) == [current]
+    assert SEGMENT_REVIEW_REQUEST_VERSION == "segment-review-request-v2"
 
 
 def test_completed_review_sources_must_be_exact_segment_student_lineage() -> None:
@@ -597,7 +621,7 @@ def test_segment_review_worker_uses_explicit_isolated_settings(
                 "student_id": str(student_id),
                 "session_id": str(HISTORICAL_SESSION_ID),
                 "segment_id": str(segment_id),
-                "review_request_version": "segment-review-request-v1",
+                "review_request_version": SEGMENT_REVIEW_REQUEST_VERSION,
                 "closed_at": segment.closed_at.isoformat(),
                 "closure_reason": segment.closure_reason,
             }
