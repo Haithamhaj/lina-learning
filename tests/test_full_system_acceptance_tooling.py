@@ -288,7 +288,7 @@ def test_historical_job_scope_refuses_claimable_jobs_for_other_sessions() -> Non
 
 
 def test_historical_job_selection_preserves_prior_request_audit_and_uses_current_request_version() -> None:
-    """Catches v1 review jobs blocking an immutable v2 Review rerun."""
+    """Catches prior review jobs blocking an immutable current-version Review rerun."""
 
     prior = SimpleNamespace(
         payload={
@@ -299,14 +299,14 @@ def test_historical_job_selection_preserves_prior_request_audit_and_uses_current
     current = SimpleNamespace(
         payload={
             "session_id": str(HISTORICAL_SESSION_ID),
-            "review_request_version": "segment-review-request-v2",
+            "review_request_version": "segment-review-request-v3",
         }
     )
 
     assert _select_current_historical_review_jobs(
         [prior, current], session_id=HISTORICAL_SESSION_ID
     ) == [current]
-    assert SEGMENT_REVIEW_REQUEST_VERSION == "segment-review-request-v2"
+    assert SEGMENT_REVIEW_REQUEST_VERSION == "segment-review-request-v3"
 
 
 def test_completed_review_sources_must_be_exact_segment_student_lineage() -> None:

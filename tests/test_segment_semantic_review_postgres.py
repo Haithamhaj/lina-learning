@@ -365,9 +365,37 @@ def test_review_prompt_requires_an_exact_cited_student_quote_for_misconception_e
         )
 
         instructions = str(provider.payloads[0]["instructions"])
-        assert SEGMENT_LEARNING_REVIEW_PROMPT_VERSION == "segment-learning-review-prompt-v2"
+        assert SEGMENT_LEARNING_REVIEW_PROMPT_VERSION == "segment-learning-review-prompt-v3"
         assert "exact normalized substring" in instructions
         assert "explicit_student_reasoning" in instructions
+
+
+def test_review_prompt_requires_strong_understanding_to_have_supported_reasoning(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches a schema-valid strong-understanding claim that violates the compiled dimensions."""
+
+    with factory.begin() as session:
+        _, learning_session, segment = _lineage(session)
+        student = _message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            role="student",
+            content="Two fourths is the same as one half.",
+        )
+        provider = _Provider(_output(_finding(student)))
+
+        review_completed_segment(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            gateway=_gateway(session, provider),
+        )
+
+        instructions = str(provider.payloads[0]["instructions"])
+        assert "strong_demonstration" in instructions
+        assert "well_supported" in instructions
 
 
 def test_transfer_and_retention_contracts_fail_closed_without_authoritative_history(

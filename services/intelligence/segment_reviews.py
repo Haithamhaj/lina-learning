@@ -44,7 +44,7 @@ from services.tutor.teaching_methods import (
 )
 
 SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION = "segment-learning-review-v1"
-SEGMENT_LEARNING_REVIEW_PROMPT_VERSION = "segment-learning-review-prompt-v2"
+SEGMENT_LEARNING_REVIEW_PROMPT_VERSION = "segment-learning-review-prompt-v3"
 SEGMENT_REVIEW_POLICY_VERSION = "segment-review-policy-v1"
 
 SegmentReviewEventType = Literal[
@@ -460,6 +460,7 @@ _PROMPT = (
     "Review the complete supplied raw Segment only. Raw interaction outranks optional provisional Candidate hints. "
     "Return findings=[] when no supported learning occurrence exists. Casual greetings, navigation, preferences, and Tutor explanation without observable Student outcome may have no finding. "
     "Confusion, a bare wrong answer, and an arithmetic slip are not misconception by themselves; explicit Student wrong reasoning may support one. For a misconception_signal, misconception_evidence must use version misconception-evidence-v1, cite its Student source within source_message_ids, and copy explicit_student_reasoning as an exact normalized substring of that cited Student message; never paraphrase it. If those conditions are unavailable, omit the misconception Finding. "
+    "Use understanding=strong_demonstration only when reasoning_demonstration=well_supported and independence is not full_teaching; otherwise use a lower supported understanding value. "
     "When a later Student message corrects earlier reasoning, preserve both observations when supported and emit a separate self_correction Finding grounded in the correction; set self_correction to prompted or self_initiated only on that self_correction Finding. Set self_correction to not_observed on every other event type. "
     "Do not infer independence after full teaching, transfer from near-identical practice, retention without supplied anchors, or TeachingMethod identity. Do not use relationship=retention_failure because C v1 supplies no authoritative historical retention anchors. "
     "Evaluate method effectiveness only with supplied method lineage and a later Student outcome; express it only in a strategy_outcome Finding and set strategy_effectiveness to not_evaluable on every other event type. Do not emit psychological, personality, or intelligence labels, mastery percentages, or numeric confidence. "

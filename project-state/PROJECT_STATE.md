@@ -35,8 +35,8 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
 - Each eligible closure idempotently queues the unhandled
   `SEGMENT_LEARNING_REVIEW` request at `segment-review-request-v1`, identified
   by Segment/request-version only. The current strict-grounding correction
-  preserves v1 audit rows and executes the immutable v2 request/prompt pair:
-  `segment-review-request-v2` / `segment-learning-review-prompt-v2`. B creates no `SegmentLearningReview` row,
+  preserves v1/v2 audit rows and executes the immutable v3 request/prompt pair:
+  `segment-review-request-v3` / `segment-learning-review-prompt-v3`. B creates no `SegmentLearningReview` row,
   ModelTask, model call, or handler; `SESSION_CONSOLIDATION` remains
   operational. Codex-reported, not independently re-executed: focused
   B/runtime/lifecycle PostgreSQL coverage (45 passed) and canonical Python
