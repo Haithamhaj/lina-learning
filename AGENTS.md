@@ -81,9 +81,10 @@ The following require Product Owner approval before changing their meaning:
 - Services request AI by task through the Model Gateway; do not call provider SDKs from arbitrary routes/services.
 - Normal Tutor turns target one primary Tutor call.
 - Tutor may emit hidden Candidate Event metadata; it does not directly write stable learner conclusions.
-- No extra normal-turn Evidence evaluator is authorized. Completed meaningful
-  Segments may be reviewed asynchronously as background work, outside Tutor
-  latency; staged findings do not directly update personalization. Closed
+- No extra normal-turn Evidence evaluator is authorized. Closed, structurally
+  reviewable Segments may be reviewed asynchronously as background work, outside
+  Tutor latency; deterministic reviewability does not decide educational meaning,
+  and staged findings do not directly update personalization. Closed
   Session Finalization remains the durable activation boundary, is
   deterministic by default, and requires no broad semantic Session model call
   after Segment Reviews.

@@ -482,9 +482,10 @@ Finalization, or Evidence activation was included.
 ## SEG-EVID-01B — Segment Completion & Review Jobs
 **Status:** READY
 **Dependencies:** SEG-EVID-01A
-**Purpose:** Implement completion semantics, meaningful eligibility,
-`SEGMENT_LEARNING_REVIEW`, and idempotency while preserving CTX-03
-`UNCERTAIN` behavior.
+**Purpose:** Implement durable Segment completion behavior, deterministic
+structural reviewability, `SEGMENT_LEARNING_REVIEW` job scheduling, idempotent
+orchestration, session-close handling, and CTX-03 `NEW_SEGMENT` / `UNCERTAIN`
+consistency. No semantic determination of learning meaning in B.
 
 ## SEG-EVID-01C — Segment Semantic Reviewer
 **Status:** BLOCKED

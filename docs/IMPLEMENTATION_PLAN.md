@@ -55,7 +55,7 @@ If structural/indexed sources exist, retrieval grounds the answer
         ↓
 Interaction produces optional Candidate hints
         ↓
-Completed Segments receive semantic review
+Closed Segments with valid lineage and persisted Student raw interaction receive semantic review
         ↓
 Deterministic Session Evidence generation is authorized
         ↓
@@ -1215,14 +1215,15 @@ Student Turn
 
 governed transition persists next Segment
 → prior Segment complete
-→ eligibility gate
+→ structural reviewability: closed + valid lineage + persisted Student raw interaction
+→ no deterministic learning-meaning gate
 → SEGMENT_LEARNING_REVIEW job
 
 Session closes
 → final Segment complete
-→ review final eligible Segment if required
+→ review final structurally reviewable Segment if required
 
-all required Segment reviews complete
+all structurally reviewable Segment reviews complete
 → SESSION_INTELLIGENCE_FINALIZE
       ↓
 deterministic finalization
@@ -1259,7 +1260,7 @@ The following rules are architectural, not optional optimizations.
 ```text
 Raw Interaction
 → optional Candidate hint
-→ completed Segment Review
+→ closed structurally reviewable Segment Review
 → Session-authorized Learning Event
 → Evidence
 → Current State / Pattern

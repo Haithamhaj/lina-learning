@@ -201,7 +201,7 @@ Student question
 → One primary Tutor model call
 → Tutor response
 → optional provisional Candidate hints
-→ completed meaningful Segment review in background
+→ closed structurally reviewable Segment review in background
 → Session-authorized Evidence / State / Patterns
 → Later personalization
 ```

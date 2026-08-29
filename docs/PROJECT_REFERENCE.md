@@ -1097,7 +1097,7 @@ Raw Interaction History
         ↓
 Optional Provisional Candidate Hints
         ↓
-Completed Learning Segment
+Closed Structurally Reviewable Segment
         ↓
 Segment Learning Review
         ↓
@@ -1159,12 +1159,17 @@ history when the Tutor omitted a Candidate.
 
 ## 13.4 Segment Learning Review and Session Intelligence Finalization
 
-Completed meaningful Segments are the semantic review unit. Background Segment
-Learning Review receives the complete relevant raw Segment history, not merely
-Candidate-local excerpts, and produces staged findings only.
+Every closed Segment with valid Session/Segment lineage and at least one
+persisted raw Student interaction is structurally reviewable. Background Segment
+Learning Review receives its complete relevant raw Segment history, not merely
+Candidate-local excerpts, and produces staged findings only. Structural
+reviewability does not determine educational meaning and does not require a
+Candidate, Guided Check, TeachingMethod, Tutor response, detected concept, or a
+minimum Exchange count; the Segment AI Reviewer determines zero or more
+supported findings.
 
 Closed Sessions remain the durable activation authority. Session Intelligence
-Finalization verifies required Segment Reviews, compatible versions,
+Finalization verifies every structurally reviewable Segment Review, compatible versions,
 provenance, and source lineage; it deterministically materializes Validated
 Learning Events and Evidence, then activates downstream intelligence. No giant
 semantic Session call is required after Segment Reviews by default.
@@ -1322,7 +1327,7 @@ Sessions close automatically after a configurable period of inactivity.
 A grace window may allow a quick return to continue the same session.
 
 Session closure completes the final Segment. In the approved target, required
-completed-Segment Reviews finish in background work and deterministic Session
+structurally reviewable Segment Reviews finish in background work and deterministic Session
 Intelligence Finalization activates Evidence and intelligence. Current code
 still uses legacy candidate-driven Session Evidence consolidation.
 
@@ -1519,7 +1524,7 @@ protected personalization path remains:
 ```text
 Raw Interaction
 → optional provisional Candidate hints
-→ completed Segment semantic review
+→ closed structurally reviewable Segment semantic review
 → Session-authorized Validated Learning Events / Evidence
 → Current Learning State / Patterns
 → Learner Intelligence Card
@@ -1621,7 +1626,7 @@ Frequent/latency-sensitive:
 
 Background semantic:
 
-- 0..N eligible Segment Learning Reviews per Session,
+- 0..N structurally reviewable Segment Learning Reviews per Session,
 - semantic curriculum extraction,
 - school-plan extraction.
 
@@ -2257,7 +2262,7 @@ Tutor adapts explanation
         ↓
 Optional Candidate hints are captured
         ↓
-Meaningful Segment closes and background Segment Review stages findings
+Closed structurally reviewable Segment reaches background Review; the AI stages 0..N findings
         ↓
 Session closes
         ↓

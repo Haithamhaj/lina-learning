@@ -17,6 +17,10 @@ SEG-EVID-01B is READY. EDU-ERR-01 remains blocked by SEG-EVID-01F.
   downgrade-refusal design were reviewed. It includes no Segment Review runtime,
   job, model call, Session Finalization, or Evidence activation; Session remains
   the durable Evidence authority.
+- Every closed Segment with valid ownership lineage and at least one persisted
+  raw Student interaction is structurally reviewable. SEG-EVID-01B schedules
+  that Review without determining educational meaning; SEG-EVID-01C's AI
+  Reviewer determines 0..N supported findings, including valid empty findings.
 - Candidate Events are provisional hints. Staged Segment findings do not update
   current-session personalization; Pattern counters/lifecycle are unchanged.
 - Existing Session Evidence remains the current/legacy implementation until

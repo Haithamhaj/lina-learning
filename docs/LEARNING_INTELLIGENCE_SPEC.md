@@ -205,6 +205,9 @@ An interaction or completed Segment contains a meaningful learning occurrence on
 6. create or resolve an important learning loop.
 
 Normal conversational activity is not intelligence merely because it occurred.
+These Meaningful Event Rules govern semantic Segment Review and later
+intelligence interpretation; they are not deterministic pre-review eligibility
+criteria.
 
 For misconception semantics: confusion alone, a bare wrong answer alone, and
 an arithmetic slip alone do not establish a misconception. Explicit incorrect
@@ -990,20 +993,23 @@ hints remain provisional and are never the only route to intelligence.
 
 ## 17.4 Segment Learning Review and Session Intelligence Finalization
 
-Meaningful Segment eligibility is a deterministic structural gate, not
-keyword-based educational classification. Eligible examples include a Candidate
-present, valid Guided Check learning activity, persisted TeachingMethod followed
-by Student response, multiple complete learning Exchanges, or another approved
-structural learning marker.
+Structural reviewability is the complete deterministic pre-review gate. A
+Segment is reviewable only when it is durably closed, has valid Session/Segment
+ownership lineage, and contains at least one persisted raw Student interaction
+assigned to that Segment. This gate rejects only structurally empty or invalid
+records; it must not determine whether learning meaning occurred or require a
+Candidate, Guided Check, TeachingMethod, TeachingMode, TeachingStrategy,
+Tutor response, concept, message length, event type, topic classification, or
+minimum Exchange count. Those are optional source context for semantic Review.
 
 ```text
-Completed meaningful Segment
+Closed structurally reviewable Segment
       ↓
 asynchronous Segment Learning Review of complete raw Segment history
       ↓
 Staged findings (zero is valid; no personalization update)
       ↓
-Session CLOSED + every required eligible Segment accounted for
+Session CLOSED + every structurally reviewable Segment accounted for
       ↓
 compatible review versions + provenance validation
       ↓
@@ -1016,6 +1022,10 @@ Segment Review is semantic authority for the completed learning episode. Session
 Finalization is the durable activation authority: it is deterministic by
 default, makes no broad semantic Session call after Segment Reviews by default,
 and permits no partial activation.
+
+The expected Review set for Session Finalization is every closed Segment that
+satisfies this same structural-reviewability rule. Candidate, Guided Check,
+TeachingMethod, or Exchange-count presence must not change that set.
 
 Normal new-session context does not automatically load prior raw transcripts or
 archived Segments. Historical conversation lookup and semantic archive retrieval
@@ -1037,6 +1047,9 @@ If no meaningful learning/evidence/state change occurred:
 - keep the normal session record,
 - do not create unnecessary intelligence objects,
 - do not create a full learning card.
+
+A structurally reviewable Segment may still be reviewed and return
+`findings = []`; that valid semantic result does not create intelligence.
 
 If meaningful learning occurred, create an Intelligence Delta for that session.
 
@@ -1746,7 +1759,7 @@ They must be configurable/versioned rather than hardcoded across business logic.
 
 - inactivity timeout,
 - grace window,
-- Segment eligibility policy,
+- structural reviewability rule (not semantic eligibility),
 - Segment review capacity,
 - max staged findings per Segment,
 - Session finalization completeness rules,
@@ -1898,8 +1911,11 @@ The Learning Intelligence core is ready for real Lina use when all of the follow
 
 1. Raw interaction sources are retained according to project policy.
 2. The Tutor can emit optional provisional Candidate hints without a separate extractor call per message.
-3. Completed meaningful Segments are reviewed asynchronously after governed completion; Session closure completes the final Segment.
-4. Deterministic Session Finalization can produce structured validated events and Evidence only after all required eligible Segment Reviews are complete.
+3. Every closed Segment with valid lineage and persisted Student raw interaction
+   is reviewed asynchronously after governed completion; Session closure
+   completes the final Segment.
+4. Deterministic Session Finalization can produce structured validated events and
+   Evidence only after every structurally reviewable Segment Review is complete.
 5. Evidence follows the approved categorical rubrics.
 6. Current Learning State is distinct from long-term Patterns.
 7. Pattern frequency, recency, counter-evidence, scope, and lifecycle are deterministic and versioned.
