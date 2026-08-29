@@ -1974,7 +1974,7 @@ def _close_and_ensure_historical_review_jobs(
             raise AcceptanceSafetyError(
                 "Historical Segment Review job is failed or already running."
             )
-        return [job.id for job in target_jobs]
+        return segment_ids
 
 
 def _select_current_historical_review_jobs(

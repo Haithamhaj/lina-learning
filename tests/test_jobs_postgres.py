@@ -10,8 +10,7 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
-from services.platform.db.connection import normalize_database_url
-from services.platform.db.connection import get_engine
+from services.platform.db.connection import get_engine, normalize_database_url
 from services.platform.db.models import Job, JobStatus
 from services.platform.jobs import (
     JobStateError,
@@ -21,7 +20,6 @@ from services.platform.jobs import (
     fail_job,
 )
 from workers.job_worker import JobHandlerRegistry, run_once
-
 
 pytestmark = pytest.mark.skipif(
     not os.getenv("DATABASE_URL"),
