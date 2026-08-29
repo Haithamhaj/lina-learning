@@ -464,7 +464,7 @@ implementation code changed.
 
 ## Full-System Acceptance — Learning Intelligence
 **Status:** IN_PROGRESS
-**Dependencies:** SEG-EVID-01A–C accepted; SEG-EVID-01D implemented and pending independent review; SEG-EVID-01E–F completed in order.
+**Dependencies:** SEG-EVID-01A–D accepted; SEG-EVID-01E–F completed in order.
 **Purpose:** Prove the governed path from raw conversation through real Segment
 Review, Session-authorized learning memory, and a later real Tutor
 personalization on an isolated acceptance database, then prove the same path
@@ -473,9 +473,9 @@ from a clean fresh start.
 `docs/FULL_SYSTEM_ACCEPTANCE_EXECUTION_SPEC.md`. This objective preserves raw
 source authority, requires real `openai / gpt-5.6-luna` Model Gateway evidence
 for AI-powered acceptance work, and protects the source database from writes.
-**Stages:** SEG-EVID-01D is implemented and pending independent review;
-SEG-EVID-01E and SEG-EVID-01F remain ordered blocked implementation/verification
-stages serving this Full-System Acceptance objective;
+**Stages:** SEG-EVID-01D is independently accepted; SEG-EVID-01E is READY and
+SEG-EVID-01F remains blocked in the ordered implementation/verification stages
+serving this Full-System Acceptance objective;
 they are not independent product goals. Accepted SEG-EVID-01A/B/C records and
 all deferred/frozen work remain unchanged.
 **Completion gate:** Historical isolated-database and separate fresh-start
@@ -593,7 +593,7 @@ REPRESENTATIVE SCENARIOS VERIFIED` are CODEX-REPORTED; `REAL-LINA VERIFIED =
 NO`. No GitHub CI status is available.
 
 ## SEG-EVID-01D — Session Finalization & Intelligence Activation
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** SEG-EVID-01C
 **Purpose:** Implement completeness/version gates, deterministic finalization,
 Event/Evidence materialization, and Current State / Pattern / Decision
@@ -613,9 +613,18 @@ Event/Evidence rows, 11 Patterns, 20 Decision Views, 6
 strategy-effectiveness Patterns, and 5 non-insufficient strategy-effectiveness
 Decision Views. This is Codex-reported acceptance evidence, not independent
 acceptance; no new model call, browser, or Real-Lina verification was performed.
+**Acceptance:** Independently **CODE REVIEW VERIFIED / ACCEPTED**:
+deterministic Session Finalization, one unified Session Authority, Candidate-free
+Event/Evidence downstream authority, exact Segment Review Finding provenance,
+cross-subject withholding, atomic rollback with no partial activation, and
+legacy/new pipeline separation are accepted. Candidate-free grounded
+TeachingMethod strategy outcomes are accepted downstream without weakening
+Review validation or manufacturing Candidate identity. The test, real-model,
+and copied-database results above remain Codex-reported, not independently
+re-executed.
 
 ## SEG-EVID-01E — Reprocessing & Authority Compatibility
-**Status:** BLOCKED
+**Status:** READY
 **Dependencies:** SEG-EVID-01D
 **Purpose:** Implement legacy/new coexistence, Session-scoped external
 reprocessing, Segment-internal semantic rebuild, atomic activation, and legacy

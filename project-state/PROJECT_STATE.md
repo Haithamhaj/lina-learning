@@ -9,8 +9,9 @@ isolated acceptance database, then prove the same path from a clean fresh
 start. CTX-03 remains the approved, technically verified Context v2 direction.
 SEG-EVID-01 is the approved Learning Intelligence semantic architecture.
 CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A/B/C are DONE / ACCEPTED;
-SEG-EVID-01D is implemented and in REVIEW pending independent acceptance,
-while SEG-EVID-01E–F remain BLOCKED by their ordered dependencies.
+SEG-EVID-01D is DONE / CODE REVIEW VERIFIED / ACCEPTED;
+SEG-EVID-01E is READY, while SEG-EVID-01F remains BLOCKED by its ordered
+dependency.
 EDU-ERR-01 remains blocked by SEG-EVID-01F.
 
 ## Current reality
@@ -96,6 +97,14 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
   strategy-effectiveness Decision Views from 8 Candidate-free strategy outcomes.
   This is Codex-reported acceptance evidence, not independent acceptance or
   Real-Lina/browser verification.
+- SEG-EVID-01D is independently **CODE REVIEW VERIFIED / ACCEPTED**:
+  deterministic Session Finalization, one unified Session Authority,
+  Candidate-free Event/Evidence downstream authority, exact Segment Review
+  Finding provenance, cross-subject withholding, atomic rollback/no partial
+  activation, legacy/new pipeline separation, and Candidate-free grounded
+  TeachingMethod strategy outcomes are accepted. Codex-run automated tests and
+  real-model/copied-database acceptance evidence remain Codex-reported and were
+  not independently re-executed.
 - Full-System Acceptance is governed by
   `docs/FULL_SYSTEM_ACCEPTANCE_EXECUTION_SPEC.md`. It requires a copied,
   isolated acceptance database with the source database untouched; actual
@@ -169,12 +178,12 @@ and RAG/curriculum remain separate authorities.
 
 ## Next recommended action
 
-Independently review SEG-EVID-01D — Session Finalization & Intelligence
-Activation, including the Candidate-free TeachingMethod downstream correction.
+SEG-EVID-01E — Reprocessing & Authority Compatibility
 
 CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A–C are DONE / ACCEPTED;
-SEG-EVID-01D is REVIEW pending independent acceptance; SEG-EVID-01E–F remain
-BLOCKED; EDU-ERR-01 remains blocked by SEG-EVID-01F;
+SEG-EVID-01D is DONE / CODE REVIEW VERIFIED / ACCEPTED;
+SEG-EVID-01E is READY; SEG-EVID-01F remains BLOCKED; EDU-ERR-01 remains
+blocked by SEG-EVID-01F;
 SCOPE-01,
 SUBJ-01, REC-25, LR-D04B, archive retrieval, and frozen future capabilities
 remain deferred. Real-Lina validation remains deferred.
