@@ -31,9 +31,12 @@ blocked by SEG-EVID-01F.
 - The strict Tutor schema defect is corrected and independently CODE REVIEW
   VERIFIED at `8efa6d5388c4d2e8599ea2a21cac0766a677e9b1`: nullable Candidate
   `misconception_evidence` is required for strict Structured Outputs.
-  Automated execution is Codex-reported (focused/relevant and canonical Python:
-  529 passed, 5 skipped). Real Luna remains NOT VERIFIED because this isolated
-  worktree has no configured provider credentials. Turn-level misconception
+  Codex-reported focused/relevant and canonical Python execution is 544 passed,
+  5 skipped. Controlled real `gpt-5.6-luna` Tutor/Model-Gateway scenarios
+  accepted strict `tutor_turn_v7` output: confusion, bare wrong answer, and an
+  arithmetic slip did not persist a misconception; explicit fraction reasoning
+  produced source-grounded `misconception-evidence-v1`. This is controlled
+  real-model evidence, not Real-Lina verification. Turn-level misconception
   remains provisional under SEG-EVID. EVID-01 remains an open legacy HTTPError
   defect but is off the new critical path. PERS-01 is absorbed into SEG-EVID-01F.
 
@@ -70,7 +73,6 @@ and RAG/curriculum remain separate authorities.
 - **SEG-EVID-R3 — Cross-Subject Attribution — 5**
 - **SEG-EVID-R4 — Legacy/New Authority Coexistence — 5**
 - **SEG-EVID-R5 — Semantic Review Cost — 3**
-- **CAND-01-REAL-LUNA — Real provider transport verification unavailable — 3**
 - **STATE-01 — Structured Segment State lineage reliability — OPEN / NON-BLOCKING**
 
 ## Next recommended action
@@ -78,8 +80,8 @@ and RAG/curriculum remain separate authorities.
 Independently review SEG-EVID-01A.
 If accepted → unblock SEG-EVID-01B.
 
-CAND-01 remains FIX IMPLEMENTED / VERIFICATION, not closed, pending Real Luna
-transport verification. EDU-ERR-01 remains blocked by SEG-EVID-01F; SCOPE-01,
+CAND-01 remains FIX IMPLEMENTED / VERIFICATION, not closed, pending independent
+review. EDU-ERR-01 remains blocked by SEG-EVID-01F; SCOPE-01,
 SUBJ-01, REC-25, LR-D04B, archive retrieval, and frozen future capabilities
 remain deferred.
 

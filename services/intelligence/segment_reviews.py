@@ -35,6 +35,11 @@ def create_segment_learning_review(
     if segment is None or segment.session_id != learning_session.id:
         raise SegmentLearningReviewLineageError("LearningSegment does not belong to the supplied LearningSession.")
 
+    if segment.closed_at is None or segment.closure_reason is None:
+        raise SegmentLearningReviewLineageError(
+            "LearningSegment must be durably closed before a SegmentLearningReview can be created."
+        )
+
     review = SegmentLearningReview(
         student_id=student_id,
         session_id=session_id,

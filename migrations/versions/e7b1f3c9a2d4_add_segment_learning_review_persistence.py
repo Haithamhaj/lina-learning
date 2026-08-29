@@ -97,7 +97,7 @@ def upgrade() -> None:
         "learning_segments",
         ["segment_id"],
         ["id"],
-        ondelete="SET NULL",
+        ondelete="RESTRICT",
     )
     op.create_foreign_key(
         "fk_learning_events_segment_review",
@@ -105,7 +105,7 @@ def upgrade() -> None:
         "segment_learning_reviews",
         ["segment_review_id"],
         ["id"],
-        ondelete="SET NULL",
+        ondelete="RESTRICT",
     )
     op.execute(
         "UPDATE learning_events SET "

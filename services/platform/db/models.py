@@ -778,10 +778,10 @@ class LearningEvent(Base):
         PostgreSQLUUID(as_uuid=True), ForeignKey("candidate_events.id", ondelete="SET NULL")
     )
     segment_id: Mapped[UUID | None] = mapped_column(
-        PostgreSQLUUID(as_uuid=True), ForeignKey("learning_segments.id", ondelete="SET NULL")
+        PostgreSQLUUID(as_uuid=True), ForeignKey("learning_segments.id", ondelete="RESTRICT")
     )
     segment_review_id: Mapped[UUID | None] = mapped_column(
-        PostgreSQLUUID(as_uuid=True), ForeignKey("segment_learning_reviews.id", ondelete="SET NULL")
+        PostgreSQLUUID(as_uuid=True), ForeignKey("segment_learning_reviews.id", ondelete="RESTRICT")
     )
     candidate_event_ids: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, default=list, server_default="[]"

@@ -81,6 +81,16 @@ def _lineage(session: Session) -> tuple[Student, LearningSession, LearningSegmen
     return student, learning_session, segment
 
 
+def _closed_lineage(session: Session) -> tuple[Student, LearningSession, LearningSegment]:
+    """Create one durably closed Segment suitable for Review persistence."""
+
+    student, learning_session, segment = _lineage(session)
+    segment.closed_at = datetime.now(UTC)
+    segment.closure_reason = "SESSION_CLOSED"
+    session.flush()
+    return student, learning_session, segment
+
+
 def _legacy_lineage(session: Session) -> tuple[Student, LearningSession]:
     """Create only columns available before the SEG-EVID-01A migration."""
 
@@ -205,7 +215,7 @@ def test_segment_learning_review_persists_pending_and_terminal_contracts(
     """Catches a review record missing its versioned semantic/audit identity."""
 
     with factory.begin() as session:
-        student, learning_session, segment = _lineage(session)
+        student, learning_session, segment = _closed_lineage(session)
         pending = _review(student, learning_session, segment)
         session.add(pending)
         session.flush()
@@ -234,7 +244,7 @@ def test_segment_learning_review_rejects_unknown_status(factory: sessionmaker[Se
     """Catches a new review lifecycle state being persisted without approval."""
 
     with factory.begin() as session:
-        student, learning_session, segment = _lineage(session)
+        student, learning_session, segment = _closed_lineage(session)
         with pytest.raises(IntegrityError):
             with session.begin_nested():
                 session.add(_review(student, learning_session, segment, status="ACTIVE"))
@@ -245,7 +255,7 @@ def test_segment_learning_review_identity_is_unique_but_versioned(factory: sessi
     """Catches duplicate exact reviews or blocks a changed semantic contract."""
 
     with factory.begin() as session:
-        student, learning_session, segment = _lineage(session)
+        student, learning_session, segment = _closed_lineage(session)
         session.add(_review(student, learning_session, segment))
         session.flush()
         with pytest.raises(IntegrityError):
@@ -276,7 +286,7 @@ def test_review_persistence_helper_rejects_inconsistent_ownership(
     )
 
     with factory.begin() as session:
-        student, learning_session, segment = _lineage(session)
+        student, learning_session, segment = _closed_lineage(session)
         other_student, other_session, _ = _lineage(session)
         review = create_segment_learning_review(
             session,
@@ -306,6 +316,83 @@ def test_review_persistence_helper_rejects_inconsistent_ownership(
                 provider="fixture",
                 model="fixture-model",
             )
+
+
+def test_review_persistence_helper_rejects_open_segment(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches an open, still-mutable Segment entering the Review boundary."""
+
+    from services.intelligence.segment_reviews import (
+        SegmentLearningReviewLineageError,
+        create_segment_learning_review,
+    )
+
+    with factory.begin() as session:
+        student, learning_session, open_segment = _lineage(session)
+
+        with pytest.raises(SegmentLearningReviewLineageError, match="closed"):
+            create_segment_learning_review(
+                session,
+                student_id=student.id,
+                session_id=learning_session.id,
+                segment_id=open_segment.id,
+                schema_version="segment-review-v1",
+                prompt_version="segment-review-prompt-v1",
+                rubric_version="learning-rubric-v1",
+                review_policy_version="segment-review-policy-v1",
+                provider="fixture",
+                model="fixture-model",
+            )
+
+
+def test_event_linked_review_cannot_be_deleted(factory: sessionmaker[Session]) -> None:
+    """Catches Event provenance being silently unlinked when a Review is deleted."""
+
+    with factory.begin() as session:
+        student, learning_session, segment = _closed_lineage(session)
+        processing_run = _processing_run(session, student)
+        review = _review(student, learning_session, segment)
+        session.add(review)
+        session.flush()
+        event = LearningEvent(
+            processing_run_id=processing_run.id,
+            session_id=learning_session.id,
+            segment_review_id=review.id,
+            subject="MATH",
+            event_type="supported_learning_occurrence",
+            description="An Event keeps Review provenance once materialized.",
+        )
+        session.add(event)
+        session.flush()
+
+        with pytest.raises(IntegrityError):
+            with session.begin_nested():
+                session.delete(review)
+                session.flush()
+
+
+def test_event_linked_segment_cannot_be_deleted(factory: sessionmaker[Session]) -> None:
+    """Catches Event provenance being silently unlinked when a Segment is deleted."""
+
+    with factory.begin() as session:
+        student, learning_session, segment = _closed_lineage(session)
+        processing_run = _processing_run(session, student)
+        event = LearningEvent(
+            processing_run_id=processing_run.id,
+            session_id=learning_session.id,
+            segment_id=segment.id,
+            subject="MATH",
+            event_type="supported_learning_occurrence",
+            description="An Event keeps Segment provenance once materialized.",
+        )
+        session.add(event)
+        session.flush()
+
+        with pytest.raises(IntegrityError):
+            with session.begin_nested():
+                session.delete(segment)
+                session.flush()
 
 
 def test_legacy_learning_event_preserves_singular_anchors_and_empty_plural_defaults(
@@ -372,7 +459,7 @@ def test_segment_derived_event_allows_no_candidate_anchor(factory: sessionmaker[
     """Catches Segment findings remaining incorrectly Candidate-gated."""
 
     with factory.begin() as session:
-        student, learning_session, segment = _lineage(session)
+        student, learning_session, segment = _closed_lineage(session)
         processing_run = _processing_run(session, student)
         review = _review(student, learning_session, segment)
         session.add(review)
@@ -404,7 +491,7 @@ def test_learning_event_preserves_complete_multi_message_provenance(
     """Catches an Event collapsing multi-message support to one primary anchor."""
 
     with factory.begin() as session:
-        student, learning_session, segment = _lineage(session)
+        student, learning_session, segment = _closed_lineage(session)
         processing_run = _processing_run(session, student)
         review = _review(student, learning_session, segment)
         session.add(review)
@@ -432,7 +519,7 @@ def test_learning_event_preserves_multiple_candidate_hints(factory: sessionmaker
     """Catches plural Candidate provenance being reduced to one hint."""
 
     with factory.begin() as session:
-        student, learning_session, segment = _lineage(session)
+        student, learning_session, segment = _closed_lineage(session)
         processing_run = _processing_run(session, student)
         review = _review(student, learning_session, segment)
         session.add(review)
@@ -464,7 +551,7 @@ def test_persisting_review_has_no_intelligence_activation_side_effects(
     """Catches persistence-only A silently activating downstream intelligence."""
 
     with factory.begin() as session:
-        student, learning_session, segment = _lineage(session)
+        student, learning_session, segment = _closed_lineage(session)
         before = (
             session.query(LearningEvent).count(),
             session.query(LearningEvidence).count(),
@@ -537,7 +624,7 @@ def test_segment_review_migration_backfills_legacy_lineage_and_safe_downgrade(
             assert legacy.segment_id is None
             assert legacy.segment_review_id is None
 
-            student, learning_session, segment = _lineage(session)
+            student, learning_session, segment = _closed_lineage(session)
             processing_run = _processing_run(session, student)
             review = _review(student, learning_session, segment)
             session.add(review)

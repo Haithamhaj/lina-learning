@@ -469,9 +469,11 @@ implementation code changed.
 `SegmentLearningReview`, Segment Review contract/version identity,
 LearningEvent Segment lineage, multi-message provenance, and backward-compatible
 legacy handling. No runtime intelligence activation yet.
-**Verification:** Focused persistence/migration contracts, relevant database and
-unchanged-Tutor regression coverage, and canonical Python verification passed
-(540 passed, 5 skipped). No Segment Review execution, job, ModelTask, Session
+**Verification:** Codex-reported focused persistence/migration contracts,
+relevant database and unchanged-Tutor regression coverage, and canonical Python
+verification passed (544 passed, 5 skipped). The correction rejects Review
+creation for open Segments and keeps Event-linked Segment/Review provenance from
+being deleted. No Segment Review execution, job, ModelTask, Session
 Finalization, or Evidence activation was added.
 
 ## SEG-EVID-01B — Segment Completion & Review Jobs
@@ -830,7 +832,7 @@ closed, or used to start REC-25 or LR-D04B.
 | **DATA-01** — Historical Tutor Message Persistence Gap | 5 | CLOSED / CURRENT DEFECT FIX ACCEPTED | Historical gap is high-confidence failed-stream behavior; the exact provider trigger remains unknown. Tutor deltas are provisional until terminal `event: turn`; reader error or non-terminal EOF removes only the current provisional Tutor bubble while retaining the durable Student message. Failed/partial Tutor output is never persisted as authoritative conversation. | Closed. Browser verification was unavailable without Clerk configuration; automated terminal-protocol verification passed. |
 | **CTX-03** — Hybrid Segment Context Runtime | 5 | TECHNICAL CONTEXT RUNTIME VERIFIED / REAL-LINA VALIDATION DEFERRED | Current-Segment-only runtime: session-local Segment lineage and compact Structured Segment State are accepted; CTX-03C supplies complete immediate/recent/raw-semantic Exchange context from the latest Segment only, with temporary PostgreSQL/pgvector indexing and a shared query embedding. CTX-03D adds only a final deterministic capacity guardrail and private operational lineage; it does not re-rank relevance. Excludes prior-Segment reopening, prior-session/archive retrieval, memory service, retro-linking, extra classifier/summarizer calls, and external vector databases. | CTX-03E-A verified the technical runtime with real `gpt-5.6-luna` and `text-embedding-3-small`; Real-Lina validation remains deferred. |
 | **ACT-02** — NAVIGATION vs ANSWER_CHOICE Semantic Misuse | 4 | ACCEPTED / CLOSED | Generic Suggested Action clicks and legacy `ANSWER_CHOICE` clicks are non-evidentiary. Only a validated latest persisted Guided Learning Check answer with exact choice membership can enter bounded Candidate processing; forged, stale, cross-session, and non-member responses are rejected. Runtime owns final authority validation. Configured production build/browser verification was not run because this isolated worktree has no valid Clerk publishable key; it is non-blocking for this backend Evidence-authority closure. | CTX-03E-A technical gate is complete; Real-Lina validation is deferred and does not block Stabilization Track B. |
-| **CAND-01** — Confusion / Ambiguity Is Not Misconception | 4 | FIX IMPLEMENTED / VERIFICATION | The strict Structured Output transport defect is corrected and independently CODE REVIEW VERIFIED at `8efa6d5388c4d2e8599ea2a21cac0766a677e9b1`: nullable `misconception_evidence` is required under Candidate. Automated execution cited here is Codex-reported (focused/relevant and canonical Python: 529 passed, 5 skipped). Turn-level misconception Candidate remains provisional; Segment Review becomes durable semantic authority. Real Luna is NOT VERIFIED because this isolated worktree has no configured provider credentials. | Independent review complete; SEG-EVID-01A is READY. CAND-01 is not CLOSED. |
+| **CAND-01** — Confusion / Ambiguity Is Not Misconception | 4 | FIX IMPLEMENTED / VERIFICATION | The strict Structured Output transport defect is corrected and independently CODE REVIEW VERIFIED at `8efa6d5388c4d2e8599ea2a21cac0766a677e9b1`: nullable `misconception_evidence` is required under Candidate. Codex-reported focused/relevant and canonical Python execution: 544 passed, 5 skipped. Controlled real `gpt-5.6-luna` Tutor/Model-Gateway scenarios accepted strict `tutor_turn_v7` output: confusion, bare wrong answer, and arithmetic slip did not persist a misconception; explicit fraction reasoning produced source-grounded `misconception-evidence-v1`. Turn-level misconception Candidate remains provisional; Segment Review becomes durable semantic authority. | Real Luna transport and representative scenarios are verified; CAND-01 is not CLOSED pending independent review. |
 | **EDU-ERR-01** — Educational Error Classification Foundation | 4 | APPROVED / BLOCKED BY SEG-EVID-01F | Future versioned domain-general plus domain-specific Educational Error Registry: Raw Segment → Segment Review → confirmed educational-error classification → Session-authorized Evidence → existing support/counter Pattern lifecycle → Learner Intelligence. No Error Memory subsystem and no new counters. | After SEG-EVID-01F; then SCOPE-01/SUBJ-01. Do not implement in this commit. |
 | **SCOPE-01** — Science / Explore Inside Math Session | 3 | OPEN / PRODUCT POLICY DECISION REQUIRED | Cross-subject exploration policy is a Product Owner decision, not an engineering decision. | Product Owner decision before SUBJ-01. |
 | **SUBJ-01** — Cross-Subject Candidate Attribution | 4 | OPEN | S3 persisted a moon-phases Candidate with subject MATH / school; Evidence must not silently contaminate the wrong subject/thread. | SCOPE-01 decision first. |
@@ -954,8 +956,8 @@ expansion remain frozen.
   and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
 **Next action:** Independently review SEG-EVID-01A. If accepted → unblock
-SEG-EVID-01B. CAND-01 remains FIX IMPLEMENTED / VERIFICATION pending Real Luna
-transport verification; do not begin EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25,
+SEG-EVID-01B. CAND-01 remains FIX IMPLEMENTED / VERIFICATION pending
+independent review; do not begin EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25,
 LR-D04B, archive retrieval, or frozen future capabilities.
 
 ---
