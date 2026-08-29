@@ -374,6 +374,47 @@ def test_run_once_completes_one_job_with_a_registered_handler(
         assert completed.result == {"doubled": 14}
 
 
+def test_run_once_claims_only_the_explicitly_selected_job(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """An acceptance-scoped worker must not claim an older matching job."""
+
+    with postgres_session_factory.begin() as session:
+        stale_job_id = enqueue_job(
+            session,
+            job_type="fixture",
+            payload={"value": 3},
+            run_after=NOW,
+        ).id
+        selected_job_id = enqueue_job(
+            session,
+            job_type="fixture",
+            payload={"value": 7},
+            run_after=NOW,
+        ).id
+
+    registry = JobHandlerRegistry()
+    registry.register("fixture", lambda job: {"value": job.payload["value"]})
+
+    assert run_once(
+        postgres_session_factory,
+        registry,
+        worker_id="test-worker",
+        now=NOW,
+        job_ids=[selected_job_id],
+    ) == JobStatus.COMPLETED
+
+    with postgres_session_factory() as session:
+        stale = session.get(Job, stale_job_id)
+        selected = session.get(Job, selected_job_id)
+        assert stale is not None
+        assert stale.status == JobStatus.PENDING
+        assert stale.attempt_count == 0
+        assert selected is not None
+        assert selected.status == JobStatus.COMPLETED
+        assert selected.result == {"value": 7}
+
+
 def test_worker_leaves_deferred_session_consolidation_pending_until_its_handler_exists(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:

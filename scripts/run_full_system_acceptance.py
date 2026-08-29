@@ -2071,6 +2071,7 @@ def _run_exact_historical_jobs(
             registry,
             worker_id=worker_id,
             now=datetime.now(UTC),
+            job_ids=expected,
         )
         if status is not JobStatus.COMPLETED:
             raise AcceptanceSafetyError(

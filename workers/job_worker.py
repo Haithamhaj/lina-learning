@@ -6,10 +6,10 @@ import logging
 import os
 import socket
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Collection, Mapping
 from datetime import UTC, datetime
 from typing import TypeAlias
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -69,8 +69,13 @@ def run_once(
     *,
     worker_id: str,
     now: datetime | None = None,
+    job_ids: Collection[UUID] | None = None,
 ) -> JobStatus | None:
-    """Claim and handle at most one job without holding a database lock to run it."""
+    """Claim and handle at most one job without holding a database lock to run it.
+
+    ``job_ids`` lets an isolated acceptance run limit normal worker execution to
+    a prevalidated durable job set. Ordinary polling leaves it unset.
+    """
 
     claim_time = now or datetime.now(UTC)
     job_types = registry.job_types()
@@ -82,6 +87,7 @@ def run_once(
             worker_id=worker_id,
             now=claim_time,
             job_types=job_types,
+            job_ids=job_ids,
         )
         if job is None:
             return None

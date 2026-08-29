@@ -80,6 +80,7 @@ def claim_next_job(
     now: datetime | None = None,
     lease_duration: timedelta = DEFAULT_LEASE_DURATION,
     job_types: Collection[str] | None = None,
+    job_ids: Collection[UUID] | None = None,
 ) -> Job | None:
     """Atomically lease one eligible PostgreSQL job using ``SKIP LOCKED``."""
 
@@ -90,6 +91,9 @@ def claim_next_job(
 
     registered_types = tuple(job_types) if job_types is not None else None
     if registered_types == ():
+        return None
+    selected_job_ids = tuple(job_ids) if job_ids is not None else None
+    if selected_job_ids == ():
         return None
 
     claim_time = now or _utc_now()
@@ -103,6 +107,8 @@ def claim_next_job(
     )
     if registered_types is not None:
         eligible = and_(eligible, Job.job_type.in_(registered_types))
+    if selected_job_ids is not None:
+        eligible = and_(eligible, Job.id.in_(selected_job_ids))
 
     while True:
         job = session.execute(
