@@ -5,17 +5,18 @@
 CTX-03 remains the approved, technically verified Context v2 direction.
 SEG-EVID-01 is the approved Learning Intelligence semantic architecture, but
 is not implemented. Current code still uses legacy Session Evidence.
-CAND-01 strict Structured Output compatibility correction is FIX IMPLEMENTED /
-VERIFICATION and independently CODE REVIEW VERIFIED. SEG-EVID-01A persistence
-contracts are implemented and awaiting independent review; EDU-ERR-01 is
-blocked by SEG-EVID-01F.
+CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A is DONE and independently accepted;
+SEG-EVID-01B is READY. EDU-ERR-01 remains blocked by SEG-EVID-01F.
 
 ## Current reality
 
-- SEG-EVID-01A persists Segment closure facts, versioned Segment Learning
-  Reviews, and backward-compatible Event provenance. It does not execute a
-  Review, enqueue work, alter Tutor behavior, or activate intelligence; Session
-  remains the durable Evidence authority.
+- SEG-EVID-01A is independently CODE REVIEW VERIFIED: Segment Review creation
+  requires a durably closed Segment; Event-linked Segment and Segment Review
+  provenance uses `RESTRICT`; Candidate remains provisional with nullable
+  `SET NULL` lineage; and the migration, legacy backfill, and Candidate-free
+  downgrade-refusal design were reviewed. It includes no Segment Review runtime,
+  job, model call, Session Finalization, or Evidence activation; Session remains
+  the durable Evidence authority.
 - Candidate Events are provisional hints. Staged Segment findings do not update
   current-session personalization; Pattern counters/lifecycle are unchanged.
 - Existing Session Evidence remains the current/legacy implementation until
@@ -28,17 +29,20 @@ blocked by SEG-EVID-01F.
 - One primary Tutor call, safety-first policy enforcement, question-driven RAG,
   and separation of Safety, context, RAG, Student Core Profile, and learner
   intelligence remain protected.
-- The strict Tutor schema defect is corrected and independently CODE REVIEW
-  VERIFIED at `8efa6d5388c4d2e8599ea2a21cac0766a677e9b1`: nullable Candidate
-  `misconception_evidence` is required for strict Structured Outputs.
-  Codex-reported focused/relevant and canonical Python execution is 544 passed,
-  5 skipped. Controlled real `gpt-5.6-luna` Tutor/Model-Gateway scenarios
-  accepted strict `tutor_turn_v7` output: confusion, bare wrong answer, and an
-  arithmetic slip did not persist a misconception; explicit fraction reasoning
-  produced source-grounded `misconception-evidence-v1`. This is controlled
-  real-model evidence, not Real-Lina verification. Turn-level misconception
-  remains provisional under SEG-EVID. EVID-01 remains an open legacy HTTPError
-  defect but is off the new critical path. PERS-01 is absorbed into SEG-EVID-01F.
+- CAND-01 is ACCEPTED / CLOSED after independent engineering review: the strict
+  Structured Output correction and source-grounded misconception protection are
+  accepted. Codex-reported focused/relevant and canonical Python execution is
+  544 passed, 5 skipped. Codex-reported controlled real `gpt-5.6-luna`
+  Tutor/Model-Gateway verification was successful, not independently
+  re-executed: confusion, bare wrong answer, and arithmetic slip did not become
+  misconception signals; explicit wrong reasoning produced grounded
+  `misconception-evidence-v1`. Turn-level Candidate remains provisional and
+  Segment Review is the future durable semantic authority; this does not claim
+  perfect turn-level Luna classification. Real-Lina validation remains deferred
+  and is not part of CAND-01 closure. For future real-model checks, existing
+  local project env configuration may be loaded read-only when the isolated
+  worktree has no env file. EVID-01 remains an open legacy HTTPError defect but
+  is off the new critical path. PERS-01 is absorbed into SEG-EVID-01F.
 
 ## Active decisions
 
@@ -77,13 +81,12 @@ and RAG/curriculum remain separate authorities.
 
 ## Next recommended action
 
-Independently review SEG-EVID-01A.
-If accepted → unblock SEG-EVID-01B.
+Begin SEG-EVID-01B — Segment Completion & Review Jobs.
 
-CAND-01 remains FIX IMPLEMENTED / VERIFICATION, not closed, pending independent
-review. EDU-ERR-01 remains blocked by SEG-EVID-01F; SCOPE-01,
+CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01C–F remain BLOCKED; EDU-ERR-01 remains
+blocked by SEG-EVID-01F; SCOPE-01,
 SUBJ-01, REC-25, LR-D04B, archive retrieval, and frozen future capabilities
-remain deferred.
+remain deferred. Real-Lina validation remains deferred.
 
 ## Critical references
 
