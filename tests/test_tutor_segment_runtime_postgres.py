@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
 from services.platform.db.connection import normalize_database_url
-from services.platform.db.models import LearningMessage, LearningSegment, LearningSession, ModelTask, Student, User
+from services.platform.db.models import Job, LearningMessage, LearningSegment, LearningSession, ModelTask, Student, User
 from services.platform.safety import SafetyAction, SafetyDecision
 from services.retrieval.service import RetrievedBlock
 from services.tutor.context import SessionContextMessage, TutorContext, TutorContextDebug
@@ -36,7 +36,7 @@ def factory() -> sessionmaker[Session]:
     with engine.begin() as connection:
         connection.execute(
             text(
-                "TRUNCATE candidate_events, learning_messages, learning_segments, ai_executions, "
+                "TRUNCATE jobs, candidate_events, learning_messages, learning_segments, ai_executions, "
                 "learning_sessions, students, users CASCADE"
             )
         )
@@ -194,6 +194,15 @@ def _messages(session: Session, learning_session: LearningSession) -> list[Learn
     )
 
 
+def _review_jobs(session: Session, segment: LearningSegment) -> list[Job]:
+    return list(
+        session.query(Job)
+        .filter_by(job_type="SEGMENT_LEARNING_REVIEW")
+        .filter(Job.payload["segment_id"].astext == str(segment.id))
+        .all()
+    )
+
+
 def test_first_successful_exchange_creates_segment_one_and_normalizes_relation(factory: sessionmaker[Session]) -> None:
     """Catches a first turn inventing a prior Segment or leaving its pair unassigned."""
 
@@ -213,6 +222,9 @@ def test_first_successful_exchange_creates_segment_one_and_normalizes_relation(f
         assert student.payload["conversation"]["segment_relation"] is None
         assert student.payload["conversation"]["relation_source"] == "STRUCTURAL_FIRST_SEGMENT"
         assert segment.structured_state["source_message_ids"] == [str(student.id)]
+        assert segment.closed_at is None
+        assert segment.closure_reason is None
+        assert _review_jobs(session, segment) == []
         assert len(provider.calls) == 1
 
 
@@ -241,6 +253,9 @@ def test_continue_updates_one_segment_projection_without_erasing_raw_messages(fa
         assert first_tutor.content == "Try one small step."
         assert messages[2].payload["conversation"]["segment_relation"] == "CONTINUE"
         assert messages[2].payload["conversation"]["relation_source"] == "LUNA"
+        assert segment.closed_at is None
+        assert segment.closure_reason is None
+        assert _review_jobs(session, segment) == []
 
 
 @pytest.mark.parametrize("relation", ["NEW_SEGMENT", "UNCERTAIN"])
@@ -270,6 +285,11 @@ def test_new_or_uncertain_relation_creates_an_independent_next_segment(
         assert messages[2].payload["conversation"]["segment_relation"] == relation
         assert messages[2].payload["conversation"]["relation_source"] == "LUNA"
         assert segments[1].structured_state["active_goal"] == "Different orientation"
+        assert segments[0].closed_at is not None
+        assert segments[0].closure_reason == "NEXT_SEGMENT_CREATED"
+        assert len(_review_jobs(session, segments[0])) == 1
+        assert segments[1].closed_at is None
+        assert _review_jobs(session, segments[1]) == []
 
 
 @pytest.mark.parametrize("relation", [_MISSING, "NOT_A_RELATION", None])
@@ -295,6 +315,11 @@ def test_missing_or_invalid_relation_uses_conservative_new_ephemeral_fallback(
         assert student.segment_id == segments[1].id
         assert student.payload["conversation"]["segment_relation"] == "UNCERTAIN"
         assert student.payload["conversation"]["relation_source"] == "FALLBACK"
+        assert segments[0].closed_at is not None
+        assert segments[0].closure_reason == "NEXT_SEGMENT_CREATED"
+        assert len(_review_jobs(session, segments[0])) == 1
+        assert segments[1].closed_at is None
+        assert _review_jobs(session, segments[1]) == []
 
 
 def test_state_rejects_cross_segment_source_and_new_segment_never_inherits_state(factory: sessionmaker[Session]) -> None:

@@ -3,10 +3,11 @@
 ## Current goal
 
 CTX-03 remains the approved, technically verified Context v2 direction.
-SEG-EVID-01 is the approved Learning Intelligence semantic architecture, but
-is not implemented. Current code still uses legacy Session Evidence.
-CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A is DONE and independently accepted;
-SEG-EVID-01B is READY. EDU-ERR-01 remains blocked by SEG-EVID-01F.
+SEG-EVID-01 is the approved Learning Intelligence semantic architecture; its
+first two slices are complete in code, while current durable intelligence still
+uses legacy Session Evidence. CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A is
+DONE and independently accepted; SEG-EVID-01B is implemented and awaiting
+independent review. EDU-ERR-01 remains blocked by SEG-EVID-01F.
 
 ## Current reality
 
@@ -17,10 +18,20 @@ SEG-EVID-01B is READY. EDU-ERR-01 remains blocked by SEG-EVID-01F.
   downgrade-refusal design were reviewed. It includes no Segment Review runtime,
   job, model call, Session Finalization, or Evidence activation; Session remains
   the durable Evidence authority.
-- Every closed Segment with valid ownership lineage and at least one persisted
-  raw Student interaction is structurally reviewable. SEG-EVID-01B schedules
-  that Review without determining educational meaning; SEG-EVID-01C's AI
-  Reviewer determines 0..N supported findings, including valid empty findings.
+- SEG-EVID-01B completes Segments and creates only structural Review requests:
+  a closed Segment must belong to the supplied Session, its Session to a valid
+  Student, and contain at least one persisted raw Student `LearningMessage`
+  assigned to it. It does not inspect content, Candidate metadata, Guided
+  Learning Checks, TeachingMethod, semantic output, or derived intelligence.
+  `CONTINUE` does not schedule a Review; `NEW_SEGMENT`, `UNCERTAIN`, and the
+  conservative fallback close the prior Segment before creating the next.
+  Session close reconciles only that Session's legacy-open Segments and keeps
+  the existing `SESSION_CONSOLIDATION` job.
+- Each reviewable closure idempotently queues the unhandled
+  `SEGMENT_LEARNING_REVIEW` job with `segment-review-request-v1`; no Segment
+  Review row, ModelTask, model call, handler, Session Finalization, or Evidence
+  activation exists in B. SEG-EVID-01C's future AI Reviewer determines 0..N
+  supported findings, including valid empty findings.
 - Candidate Events are provisional hints. Staged Segment findings do not update
   current-session personalization; Pattern counters/lifecycle are unchanged.
 - Existing Session Evidence remains the current/legacy implementation until
@@ -85,10 +96,10 @@ and RAG/curriculum remain separate authorities.
 
 ## Next recommended action
 
-Begin SEG-EVID-01B — Segment Completion & Review Jobs.
+Independently review SEG-EVID-01B — Segment Completion & Review Jobs.
 
-CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01C–F remain BLOCKED; EDU-ERR-01 remains
-blocked by SEG-EVID-01F; SCOPE-01,
+CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01B remains REVIEW; SEG-EVID-01C–F
+remain BLOCKED; EDU-ERR-01 remains blocked by SEG-EVID-01F; SCOPE-01,
 SUBJ-01, REC-25, LR-D04B, archive retrieval, and frozen future capabilities
 remain deferred. Real-Lina validation remains deferred.
 

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from services.platform.config import Settings, get_settings
 from services.platform.db.models import LearningSession
 from services.tutor.exchanges import clear_session_exchange_embeddings
+from services.tutor.segment_lifecycle import reconcile_segments_for_session_close
 from services.platform.jobs import enqueue_job
 
 SESSION_CONSOLIDATION_JOB = "SESSION_CONSOLIDATION"
@@ -57,6 +58,11 @@ def close_session_if_eligible(
     if learning_session.status != "OPEN" or now < policy.closes_at(learning_session.last_activity_at):
         return False
 
+    reconcile_segments_for_session_close(
+        session,
+        learning_session=learning_session,
+        closed_at=now,
+    )
     learning_session.status = "CLOSED"
     learning_session.closed_at = now
     clear_session_exchange_embeddings(session, learning_session=learning_session)

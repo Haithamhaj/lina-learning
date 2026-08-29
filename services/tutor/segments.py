@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID
 
@@ -11,6 +12,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from services.platform.db.models import LearningMessage, LearningSegment, LearningSession
+from services.tutor.segment_lifecycle import NEXT_SEGMENT_CREATED, complete_segment
 
 
 class SegmentAssignmentError(ValueError):
@@ -94,6 +96,14 @@ def create_next_segment(session: Session, *, learning_session: LearningSession) 
             .with_for_update()
         ).scalar_one()
     latest = latest_segment_for_session(session, session_id=learning_session.id)
+    if latest is not None:
+        complete_segment(
+            session,
+            learning_session=learning_session,
+            segment=latest,
+            closure_reason=NEXT_SEGMENT_CREATED,
+            closed_at=datetime.now(UTC),
+        )
     segment = LearningSegment(
         session_id=learning_session.id,
         sequence=1 if latest is None else latest.sequence + 1,
