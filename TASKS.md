@@ -480,36 +480,40 @@ regression coverage, and canonical Python verification passed (544 passed,
 Finalization, or Evidence activation was included.
 
 ## SEG-EVID-01B — Segment Completion & Review Jobs
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** SEG-EVID-01A
 **Purpose:** Implement durable Segment completion behavior, deterministic
 structural reviewability, `SEGMENT_LEARNING_REVIEW` job scheduling, idempotent
 orchestration, session-close handling, and CTX-03 `NEW_SEGMENT` / `UNCERTAIN`
 consistency. No semantic determination of learning meaning in B.
-**Completion note:** A Segment Review request is structurally eligible only
-when a durably closed Segment belongs to its supplied Session, that Session has
-a valid Student, and it has at least one persisted raw `LearningMessage` with
-`role="student"` assigned to the Segment. No Candidate, content, semantic,
-Guided Learning Check, TeachingMethod, or derived-intelligence condition is
-consulted. `CONTINUE` leaves the Segment open; `NEW_SEGMENT`, `UNCERTAIN`, and
-the conservative fallback close the prior Segment as `NEXT_SEGMENT_CREATED`
-before creating the next one. Session closure reconciles only its own
-pre-existing open Segments, preserves valid closures, and retains
-`SESSION_CONSOLIDATION`. Reviewable closures enqueue exactly one pending
-`SEGMENT_LEARNING_REVIEW` request using
-`segment-review-request-v1`; no Review row, ModelTask, model call, handler,
-Session Finalization, or Evidence activation is included.
-**Verification:** RED contracts failed before the lifecycle implementation;
-Codex-reported focused PostgreSQL coverage passed (45 passed), followed by the
-canonical disposable-PostgreSQL Python suite (552 passed, 5 skipped). Review
-status remains pending independent review.
+**Acceptance:** Independently CODE REVIEW VERIFIED. `CONTINUE` keeps the
+current Segment open with no Review; `NEW_SEGMENT`, `UNCERTAIN`, and the
+accepted fallback close the prior Segment as `NEXT_SEGMENT_CREATED` before the
+next is created. Session close reconciles only its own lineage: superseded open
+Segments close as `NEXT_SEGMENT_CREATED` and the final open Segment as
+`SESSION_CLOSED`. Structural reviewability requires only durable closure, valid
+Session/Segment/Student lineage, and one persisted raw Student
+`LearningMessage` assigned to the Segment—never Candidate, Guided Check,
+TeachingMethod, Tutor-response, Exchange-count, concept, keyword, or other
+semantic prerequisites. Each eligible closure idempotently queues exactly one
+`SEGMENT_LEARNING_REVIEW` request at `segment-review-request-v1`, identified by
+Segment/request-version only (not prompt/model/rubric versions). B creates no
+`SegmentLearningReview` row or Review handler; `SESSION_CONSOLIDATION` remains
+operational; and no Session Finalization, Evidence, Pattern, Card, or
+personalization activation was introduced.
+**Verification:** Independently verified review status is CODE REVIEW only.
+Codex-reported, not independently re-executed: focused PostgreSQL
+B/runtime/lifecycle coverage (45 passed) and canonical Python (552 passed,
+5 skipped). No GitHub CI status is available.
 
 ## SEG-EVID-01C — Segment Semantic Reviewer
-**Status:** BLOCKED
+**Status:** READY
 **Dependencies:** SEG-EVID-01B
-**Purpose:** Implement the `segment_evidence` task with complete raw Segment
-input, optional Candidate hints, TeachingMethod lineage, strict structured
-output, source validation, and staged findings. No Card/Pattern activation.
+**Purpose:** Implement the `segment_evidence` ModelTask with complete raw
+Segment input, optional Candidate hints, Guided Check / TeachingMethod lineage
+where present, strict structured semantic output, source/provenance validation,
+versioned `SegmentLearningReview`, and staged findings only. No Card/Pattern
+activation.
 
 ## SEG-EVID-01D — Session Finalization & Intelligence Activation
 **Status:** BLOCKED
@@ -976,9 +980,9 @@ expansion remain frozen.
 - **Lifecycle:** UI-01 is **CLOSED** following real S3 browser use with no hang
   and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
-**Next action:** Independently review SEG-EVID-01B — Segment Completion &
-Review Jobs. Do not begin SEG-EVID-01C–F, EDU-ERR-01, SCOPE-01, SUBJ-01,
-REC-25, LR-D04B, archive retrieval, or frozen future capabilities.
+**Next action:** Begin SEG-EVID-01C — Segment Semantic Reviewer. Do not begin
+SEG-EVID-01D–F, EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, LR-D04B, archive
+retrieval, or frozen future capabilities.
 
 ---
 
