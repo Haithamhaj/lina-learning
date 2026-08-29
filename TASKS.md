@@ -65,7 +65,9 @@
 ## TASK-006 — DB-backed jobs and worker foundation
 **Status:** DONE
 **Dependencies:** TASK-003  
-**Purpose:** Support document processing, session consolidation, and rebuild work without Redis/Celery.  
+**Purpose:** Support document processing, Segment Review, deterministic Session
+finalization, legacy Session Evidence compatibility, and rebuild work without
+Redis/Celery.
 **Expected output:** `jobs` table, worker loop, retry/failure status, idempotency hook.  
 **Likely areas:** `/workers`, `/services/platform/jobs`.  
 **Verification:** Test job moves pending → running → completed; failure is recorded; duplicate/idempotent execution behavior covered.  
@@ -333,10 +335,16 @@ Before Phase 3 becomes eligible, complete an **Early Lina Calibration Checkpoint
 
 # Phase 3 — Learning Intelligence Core
 
+> **Historical implementation boundary:** TASK-020–TASK-026 describe the
+> completed legacy/current Session Evidence implementation. SEG-EVID-01
+> supersedes Session-wide semantic review as the approved target architecture
+> for future Evidence generations while preserving these historical completion
+> records and existing data.
+
 ## TASK-020 — Automatic session-close lifecycle
 **Status:** DONE
 **Dependencies:** Phase 2 Exit Gate, TASK-006  
-**Recovery state:** A versioned central inactivity-plus-grace policy now keeps
+**Recovery state (historical/current legacy implementation):** A versioned central inactivity-plus-grace policy now keeps
 quick returns in the same OPEN session, closes only after the full window, and
 atomically writes one deferred `SESSION_CONSOLIDATION` job. Lifecycle scans use
 row locks and the durable job idempotency key; no Candidate validation or
@@ -350,7 +358,7 @@ is now under review.
 ## TASK-021 — Session Evidence consolidation
 **Status:** DONE
 **Dependencies:** TASK-020, `docs/LEARNING_INTELLIGENCE_SPEC.md`  
-**Recovery state:** Closed sessions now enqueue one `SESSION_EVIDENCE` Gateway
+**Recovery state (historical/current legacy implementation):** Closed sessions now enqueue one `SESSION_EVIDENCE` Gateway
 call only when source-linked Candidate Events exist. Strict versioned output
 validation creates contextual Learning Events and categorical Evidence with
 raw-message/Candidate/session/run traceability; empty sessions create none.
@@ -445,6 +453,54 @@ approval.
 
 ### Phase 3 Exit Gate
 A meaningful Math session must create auditable Evidence and relevant intelligence that can influence a later Tutor session without loading full history.
+
+## SEG-EVID-00 — Governing Documentation Alignment
+**Status:** DONE
+**Purpose:** Align every governing document with the approved
+Segment-Scoped Semantic Review + Session-Scoped Intelligence Authority.
+**Verification:** The eight governing documents agree; AGENTS and Roadmap
+contradictions are removed; historical Session Evidence is preserved; and no
+implementation code changed.
+
+## SEG-EVID-01A — Governing Contracts & Persistence
+**Status:** BLOCKED
+**Dependencies:** CAND-01 strict schema compatibility correction committed.
+**Purpose:** Implement explicit Segment completion persistence, versioned
+`SegmentLearningReview`, Segment Review contract/version identity,
+LearningEvent Segment lineage, multi-message provenance, and backward-compatible
+legacy handling. No runtime intelligence activation yet.
+
+## SEG-EVID-01B — Segment Completion & Review Jobs
+**Status:** BLOCKED BY SEG-EVID-01A
+**Purpose:** Implement completion semantics, meaningful eligibility,
+`SEGMENT_LEARNING_REVIEW`, and idempotency while preserving CTX-03
+`UNCERTAIN` behavior.
+
+## SEG-EVID-01C — Segment Semantic Reviewer
+**Status:** BLOCKED BY SEG-EVID-01B
+**Purpose:** Implement the `segment_evidence` task with complete raw Segment
+input, optional Candidate hints, TeachingMethod lineage, strict structured
+output, source validation, and staged findings. No Card/Pattern activation.
+
+## SEG-EVID-01D — Session Finalization & Intelligence Activation
+**Status:** BLOCKED BY SEG-EVID-01C
+**Purpose:** Implement completeness/version gates, deterministic finalization,
+Event/Evidence materialization, and Current State / Pattern / Decision
+activation with no semantic Session call by default.
+
+## SEG-EVID-01E — Reprocessing & Authority Compatibility
+**Status:** BLOCKED BY SEG-EVID-01D
+**Purpose:** Implement legacy/new coexistence, Session-scoped external
+reprocessing, Segment-internal semantic rebuild, atomic activation, and legacy
+Session Evidence handling.
+
+## SEG-EVID-01F — Real Model & Multi-Session Verification
+**Status:** BLOCKED BY SEG-EVID-01E
+**Purpose:** Verify confusion, bare wrong answer, explicit misconception,
+correction/counter-evidence, TeachingMethod outcome, transfer, retention with
+bounded historical anchors, multi-Session Pattern support/counter and
+weakening/resolution, Card updates only after Session activation, relevant
+future Tutor use, and current Student behavior above historical intelligence.
 
 ---
 
@@ -658,8 +714,10 @@ failure tolerance, empty-match Tutor behavior, and relevance-first intelligence.
 scenarios together: zero-content Tutor use, empty retrieval, structural-only
 grounding/provenance, optional semantic failure, relevant intelligence,
 stale-school-focus exclusion, recent-topic continuation, and no school-position
-authority. Protected Safety, one-primary-call, and Candidate → Evidence →
-State/Pattern boundaries remain covered by the focused and full suites.
+authority. Protected Safety and one-primary-call boundaries remain covered by
+the focused and full suites; the Candidate → Evidence wording is a completed
+legacy/current implementation record superseded for future generations by
+SEG-EVID-01.
 
 ## REC-35 — Real Lina Calibration Resumes
 **Roadmap:** LR-A10
@@ -683,7 +741,7 @@ remains available; action clicks through the existing Tutor turn path; and the
 rule that self-reported understanding or button selection is not mastery
 Evidence.
 **Protected behavior:** Preserve one primary Tutor model call; Safety before
-Tutor; optional grounding; Candidate → Evidence boundaries; failed-turn
+Tutor; optional grounding; provisional Candidate boundaries; failed-turn
 durability; the 800-token budget; and `response.incomplete` handling.
 **Explicit exclusions:** REC-25 execution; Track B; Science, Voice, Vision;
 Learning Canvas / Artifact Engine; Parent Dashboard expansion; RAG/index
@@ -710,14 +768,15 @@ REC-25 remains blocked; the next approved task is REC-35.2.
 **Purpose:** Implement TeachingMethod identity, an internal versioned registry,
 same-call semantic Mode / Strategy / Method / prior-method-relation decision,
 and source-grounded method observability while preserving one primary Tutor call
-and the existing Candidate → Evidence architecture.
+and the approved provisional Candidate → Segment Review → Session-authorized
+Evidence architecture.
 **Required boundaries:** TeachingStrategy and TeachingMethod remain distinct;
 current behavior outranks history; semantic turn decisions belong to Luna in
 the one primary call while runtime validates canonical values/lineage; a
 selected method is not Evidence; the selected method must persist as
-project-owned Tutor-turn metadata; and Session Evidence consolidation must
-receive bounded method, observable-outcome, concept/context, and audit-source
-lineage. Immediate representation switching is contextual adaptation, not
+project-owned Tutor-turn metadata; and Segment Review must receive bounded
+method, observable-outcome, concept/context, and audit-source lineage before
+Session-authorized Evidence activation. Immediate representation switching is contextual adaptation, not
 historical method ranking.
 **Explicit exclusions:** LR-D04B longitudinal method learning; REC-25; Track B;
 Science; Voice/STT; Vision; Learning Canvas; Interactive Artifact Engine;
@@ -762,8 +821,8 @@ closed, or used to start REC-25 or LR-D04B.
 | **DATA-01** — Historical Tutor Message Persistence Gap | 5 | CLOSED / CURRENT DEFECT FIX ACCEPTED | Historical gap is high-confidence failed-stream behavior; the exact provider trigger remains unknown. Tutor deltas are provisional until terminal `event: turn`; reader error or non-terminal EOF removes only the current provisional Tutor bubble while retaining the durable Student message. Failed/partial Tutor output is never persisted as authoritative conversation. | Closed. Browser verification was unavailable without Clerk configuration; automated terminal-protocol verification passed. |
 | **CTX-03** — Hybrid Segment Context Runtime | 5 | TECHNICAL CONTEXT RUNTIME VERIFIED / REAL-LINA VALIDATION DEFERRED | Current-Segment-only runtime: session-local Segment lineage and compact Structured Segment State are accepted; CTX-03C supplies complete immediate/recent/raw-semantic Exchange context from the latest Segment only, with temporary PostgreSQL/pgvector indexing and a shared query embedding. CTX-03D adds only a final deterministic capacity guardrail and private operational lineage; it does not re-rank relevance. Excludes prior-Segment reopening, prior-session/archive retrieval, memory service, retro-linking, extra classifier/summarizer calls, and external vector databases. | CTX-03E-A verified the technical runtime with real `gpt-5.6-luna` and `text-embedding-3-small`; Real-Lina validation remains deferred. |
 | **ACT-02** — NAVIGATION vs ANSWER_CHOICE Semantic Misuse | 4 | ACCEPTED / CLOSED | Generic Suggested Action clicks and legacy `ANSWER_CHOICE` clicks are non-evidentiary. Only a validated latest persisted Guided Learning Check answer with exact choice membership can enter bounded Candidate processing; forged, stale, cross-session, and non-member responses are rejected. Runtime owns final authority validation. Configured production build/browser verification was not run because this isolated worktree has no valid Clerk publishable key; it is non-blocking for this backend Evidence-authority closure. | CTX-03E-A technical gate is complete; Real-Lina validation is deferred and does not block Stabilization Track B. |
-| **CAND-01** — Confusion / Ambiguity Is Not Misconception | 4 | FIX IMPLEMENTED / VERIFICATION | A `misconception_signal` now requires `misconception-evidence-v1`: Luna's concise proposed incorrect model plus an exact normalized Student reasoning span and current raw Student source ID. Runtime filters malformed, foreign, unsupported, action-click, and Guided Check-only misconception candidates without discarding unrelated valid Candidates; it does not determine pedagogical correctness. | Focused and full disposable PostgreSQL automated verification passed; Real Luna was not configured. Not CLOSED. |
-| **EDU-ERR-01** — Educational Error Classification Foundation | 4 | APPROVED / NOT STARTED | Future versioned domain-general plus domain-specific Educational Error Registry: Candidate proposed classification → Validated Learning Event confirmed classification → existing Evidence → existing support/counter Pattern lifecycle → Learner Intelligence. It will replace free-form misconception Pattern identity with validated canonical identity without creating a second memory/counter system. | After CAND-01; before SCOPE-01. Do not implement in this commit. |
+| **CAND-01** — Confusion / Ambiguity Is Not Misconception | 4 | FIX IMPLEMENTED / VERIFICATION | The current source-grounded provisional misconception protection remains useful; Turn-level misconception Candidate remains provisional and Segment Review becomes durable semantic authority. Current Real-Luna verification is BLOCKED before inference by a verified strict JSON-schema defect. | Next action is only the provider-compatible strict schema transport correction. Not CLOSED. |
+| **EDU-ERR-01** — Educational Error Classification Foundation | 4 | APPROVED / BLOCKED BY SEG-EVID-01F | Future versioned domain-general plus domain-specific Educational Error Registry: Raw Segment → Segment Review → confirmed educational-error classification → Session-authorized Evidence → existing support/counter Pattern lifecycle → Learner Intelligence. No Error Memory subsystem and no new counters. | After SEG-EVID-01F; then SCOPE-01/SUBJ-01. Do not implement in this commit. |
 | **SCOPE-01** — Science / Explore Inside Math Session | 3 | OPEN / PRODUCT POLICY DECISION REQUIRED | Cross-subject exploration policy is a Product Owner decision, not an engineering decision. | Product Owner decision before SUBJ-01. |
 | **SUBJ-01** — Cross-Subject Candidate Attribution | 4 | OPEN | S3 persisted a moon-phases Candidate with subject MATH / school; Evidence must not silently contaminate the wrong subject/thread. | SCOPE-01 decision first. |
 | **DEC-01** — Mode / Strategy / Prior-Relation Calibration | 3 | OPEN / STILL PRESENT | S3 direct continuations remain NOT_RELEVANT or otherwise unstable. Do not replace Luna/Terra understanding with keyword routing. | Start C. |
@@ -771,8 +830,8 @@ closed, or used to start REC-25 or LR-D04B.
 | **REP-01** — Over-Practice / Repetition Control | 3 | OPEN / CONFIRMED | After repeated independent success, Tutor continued near-identical checks instead of progressing, changing task type, testing transfer, or restoring agency. | After Mode/Strategy/Method calibration. |
 | **LANG-01** — Language Continuity | 3 | OPEN / STILL PRESENT | Numeric-only Student answers caused an English long-division thread to drift back to Arabic without an explicit language switch. | After REP-01. |
 | **CAND-02** — Guided vs Independent Candidate Consistency | 3 | OPEN / STILL PRESENT | Equivalent learning behaviors alternate between guided_success and independent_success without a justified support difference. | Final C calibration after Tutor semantic/prompt changes. |
-| **EVID-01** — Session Evidence Consolidation HTTPError | 5 | OPEN / ROOT CAUSE UNKNOWN | Three prior session_evidence HTTPErrors produced no completed LearningEvent, LearningEvidence, or session authority output. | Candidate and Tutor semantic hygiene first. |
-| **PERS-01** — End-to-End Personalization Validation | 5 | BLOCKED VALIDATION | Must prove Interaction → Candidate → Evidence → Current State / Patterns → Learner Intelligence → relevant later Tutor context. | EVID-01 and trustworthy Evidence first. |
+| **EVID-01** — Session Evidence Consolidation HTTPError | 5 | OPEN LEGACY DEFECT / REMOVED FROM NEW CRITICAL PATH | Three historical `session_evidence` HTTPErrors produced no completed LearningEvent, LearningEvidence, or session authority output; root cause remains unknown. | Investigate/fix under SEG-EVID-01E only if the legacy route remains required for compatibility/reprocessing. |
+| **PERS-01** — End-to-End Personalization Validation | 5 | SUPERSEDED / ABSORBED INTO SEG-EVID-01F | SEG-EVID-01F proves Interaction → Segment Review → Session-authorized Evidence → State / Patterns → Card → later Tutor personalization. | Do not retain a duplicate validation gate. |
 | **MATH-01** — Structured Math Readability | 4 | OPEN / CONFIRMED | Plain-text long-division alignment is not reliably readable in proportional chat rendering; a future minimal structured Math representation is needed. | Independent; do not unfreeze the Artifact Engine. |
 | **ID-01** — Concurrent First-Identity Creation Race | 3 | OPEN / INVESTIGATION REQUIRED | One concurrent demo/session creation attempt returned duplicate-user HTTP 500. Lookup-then-create under DB uniqueness makes a race plausible, not proven. | Independent; exact reproduction/root cause before any fix. |
 
@@ -780,11 +839,14 @@ closed, or used to start REC-25 or LR-D04B.
 
 1. **A — Conversation & Safety Integrity:** CTX-02 CLOSED → SAFE-01 CLOSED →
    CTX-03 technical gate complete; Real-Lina final validation deferred.
-2. **B — Interaction / Evidence Hygiene:** ACT-02 CLOSED → CAND-01 verification →
-   EDU-ERR-01 → SCOPE-01 Product Owner decision → SUBJ-01.
+2. **B — Interaction / Evidence Hygiene:** ACT-02 CLOSED → CAND-01 strict
+   schema compatibility correction → SEG-EVID-01A → SEG-EVID-01B →
+   SEG-EVID-01C → SEG-EVID-01D → SEG-EVID-01E → SEG-EVID-01F → EDU-ERR-01
+   → SCOPE-01 Product Owner decision → SUBJ-01.
 3. **C — Tutor Semantic Calibration:** DEC-01 → DEC-02 → REP-01 → LANG-01
    → CAND-02 final.
-4. **D — Evidence / Personalization:** EVID-01 → PERS-01.
+4. **D — Evidence / Personalization:** legacy EVID-01 compatibility is
+   considered under SEG-EVID-01E; PERS-01 is absorbed into SEG-EVID-01F.
 5. **E — Independent Product / Platform:** MATH-01 and ID-01 are independent
    from the Evidence critical path and must not reorder A → B → C → D.
 
@@ -810,8 +872,8 @@ eligible-session Evidence path.
 
 Protect one primary Tutor call; current Student behavior above history;
 multilingual capability; dynamic suggested actions; bounded ANSWER_CHOICE
-semantics with no mastery from a click alone; Candidate → Evidence authority
-separation; server-grounded TeachingMethod lineage; actual method switching
+semantics with no mastery from a click alone; provisional-Candidate / durable
+Evidence authority separation; server-grounded TeachingMethod lineage; actual method switching
 after difficulty; WORKED_EXAMPLE → CONCRETE_EXAMPLE → VISUAL_REPRESENTATION
 adaptation; zero-book Tutor availability; Safety before Tutor; and optional
 grounding.
@@ -882,7 +944,11 @@ expansion remain frozen.
 - **Lifecycle:** UI-01 is **CLOSED** following real S3 browser use with no hang
   and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
-**Next action:** CAND-01 — Confusion / Ambiguity Is Not Misconception. Real-Lina validation remains deferred and is required before any final CORE LEARNING RUNTIME STABILIZED declaration; do not begin REC-25 or LR-D04B.
+**Next action:** Complete SEG-EVID-00 governing documentation alignment, then
+independently review and perform only the CAND-01 strict Structured Output
+compatibility correction before SEG-EVID-01A. Real-Lina validation remains
+deferred and is required before any final CORE LEARNING RUNTIME STABILIZED
+declaration; do not begin EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, or LR-D04B.
 
 ---
 

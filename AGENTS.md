@@ -39,7 +39,14 @@ The Roadmap records approved product-evolution decisions, sequencing, dependenci
 
 The following require Product Owner approval before changing their meaning:
 
-- Event → Evidence → State/Pattern → Intelligence Card architecture.
+- Raw interaction → completed Segment semantic review → Session-authorized
+  Evidence → Current State / Patterns → Learner Intelligence Card →
+  personalization architecture. Segment semantic review is protected;
+  Session remains the durable intelligence-authority boundary. Staged Segment
+  findings are not Learner Intelligence, Candidate Events are provisional
+  hints rather than mandatory Evidence authority, and no second learner-memory
+  system is authorized. Current behavior and the existing Pattern
+  counters/lifecycle remain protected.
 - Learning Intelligence Rubric semantics and Pattern Rules.
 - Mastery/confidence as derived decision views, not source truth.
 - Current behavior outranking historical personalization.
@@ -74,7 +81,12 @@ The following require Product Owner approval before changing their meaning:
 - Services request AI by task through the Model Gateway; do not call provider SDKs from arbitrary routes/services.
 - Normal Tutor turns target one primary Tutor call.
 - Tutor may emit hidden Candidate Event metadata; it does not directly write stable learner conclusions.
-- Session Evidence consolidation happens at session level, not as an extra evaluator call after every message.
+- No extra normal-turn Evidence evaluator is authorized. Completed meaningful
+  Segments may be reviewed asynchronously as background work, outside Tutor
+  latency; staged findings do not directly update personalization. Closed
+  Session Finalization remains the durable activation boundary, is
+  deterministic by default, and requires no broad semantic Session model call
+  after Segment Reviews.
 - AI handles semantic/cognitive work, including the normal Tutor call's turn-level Mode, Strategy, Method, and prior-method-relation decision; deterministic code handles allowed-value validation, safety, counts, recency, lifecycle, weights, persistence, effective policy routing, and state transitions where practical. No extra classifier/model call is authorized for those Tutor decisions.
 - Safety/boundary enforcement must consume the explicit policy-engine decision contract; Tutor prompt text alone is not enforcement.
 - For teaching-strategy patterns, only observable Lina outcomes may confirm/challenge effectiveness; choosing the strategy because history recommended it is not Evidence.

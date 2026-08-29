@@ -53,11 +53,11 @@ Tutor answers safely from model knowledge
         ↓
 If structural/indexed sources exist, retrieval grounds the answer
         ↓
-Interaction produces Candidate Events, Evidence, and Intelligence
+Interaction produces optional Candidate hints
         ↓
-Meaningful learning events are captured
+Completed Segments receive semantic review
         ↓
-Session evidence is produced
+Deterministic Session Evidence generation is authorized
         ↓
 Current state / patterns / intelligence are updated
         ↓
@@ -120,7 +120,7 @@ Controls:
 - scope,
 - lifecycle,
 - deterministic weighting,
-- session consolidation,
+- Segment semantic review, staged findings, and Session Finalization,
 - Intelligence Card,
 - decision views,
 - reprocessing,
@@ -367,12 +367,14 @@ Owns:
 - one primary tutor-model call,
 - tutor response streaming,
 - hidden Candidate Event metadata,
+- enqueue seam for completed Segment review,
 - open learning loops.
 
 Must not:
 
 - directly create stable learner patterns,
 - directly overwrite learner intelligence,
+- own semantic Evidence activation,
 - directly manage provider-specific AI SDK calls,
 - own document parsing,
 - own deterministic pattern weighting.
@@ -381,7 +383,9 @@ Must not:
 
 Owns:
 
-- Candidate Event consolidation,
+- Segment semantic review,
+- staged Segment findings,
+- deterministic Session Finalization,
 - validated learning events,
 - evidence,
 - current learning state,
@@ -460,7 +464,8 @@ Example:
 
 ```text
 execute(task="tutor", ...)
-execute(task="session_evidence", ...)
+execute(task="segment_evidence", ...)
+execute(task="session_evidence", ...)  # LEGACY / HISTORICAL until SEG-EVID-01E
 execute(task="vision_student_work", ...)
 ```
 
@@ -654,6 +659,11 @@ lifecycle; Tutor consumes only compact Student Core Context.
 - optional Grade-scoped Durable Conversation Topics
 
 ## 11.4 Learning Intelligence
+
+Approved target concepts (not yet implemented) include Segment Learning Reviews,
+Segment Review processing/version lineage, multi-message Event provenance, and
+Event Segment lineage. Current data/code remains the legacy Session Evidence
+implementation until SEG-EVID-01 delivery.
 
 - candidate-event source metadata if persisted
 - learning events
@@ -893,7 +903,7 @@ Do not implement a self-rewriting persona system.
 
 TeachingMode governs the kind of learning interaction. TeachingStrategy governs support/intervention flow. TeachingMethod is a separate pedagogical representation. `prior_method_relation` is turn-level semantic routing/audit metadata for the relation to the immediately previous persisted Tutor method. The small internal, project-owned, versioned Teaching Method Registry owns canonical IDs, compact definitions, active/frozen status, and validation; it is not an MCP, agent, service, database table, giant mutable prompt, or natural-language keyword rules engine. With seven active methods, the primary call may receive all compact active definitions.
 
-REC-35.2 owns the exact implementation. It should use existing structured/JSONB boundaries where practical, persist the selected TeachingMethod identity with the Tutor turn, and preserve enough bounded source lineage for later Session Evidence consolidation to connect method used → observable Student outcome → relevant concept/context. Evidence must never invent the method identity. No new database migration is authorized unless a blocker is separately discovered and approved.
+REC-35.2 owns the exact implementation. It should use existing structured/JSONB boundaries where practical, persist the selected TeachingMethod identity with the Tutor turn, and preserve enough bounded source lineage for Segment Review to connect method used → observable Student outcome → relevant concept/context before Session-authorized Evidence activation. Evidence must never invent the method identity. No new database migration is authorized unless a blocker is separately discovered and approved.
 
 ## 14.3 Teaching Priority
 
@@ -938,7 +948,8 @@ Persisted method lineage
     ↓
 Later observable Student outcome
     ↓
-Existing Candidate / Evidence pipeline
+Optional provisional Candidate hints → completed Segment Review →
+Session-authorized Evidence pipeline
 ```
 
 Turn-level decisions are not learner memory, and selection or use alone is not method-effectiveness Evidence. Historical method ranking is explicitly deferred to LR-D04B, after sufficient real Evidence and validation.
@@ -991,10 +1002,11 @@ reopened or injected into normal context merely because it shares a topic.
 
 Durable Conversation Topic is navigation metadata, not Learner Intelligence,
 Evidence, curriculum semantics, a Safety category, or a learner-memory system.
-It does not directly update personalization; that remains governed by the
-Raw Interaction → Candidate → Event → Evidence → State/Pattern → Intelligence
-Card path. Raw messages/assets remain source authority and all derived metadata
-must remain rebuildable.
+It does not directly update personalization; that remains governed by the Raw
+Interaction → completed Segment semantic review → Session-authorized Evidence
+→ State/Pattern → Intelligence Card path. Candidate hints may assist but are
+not mandatory. Raw messages/assets remain source authority and all derived
+metadata must remain rebuildable.
 
 CTX-03A authorizes only durable session-local Segment identity and
 LearningMessage-to-Segment lineage. CTX-03B owns same-primary-Luna Segment
@@ -1194,24 +1206,28 @@ experience. An optional Durable Conversation Topic may link Segments within a
 Grade, but never authorizes Evidence attribution, personalization, Safety, or
 curriculum interpretation.
 
-## 17.3 End-of-Session Consolidation
+## 17.3 Segment Review and Session Finalization
 
 ```text
-Candidate Events
-      +
-Relevant interaction excerpts
-      +
-Thread context
+Student Turn
+→ one primary Tutor call
+→ optional provisional Candidate
+
+governed transition persists next Segment
+→ prior Segment complete
+→ eligibility gate
+→ SEGMENT_LEARNING_REVIEW job
+
+Session closes
+→ final Segment complete
+→ review final eligible Segment if required
+
+all required Segment reviews complete
+→ SESSION_INTELLIGENCE_FINALIZE
       ↓
-Session Evidence Consolidation
-      ↓
-Validated Learning Events
-      ↓
-Evidence
-      ↓
-Deterministic Current-State / Pattern Engine
-      ↓
-Intelligence Card refresh
+deterministic finalization
+→ one coherent Evidence generation
+→ Current State / Patterns / Decisions / Card
 ```
 
 ## 17.4 Normal AI Cost Pattern
@@ -1219,9 +1235,13 @@ Intelligence Card refresh
 Target runtime pattern:
 
 ```text
-1 primary Tutor call per meaningful turn
+1 primary Tutor call per Student Turn
 +
-1 consolidation call per meaningful session
+0..N background Segment Review calls
++
+0 semantic Session calls by default
++
+1 deterministic Session Finalization
 ```
 
 Do not run an evidence LLM call after every message.
@@ -1238,8 +1258,9 @@ The following rules are architectural, not optional optimizations.
 
 ```text
 Raw Interaction
-→ Candidate Event
-→ Learning Event
+→ optional Candidate hint
+→ completed Segment Review
+→ Session-authorized Learning Event
 → Evidence
 → Current State / Pattern
 → Intelligence Card
@@ -1397,7 +1418,8 @@ The policy engine is an explicit runtime contract. Its category-detection implem
 Initial task categories should include:
 
 - tutor
-- session_evidence
+- segment_evidence (approved future target)
+- session_evidence (LEGACY / HISTORICAL compatibility route until SEG-EVID-01E)
 - curriculum_semantics
 - vision_student_work
 - speech_to_text
@@ -1437,9 +1459,17 @@ Upgrade only tasks that demonstrate a real quality need.
 - STT
 - embeddings where applicable
 
-### Session/batch
+### Background semantic
 
-- session evidence consolidation
+- Segment Learning Review
+
+### Deterministic
+
+- Session Finalization
+
+### Legacy
+
+- Session Evidence consolidation only where required for historical compatibility/reprocessing
 - current-focus extraction
 - school-plan extraction
 
@@ -1561,7 +1591,7 @@ Use for structured AI outputs such as:
 
 - Tutor hidden metadata,
 - Candidate Events,
-- evidence consolidation,
+- Segment Review structured output and deterministic Session Finalization,
 - curriculum semantic extraction,
 - Vision interpretation.
 
@@ -1594,7 +1624,7 @@ Benchmark Tutor candidates on real or representative Grade 5 cases for:
 - switching representation,
 - teaching when Lina is stuck,
 - avoiding excessive repetition,
-- generating useful Candidate Events.
+- generating useful optional Candidate hints.
 
 ## 24.6 Real Lina Review
 
@@ -1778,6 +1808,10 @@ with optional grounding when useful sources are available.
 
 ## Phase 3 — Learning Intelligence Core
 
+**Historical implementation note:** Phase 3 records completed current/legacy
+Session Evidence work factually. SEG-EVID is a post-Phase-3 correction of the
+semantic review boundary, not a rewrite that erases completed history.
+
 ### Goal
 
 Prove the durable product loop: real interactions create auditable intelligence that affects later teaching.
@@ -1787,7 +1821,7 @@ Prove the durable product loop: real interactions create auditable intelligence 
 - session inactivity/close logic,
 - multi-thread session support,
 - Candidate Event persistence/buffering as needed,
-- session evidence consolidation,
+- legacy/current Session Evidence consolidation (historical Phase 3 implementation),
 - validated Learning Events,
 - Evidence Rubric implementation,
 - Current Learning State,
@@ -1916,7 +1950,7 @@ This is a mandatory product decision gate.
 ### Cost/Latency
 
 - Is normal Tutor interaction fast enough?
-- Is session consolidation acceptable?
+- Are Segment Review cost and deterministic Session Finalization acceptable?
 - Which task routes consume most cost?
 
 ## 26.3 Gate Outcomes
@@ -2122,7 +2156,9 @@ Normal learning:
 ```text
 One Tutor call per turn
 +
-One consolidation call per meaningful session
+0..N background Segment Review calls per Session
++
+one deterministic Session Finalization
 ```
 
 ## 33.2 Content
@@ -2242,8 +2278,8 @@ The first product loop is complete only when all of the following are true.
 
 ## Intelligence
 
-- meaningful Candidate Events are produced.
-- session consolidation creates traceable Events/Evidence.
+- optional Candidate hints are source-linked when produced, but are not required for every later Event.
+- Segment Review and Session Finalization create traceable Events/Evidence.
 - Current State can update.
 - Patterns can evolve under deterministic rules.
 - Intelligence Card remains compact.

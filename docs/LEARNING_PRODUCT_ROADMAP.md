@@ -48,7 +48,7 @@ A roadmap item becomes executable only when:
 
 ### Approved supersession rule
 
-The decisions in Sections 3, 4, 12, and 13 are newly approved product decisions. Where an older statement in `PROJECT_REFERENCE.md`, `IMPLEMENTATION_PLAN.md`, `TASKS.md`, `LEARNING_INTELLIGENCE_SPEC.md`, or `SYSTEM_MAP.html` directly contradicts one of these explicitly approved decisions, the older statement is **superseded pending LR-A01 governing-document reconciliation**.
+The decisions in Sections 3, 4, 12, and 13 are newly approved product decisions. Where an older statement in `PROJECT_REFERENCE.md`, `IMPLEMENTATION_PLAN.md`, `TASKS.md`, `LEARNING_INTELLIGENCE_SPEC.md`, or `SYSTEM_MAP.html` directly contradicts one of these explicitly approved decisions, the older statement is **superseded pending the applicable governing-document reconciliation, including SEG-EVID-00 where Learning Intelligence authority is affected**.
 
 This rule exists only to prevent Codex or another AI agent from implementing known-obsolete assumptions before the governing documents are reconciled. It is not permission to invent additional product changes.
 
@@ -138,14 +138,19 @@ The retained core learning path is:
 
 ```text
 Raw Interaction
-→ Candidate Event
-→ Validated Learning Event / Evidence
+→ optional Provisional Candidate hints
+→ Completed Segment
+→ Segment Learning Review
+→ Session-authorized Validated Learning Event / Evidence
 → Current State / Patterns
 → Learner Intelligence Card
 → Relevant later personalization
 ```
 
-The system should preserve the distinction between raw interaction, candidate interpretation, validated evidence, current state, historical patterns, and runtime personalization.
+Candidate ≠ Evidence; Current State ≠ Pattern; and Card ≠ source truth. The
+system preserves the distinction between raw interaction, provisional candidate
+interpretation, Segment semantic review, Session-authorized Evidence, current
+state, historical patterns, and runtime personalization.
 
 The Learner Intelligence Card remains a compact runtime projection rather than a new source of truth.
 
@@ -195,8 +200,9 @@ Student question
 → Relevant Learner Intelligence
 → One primary Tutor model call
 → Tutor response
-→ Candidate Event
-→ Evidence / State / Patterns
+→ optional provisional Candidate hints
+→ completed meaningful Segment review in background
+→ Session-authorized Evidence / State / Patterns
 → Later personalization
 ```
 
@@ -249,7 +255,7 @@ Keep unless implementation evidence proves otherwise:
 - deterministic RRF/hybrid fusion,
 - context budgets,
 - exact source lineage,
-- Candidate Event contract,
+- Candidate Event contract as provisional observation infrastructure, not mandatory durable Evidence authority,
 - Evidence pipeline,
 - Current State,
 - Patterns,
@@ -502,7 +508,8 @@ Possible judgment:
 
 | Roadmap ID | Capability / task | Dependency | Expected output |
 |---|---|---|---|
-| **LR-D01** | Real Evidence calibration | LR-A10 | Validate Candidate → Evidence behavior on real interactions |
+| **LR-D00** | Segment Evidence Authority Foundation | approved SEG-EVID-01 architecture; governing-document reconciliation; CAND-01 strict-schema transport correction | completed-Segment semantic review, staged Segment findings, Session-scoped deterministic Evidence activation, legacy Session Evidence compatibility, and no change to existing Pattern counters/lifecycle; gate: SEG-EVID-01F real-model and multi-Session validation passes |
+| **LR-D01** | Real Evidence calibration | LR-D00 | Validate completed Segment Review → Session-authorized Evidence on real interactions, including Candidate-confirmed, Candidate-rejected, and raw-Segment-supported events |
 | **LR-D02** | Concept quality calibration | LR-D01 | Confirm interaction-derived concept labels are useful and stable enough for evidence grouping |
 | **LR-D03** | Card relevance calibration | LR-D01 | Confirm relevant personalization helps and irrelevant history stays out |
 | **LR-D04A** | Teaching Method Foundation & Observability | REC-35.1 completed / Product Owner browser acceptance | Separate TeachingStrategy from TeachingMethod; establish a versioned internal method registry; have the same primary Tutor call semantically decide Mode, Strategy, Method, and prior-method relation from the current turn/context; validate and persist the selected-method lineage; and preserve source-grounded method → Student-outcome observability. The seven active compact methods may all be supplied to the call; no keyword selector, extra classifier call, historical method ranking, or new learner-profile subsystem. |
@@ -725,13 +732,14 @@ On the next authorized map update, visually distinguish:
 | Track A — Core Simplification | **COMPLETE / ACCEPTED** | LR-A01–LR-A10 are complete; its protected architecture remains governing |
 | Track B — Trusted Grade 5 Math References | **APPROVED FUTURE PILOT** | Do not build until Track A gate / promotion |
 | Track C — Student-Captured Pages | **APPROVED FUTURE BEHAVIOR / FROZEN** | Wait for Vision gate |
-| Track D — Personalization Calibration | **ACTIVE / EVIDENCE-GOVERNED** | REC-35.2 implements LR-D04A; LR-D04B remains dependent on sufficient real Evidence |
+| Track D — Personalization Calibration | **ACTIVE / EVIDENCE-GOVERNED** | SEG-EVID foundation is the prerequisite for further Evidence-based personalization calibration; REC-35.2 / LR-D04A remains existing work/history and LR-D04B requires trustworthy Evidence under the new authority path |
 | Track E — Broader Expansion | **FROZEN** | Later gates only |
 
 ---
 
 # 17. Next Recommended Action
 
-REC-35.2 remains in **REVIEW** pending its approved semantic-authority code correction: the same primary Tutor call must semantically decide Mode, Strategy, Method, and prior-method relation, followed by deterministic validation. Browser acceptance remains pending until that correction is implemented.
-
-Do not begin LR-D04B historical method learning, REC-25, Track B, or any frozen Artifact/Vision capability in the same change.
+Execution order is: SEG-EVID-00 documentation alignment → CAND-01 strict schema
+compatibility correction → SEG-EVID-01A–F → EDU-ERR-01 → SCOPE-01 → SUBJ-01.
+Preserve the Real-Lina final validation requirement. Do not unfreeze Track B/C/E,
+LR-D04B, REC-25, or any frozen Artifact/Vision capability.

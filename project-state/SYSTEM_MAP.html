@@ -33,9 +33,9 @@
 <header>
   <div>
     <h1>Lina Personal Learning System</h1>
-    <p>Operating map after Hybrid Segment Context governance approval. REC-35.2 remains in REVIEW behind Stabilization TODO v2.1; CTX-02 and SAFE-01 are closed, and CTX-03 is next approved runtime work.</p>
+    <p>Operating map: Context v2 is technically verified; SEG-EVID is approved governing architecture, not implemented. Safety, conversation context, learning semantic review, durable intelligence, and RAG remain separate authorities.</p>
   </div>
-  <div class="badge">STABILIZATION ACTIVE · CONTEXT v2 GOVERNED</div>
+  <div class="badge">STABILIZATION ACTIVE · CONTEXT v2 VERIFIED · SEG-EVID ARCHITECTURE APPROVED</div>
 </header>
 
 <div class="toolbar" aria-label="Map layer filter">
@@ -73,7 +73,7 @@
 </section>
 
 <section class="panel context section" data-layer="context runtime">
-  <span class="status">CTX-03 IN PROGRESS · CTX-03A ACCEPTED · CTX-03B RELATION/STATE IMPLEMENTED / REVIEW</span>
+  <span class="status">CTX-03 TECHNICAL CONTEXT RUNTIME VERIFIED · REAL-LINA VALIDATION DEFERRED</span>
   <h2>Conversation Context v2</h2>
   <div class="context-grid">
     <div class="node"><strong>Session</strong><small>Temporary conversational container. New Sessions begin conversationally fresh; prior raw transcripts are not injected by default.</small></div>
@@ -90,7 +90,7 @@
   <div class="assembly">
     <div class="node"><strong>1 · Current Turn</strong><small>Current Lina input is authoritative.</small></div>
     <div class="node"><strong>2 · Full Immediate Exchange</strong><small>Complete previous Student + Tutor raw messages when available; no positional slicing.</small></div>
-    <div class="node"><strong>3 · Structured Segment State</strong><small>Compact, source-linked conversational metadata only; CTX-03 runtime is not yet implemented.</small></div>
+    <div class="node"><strong>3 · Structured Segment State</strong><small>Compact, source-linked conversational metadata only; Context v2 is separate from Evidence and learner intelligence.</small></div>
     <div class="node"><strong>4 · Recent + Older Raw Exchanges</strong><small>Recent complete Exchanges enter directly; 0..N older complete Exchanges are selected only from the active Segment.</small></div>
     <div class="node"><strong>5 · Intelligence / RAG</strong><small>Relevant Learner Intelligence/Open Loops and question-driven grounding enter separately.</small></div>
     <div class="node"><strong>6 · Safety Decision</strong><small>Effective policy directive remains independent and upstream authority.</small></div>
@@ -107,10 +107,27 @@
   <rect class="box context" x="398" y="82" width="210" height="82" rx="14"/><text x="503" y="108" text-anchor="middle">Hybrid Segment Context</text><text class="sub" x="503" y="130" text-anchor="middle">turn + full exchange + selected raw Exchanges</text><text class="sub" x="503" y="146" text-anchor="middle">final guardrail; separate inputs</text>
   <rect class="box core" x="628" y="82" width="190" height="82" rx="14"/><text x="723" y="108" text-anchor="middle">ONE Luna Tutor Call</text><text class="sub" x="723" y="130" text-anchor="middle">response + teaching decisions</text><text class="sub" x="723" y="146" text-anchor="middle">no chain / extra classifier by default</text>
   <rect class="box core" x="838" y="82" width="220" height="82" rx="14"/><text x="948" y="108" text-anchor="middle">Validation / Persistence</text><text class="sub" x="948" y="130" text-anchor="middle">canonical values · lineage · policy</text><text class="sub" x="948" y="146" text-anchor="middle">conversation metadata ≠ learner truth</text>
-  <rect class="box data" x="1078" y="82" width="264" height="82" rx="14"/><text x="1210" y="108" text-anchor="middle">Outcome → Candidate → Evidence</text><text class="sub" x="1210" y="130" text-anchor="middle">observable Lina outcome only</text><text class="sub" x="1210" y="146" text-anchor="middle">raw source-grounded lineage</text>
+  <rect class="box data" x="1078" y="82" width="264" height="82" rx="14"/><text x="1210" y="108" text-anchor="middle">Response + provisional Candidate hints</text><text class="sub" x="1210" y="130" text-anchor="middle">not Evidence or learner intelligence</text><text class="sub" x="1210" y="146" text-anchor="middle">raw source-grounded lineage</text>
   <path class="arrow" d="M178 123H198"/><path class="arrow" d="M378 123H398"/><path class="arrow" d="M608 123H628"/><path class="arrow" d="M818 123H838"/><path class="arrow" d="M1058 123H1078"/>
-  <path class="arrow" d="M1210 164 C1210 244, 503 244, 503 164"/><text class="sub" x="856" y="248" text-anchor="middle">Evidence-grounded Intelligence may advise later Tutor turns; current behavior still outranks historical personalization.</text><text class="sub" x="856" y="266" text-anchor="middle">Conversation Topic, TeachingMethod, Safety category, and Curriculum Concept remain distinct.</text>
+  <path class="arrow" d="M1210 164 C1210 244, 503 244, 503 164"/><text class="sub" x="856" y="248" text-anchor="middle">Only Session-authorized Evidence may advise later Tutor turns; current behavior still outranks historical personalization.</text><text class="sub" x="856" y="266" text-anchor="middle">Conversation Topic, TeachingMethod, Safety category, and Curriculum Concept remain distinct.</text>
 </svg>
+</section>
+
+<section class="lanes">
+  <article class="panel context lane" data-layer="context intelligence"><h2>🔎 Background Learning Semantic Review</h2>
+    <div class="step"><div><b>Completed Meaningful Segment</b><span>New persisted Segment completes the prior one; Session close completes the final Segment. `UNCERTAIN` keeps its accepted independent Ephemeral-Segment behavior.</span></div></div>
+    <div class="step"><div><b>Background Segment Learning Review · APPROVED / NOT IMPLEMENTED</b><span>Uses complete relevant raw Segment history with optional Candidate hints; it is outside Tutor latency.</span></div></div>
+    <div class="step"><div><b>Staged Findings</b><span>Zero findings is valid. Staged findings are NOT YET LONG-TERM INTELLIGENCE and cannot personalize the current Session.</span></div></div>
+  </article>
+  <article class="panel data lane" data-layer="intelligence"><h2>🏛️ Durable Learning Intelligence Authority</h2>
+    <div class="step"><div><b>Closed Session → deterministic Session Finalization</b><span>Requires all eligible Segment Reviews, compatible versions, and validated provenance. No broad semantic Session call by default.</span></div></div>
+    <div class="step"><div><b>Validated Events / Evidence</b><span>Only this activation path updates Current State, Patterns, Decision Views, and the Card. No partial activation.</span></div></div>
+    <div class="step"><div><b>Future Tutor personalization</b><span>Current behavior still outranks history; existing counters/lifecycle remain unchanged.</span></div></div>
+  </article>
+  <article class="panel warn lane" data-layer="intelligence"><h2>🧪 EDU-ERR Future Seam</h2>
+    <div class="step"><div><b>Segment Review → canonical educational-error classification</b><span>Then Session-authorized Evidence and the existing Pattern lifecycle. APPROVED FUTURE / NOT STARTED after SEG-EVID-01F.</span></div></div>
+    <div class="step"><div><b>No Error Memory subsystem</b><span>No new counters and no direct Candidate, Safety, RAG, or TeachingMethod-to-Evidence shortcut.</span></div></div>
+  </article>
 </section>
 
 <section class="lanes">
@@ -122,7 +139,7 @@
   </article>
   <article class="panel core lane" data-layer="intelligence"><h2>🧩 Learning Intelligence</h2>
     <div class="step"><div><b>Raw Interaction</b><span>Authoritative source history and original student work.</span></div></div>
-    <div class="step"><div><b>Candidate → Validated Event → Evidence</b><span>Conversation classification alone creates no learner conclusion.</span></div></div>
+    <div class="step"><div><b>Raw → Segment Review → Session-authorized Evidence</b><span>Candidate is a provisional hint; Segment State, Safety metadata, RAG concepts, and TeachingMethod selection are not Evidence.</span></div></div>
     <div class="step"><div><b>Current State ≠ Pattern</b><span>Current state may change quickly; patterns require repeated evidence.</span></div></div>
     <div class="step"><div><b>Compact Intelligence Card</b><span>Normal cross-session personalization path; not a transcript summary.</span></div></div>
   </article>

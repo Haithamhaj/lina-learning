@@ -768,7 +768,7 @@ Historical patterns are priors, not commands. Relevant personalization informs L
 
 Luna makes the joint semantic Mode + Strategy + Method + prior-method-relation decision inside the same primary Tutor call. Runtime code supplies the current message, relevant context/personalization, prior persisted method, and compact taxonomies; it validates values, null combinations, safety, lineage, and structural consistency after the call. It must not infer those meanings from Arabic/English keyword or phrase lists, and no additional classifier/model call is authorized. For greetings, thanks, casual conversation, and other genuinely non-instructional turns, all four turn decisions may be null. If Luna determines `DID_NOT_HELP`, a same-method selection is structurally inconsistent unless the relation is `EXPLICIT_REPEAT_REQUEST`; exact enforcement belongs to the REC-35.2 correction implementation.
 
-Turn decisions are routing/audit metadata, not learner memory. Selecting or using a TeachingMethod, or marking `HELPED`/`DID_NOT_HELP`, is not Evidence that it worked or failed. Effectiveness is evaluable only after an observable Student outcome through the existing Candidate → Evidence path, and any later method history remains advisory, context-specific, and free of learning-style labels.
+Turn decisions are routing/audit metadata, not learner memory. Selecting or using a TeachingMethod, or marking `HELPED`/`DID_NOT_HELP`, is not Evidence that it worked or failed. Effectiveness is evaluable only after an observable Student outcome through optional provisional Candidate hints, completed Segment semantic review, and Session-authorized Evidence. Segment Review may interpret effectiveness only; it may not invent or rename the persisted, server-grounded TeachingMethod identity. Any later method history remains advisory, context-specific, and free of learning-style labels.
 
 `NAVIGATION` and pure self-report action choices are not Evidence merely because they were selected. A bounded `ANSWER_CHOICE` may represent an observable guided attempt and may emit only the approved bounded Candidate Event types; it never becomes independent success or mastery merely from the click. The Tutor must not globally require hidden candidate metadata to be null for every button selection.
 
@@ -1095,7 +1095,15 @@ This project reference governs only the architectural contract.
 ```text
 Raw Interaction History
         ↓
-Candidate Events
+Optional Provisional Candidate Hints
+        ↓
+Completed Learning Segment
+        ↓
+Segment Learning Review
+        ↓
+Staged Semantic Findings
+        ↓
+Session Intelligence Finalization
         ↓
 Validated Learning Events
         ↓
@@ -1142,15 +1150,28 @@ A candidate event means:
 
 > something in this interaction may be educationally meaningful and worth reviewing later.
 
-It is not final evidence and does not directly update the learner profile.
+Candidate Events are optional, provisional, source-linked, auditable semantic
+hints. They are not Evidence, mandatory gates for every future Validated
+Learning Event, Pattern or Current State authority, or personalization
+authority. A Segment Review may confirm, reject, reinterpret, or combine
+Candidates, and may identify a supported learning occurrence from raw Segment
+history when the Tutor omitted a Candidate.
 
-## 13.4 Session Consolidation
+## 13.4 Segment Learning Review and Session Intelligence Finalization
 
-Meaningful candidate events are reviewed at the end of the session using relevant excerpts and thread context.
+Completed meaningful Segments are the semantic review unit. Background Segment
+Learning Review receives the complete relevant raw Segment history, not merely
+Candidate-local excerpts, and produces staged findings only.
 
-The session consolidation process generates validated events/evidence as appropriate.
+Closed Sessions remain the durable activation authority. Session Intelligence
+Finalization verifies required Segment Reviews, compatible versions,
+provenance, and source lineage; it deterministically materializes Validated
+Learning Events and Evidence, then activates downstream intelligence. No giant
+semantic Session call is required after Segment Reviews by default.
 
-It should not require a separate evidence-model call after every individual message.
+The approved target is not yet implemented: current code uses legacy,
+candidate-driven `SESSION_EVIDENCE` consolidation. Historical Session Evidence
+remains valid, immutable, auditable, and rebuildable.
 
 ## 13.5 Meaningful Event Gate
 
@@ -1300,7 +1321,10 @@ Sessions close automatically after a configurable period of inactivity.
 
 A grace window may allow a quick return to continue the same session.
 
-After the session is closed, background consolidation can process candidate events and update intelligence.
+Session closure completes the final Segment. In the approved target, required
+completed-Segment Reviews finish in background work and deterministic Session
+Intelligence Finalization activates Evidence and intelligence. Current code
+still uses legacy candidate-driven Session Evidence consolidation.
 
 A new Session begins conversationally fresh. It does not normally inject prior
 raw transcripts, old Segments, or archived conversation history. Cross-session
@@ -1354,8 +1378,8 @@ conversationally necessary, such as an active goal, reference, unresolved point,
 or relevant raw Exchange reference. It is not a free-form learner summary and
 cannot create learner conclusions, Evidence, Current State, Patterns, Learner
 Intelligence, personalization, curriculum authority, or Safety authority. This
-is approved architecture; the production Segment State/runtime assembler remains
-future CTX-03 work.
+is approved architecture; the technical CTX-03 runtime is verified, while
+Real-Lina Context validation remains deferred.
 
 ## 16.4 Optional Durable Conversation Topics
 
@@ -1389,6 +1413,10 @@ backfill. A natural clarification is permitted when it matters. No separate
 classifier/model call is a governing requirement; the preferred normal
 architecture remains no extra model call unless measured evidence and Product
 Owner approval justify one.
+
+A prior Segment becomes complete whenever the governed CTX-03 transition
+policy successfully persists a new LearningSegment, whether the model relation
+was `NEW_SEGMENT` or `UNCERTAIN`. `CONTINUE` remains in the current Segment.
 
 ## 16.5 Historical Lookup Is On-Demand and Deferred
 
@@ -1489,8 +1517,12 @@ conversation is about. They must not directly update personalization. The only
 protected personalization path remains:
 
 ```text
-Raw Interaction → Candidate Event → Validated Learning Event → Evidence
-→ Current Learning State / Patterns → Learner Intelligence Card
+Raw Interaction
+→ optional provisional Candidate hints
+→ completed Segment semantic review
+→ Session-authorized Validated Learning Events / Evidence
+→ Current Learning State / Patterns
+→ Learner Intelligence Card
 → Tutor personalization
 ```
 
@@ -1503,8 +1535,8 @@ Conversation context is also orthogonal to pedagogical routing:
 `segment_relation`, `conversation_topic_relation`, and
 `conversation_topic_ref` are not TeachingMode, TeachingStrategy,
 TeachingMethod, or `prior_method_relation`. Selecting a method remains not
-Evidence of effectiveness; an observable Lina outcome is required through the
-Candidate → Evidence path.
+Evidence of effectiveness; an observable Lina outcome requires Segment Review
+interpretation and Session-authorized Evidence.
 
 Conversation Topic is distinct from a Safety / Parent Boundary category.
 Safety remains upstream authority: the Current Student Turn is evaluated by the
@@ -1543,7 +1575,8 @@ ai.execute(task, payload, constraints)
 Initial task classes include:
 
 - `tutor`
-- `session_evidence`
+- `segment_evidence` (approved future target)
+- `session_evidence` (LEGACY / HISTORICAL EVIDENCE INTERPRETATION ROUTE until compatibility/reprocessing work completes)
 - `curriculum_semantics`
 - `vision_student_work`
 - `vision_content_enrichment`
@@ -1586,11 +1619,19 @@ Frequent/latency-sensitive:
 - STT.
 - embeddings.
 
-Batch/occasional:
+Background semantic:
 
-- session evidence consolidation,
+- 0..N eligible Segment Learning Reviews per Session,
 - semantic curriculum extraction,
 - school-plan extraction.
+
+Deterministic:
+
+- Session Intelligence Finalization.
+
+Legacy:
+
+- `session_evidence` for historical compatibility/reprocessing where still required.
 
 Rare/expensive:
 
@@ -1644,7 +1685,7 @@ Explicit configurable budgets should limit:
 - image size,
 - historical lookback,
 - Segment context,
-- session consolidation input,
+- Segment review capacity / input budget,
 - optional web/image-generation usage.
 
 Exact values should be tuned from real usage rather than guessed prematurely.
@@ -1693,11 +1734,13 @@ A change in document-processing or semantic-extraction logic can rebuild downstr
 
 ```text
 Raw Interaction
-    ↓
-Events
-    ↓
-Evidence
-    ↓
+        ↓
+Completed Segments
+        ↓
+Segment Reviews / staged findings
+        ↓
+Session-authorized Events / Evidence
+        ↓
 Patterns / Current State
     ↓
 Intelligence Card
@@ -1716,6 +1759,8 @@ Version information may include:
 - provider,
 - prompt version,
 - schema version,
+- segment review schema/prompt/rubric/policy versions,
+- session finalization policy version,
 - evidence policy version,
 - pattern policy version,
 - document pipeline version.
@@ -1790,7 +1835,9 @@ Suggested responsibilities:
 - open loops.
 
 ### Intelligence
-- events,
+- Segment semantic review and staged findings,
+- Session Intelligence Finalization,
+- validated events,
 - evidence,
 - current state,
 - patterns,
@@ -1893,7 +1940,9 @@ Appropriate jobs include:
 - Docling conversion,
 - semantic extraction,
 - embeddings,
-- session consolidation,
+- Segment Learning Review,
+- Session Intelligence Finalization,
+- legacy Session Evidence reprocessing compatibility where required,
 - intelligence rebuild,
 - Grade transition processing.
 
@@ -2000,7 +2049,7 @@ The following rules should be treated as protected design constraints unless the
 20. **Pattern weights/lifecycle are system-governed, not free LLM judgment.**
 21. **AI is used for cognition; deterministic code is preferred for state, counts, lifecycle, and rules.**
 22. **The normal Tutor path uses one primary Tutor model call.**
-23. **Evidence consolidation is session-level rather than one extra LLM call per message.**
+23. **Semantic learning interpretation is completed-Segment-scoped; durable Evidence/intelligence activation remains Session-scoped. No additional Evidence evaluator is added to each normal Tutor Turn.**
 24. **Original books and raw learning history are preserved so derived state can be rebuilt.**
 25. **Every important derived processing path is versionable and auditable.**
 26. **No unnecessary AI call without identifiable product/learning value.**
@@ -2071,7 +2120,16 @@ The following rules should be treated as protected design constraints unless the
 | Archive vector / automatic historical semantic retrieval | Deferred — on-demand seam requires independent validation |
 | Session auto-close after inactivity | Approved |
 | Tutor emits candidate events in same Tutor call | Approved |
-| Session-level evidence consolidation | Approved |
+| Session-level semantic consolidation as primary semantic review unit | SUPERSEDED BY SEG-EVID-01 |
+| Segment-scoped semantic Learning Review | Approved |
+| Session-scoped durable intelligence authority | Approved |
+| Staged Segment findings remain inactive until Session activation | Approved |
+| Candidate Events are provisional semantic hints, not mandatory Evidence gates | Approved |
+| Session Finalization deterministic by default; no semantic Session call after Segment Reviews by default | Approved |
+| Existing Current State / Pattern / support-counter architecture preserved | Approved |
+| Historical Session Evidence remains valid | Approved |
+| EDU-ERR integrates into Segment Review later | Approved future |
+| Cross-subject attribution | Deferred to SCOPE-01 / SUBJ-01 |
 | Docling as document-understanding baseline | Approved |
 | Duckling as runtime product dependency | Rejected |
 | Duckling as content workbench/reference | Approved |
@@ -2197,11 +2255,13 @@ Optional question-driven grounding improves the answer when available
         ↓
 Tutor adapts explanation
         ↓
-Candidate events are captured
+Optional Candidate hints are captured
+        ↓
+Meaningful Segment closes and background Segment Review stages findings
         ↓
 Session closes
         ↓
-Evidence is consolidated
+Deterministic finalization activates Evidence
         ↓
 Current state / patterns / card update
         ↓
@@ -2306,7 +2366,7 @@ Defines:
 - scope rules,
 - lifecycle rules,
 - card compaction rules,
-- session consolidation behavior,
+- Segment Review, staged findings, and Session Finalization behavior,
 - audit/reprocessing rules.
 
 ## `IMPLEMENTATION_PLAN.md`
@@ -2352,7 +2412,7 @@ representation and hybrid retrieval preserve useful provenance, while
 educational semantics remain optional enrichment. The Tutor teaches using a
 stable identity and adaptive teaching strategy.
 
-The system does not treat the Tutor model's impression as learner truth. Raw interactions are preserved, meaningful events are extracted, evidence is consolidated, temporal patterns evolve under explicit rules, and a compact Learner Intelligence Card provides relevant memory without loading years of history into each prompt.
+The system does not treat the Tutor model's impression as learner truth. Raw interactions are preserved; completed Segments are semantically reviewed and staged; closed Sessions deterministically authorize Evidence; temporal patterns evolve under explicit rules; and a compact Learner Intelligence Card provides relevant memory without loading years of history into each prompt.
 
 Mastery and confidence are views over this evidence, not permanent source data.
 

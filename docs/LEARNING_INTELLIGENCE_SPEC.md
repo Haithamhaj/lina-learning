@@ -2,7 +2,7 @@
 
 ## LEARNING_INTELLIGENCE_SPEC.md
 
-**Status:** Complete specification — awaiting approval  
+**Status:** Approved governing specification; SEG-EVID architecture approved, implementation pending
 **Authority:** Governing specification for the Learning Intelligence subsystem  
 **Audience:** Product owner, ChatGPT, Codex, AI agents, developers, reviewers  
 **Depends on:** `PROJECT_REFERENCE.md`  
@@ -23,7 +23,9 @@ It is the governing contract for:
 - learner patterns,
 - temporal weighting,
 - pattern scope and lifecycle,
-- session consolidation,
+- Segment semantic review,
+- staged Segment findings,
+- Session Intelligence Finalization / Session authority,
 - the Learner Intelligence Card,
 - derived mastery/confidence views,
 - grade transition intelligence,
@@ -50,7 +52,15 @@ The canonical pipeline is:
 ```text
 Raw Interaction
       ↓
-Candidate Event
+Optional Provisional Candidate Hint
+      ↓
+Completed Learning Segment
+      ↓
+Segment Learning Review
+      ↓
+Staged Segment Findings
+      ↓
+Session Intelligence Finalization
       ↓
 Validated Learning Event
       ↓
@@ -93,13 +103,20 @@ for all downstream lineage.
 
 ## 2.2 Candidate Event
 
-A lightweight signal emitted during the interaction indicating that something potentially meaningful happened.
+A lightweight, optional, source-linked, auditable hint emitted during the
+interaction indicating that something potentially meaningful may have happened.
 
-A Candidate Event is **not** evidence and must not directly update a stable learner pattern.
+A Candidate Event is **not** Evidence, is not a mandatory gate, and must not
+directly update Current State, a stable Pattern, or personalization. Segment
+Review may produce supported staged findings with zero Candidate IDs.
 
 ## 2.3 Validated Learning Event
 
-A structured description of a meaningful learning occurrence after end-of-session consolidation.
+A Session-authorized structured learning occurrence derived from one completed
+Segment semantic review. Its conceptual lineage includes `session_id`,
+`segment_id`, `segment_review_id`, optional `candidate_event_ids[]`, potentially
+multiple `source_refs[]`, and `processing_run_id`. This is a governing contract,
+not a claim that the current database implementation already supports it.
 
 It describes **what happened in that context**, not a general conclusion about Lina.
 
@@ -119,7 +136,8 @@ Short-lived intelligence about what matters **now**, for example:
 - a recently successful strategy,
 - a current retention concern.
 
-A strong event may update Current Learning State immediately after consolidation.
+A strong Session-authorized event may update Current Learning State only after
+successful Session Intelligence Finalization.
 
 ## 2.6 Learner Pattern
 
@@ -177,7 +195,7 @@ The AI may suggest that an event supports a pattern. It must not independently d
 
 ## 4.1 Meaningful Event Principle
 
-An interaction becomes a Candidate Event only when it can reasonably:
+An interaction or completed Segment contains a meaningful learning occurrence only when it can reasonably:
 
 1. add information about Lina's understanding or learning behavior,
 2. confirm existing intelligence,
@@ -187,6 +205,13 @@ An interaction becomes a Candidate Event only when it can reasonably:
 6. create or resolve an important learning loop.
 
 Normal conversational activity is not intelligence merely because it occurred.
+
+For misconception semantics: confusion alone, a bare wrong answer alone, and
+an arithmetic slip alone do not establish a misconception. Explicit incorrect
+reasoning may establish one. Segment Review may interpret reasoning distributed
+across multiple turns; a later correction in the same Segment becomes
+counter/corrective Evidence rather than erasing the original observation.
+Turn-level `misconception_signal` remains provisional only.
 
 ## 4.2 Examples That Usually Qualify
 
@@ -238,9 +263,9 @@ The taxonomy is intentionally compact. New event types may be added without chan
 | `retention_check` | Previously learned concept is encountered after meaningful elapsed time | Review, natural curriculum use |
 | `strategy_applied` | Tutor uses a teaching strategy worth tracking | Tutor runtime |
 | `strategy_outcome` | Observable outcome follows a teaching strategy | Tutor, artifact |
-| `support_change` | Required support materially increases or decreases | Session consolidation |
-| `open_loop_created` | Important understanding remains unresolved | Session end |
-| `open_loop_resolved` | Previously open learning loop is resolved | Tutor/session |
+| `support_change` | Required support materially increases or decreases | Segment Review / Session Finalization |
+| `open_loop_created` | Important understanding remains unresolved | Segment Review / Session Finalization |
+| `open_loop_resolved` | Previously open learning loop is resolved | Segment Review / Session Finalization |
 | `extended_learning_event` | Meaningful learning outside the current school scope | Explore mode |
 | `artifact_interaction` | Interactive artifact action has educational meaning | Learning Artifact Engine |
 
@@ -439,7 +464,7 @@ Examples of strategy identity:
 
 For teaching-representation effectiveness, **TeachingMethod** is the canonical method identity. It is distinct from TeachingStrategy, which governs the support/intervention flow. The existing `strategy_applied` and `strategy_outcome` taxonomy remains compatible: the existing `strategy_key` lineage may carry the canonical TeachingMethod identifier where the established pattern contract requires it.
 
-Mode, Strategy, Method, and prior-method-relation are turn-level semantic routing/audit metadata from the same primary Tutor call, not Candidate Events, Evidence, or learner memory. Runtime validates their canonical values and persisted source lineage but does not infer their natural-language meaning. That method identity must be source-grounded in persisted project-owned Tutor-turn metadata, together with the bounded prior-turn/source lineage needed to connect the method to the later observable Student outcome. Session Evidence consolidation must not invent a method identity. An immediate same-session method change after current confusion is contextual adaptation; repeated method outcomes are the separate, evidence-dependent basis for any stable `strategy_effectiveness` pattern.
+Mode, Strategy, Method, and prior-method-relation are turn-level semantic routing/audit metadata from the same primary Tutor call, not Candidate Events, Evidence, or learner memory. Runtime validates their canonical values and persisted source lineage but does not infer their natural-language meaning. That method identity must be source-grounded in persisted project-owned Tutor-turn metadata, together with the bounded prior-turn/source lineage needed to connect the method to the later observable Student outcome. Segment Review interprets outcome only and must not invent a method identity. An immediate same-session method change after current confusion is contextual adaptation; repeated method outcomes are the separate, evidence-dependent basis for any stable `strategy_effectiveness` pattern.
 
 ---
 
@@ -628,8 +653,9 @@ compact, session-local, source-linked, and rebuildable conversational context.
 They may reference raw messages or complete Exchanges, but are not Candidate
 Evidence, Learning Evidence, Current Learning State, Learner Pattern, or
 Learner Intelligence. They cannot create learner conclusions or bypass the
-protected Raw Interaction → Candidate Event → Validated Learning Event →
-Evidence path.
+protected Raw Interaction → completed Segment semantic review →
+Session-authorized Validated Learning Event / Evidence path. Candidate metadata
+may assist this path but is not required.
 
 ## 11.3 Current State Lifecycle
 
@@ -935,7 +961,12 @@ authority. Segment summaries, topic references, and aliases can never be the
 sole source for Evidence; raw `source_refs` (message IDs and asset/source refs
 where applicable) preserve lineage.
 
-## 17.3 Candidate Event Capture
+## 17.3 Segment Completion and Candidate Capture
+
+A prior Segment becomes complete whenever governed CTX-03 transition policy
+successfully persists a new LearningSegment, regardless of whether the model
+relation was `NEW_SEGMENT` or `UNCERTAIN`. `CONTINUE` remains in the current
+Segment. Session closure completes the final Segment.
 
 The primary Tutor call may emit hidden Candidate Event metadata alongside the student-facing response.
 
@@ -954,35 +985,48 @@ Example:
 }
 ```
 
-This avoids an additional event-extractor LLM call after every message.
+This avoids an additional event-extractor LLM call after every message. The
+hints remain provisional and are never the only route to intelligence.
 
-## 17.4 End-of-Session Consolidation
+## 17.4 Segment Learning Review and Session Intelligence Finalization
 
-At session close:
+Meaningful Segment eligibility is a deterministic structural gate, not
+keyword-based educational classification. Eligible examples include a Candidate
+present, valid Guided Check learning activity, persisted TeachingMethod followed
+by Student response, multiple complete learning Exchanges, or another approved
+structural learning marker.
 
 ```text
-Candidate Events
-      +
-Relevant Interaction Excerpts
-      +
-Thread Context
+Completed meaningful Segment
       ↓
-Session Consolidation
+asynchronous Segment Learning Review of complete raw Segment history
       ↓
-Validated Learning Events
+Staged findings (zero is valid; no personalization update)
       ↓
-Evidence
+Session CLOSED + every required eligible Segment accounted for
       ↓
-Current State + Pattern Engine
+compatible review versions + provenance validation
       ↓
-Intelligence Card Refresh
+deterministic Session Intelligence Finalization
+      ↓
+Validated Learning Events / Evidence / downstream activation
 ```
 
-The consolidation step should receive only the relevant excerpts needed to interpret Candidate Events accurately, not automatically the entire historical transcript.
+Segment Review is semantic authority for the completed learning episode. Session
+Finalization is the durable activation authority: it is deterministic by
+default, makes no broad semantic Session call after Segment Reviews by default,
+and permits no partial activation.
 
 Normal new-session context does not automatically load prior raw transcripts or
 archived Segments. Historical conversation lookup and semantic archive retrieval
 remain deferred on-demand work, not part of normal Tutor context.
+
+When a rubric logically requires authoritative historical comparison, such as
+retention, Segment Review may receive bounded structured anchors:
+`prior_evidence_id`, `concept_ref`, `prior_demonstration_state`,
+`prior_observed_at`, `elapsed_time`, and `reason_for_inclusion`. It does not
+receive the full Card, broad Pattern conclusions, a full prior Session
+transcript, or a free-form learner profile summary by default.
 
 ## 17.5 Sessions Without Meaningful Learning
 
@@ -1101,7 +1145,9 @@ Historical records remain elsewhere.
 
 ## 19.4 Card Update
 
-The card is refreshed after meaningful end-of-session consolidation, not after every message.
+The card is refreshed only after successful Session intelligence
+activation/finalization, not after every message. Staged Segment findings do
+not enter the Card.
 
 ---
 
@@ -1503,6 +1549,11 @@ processing_run_id
 model/provider
 prompt_version
 schema_version
+segment_review_schema_version
+segment_review_prompt_version
+segment_review_rubric_version
+segment_review_policy_version
+session_finalization_policy_version
 evidence_rubric_version
 pattern_policy_version
 decision_policy_version
@@ -1524,9 +1575,13 @@ Canonical rebuild path:
 ```text
 Raw Interactions
       ↓
-Event Extraction vN
+enumerate completed Segments
       ↓
-Evidence Rubric vN
+re-run/reuse Segment Reviews under selected versions
+      ↓
+stage complete Session Evidence generation
+      ↓
+atomic authority activation
       ↓
 Pattern Policy vN
       ↓
@@ -1560,6 +1615,9 @@ The product owner and development process should be able to inspect:
 
 - raw transcript/source interaction,
 - Candidate Events,
+- Segment review IDs and Segment IDs,
+- staged findings, review model/version, and review failures,
+- which reviews composed an activated Session generation,
 - validated events,
 - evidence outputs,
 - pattern changes,
@@ -1653,6 +1711,9 @@ These rules are non-negotiable unless explicitly changed by the project owner.
 27. **A Learning Thread / `thread_id` is the session-local Segment identity; its metadata does not replace raw message or asset lineage.**
 28. **Durable Conversation Topic and Segment metadata are navigation context only and create no learner conclusion, Evidence, personalization, Safety, or curriculum authority.**
 29. **Normal Tutor context does not inject prior-session raw history or automatic historical semantic archive retrieval.**
+30. **Segment Review is semantic authority for completed learning episodes; Session remains durable activation authority.**
+31. **Staged Segment findings are not Learner Intelligence, and no partial Session intelligence activation is allowed.**
+32. **Candidate Events are optional provisional hints; no second learner-memory/counter system is authorized.**
 
 ---
 
@@ -1685,8 +1746,11 @@ They must be configurable/versioned rather than hardcoded across business logic.
 
 - inactivity timeout,
 - grace window,
-- maximum consolidation excerpt size,
-- maximum candidate-event count per session.
+- Segment eligibility policy,
+- Segment review capacity,
+- max staged findings per Segment,
+- Session finalization completeness rules,
+- review cost thresholds.
 
 ## 35.4 Intelligence Card Parameters
 
@@ -1833,9 +1897,9 @@ Grade 6 becomes active
 The Learning Intelligence core is ready for real Lina use when all of the following are true:
 
 1. Raw interaction sources are retained according to project policy.
-2. The Tutor can emit Candidate Events without a separate extractor call per message.
-3. Sessions consolidate automatically after inactivity.
-4. Consolidation can produce structured validated events and evidence.
+2. The Tutor can emit optional provisional Candidate hints without a separate extractor call per message.
+3. Completed meaningful Segments are reviewed asynchronously after governed completion; Session closure completes the final Segment.
+4. Deterministic Session Finalization can produce structured validated events and Evidence only after all required eligible Segment Reviews are complete.
 5. Evidence follows the approved categorical rubrics.
 6. Current Learning State is distinct from long-term Patterns.
 7. Pattern frequency, recency, counter-evidence, scope, and lifecycle are deterministic and versioned.
