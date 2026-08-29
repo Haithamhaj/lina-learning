@@ -462,6 +462,28 @@ Segment-Scoped Semantic Review + Session-Scoped Intelligence Authority.
 contradictions are removed; historical Session Evidence is preserved; and no
 implementation code changed.
 
+## Full-System Acceptance — Learning Intelligence
+**Status:** IN_PROGRESS
+**Dependencies:** SEG-EVID-01A–C accepted; SEG-EVID-01D–F completed in order.
+**Purpose:** Prove the governed path from raw conversation through real Segment
+Review, Session-authorized learning memory, and a later real Tutor
+personalization on an isolated acceptance database, then prove the same path
+from a clean fresh start.
+**Scope:** The durable execution spec is
+`docs/FULL_SYSTEM_ACCEPTANCE_EXECUTION_SPEC.md`. This objective preserves raw
+source authority, requires real `openai / gpt-5.6-luna` Model Gateway evidence
+for AI-powered acceptance work, and protects the source database from writes.
+**Stages:** SEG-EVID-01D, SEG-EVID-01E, and SEG-EVID-01F are ordered
+implementation/verification stages serving this Full-System Acceptance
+objective;
+they are not independent product goals. Accepted SEG-EVID-01A/B/C records and
+all deferred/frozen work remain unchanged.
+**Completion gate:** Historical isolated-database and separate fresh-start
+journeys demonstrate `Conversation → Segments → Reviews → Evidence → Memory →
+Tutor personalization` with evidence labels that distinguish automated, real
+Luna, database end-to-end, Tutor personalization, browser (if run), and
+`REAL-LINA VERIFIED = NO`.
+
 ## SEG-EVID-01A — Governing Contracts & Persistence
 **Status:** DONE
 **Dependencies:** CAND-01 strict schema compatibility correction committed and independently reviewed.
@@ -571,14 +593,15 @@ NO`. No GitHub CI status is available.
 **Dependencies:** SEG-EVID-01C
 **Purpose:** Implement completeness/version gates, deterministic finalization,
 Event/Evidence materialization, and Current State / Pattern / Decision
-activation with no semantic Session call by default.
+activation with no semantic Session call by default, as Stage D of Full-System
+Acceptance.
 
 ## SEG-EVID-01E — Reprocessing & Authority Compatibility
 **Status:** BLOCKED
 **Dependencies:** SEG-EVID-01D
 **Purpose:** Implement legacy/new coexistence, Session-scoped external
 reprocessing, Segment-internal semantic rebuild, atomic activation, and legacy
-Session Evidence handling.
+Session Evidence handling, as Stage E of Full-System Acceptance.
 
 ## SEG-EVID-01F — Real Model & Multi-Session Verification
 **Status:** BLOCKED
@@ -587,7 +610,8 @@ Session Evidence handling.
 correction/counter-evidence, TeachingMethod outcome, transfer, retention with
 bounded historical anchors, multi-Session Pattern support/counter and
 weakening/resolution, Card updates only after Session activation, relevant
-future Tutor use, and current Student behavior above historical intelligence.
+future Tutor use, and current Student behavior above historical intelligence,
+as Stage F of Full-System Acceptance.
 
 ---
 
@@ -1031,9 +1055,11 @@ expansion remain frozen.
 - **Lifecycle:** UI-01 is **CLOSED** following real S3 browser use with no hang
   and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
-**Next action:** Begin SEG-EVID-01D — Session Finalization & Intelligence
-Activation. Do not begin SEG-EVID-01E–F, EDU-ERR-01, SCOPE-01, SUBJ-01,
-REC-25, LR-D04B, archive retrieval, or frozen future capabilities.
+**Next action:** Execute Full-System Acceptance beginning
+with SEG-EVID-01D — Session Finalization & Intelligence Activation. Do not
+begin SEG-EVID-01E–F until their ordered dependencies are complete, or
+EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, LR-D04B, archive retrieval, or frozen
+future capabilities.
 
 ---
 

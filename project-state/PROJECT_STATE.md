@@ -2,13 +2,16 @@
 
 ## Current goal
 
-CTX-03 remains the approved, technically verified Context v2 direction.
-SEG-EVID-01 is the approved Learning Intelligence semantic architecture; its
-first two slices are complete in code, while current durable intelligence still
-uses legacy Session Evidence. CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A is
-DONE and independently accepted; SEG-EVID-01B is DONE and independently
-accepted; SEG-EVID-01C is DONE / ACCEPTED; SEG-EVID-01D is READY.
-SEG-EVID-01E–F remain BLOCKED; EDU-ERR-01 remains blocked by SEG-EVID-01F.
+Full-System Acceptance is the active Learning Intelligence execution objective:
+prove the governed path from raw conversation through real Segment Review,
+Session-authorized learning memory, and real later Tutor personalization on an
+isolated acceptance database, then prove the same path from a clean fresh
+start. CTX-03 remains the approved, technically verified Context v2 direction.
+SEG-EVID-01 is the approved Learning Intelligence semantic architecture.
+CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A/B/C are DONE / ACCEPTED;
+SEG-EVID-01D is READY as the first implementation stage of this acceptance,
+while SEG-EVID-01E–F remain BLOCKED by their ordered dependencies.
+EDU-ERR-01 remains blocked by SEG-EVID-01F.
 
 ## Current reality
 
@@ -73,6 +76,13 @@ SEG-EVID-01E–F remain BLOCKED; EDU-ERR-01 remains blocked by SEG-EVID-01F.
 - Existing `SESSION_EVIDENCE` remains the current/legacy live durable authority
   until the SEG-EVID-01D transition is implemented and accepted. Historical
   Evidence remains valid, auditable, and rebuildable.
+- Full-System Acceptance is governed by
+  `docs/FULL_SYSTEM_ACCEPTANCE_EXECUTION_SPEC.md`. It requires a copied,
+  isolated acceptance database with the source database untouched; actual
+  `openai / gpt-5.6-luna` Model Gateway evidence for AI-powered operations;
+  and separate historical-reconstruction and clean fresh-start journeys.
+  SEG-EVID-01D/E/F serve this one acceptance objective and do not reopen the
+  accepted A/B/C decisions.
 - Track A is COMPLETE / ACCEPTED; the authenticated Tutor works with zero
   content, uses optional question-driven grounding, and remains safety-first.
 - CTX-03 preserves current-Segment-only context. `CONTINUE` stays in the
@@ -108,6 +118,9 @@ SEG-EVID-01E–F remain BLOCKED; EDU-ERR-01 remains blocked by SEG-EVID-01F.
   no learner-style/psychological labels or second learner-memory/counter system.
 - Bounded authoritative historical anchors are allowed only when a rubric
   requires them. Cross-subject findings fail closed pending SCOPE-01/SUBJ-01.
+- Full-System Acceptance evidence labels distinguish automated tests, real Luna,
+  database end-to-end behavior, Tutor personalization, and browser execution
+  when performed; `REAL-LINA VERIFIED = NO` until Lina validates it herself.
 
 ## Protected areas
 
@@ -130,15 +143,18 @@ and RAG/curriculum remain separate authorities.
 - **SEG-EVID-R3 — Cross-Subject Attribution — 5**
 - **SEG-EVID-R4 — Legacy/New Authority Coexistence — 5**
 - **SEG-EVID-R5 — Semantic Review Cost — 3**
+- **FSA-R1 — Source Database Isolation — 5**
+- **FSA-R2 — Real-Luna Evidence Integrity — 5**
 - **STATE-01 — Structured Segment State lineage reliability — OPEN / NON-BLOCKING**
 
 ## Next recommended action
 
-Begin SEG-EVID-01D — Session Finalization & Intelligence Activation.
+Execute Full-System Learning Intelligence Acceptance beginning with
+SEG-EVID-01D — Session Finalization & Intelligence Activation.
 
 CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A–C are DONE / ACCEPTED;
-SEG-EVID-01D is READY; SEG-EVID-01E–F remain BLOCKED; EDU-ERR-01 remains
-blocked by SEG-EVID-01F;
+SEG-EVID-01D is READY as the first acceptance stage; SEG-EVID-01E–F remain
+BLOCKED; EDU-ERR-01 remains blocked by SEG-EVID-01F;
 SCOPE-01,
 SUBJ-01, REC-25, LR-D04B, archive retrieval, and frozen future capabilities
 remain deferred. Real-Lina validation remains deferred.
