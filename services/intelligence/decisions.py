@@ -16,7 +16,6 @@ from services.platform.db.models import (
     CurrentLearningState,
     DecisionView,
     IntelligenceProcessingRun,
-    IntelligenceSessionAuthority,
     LearnerPattern,
     LearningEvidence,
     LearningEvent,
@@ -49,13 +48,31 @@ class DecisionViewPolicyError(ValueError):
 class _EvidenceItem:
     evidence: LearningEvidence
     event: LearningEvent
-    candidate: CandidateEvent
+    candidate: CandidateEvent | None
+    observed_at: datetime
 
     @property
     def task_ref(self) -> str:
-        payload = self.candidate.payload if isinstance(self.candidate.payload, dict) else {}
+        payload = (
+            self.candidate.payload
+            if self.candidate is not None and isinstance(self.candidate.payload, dict)
+            else {}
+        )
         value = payload.get("task_ref")
-        return value if isinstance(value, str) and value else self.evidence.source_ref
+        if isinstance(value, str) and value:
+            return value
+        if self.event.segment_id is not None:
+            return f"segment:{self.event.segment_id}"
+        return self.evidence.source_ref
+
+    @property
+    def has_grounded_strategy_outcome(self) -> bool:
+        payload = (
+            self.candidate.payload
+            if self.candidate is not None and isinstance(self.candidate.payload, dict)
+            else {}
+        )
+        return isinstance(payload.get("observed_student_outcome"), str)
 
 
 def derive_decision_views(
@@ -251,41 +268,40 @@ def _evidence_items(
     subject: str,
     concept_ref: str,
 ) -> list[_EvidenceItem]:
+    from services.intelligence.authority import authoritative_evidence_ids
+
+    evidence_ids = authoritative_evidence_ids(session, student_id=student_id)
+    if not evidence_ids:
+        return []
     rows = session.execute(
-        select(LearningEvidence, LearningEvent, CandidateEvent, IntelligenceProcessingRun)
+        select(LearningEvidence, LearningEvent, CandidateEvent, LearningSession)
         .join(LearningEvent, LearningEvidence.event_id == LearningEvent.id)
-        .join(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
-        .join(IntelligenceProcessingRun, LearningEvent.processing_run_id == IntelligenceProcessingRun.id)
+        .outerjoin(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
+        .join(LearningSession, LearningEvent.session_id == LearningSession.id)
         .where(
-            IntelligenceProcessingRun.status == "COMPLETED",
-            CandidateEvent.session_id.in_(select(LearningSession.id).where(LearningSession.student_id == student_id)),
+            LearningEvidence.id.in_(evidence_ids),
+            LearningSession.student_id == student_id,
         )
     ).all()
-    authoritative_runs = {
-        row.session_id: row.evidence_processing_run_id
-        for row in session.execute(
-            select(IntelligenceSessionAuthority).where(IntelligenceSessionAuthority.student_id == student_id)
-        ).scalars()
-    }
-    selected: dict[UUID, tuple[_EvidenceItem, IntelligenceProcessingRun]] = {}
-    for evidence, event, candidate, run in rows:
-        authoritative_run_id = authoritative_runs.get(event.session_id)
-        if authoritative_run_id is not None and event.processing_run_id != authoritative_run_id:
-            continue
-        item = _EvidenceItem(evidence, event, candidate)
-        prior = selected.get(candidate.id)
-        if prior is None or _version_key(run, event) > _version_key(prior[1], prior[0].event):
-            selected[candidate.id] = (item, run)
     authoritative = (
-        item
-        for item, _ in selected.values()
-        if item.event.subject == subject
-        and item.event.concept_ref == concept_ref
-        and item.evidence.concept_ref == concept_ref
+        _EvidenceItem(
+            evidence=evidence,
+            event=event,
+            candidate=candidate,
+            observed_at=(
+                (candidate.created_at if candidate is not None else None)
+                or learning_session.closed_at
+                or datetime.now(UTC)
+            ),
+        )
+        for evidence, event, candidate, learning_session in rows
+        if event.subject == subject
+        and event.concept_ref == concept_ref
+        and evidence.concept_ref == concept_ref
     )
     return sorted(
         authoritative,
-        key=lambda item: (item.candidate.created_at, str(item.candidate.id)),
+        key=lambda item: (item.observed_at, str(item.evidence.id)),
     )
 
 
@@ -431,10 +447,7 @@ def _strategy_effectiveness(
         item
         for item in evidence
         if item.event.event_type == "strategy_outcome"
-        and isinstance(
-            (item.candidate.payload if isinstance(item.candidate.payload, dict) else {}).get("observed_student_outcome"),
-            str,
-        )
+        and item.has_grounded_strategy_outcome
         and item.evidence.dimensions.get("strategy_effectiveness") in {"helped", "enabled_independent_success", "ineffective"}
     ]
     if not outcomes:
@@ -470,7 +483,7 @@ def _confidence(
     polarity = {_polarity(item) for item in evidence}
     if len(polarity - {"neutral"}) > 1:
         return "LOW"
-    latest_observed = max(item.candidate.created_at for item in evidence)
+    latest_observed = max(item.observed_at for item in evidence)
     if (
         len(evidence) >= policy.strong_evidence_count
         and task_count >= policy.high_confidence_task_count

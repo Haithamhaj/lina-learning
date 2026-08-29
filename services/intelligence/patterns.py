@@ -59,7 +59,7 @@ class PatternPolicyError(ValueError):
 class _EvidenceContext:
     evidence: LearningEvidence
     event: LearningEvent
-    candidate: CandidateEvent
+    candidate: CandidateEvent | None
     learning_session: LearningSession
     run: IntelligenceProcessingRun
     observed_at: datetime
@@ -127,9 +127,11 @@ def apply_processing_run_patterns(
     evidence_ids = session.execute(
         select(LearningEvidence.id)
         .join(LearningEvent, LearningEvidence.event_id == LearningEvent.id)
-        .join(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
         .where(LearningEvent.processing_run_id == processing_run_id)
-        .order_by(CandidateEvent.created_at, LearningEvidence.id)
+        .order_by(
+            LearningEvent.segment_review_finding_index.nulls_last(),
+            LearningEvidence.id,
+        )
     ).scalars()
     result: list[LearnerPattern] = []
     for evidence_id in evidence_ids:
@@ -232,7 +234,7 @@ def _load_validated_evidence(session: Session, *, evidence_id: UUID) -> _Evidenc
     row = session.execute(
         select(LearningEvidence, LearningEvent, CandidateEvent, LearningSession, IntelligenceProcessingRun)
         .join(LearningEvent, LearningEvidence.event_id == LearningEvent.id)
-        .join(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
+        .outerjoin(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
         .join(LearningSession, LearningEvent.session_id == LearningSession.id)
         .join(IntelligenceProcessingRun, LearningEvent.processing_run_id == IntelligenceProcessingRun.id)
         .where(LearningEvidence.id == evidence_id)
@@ -240,18 +242,24 @@ def _load_validated_evidence(session: Session, *, evidence_id: UUID) -> _Evidenc
     if row is None:
         raise PatternSourceError("Evidence does not exist.")
     evidence, event, candidate, learning_session, run = row
+    from services.intelligence.authority import is_supported_evidence_run_scope
+
     run_scope = run.scope if isinstance(run.scope, dict) else {}
     if (
         run.status != "COMPLETED"
         or learning_session.status != "CLOSED"
-        or not _supported_evidence_schema(run_scope.get("consolidation_schema_version"))
+        or not is_supported_evidence_run_scope(run_scope)
         or run_scope.get("session_id") != str(learning_session.id)
         or event.subject != "MATH"
         or evidence.concept_ref != event.concept_ref
     ):
         raise PatternSourceError("Patterns require completed, validated TASK-021 Math Evidence.")
-    payload = candidate.payload if isinstance(candidate.payload, dict) else {}
-    observed_at = candidate.created_at or learning_session.closed_at or datetime.now(UTC)
+    payload = _candidate_payload(candidate)
+    observed_at = (
+        (candidate.created_at if candidate is not None else None)
+        or learning_session.closed_at
+        or datetime.now(UTC)
+    )
     return _EvidenceContext(
         evidence=evidence,
         event=event,
@@ -259,15 +267,19 @@ def _load_validated_evidence(session: Session, *, evidence_id: UUID) -> _Evidenc
         learning_session=learning_session,
         run=run,
         observed_at=observed_at,
-        task_ref=_normalized_token(payload.get("task_ref"), fallback=f"concept:{event.concept_ref or 'unknown'}"),
-        context_ref=_normalized_token(payload.get("context_ref"), fallback="math_practice"),
+        task_ref=_normalized_token(
+            payload.get("task_ref"),
+            fallback=(
+                f"segment:{event.segment_id}"
+                if event.segment_id is not None
+                else f"concept:{event.concept_ref or 'unknown'}"
+            ),
+        ),
+        context_ref=(
+            _grounded_candidate_context_ref(candidate)
+            or _event_provenance_context_ref(event)
+        ),
     )
-
-
-def _supported_evidence_schema(value: object) -> bool:
-    """Permit explicitly versioned TASK-021 outputs selected by reprocessing."""
-
-    return isinstance(value, str) and value.startswith("session-evidence-")
 
 
 def _pattern_targets(
@@ -290,15 +302,16 @@ def _pattern_targets(
     elif independent and relationship in {"contradicts", "improvement"}:
         targets.append(("support_need", "support_need", relationship))
 
-    if item.event.event_type == "misconception_signal":
+    if item.event.event_type == "misconception_signal" and item.candidate is not None:
         targets.append(("misconception_recurrence", f"misconception:{_normalized_token(item.candidate.signal, fallback='observed')}", "supports"))
     elif independent and relationship in {"contradicts", "improvement"}:
         misconception_key = _matching_misconception_key(session, item=item, policy=policy)
         if misconception_key is not None:
             targets.append(("misconception_recurrence", misconception_key, relationship))
 
-    strategy_key = _normalized_token((item.candidate.payload or {}).get("strategy_key"), fallback="")
-    strategy_outcome = (item.candidate.payload or {}).get("observed_student_outcome")
+    candidate_payload = _candidate_payload(item.candidate)
+    strategy_key = _normalized_token(candidate_payload.get("strategy_key"), fallback="")
+    strategy_outcome = candidate_payload.get("observed_student_outcome")
     if item.event.event_type == "strategy_outcome" and strategy_key and isinstance(strategy_outcome, str):
         effectiveness = dimensions.get("strategy_effectiveness")
         if effectiveness in {"helped", "enabled_independent_success"}:
@@ -324,6 +337,8 @@ def _matching_misconception_key(
     item: _EvidenceContext,
     policy: PatternPolicy,
 ) -> str | None:
+    if item.candidate is None:
+        return None
     normalized_signal = _normalized_token(item.candidate.signal, fallback="")
     if not normalized_signal:
         return None
@@ -545,21 +560,23 @@ def _broaden_supported_scope(
     ]
     grouped: dict[
         str,
-        list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent, IntelligenceProcessingRun, LearnerPattern]],
+        list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent | None, IntelligenceProcessingRun, LearnerPattern]],
     ] = {}
     for row in current_source_rows:
         link, evidence, event, candidate, run, source_pattern = row
-        payload = candidate.payload if isinstance(candidate.payload, dict) else {}
-        context_ref = _normalized_token(payload.get("context_ref"), fallback="math_practice")
+        context_ref = _grounded_candidate_context_ref(candidate)
+        if context_ref is None:
+            continue
         grouped.setdefault(context_ref, []).append(row)
     promotable_by_context: dict[
         str,
-        list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent, IntelligenceProcessingRun, LearnerPattern]],
+        list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent | None, IntelligenceProcessingRun, LearnerPattern]],
     ] = {}
     for row in promotable_support_rows:
         candidate = row[3]
-        payload = candidate.payload if isinstance(candidate.payload, dict) else {}
-        context_ref = _normalized_token(payload.get("context_ref"), fallback="math_practice")
+        context_ref = _grounded_candidate_context_ref(candidate)
+        if context_ref is None:
+            continue
         promotable_by_context.setdefault(context_ref, []).append(row)
     result: list[LearnerPattern] = []
     existing_context_patterns = _existing_scope_patterns(
@@ -601,7 +618,10 @@ def _broaden_supported_scope(
                     learning_session=item.learning_session,
                     run=run,
                     observed_at=link.observed_at,
-                    task_ref=_normalized_token((candidate.payload or {}).get("task_ref"), fallback=evidence.source_ref),
+                    task_ref=_normalized_token(
+                        _candidate_payload(candidate).get("task_ref"),
+                        fallback=link.task_ref,
+                    ),
                     context_ref=context_ref,
                 )
                 _link_evidence(session, pattern=broader, item=source_item, role=link.relationship, policy=policy)
@@ -637,7 +657,19 @@ def _broaden_supported_scope(
         subject = _upsert_pattern(session, item=item, pattern_type=pattern_type, pattern_key=pattern_key, scope=scope, policy=policy)
     if subject is not None:
         for link, evidence, event, candidate, run, source_pattern in subject_rows:
-            source_item = _EvidenceContext(evidence, event, candidate, item.learning_session, run, link.observed_at, evidence.source_ref, "math_practice")
+            context_ref = _grounded_candidate_context_ref(candidate)
+            if context_ref is None:
+                continue
+            source_item = _EvidenceContext(
+                evidence=evidence,
+                event=event,
+                candidate=candidate,
+                learning_session=item.learning_session,
+                run=run,
+                observed_at=link.observed_at,
+                task_ref=link.task_ref,
+                context_ref=context_ref,
+            )
             _link_evidence(session, pattern=subject, item=source_item, role=link.relationship, policy=policy)
     if subject is not None:
         _recompute_scope_pattern(
@@ -661,7 +693,7 @@ def _matching_contribution_rows(
     policy_version: str,
     pattern_type: str,
     pattern_key: str,
-) -> list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent, IntelligenceProcessingRun, LearnerPattern]]:
+) -> list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent | None, IntelligenceProcessingRun, LearnerPattern]]:
     from services.intelligence.authority import authoritative_evidence_ids
 
     evidence_ids = authoritative_evidence_ids(session, student_id=student_id)
@@ -673,7 +705,7 @@ def _matching_contribution_rows(
             .join(LearnerPattern, PatternEvidence.pattern_id == LearnerPattern.id)
             .join(LearningEvidence, PatternEvidence.evidence_id == LearningEvidence.id)
             .join(LearningEvent, LearningEvidence.event_id == LearningEvent.id)
-            .join(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
+            .outerjoin(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
             .join(IntelligenceProcessingRun, LearningEvent.processing_run_id == IntelligenceProcessingRun.id)
             .where(
                 LearnerPattern.student_id == student_id,
@@ -699,7 +731,7 @@ def _any_pattern_source(
     row = session.execute(
         select(LearningEvidence, LearningEvent, CandidateEvent, LearningSession, IntelligenceProcessingRun, PatternEvidence)
         .join(LearningEvent, LearningEvidence.event_id == LearningEvent.id)
-        .join(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
+        .outerjoin(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
         .join(LearningSession, LearningEvent.session_id == LearningSession.id)
         .join(IntelligenceProcessingRun, LearningEvent.processing_run_id == IntelligenceProcessingRun.id)
         .join(PatternEvidence, PatternEvidence.evidence_id == LearningEvidence.id)
@@ -715,7 +747,7 @@ def _any_pattern_source(
     if row is None:
         return None
     evidence, event, candidate, learning_session, run, link = row
-    payload = candidate.payload if isinstance(candidate.payload, dict) else {}
+    payload = _candidate_payload(candidate)
     return _EvidenceContext(
         evidence=evidence,
         event=event,
@@ -723,8 +755,11 @@ def _any_pattern_source(
         learning_session=learning_session,
         run=run,
         observed_at=link.observed_at,
-        task_ref=_normalized_token(payload.get("task_ref"), fallback=evidence.source_ref),
-        context_ref=_normalized_token(payload.get("context_ref"), fallback="math_practice"),
+        task_ref=_normalized_token(payload.get("task_ref"), fallback=link.task_ref),
+        context_ref=(
+            _grounded_candidate_context_ref(candidate)
+            or _event_provenance_context_ref(event)
+        ),
     )
 
 
@@ -751,13 +786,13 @@ def _existing_scope_patterns(
 
 
 def _distinct_concept_count(
-    rows: list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent, IntelligenceProcessingRun, LearnerPattern]],
+    rows: list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent | None, IntelligenceProcessingRun, LearnerPattern]],
 ) -> int:
     return len({event.concept_ref for _, _, event, _, _, _ in rows if event.concept_ref})
 
 
 def _qualifies_context_scope(
-    rows: list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent, IntelligenceProcessingRun, LearnerPattern]],
+    rows: list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent | None, IntelligenceProcessingRun, LearnerPattern]],
     *,
     policy: PatternPolicy,
 ) -> bool:
@@ -771,7 +806,7 @@ def _recompute_scope_pattern(
     session: Session,
     pattern: LearnerPattern,
     *,
-    rows: list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent, IntelligenceProcessingRun, LearnerPattern]],
+    rows: list[tuple[PatternEvidence, LearningEvidence, LearningEvent, CandidateEvent | None, IntelligenceProcessingRun, LearnerPattern]],
     qualifies: bool,
     now: datetime,
     policy: PatternPolicy,
@@ -796,6 +831,26 @@ def _normalized_token(value: object, *, fallback: str) -> str:
         return fallback
     normalized = "".join(character if character.isalnum() else "_" for character in value.casefold()).strip("_")
     return normalized[:120] or fallback
+
+
+def _candidate_payload(candidate: CandidateEvent | None) -> dict[str, object]:
+    return candidate.payload if candidate is not None and isinstance(candidate.payload, dict) else {}
+
+
+def _grounded_candidate_context_ref(candidate: CandidateEvent | None) -> str | None:
+    context_ref = _normalized_token(
+        _candidate_payload(candidate).get("context_ref"),
+        fallback="",
+    )
+    return context_ref or None
+
+
+def _event_provenance_context_ref(event: LearningEvent) -> str:
+    if event.segment_id is not None:
+        return f"provenance:segment:{event.segment_id}"
+    if event.segment_review_id is not None:
+        return f"provenance:review:{event.segment_review_id}"
+    return f"provenance:event:{event.id}"
 
 
 def _detail(pattern_type: str, scope: dict[str, str]) -> str:

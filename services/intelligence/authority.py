@@ -1,4 +1,4 @@
-"""Selection of the one authoritative Evidence interpretation per raw Candidate."""
+"""Selection of complete authoritative Evidence processing runs."""
 
 from __future__ import annotations
 
@@ -14,14 +14,16 @@ from services.platform.db.models import (
     IntelligenceSessionAuthority,
     LearningEvidence,
     LearningEvent,
+    LearningSession,
 )
 
 
 def authoritative_evidence_ids(session: Session, *, student_id: UUID) -> list[UUID]:
-    """Return one completed Evidence interpretation for each immutable Candidate.
+    """Return complete explicitly authorized runs plus legacy Candidate selections.
 
-    Session authority is explicit when present.  Legacy sessions without an
-    authority row retain the existing latest-completed-interpretation behavior.
+    Explicit Session authority selects every Evidence row in one complete run;
+    Candidate lineage is optional there. Legacy Sessions without authority keep
+    the previous latest-completed interpretation per immutable Candidate.
     """
 
     authorities = {
@@ -31,30 +33,63 @@ def authoritative_evidence_ids(session: Session, *, student_id: UUID) -> list[UU
         ).scalars()
     }
     rows = session.execute(
-        select(LearningEvidence.id, LearningEvent, CandidateEvent, IntelligenceProcessingRun)
+        select(
+            LearningEvidence.id,
+            LearningEvent,
+            CandidateEvent,
+            IntelligenceProcessingRun,
+            LearningSession,
+        )
         .join(LearningEvent, LearningEvidence.event_id == LearningEvent.id)
-        .join(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
+        .outerjoin(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
         .join(IntelligenceProcessingRun, LearningEvent.processing_run_id == IntelligenceProcessingRun.id)
+        .join(LearningSession, LearningEvent.session_id == LearningSession.id)
         .where(
             IntelligenceProcessingRun.student_id == student_id,
             IntelligenceProcessingRun.status == "COMPLETED",
+            LearningSession.student_id == student_id,
         )
     ).all()
+    explicitly_authorized: list[tuple[UUID, LearningEvent]] = []
     selected: dict[UUID, tuple[UUID, LearningEvent, IntelligenceProcessingRun]] = {}
-    for evidence_id, event, candidate, run in rows:
+    for evidence_id, event, candidate, run, _learning_session in rows:
         authoritative_run_id = authorities.get(event.session_id)
-        if authoritative_run_id is not None and event.processing_run_id != authoritative_run_id:
+        if authoritative_run_id is not None:
+            if event.processing_run_id == authoritative_run_id:
+                explicitly_authorized.append((evidence_id, event))
+            continue
+        if candidate is None:
+            # Candidate-free Evidence is activated only through explicit Session
+            # authority; legacy fallback remains Candidate-based by design.
             continue
         prior = selected.get(candidate.id)
         if prior is None or _version_key(run, event) > _version_key(prior[2], prior[1]):
             selected[candidate.id] = (evidence_id, event, run)
     return [
         evidence_id
-        for evidence_id, event, _ in sorted(
-            selected.values(),
+        for evidence_id, _event in sorted(
+            explicitly_authorized
+            + [(evidence_id, event) for evidence_id, event, _run in selected.values()],
             key=lambda item: (item[1].session_id, str(item[0])),
         )
     ]
+
+
+def is_supported_evidence_run_scope(scope: object) -> bool:
+    """Recognize compiled legacy and deterministic-finalization Evidence runs."""
+
+    if not isinstance(scope, dict):
+        return False
+    legacy_schema = scope.get("consolidation_schema_version")
+    if isinstance(legacy_schema, str) and legacy_schema.startswith("session-evidence-"):
+        return True
+    return (
+        scope.get("intelligence_pipeline") == "segment-finalization-v1"
+        and scope.get("segment_review_schema_version") == "segment-learning-review-v1"
+        and scope.get("segment_review_prompt_version") == "segment-learning-review-prompt-v1"
+        and scope.get("segment_review_rubric_version") == "evidence-rubric-v1"
+        and scope.get("segment_review_policy_version") == "segment-review-policy-v1"
+    )
 
 
 def _version_key(run: IntelligenceProcessingRun, event: LearningEvent) -> tuple[datetime, str, str]:

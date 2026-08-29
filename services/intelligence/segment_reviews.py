@@ -195,7 +195,11 @@ def review_completed_segment(
                 source_candidate_event_ids=tuple(candidate.id for candidate in candidates),
             ),
         )
-        envelope = _parse_and_validate_output(result.output, messages=messages, candidates=candidates)
+        envelope = validate_segment_review_output(
+            result.output,
+            messages=messages,
+            candidates=candidates,
+        )
     except SegmentReviewError as error:
         mark_segment_review_failed(session, review=review, error=error)
         raise
@@ -453,7 +457,14 @@ def _enforce_capacity(payload: dict[str, object], *, settings: Settings | None) 
         raise SegmentReviewCapacityError("SEGMENT_REVIEW_CAPACITY_EXCEEDED")
 
 
-def _parse_and_validate_output(output: dict[str, object], *, messages: list[LearningMessage], candidates: list[CandidateEvent]) -> SegmentLearningReviewEnvelope:
+def validate_segment_review_output(
+    output: dict[str, object],
+    *,
+    messages: list[LearningMessage],
+    candidates: list[CandidateEvent],
+) -> SegmentLearningReviewEnvelope:
+    """Apply the compiled Finding contract to model or persisted Review output."""
+
     try:
         envelope = SegmentLearningReviewEnvelope.model_validate(output)
     except ValidationError as error:

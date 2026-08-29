@@ -145,19 +145,24 @@ def rebuild_authoritative_current_states(
         session.flush()
         return []
     ordered_evidence = session.execute(
-        select(LearningEvidence.id, LearningSession, CandidateEvent)
+        select(LearningEvidence.id, LearningEvent, LearningSession, CandidateEvent)
         .join(LearningEvent, LearningEvidence.event_id == LearningEvent.id)
-        .join(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
+        .outerjoin(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
         .join(LearningSession, LearningEvent.session_id == LearningSession.id)
         .where(LearningEvidence.id.in_(evidence_ids))
-        .order_by(CandidateEvent.created_at, LearningEvent.id)
+        .order_by(
+            LearningSession.closed_at,
+            CandidateEvent.created_at.nulls_last(),
+            LearningEvent.segment_review_finding_index.nulls_last(),
+            LearningEvent.id,
+        )
     ).all()
     rebuilt: list[CurrentLearningState] = []
-    for evidence_id, learning_session, candidate in ordered_evidence:
+    for evidence_id, _event, learning_session, candidate in ordered_evidence:
         for state in apply_evidence_to_current_state(
             session,
             evidence_id=evidence_id,
-            now=learning_session.closed_at or candidate.created_at or now,
+            now=learning_session.closed_at or (candidate.created_at if candidate is not None else None) or now,
             policy_version=policy_version,
             force_derivation=True,
         ):
@@ -181,9 +186,11 @@ def apply_processing_run_current_state(
     evidence_ids = session.execute(
         select(LearningEvidence.id)
         .join(LearningEvent, LearningEvidence.event_id == LearningEvent.id)
-        .join(CandidateEvent, LearningEvent.candidate_event_id == CandidateEvent.id)
         .where(LearningEvent.processing_run_id == processing_run_id)
-        .order_by(CandidateEvent.created_at, LearningEvent.id)
+        .order_by(
+            LearningEvent.segment_review_finding_index.nulls_last(),
+            LearningEvent.id,
+        )
     ).scalars()
     states: list[CurrentLearningState] = []
     for evidence_id in evidence_ids:
@@ -234,22 +241,18 @@ def _load_validated_evidence(
     if row is None:
         raise CurrentStateSourceError("Evidence does not exist.")
     evidence, event, learning_session, run = row
+    from services.intelligence.authority import is_supported_evidence_run_scope
+
     scope = run.scope if isinstance(run.scope, dict) else {}
     if (
         run.status != "COMPLETED"
         or learning_session.status != "CLOSED"
-        or not _supported_evidence_schema(scope.get("consolidation_schema_version"))
+        or not is_supported_evidence_run_scope(scope)
         or scope.get("session_id") != str(event.session_id)
         or evidence.concept_ref != event.concept_ref
     ):
         raise CurrentStateSourceError("Current State requires completed, validated TASK-021 Evidence.")
     return evidence, event, learning_session, run
-
-
-def _supported_evidence_schema(value: object) -> bool:
-    """Allow explicitly versioned TASK-021 contracts during a bounded rebuild."""
-
-    return isinstance(value, str) and value.startswith("session-evidence-")
 
 
 def _require_supported_policy(policy_version: str) -> None:
