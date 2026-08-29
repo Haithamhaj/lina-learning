@@ -5,6 +5,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Self
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
 import pytest
@@ -55,7 +56,15 @@ from scripts.run_full_system_acceptance import (
     validate_historical_snapshots,
     validate_reconstruction_output,
 )
-from services.platform.db.models import AIExecution, LearningSession, ModelTask
+from services.platform.config import Settings
+from services.platform.db.models import (
+    AIExecution,
+    LearningSegment,
+    LearningSession,
+    ModelTask,
+)
+from workers.intelligence_handlers import register_intelligence_handlers
+from workers.job_worker import JobHandlerRegistry
 
 SOURCE = "postgresql+psycopg://source_user:source-secret@db.example:5432/lina_source"
 TARGET = "postgresql+psycopg://target_user:target-secret@db.example:5432/lina_acceptance_20260829_a1"
@@ -510,6 +519,95 @@ def test_failed_markdown_renders_durable_review_job_and_activation_evidence() ->
     assert "Execution taxonomy: `NOT VERIFIED`" in markdown
     assert "Codex-executed real-model verification" not in markdown
     assert str(run_id) not in markdown
+
+
+def test_segment_review_worker_uses_explicit_isolated_settings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ALLOWED_ORIGINS", "not-valid-settings-json")
+    student_id = uuid4()
+    segment_id = uuid4()
+    learning_session = SimpleNamespace(
+        id=HISTORICAL_SESSION_ID,
+        student_id=student_id,
+    )
+    segment = SimpleNamespace(
+        id=segment_id,
+        session_id=HISTORICAL_SESSION_ID,
+        closed_at=datetime(2026, 8, 29, tzinfo=UTC),
+        closure_reason="SESSION_CLOSED",
+    )
+    isolated_settings = Settings(
+        _env_file=None,
+        _env_prefix="__LINA_TEST_EXPLICIT_SETTINGS__",
+        segment_review_context_capacity=12_345,
+    )
+    captured: dict[str, object] = {}
+
+    class FakeSession:
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            return None
+
+        def get(
+            self, model: object, identity: object, **_: object
+        ) -> SimpleNamespace | None:
+            if model is LearningSession and identity == HISTORICAL_SESSION_ID:
+                return learning_session
+            if model is LearningSegment and identity == segment_id:
+                return segment
+            return None
+
+        def commit(self) -> None:
+            captured["committed"] = True
+
+    class FakeSessionFactory:
+        def __call__(self) -> FakeSession:
+            return FakeSession()
+
+    review = SimpleNamespace(id=uuid4(), status="COMPLETED")
+
+    def review_segment(*_: object, **kwargs: object) -> SimpleNamespace:
+        captured["settings"] = kwargs.get("settings")
+        return SimpleNamespace(review=review, finding_count=0, model_called=True)
+
+    monkeypatch.setattr(
+        "workers.intelligence_handlers.review_completed_segment",
+        review_segment,
+    )
+    monkeypatch.setattr(
+        "workers.intelligence_handlers.enqueue_session_intelligence_finalization_if_ready",
+        lambda *_args, **_kwargs: None,
+    )
+    registry = JobHandlerRegistry()
+    register_intelligence_handlers(
+        registry,
+        session_factory=FakeSessionFactory(),  # type: ignore[arg-type]
+        segment_evidence_gateway_factory=lambda _: object(),  # type: ignore[arg-type,return-value]
+        segment_review_settings=isolated_settings,
+    )
+    handler = registry.get("SEGMENT_LEARNING_REVIEW")
+    assert handler is not None
+
+    result = handler(
+        SimpleNamespace(
+            payload={
+                "student_id": str(student_id),
+                "session_id": str(HISTORICAL_SESSION_ID),
+                "segment_id": str(segment_id),
+                "review_request_version": "segment-review-request-v1",
+                "closed_at": segment.closed_at.isoformat(),
+                "closure_reason": segment.closure_reason,
+            }
+        )
+    )
+
+    assert captured["settings"] is isolated_settings
+    assert isolated_settings.segment_review_context_capacity == 12_345
+    assert captured["committed"] is True
+    assert result["review_status"] == "COMPLETED"
 
 
 def test_orphan_derived_rows_are_reported_as_possible_partial_activation() -> None:

@@ -2561,6 +2561,7 @@ def run_historical_intelligence_acceptance(
             full_registry,
             session_factory=session_factory,
             segment_evidence_gateway_factory=segment_gateway_factory,
+            segment_review_settings=settings,
         )
         with session_factory() as session:
             review_jobs = list(

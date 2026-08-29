@@ -12,17 +12,29 @@ from services.intelligence.consolidation import consolidate_closed_session
 from services.intelligence.current_state import apply_processing_run_current_state
 from services.intelligence.decisions import apply_processing_run_decision_views
 from services.intelligence.patterns import apply_processing_run_patterns
-from services.intelligence.session_finalization import finalize_closed_session
-from services.model_gateway.factory import create_session_evidence_gateway
-from services.model_gateway.factory import create_segment_evidence_gateway
-from services.model_gateway.gateway import ModelGateway
-from services.platform.db.models import Job, LearningSegment, LearningSession
-from services.platform.db.models import IntelligenceReprocessRun
 from services.intelligence.reprocess import (
     INTELLIGENCE_REPROCESS_JOB,
     activate_reprocess_scope,
     process_intelligence_reprocess_session,
     record_reprocess_session_failure,
+)
+from services.intelligence.segment_reviews import (
+    SegmentReviewLineageError,
+    review_completed_segment,
+)
+from services.intelligence.session_finalization import finalize_closed_session
+from services.model_gateway.factory import create_session_evidence_gateway
+from services.model_gateway.gateway import ModelGateway
+from services.platform.config import Settings
+from services.platform.db.models import (
+    IntelligenceReprocessRun,
+    Job,
+    LearningSegment,
+    LearningSession,
+)
+from services.tutor.segment_lifecycle import (
+    SEGMENT_LEARNING_REVIEW_JOB,
+    SEGMENT_REVIEW_REQUEST_VERSION,
 )
 from services.tutor.session_lifecycle import (
     LEGACY_SESSION_EVIDENCE_PIPELINE,
@@ -31,32 +43,25 @@ from services.tutor.session_lifecycle import (
     SESSION_INTELLIGENCE_FINALIZE_JOB,
     enqueue_session_intelligence_finalization_if_ready,
 )
-from services.tutor.segment_lifecycle import (
-    SEGMENT_LEARNING_REVIEW_JOB,
-    SEGMENT_REVIEW_REQUEST_VERSION,
-)
-from services.intelligence.segment_reviews import (
-    SegmentReviewLineageError,
-    review_completed_segment,
-)
 
 if TYPE_CHECKING:
     from workers.job_worker import JobHandlerRegistry
 
 
 def register_intelligence_handlers(
-    registry: "JobHandlerRegistry",
+    registry: JobHandlerRegistry,
     *,
     session_factory: sessionmaker[Session],
     evidence_gateway_factory: Callable[[Session], ModelGateway] = create_session_evidence_gateway,
     segment_evidence_gateway_factory: Callable[[Session], ModelGateway] | None = None,
+    segment_review_settings: Settings | None = None,
 ) -> None:
     """Register only the approved closed-session evidence job for TASK-021."""
 
     def handle_consolidation(job: Job) -> dict[str, object]:
         session_id = job.payload.get("session_id")
         if not isinstance(session_id, str):
-            raise ValueError("SESSION_CONSOLIDATION requires session_id.")
+            raise TypeError("SESSION_CONSOLIDATION requires session_id.")
         with session_factory() as session:
             learning_session = session.get(LearningSession, UUID(session_id), with_for_update=True)
             if learning_session is None:
@@ -105,7 +110,7 @@ def register_intelligence_handlers(
         raw_session_id = payload.get("session_id")
         raw_student_id = payload.get("student_id")
         if not isinstance(raw_session_id, str) or not isinstance(raw_student_id, str):
-            raise ValueError("SESSION_INTELLIGENCE_FINALIZE requires Session lineage.")
+            raise TypeError("SESSION_INTELLIGENCE_FINALIZE requires Session lineage.")
         if payload.get("intelligence_pipeline") != SESSION_FINALIZATION_PIPELINE:
             raise ValueError("Unsupported Session finalization pipeline contract.")
         try:
@@ -177,6 +182,7 @@ def register_intelligence_handlers(
                     learning_session=learning_session,
                     segment=segment,
                     gateway=segment_evidence_gateway_factory(session),
+                    settings=segment_review_settings,
                 )
                 enqueue_session_intelligence_finalization_if_ready(
                     session,
@@ -202,7 +208,7 @@ def register_intelligence_handlers(
     def handle_reprocess(job: Job) -> dict[str, object]:
         raw_run_id = job.payload.get("reprocess_run_id")
         if not isinstance(raw_run_id, str):
-            raise ValueError("INTELLIGENCE_REPROCESS requires reprocess_run_id.")
+            raise TypeError("INTELLIGENCE_REPROCESS requires reprocess_run_id.")
         reprocess_run_id = UUID(raw_run_id)
         with session_factory.begin() as session:
             reprocess_run = session.get(IntelligenceReprocessRun, reprocess_run_id, with_for_update=True)
@@ -225,7 +231,7 @@ def register_intelligence_handlers(
                         gateway=evidence_gateway_factory(session),
                     )
                     results.append(result)
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001 -- one Session failure is durably aggregated into the bounded reprocess result.
                 with session_factory.begin() as session:
                     failures.append(
                         record_reprocess_session_failure(
