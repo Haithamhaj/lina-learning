@@ -9,6 +9,7 @@ from datetime import UTC, date, datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
@@ -24,9 +25,9 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID as PostgreSQLUUID
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
+from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from pgvector.sqlalchemy import Vector
 
 
 class Base(DeclarativeBase):
@@ -148,11 +149,11 @@ class AIExecution(Base):
     model: Mapped[str] = mapped_column(String(128), nullable=False)
     # Normal (non-cached) input tokens and cached input tokens are kept apart
     # so ledger cost estimates can be audited against provider usage.
-    input_tokens: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
-    cached_input_tokens: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
-    cache_write_tokens: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
-    output_tokens: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
-    latency_ms: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cached_input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cache_write_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     estimated_cost_usd: Mapped[float | None] = mapped_column(nullable=True)
     success: Mapped[bool] = mapped_column(Boolean, nullable=False)
     failure_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
