@@ -14,7 +14,7 @@ from services.intelligence.segment_reviews import (
     SEGMENT_REVIEW_POLICY_VERSION,
     SegmentReviewFinding,
     SegmentReviewValidationError,
-    _historical_anchors,
+    persisted_review_historical_anchors,
     validate_segment_review_output,
 )
 from services.platform.db.models import (
@@ -87,10 +87,11 @@ def resolve_segment_review_finding(
             review.output,
             messages=messages,
             candidates=candidates,
-            historical_anchors=_historical_anchors(
+            historical_anchors=persisted_review_historical_anchors(
                 session,
                 learning_session=learning_session,
                 segment=segment,
+                review=review,
             ),
         )
     except SegmentReviewValidationError:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from datetime import UTC, datetime, timedelta
@@ -28,6 +29,7 @@ from services.platform.db.models import (
     CurrentLearningState,
     DecisionView,
     IntelligenceProcessingRun,
+    IntelligenceReprocessRun,
     IntelligenceSessionAuthority,
     Job,
     LearnerPattern,
@@ -830,6 +832,254 @@ def test_candidate_free_misconception_does_not_invent_a_recurrence_key(
         assert session.query(LearnerPattern).filter_by(
             pattern_type="misconception_recurrence"
         ).count() == 0
+
+
+def test_persisted_retention_review_keeps_exact_superseded_authority_provenance(
+    factory: sessionmaker[Session],
+) -> None:
+    """A later reprocess may supersede authority without erasing a valid Review's anchor."""
+
+    from services.intelligence.segment_review_provenance import (
+        resolve_segment_review_finding,
+    )
+    from services.intelligence.session_finalization import (
+        stage_closed_session_finalization,
+    )
+    from services.intelligence.reprocess import (
+        EvidenceVersionSelection,
+        IntelligenceReprocessRequest,
+        activate_reprocess_scope,
+        enqueue_intelligence_reprocess,
+        process_intelligence_reprocess_session,
+    )
+
+    finalize, _, _ = _finalization_api()
+    with factory.begin() as session:
+        student = _student(session)
+        source_session = LearningSession(
+            student_id=student.id,
+            subject="MATH",
+            status="CLOSED",
+            intelligence_pipeline="segment-finalization-v1",
+            closed_at=datetime(2026, 8, 20, 12, tzinfo=UTC),
+        )
+        session.add(source_session)
+        session.flush()
+        original_run = IntelligenceProcessingRun(
+            student_id=student.id,
+            rubric_version="evidence-rubric-v1",
+            policy_version=SEGMENT_REVIEW_POLICY_VERSION,
+            status="COMPLETED",
+            scope={
+                "session_id": str(source_session.id),
+                "intelligence_pipeline": "segment-finalization-v1",
+                "segment_review_schema_version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+                "segment_review_prompt_version": SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
+                "segment_review_rubric_version": "evidence-rubric-v1",
+                "segment_review_policy_version": SEGMENT_REVIEW_POLICY_VERSION,
+            },
+        )
+        session.add(original_run)
+        session.flush()
+        source_event = LearningEvent(
+            processing_run_id=original_run.id,
+            session_id=source_session.id,
+            subject="MATH",
+            concept_ref="equivalent_fractions",
+            event_type="independent_success",
+            description="Prior demonstrated understanding.",
+        )
+        session.add(source_event)
+        session.flush()
+        original_evidence = LearningEvidence(
+            event_id=source_event.id,
+            concept_ref="equivalent_fractions",
+            dimensions=_dimensions(
+                understanding="demonstrated",
+                independence="independent",
+                reasoning_demonstration="coherent",
+            ),
+            relationship="supports",
+            source_ref="fixture:source-e1",
+        )
+        session.add(original_evidence)
+        session.add(
+            IntelligenceSessionAuthority(
+                student_id=student.id,
+                session_id=source_session.id,
+                evidence_processing_run_id=original_run.id,
+            )
+        )
+        session.flush()
+
+        _, later_session, [(segment, message)] = _closed_lineage(session, student=student)
+        retention_finding = _finding(
+            message,
+            event_type="retention_check",
+            dimensions=_dimensions(
+                understanding="demonstrated",
+                independence="independent",
+                reasoning_demonstration="coherent",
+                retention="retained",
+            ),
+        )
+        retention_finding["retention_context"] = "meaningfully_delayed"
+        retention_finding["historical_anchor_evidence_ids"] = [str(original_evidence.id)]
+        later_review = _review(
+            session,
+            student=student,
+            learning_session=later_session,
+            segment=segment,
+            findings=[retention_finding],
+        )
+        finalized = finalize(session, learning_session=later_session)
+        retention_event = session.query(LearningEvent).filter_by(
+            processing_run_id=finalized.processing_run.id
+        ).one()
+        retention_evidence = session.query(LearningEvidence).filter_by(
+            event_id=retention_event.id
+        ).one()
+
+        replacement_run = IntelligenceProcessingRun(
+            student_id=student.id,
+            rubric_version="evidence-rubric-v1",
+            policy_version=SEGMENT_REVIEW_POLICY_VERSION,
+            status="COMPLETED",
+            scope={
+                "session_id": str(source_session.id),
+                "intelligence_pipeline": "segment-finalization-v1",
+                "segment_review_schema_version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+                "segment_review_prompt_version": SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
+                "segment_review_rubric_version": "evidence-rubric-v1",
+                "segment_review_policy_version": SEGMENT_REVIEW_POLICY_VERSION,
+            },
+        )
+        session.add(replacement_run)
+        session.flush()
+        replacement_event = LearningEvent(
+            processing_run_id=replacement_run.id,
+            session_id=source_session.id,
+            subject="MATH",
+            concept_ref="equivalent_fractions",
+            event_type="independent_success",
+            description="Reprocessed demonstrated understanding.",
+        )
+        session.add(replacement_event)
+        session.flush()
+        session.add(
+            LearningEvidence(
+                event_id=replacement_event.id,
+                concept_ref="equivalent_fractions",
+                dimensions=_dimensions(
+                    understanding="demonstrated",
+                    independence="independent",
+                    reasoning_demonstration="coherent",
+                ),
+                relationship="supports",
+                source_ref="fixture:source-e1-prime",
+            )
+        )
+        reprocess = IntelligenceReprocessRun(
+            student_id=student.id,
+            idempotency_key="fixture-retention-anchor-replacement",
+            scope={"session_ids": [str(source_session.id)]},
+            version_set={},
+            status="COMPLETED",
+            result={
+                "activation": {
+                    "status": "COMPLETED",
+                    "previous_authority_by_session": {
+                        str(source_session.id): {
+                            "reprocess_run_id": None,
+                            "evidence_processing_run_id": str(original_run.id),
+                        }
+                    },
+                    "new_evidence_processing_runs_by_session": {
+                        str(source_session.id): str(replacement_run.id),
+                    },
+                    "activated_at": datetime(2026, 8, 30, 12, tzinfo=UTC).isoformat(),
+                }
+            },
+        )
+        session.add(reprocess)
+        source_authority = session.query(IntelligenceSessionAuthority).filter_by(
+            session_id=source_session.id
+        ).one()
+        source_authority.evidence_processing_run_id = replacement_run.id
+        source_authority.reprocess_run_id = reprocess.id
+        source_authority.activated_at = datetime(2026, 8, 30, 12, tzinfo=UTC)
+        session.flush()
+
+        assert resolve_segment_review_finding(
+            session,
+            event=retention_event,
+            evidence=retention_evidence,
+        ) is not None
+        staged = stage_closed_session_finalization(session, learning_session=later_session)
+        assert staged.event_count == staged.evidence_count == 1
+        queued = enqueue_intelligence_reprocess(
+            session,
+            request=IntelligenceReprocessRequest(
+                student_id=student.id,
+                session_ids=(later_session.id,),
+                evidence=EvidenceVersionSelection(provider="fixture", model="fixture-evidence"),
+            ),
+        )
+        reprocessed = process_intelligence_reprocess_session(
+            session,
+            reprocess_run_id=queued.reprocess_run.id,
+            session_id=later_session.id,
+            gateway=object(),
+        )
+        activation = activate_reprocess_scope(
+            session,
+            reprocess_run_id=queued.reprocess_run.id,
+        )
+        assert reprocessed["event_count"] == 1
+        assert activation["status"] == "COMPLETED"
+
+        unapproved_run = IntelligenceProcessingRun(
+            student_id=student.id,
+            rubric_version="evidence-rubric-v1",
+            policy_version=SEGMENT_REVIEW_POLICY_VERSION,
+            status="COMPLETED",
+            scope={"session_id": str(source_session.id), "intelligence_pipeline": "segment-finalization-v1"},
+        )
+        session.add(unapproved_run)
+        session.flush()
+        unapproved_event = LearningEvent(
+            processing_run_id=unapproved_run.id,
+            session_id=source_session.id,
+            subject="MATH",
+            concept_ref="equivalent_fractions",
+            event_type="independent_success",
+            description="Completed but never authorized.",
+        )
+        session.add(unapproved_event)
+        session.flush()
+        unapproved_evidence = LearningEvidence(
+            event_id=unapproved_event.id,
+            concept_ref="equivalent_fractions",
+            dimensions=_dimensions(
+                understanding="demonstrated",
+                independence="independent",
+                reasoning_demonstration="coherent",
+            ),
+            relationship="supports",
+            source_ref="fixture:unapproved-old-evidence",
+        )
+        session.add(unapproved_evidence)
+        tampered_output = json.loads(json.dumps(later_review.output))
+        tampered_output["findings"][0]["historical_anchor_evidence_ids"] = [
+            str(unapproved_evidence.id)
+        ]
+        later_review.output = tampered_output
+        session.flush()
+        assert resolve_segment_review_finding(
+            session,
+            event=retention_event,
+            evidence=retention_evidence,
+        ) is None
 
 
 def test_candidate_free_concept_patterns_never_promote_an_invented_context(

@@ -23,6 +23,7 @@ from services.platform.config import Settings, get_settings
 from services.platform.db.models import (
     CandidateEvent,
     IntelligenceProcessingRun,
+    IntelligenceReprocessRun,
     IntelligenceSessionAuthority,
     LearningEvent,
     LearningEvidence,
@@ -506,6 +507,7 @@ def _historical_anchors(
         )
         .where(
             LearningSession.student_id == learning_session.student_id,
+            IntelligenceProcessingRun.student_id == learning_session.student_id,
             LearningEvent.session_id != learning_session.id,
             LearningEvent.subject == learning_session.subject,
             LearningEvidence.concept_ref.is_not(None),
@@ -545,6 +547,165 @@ def _historical_anchors(
             )
         )
     return anchors
+
+
+def persisted_review_historical_anchors(
+    session: Session,
+    *,
+    learning_session: LearningSession,
+    segment: LearningSegment,
+    review: SegmentLearningReview,
+) -> list[HistoricalEvidenceAnchor]:
+    """Resolve only a completed Review's exact, durably authorized anchors.
+
+    Fresh Review input deliberately uses `_historical_anchors`, which exposes
+    only the current authority.  A persisted Review instead needs to remain
+    auditable after a later complete reprocess replaces its source Session's
+    current authority.  The reprocess activation audit is the narrow durable
+    proof that the exact old Evidence run was formerly authorized; ordinary
+    old Evidence is never sufficient.
+    """
+
+    if not isinstance(review.output, dict) or segment.closed_at is None:
+        return []
+    try:
+        envelope = SegmentLearningReviewEnvelope.model_validate(review.output)
+    except ValidationError:
+        return []
+    requested_ids = {
+        evidence_id
+        for finding in envelope.findings
+        for evidence_id in finding.historical_anchor_evidence_ids
+    }
+    if not requested_ids:
+        return []
+    review_completed_at = review.completed_at or review.created_at
+    if review_completed_at is None:
+        return []
+    rows = session.execute(
+        select(
+            LearningEvidence.id,
+            LearningEvidence.concept_ref,
+            LearningEvidence.dimensions,
+            LearningSession.closed_at,
+            LearningSession.id,
+            LearningEvent.processing_run_id,
+        )
+        .join(LearningEvent, LearningEvidence.event_id == LearningEvent.id)
+        .join(LearningSession, LearningEvent.session_id == LearningSession.id)
+        .join(
+            IntelligenceProcessingRun,
+            LearningEvent.processing_run_id == IntelligenceProcessingRun.id,
+        )
+        .where(
+            LearningEvidence.id.in_(requested_ids),
+            LearningSession.student_id == learning_session.student_id,
+            IntelligenceProcessingRun.student_id == learning_session.student_id,
+            LearningEvent.session_id != learning_session.id,
+            LearningEvent.subject == learning_session.subject,
+            LearningEvidence.concept_ref.is_not(None),
+            LearningEvidence.concept_ref == LearningEvent.concept_ref,
+            LearningEvidence.dimensions["understanding"].astext.in_(
+                ("demonstrated", "strong_demonstration")
+            ),
+            IntelligenceProcessingRun.status == "COMPLETED",
+            LearningSession.closed_at.is_not(None),
+            LearningSession.closed_at < segment.closed_at,
+        )
+    ).all()
+    anchors: list[HistoricalEvidenceAnchor] = []
+    for evidence_id, concept_ref, dimensions, observed_at, source_session_id, run_id in rows:
+        if (
+            not isinstance(concept_ref, str)
+            or not isinstance(dimensions, dict)
+            or not isinstance(observed_at, datetime)
+        ):
+            continue
+        elapsed = segment.closed_at - observed_at
+        state = dimensions.get("understanding")
+        if (
+            elapsed < MEANINGFUL_RETENTION_DELAY
+            or state not in {"demonstrated", "strong_demonstration"}
+            or not _historically_authorized_evidence_run(
+                session,
+                student_id=learning_session.student_id,
+                source_session_id=source_session_id,
+                evidence_processing_run_id=run_id,
+                review_completed_at=review_completed_at,
+            )
+        ):
+            continue
+        anchors.append(
+            HistoricalEvidenceAnchor(
+                evidence_id=evidence_id,
+                concept_ref=concept_ref,
+                prior_demonstration_state=state,
+                prior_observed_at=observed_at,
+                elapsed_time=f"P{elapsed.days}D",
+            )
+        )
+    return anchors
+
+
+def _historically_authorized_evidence_run(
+    session: Session,
+    *,
+    student_id: UUID,
+    source_session_id: UUID,
+    evidence_processing_run_id: UUID,
+    review_completed_at: datetime,
+) -> bool:
+    """Require current authority or a later completed reprocess audit record."""
+
+    current_authority = session.execute(
+        select(IntelligenceSessionAuthority.id).where(
+            IntelligenceSessionAuthority.student_id == student_id,
+            IntelligenceSessionAuthority.session_id == source_session_id,
+            IntelligenceSessionAuthority.evidence_processing_run_id
+            == evidence_processing_run_id,
+        )
+    ).scalar_one_or_none()
+    if current_authority is not None:
+        return True
+    for reprocess in session.scalars(
+        select(IntelligenceReprocessRun).where(
+            IntelligenceReprocessRun.student_id == student_id,
+            IntelligenceReprocessRun.status == "COMPLETED",
+        )
+    ):
+        activation = (
+            reprocess.result.get("activation")
+            if isinstance(reprocess.result, dict)
+            else None
+        )
+        if not isinstance(activation, dict) or activation.get("status") != "COMPLETED":
+            continue
+        activated_at = _activation_timestamp(activation.get("activated_at"))
+        previous_by_session = activation.get("previous_authority_by_session")
+        previous = (
+            previous_by_session.get(str(source_session_id))
+            if isinstance(previous_by_session, dict)
+            else None
+        )
+        if (
+            activated_at is not None
+            and activated_at >= review_completed_at
+            and isinstance(previous, dict)
+            and previous.get("evidence_processing_run_id")
+            == str(evidence_processing_run_id)
+        ):
+            return True
+    return False
+
+
+def _activation_timestamp(value: object) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else None
 
 
 def _model_payload(

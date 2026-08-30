@@ -10,6 +10,8 @@
   `COMPLETED / CODEX-REPORTED`
 - SEG-EVID-01E reprocessing/authority compatibility replay:
   `COMPLETED / CODEX-REPORTED`
+- Persisted-retention provenance correction:
+  `FOCUSED POSTGRESQL VERIFIED / CODEX-REPORTED`
 - Tutor personalization verification: `COMPLETED IN THE SEPARATE FULL-SYSTEM JOURNEY`
 - Browser / Real-Lina verification: `NO`
 
@@ -60,6 +62,27 @@ required, so this is deterministic reuse of persisted real-Luna Review
 artifacts, not a new real-model execution. The original acceptance database
 and raw history were not written. This is Codex-reported copied-database
 evidence, not independent re-execution or Real-Lina/browser verification.
+
+## Persisted retention provenance correction
+
+The follow-on correction separates two intentional retention boundaries. A new
+Segment Review receives only currently authoritative historical Evidence. A
+completed persisted Review validates only its exact recorded anchor IDs and may
+use a later completed E-path activation audit to prove that a now-superseded
+source Evidence run was authoritative when the Review completed. The proof
+still requires the same Student, subject, prior closed Session, exact completed
+run, demonstrated/strong Evidence, matching concept, and meaningful delay.
+Completed-but-never-authoritative Evidence, malformed audit lineage, foreign
+or wrong-run evidence, and insufficient delay are excluded fail-closed.
+
+Codex-reported focused PostgreSQL coverage passed `117`; canonical Python
+passed `689`, with `6` skipped. It covers E1 → E1′
+authority replacement with E1 preserved, exact Finding resolution, later
+Session E-path reprocessing, rejection of an arbitrary old Evidence row, and
+fresh model input containing only E1′. No model call occurred. The retained
+isolated acceptance database is not configured in this checkout, so no
+copied-database replay was performed for this correction; the historical
+real-Luna artifacts above remain the recorded original acceptance evidence.
 
 ## Verification taxonomy
 

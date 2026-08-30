@@ -147,6 +147,18 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
   `not_tested` rather than being invented. Focused PostgreSQL `93 passed` and
   canonical Python `688 passed, 6 skipped` are Codex-reported, not independently
   re-executed. Real-Lina/browser remain NOT VERIFIED.
+- Follow-on retention-provenance correction: fresh Segment Reviews still receive
+  only current Session-authorized historical anchors. A completed persisted
+  Review can instead revalidate its exact stored anchor only when the same
+  Student/subject/prior Session/Evidence run remains qualifying and is current
+  authority or is proven by a later completed E-path authority activation audit.
+  Arbitrary old Evidence, wrong/foreign run lineage, malformed audit data, and
+  insufficient delay remain fail-closed. Codex-reported focused PostgreSQL
+  coverage passed (`117 passed`); canonical Python passed (`689 passed, 6
+  skipped`); no new model call occurred. The retained
+  isolated acceptance database is not configured in this checkout, so this
+  correction was not replayed there. SEG-EVID-01F and Full-System Acceptance
+  remain REVIEW; Real-Lina/browser remain NOT VERIFIED.
 - Track A is COMPLETE / ACCEPTED; the authenticated Tutor works with zero
   content, uses optional question-driven grounding, and remains safety-first.
 - CTX-03 preserves current-Segment-only context. `CONTINUE` stays in the

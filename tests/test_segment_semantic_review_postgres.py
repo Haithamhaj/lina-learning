@@ -520,6 +520,80 @@ def test_retention_review_uses_only_bounded_prior_session_authority_anchors(
             }
         ]
 
+        replacement_run = IntelligenceProcessingRun(
+            student_id=student.id,
+            rubric_version="evidence-rubric-v1",
+            policy_version="segment-review-policy-v1",
+            status="COMPLETED",
+            scope={"intelligence_pipeline": "segment-finalization-v1"},
+        )
+        session.add(replacement_run)
+        session.flush()
+        replacement_event = LearningEvent(
+            processing_run_id=replacement_run.id,
+            session_id=prior_session.id,
+            subject="MATH",
+            concept_ref="equivalent_fractions",
+            event_type="independent_success",
+            description="Reprocessed authorized demonstration.",
+            source_message_id=None,
+        )
+        session.add(replacement_event)
+        session.flush()
+        replacement_evidence = LearningEvidence(
+            event_id=replacement_event.id,
+            concept_ref="equivalent_fractions",
+            dimensions=_dimensions(
+                understanding="demonstrated",
+                independence="independent",
+                reasoning_demonstration="coherent",
+            ),
+            relationship="supports",
+            source_ref="fixture:reprocessed-authorized-evidence",
+        )
+        session.add(replacement_evidence)
+        authority = session.query(IntelligenceSessionAuthority).filter_by(
+            session_id=prior_session.id
+        ).one()
+        authority.evidence_processing_run_id = replacement_run.id
+        session.flush()
+
+        new_session = LearningSession(
+            student_id=student.id,
+            subject="MATH",
+            status="CLOSED",
+            closed_at=datetime(2026, 9, 8, 12, tzinfo=UTC),
+        )
+        session.add(new_session)
+        session.flush()
+        new_segment = LearningSegment(
+            session_id=new_session.id,
+            sequence=1,
+            closed_at=new_session.closed_at,
+            closure_reason="SESSION_CLOSED",
+        )
+        session.add(new_segment)
+        session.flush()
+        _message(
+            session,
+            learning_session=new_session,
+            segment=new_segment,
+            role="student",
+            content="I can explain why two fourths and one half are equal.",
+            created_at=datetime(2026, 9, 8, 11, tzinfo=UTC),
+        )
+        new_provider = _Provider(_output())
+        review_completed_segment(
+            session,
+            learning_session=new_session,
+            segment=new_segment,
+            gateway=_gateway(session, new_provider),
+        )
+        new_request = json.loads(str(new_provider.payloads[0]["input"]))
+        assert [anchor["prior_evidence_id"] for anchor in new_request["historical_anchors"]] == [
+            str(replacement_evidence.id)
+        ]
+
 
 def test_retention_failure_relationship_is_rejected_without_historical_anchors(
     factory: sessionmaker[Session],

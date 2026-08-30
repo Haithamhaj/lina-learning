@@ -20,7 +20,7 @@ from services.intelligence.segment_reviews import (
     SEGMENT_REVIEW_POLICY_VERSION,
     SegmentLearningReviewEnvelope,
     SegmentReviewValidationError,
-    _historical_anchors,
+    persisted_review_historical_anchors,
     review_completed_segment,
     validate_segment_review_output,
 )
@@ -476,10 +476,11 @@ def _validate_persisted_review(
             review.output,
             messages=message_rows,
             candidates=candidate_rows,
-            historical_anchors=_historical_anchors(
+            historical_anchors=persisted_review_historical_anchors(
                 session,
                 learning_session=learning_session,
                 segment=segment,
+                review=review,
             ),
         )
     except SegmentReviewValidationError as error:

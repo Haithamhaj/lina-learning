@@ -685,6 +685,20 @@ conservatively `not_tested`, not fabricated. Complete-scope E reprocessing and
 rollback/no-partial-activation were exercised. Focused PostgreSQL coverage:
 `93 passed`; canonical Python: `688 passed, 6 skipped`; all are Codex-reported,
 not independently re-executed. Real-Lina/browser remain NOT VERIFIED.
+**Follow-on provenance correction:** A persisted delayed-retention Review now
+validates only its exact stored anchor IDs against durable authority history:
+the same Student, subject, prior closed Session, exact completed Evidence run,
+demonstrated/strong Evidence, concept, and meaningful delay must still match.
+Current authority remains the only historical input for a new Segment Review;
+a later completed E-path activation audit may prove a formerly-authoritative
+anchor for an already persisted Review. Arbitrary old Evidence, malformed
+audit lineage, foreign/wrong-run rows, and invalid delay remain fail-closed.
+Codex-reported focused PostgreSQL correction coverage: `117 passed`; it reused
+no model output and did not rerun the real-Luna journey. Canonical Python:
+`689 passed, 6 skipped` (Codex-reported). The retained isolated
+acceptance database is not configured in this checkout, so no copied-database
+replay was performed for this correction. F remains REVIEW pending independent
+acceptance; Real-Lina/browser remain NOT VERIFIED.
 
 ---
 
