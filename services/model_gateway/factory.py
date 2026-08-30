@@ -12,6 +12,7 @@ from services.model_gateway.gateway import (
     StaticModelProvider,
 )
 from services.model_gateway.openai_provider import OpenAIResponsesProvider
+from services.intelligence.segment_reviews import SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION
 from services.model_gateway.openai_embedding_provider import OpenAIEmbeddingProvider
 from services.platform.config import Settings, get_settings
 from services.platform.db.models import ModelTask
@@ -146,7 +147,7 @@ def create_segment_evidence_gateway(
         )
 
     safe_empty_provider = local_provider or StaticModelProvider(
-        ModelResult(output={"version": "segment-learning-review-v1", "findings": []})
+        ModelResult(output={"version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION, "findings": []})
     )
     return ModelGateway(
         session,

@@ -463,7 +463,7 @@ contradictions are removed; historical Session Evidence is preserved; and no
 implementation code changed.
 
 ## Full-System Acceptance — Learning Intelligence
-**Status:** IN_PROGRESS
+**Status:** REVIEW
 **Dependencies:** SEG-EVID-01A–D accepted; SEG-EVID-01E–F completed in order.
 **Purpose:** Prove the governed path from raw conversation through real Segment
 Review, Session-authorized learning memory, and a later real Tutor
@@ -474,7 +474,7 @@ from a clean fresh start.
 source authority, requires real `openai / gpt-5.6-luna` Model Gateway evidence
 for AI-powered acceptance work, and protects the source database from writes.
 **Stages:** SEG-EVID-01D and SEG-EVID-01E are independently accepted;
-SEG-EVID-01F is READY in the ordered implementation/verification stages
+SEG-EVID-01F is REVIEW in the ordered implementation/verification stages
 serving this Full-System Acceptance objective;
 they are not independent product goals. Accepted SEG-EVID-01A/B/C records and
 all deferred/frozen work remain unchanged.
@@ -662,7 +662,7 @@ accepted. Automated, database, and model results remain Codex-reported unless
 independently re-executed.
 
 ## SEG-EVID-01F — Real Model & Multi-Session Verification
-**Status:** READY
+**Status:** REVIEW
 **Dependencies:** SEG-EVID-01E
 **Purpose:** Verify confusion, bare wrong answer, explicit misconception,
 correction/counter-evidence, TeachingMethod outcome, transfer, retention with
@@ -670,6 +670,21 @@ bounded historical anchors, multi-Session Pattern support/counter and
 weakening/resolution, Card updates only after Session activation, relevant
 future Tutor use, and current Student behavior above historical intelligence,
 as Stage F of Full-System Acceptance.
+**Current execution:** Review-ready, Codex-reported isolated Math acceptance
+completed `12` normal Sessions, `19` successful real `openai / gpt-5.6-luna`
+Tutor executions, `15` successful real Luna Segment Review executions, and
+Session-authorized finalization. The bounded authoritative retention anchor
+path is `segment-learning-review-v2` / prompt v5 / policy v2: a real Luna
+anchor-concept separator mismatch failed strict validation safely, then the
+prompt-only exact-copy correction completed a grounded `retained` Review.
+Real authorized Evidence exercised support, counter, `WEAKENING`, and
+`RESOLVED` Pattern lifecycle states; a later Tutor context selected relevant
+State/Pattern Card sources without raw historical transcript injection, while
+an unrelated long-division turn selected none. Changed-context transfer was
+conservatively `not_tested`, not fabricated. Complete-scope E reprocessing and
+rollback/no-partial-activation were exercised. Focused PostgreSQL coverage:
+`93 passed`; canonical Python: `688 passed, 6 skipped`; all are Codex-reported,
+not independently re-executed. Real-Lina/browser remain NOT VERIFIED.
 
 ---
 
@@ -1113,9 +1128,9 @@ expansion remain frozen.
 - **Lifecycle:** UI-01 is **CLOSED** following real S3 browser use with no hang
   and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
-**Next action:** SEG-EVID-01F — Real Model & Multi-Session Verification. Do not
-begin EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, LR-D04B, archive retrieval, or frozen
-future capabilities.
+**Next action:** Independent acceptance review of SEG-EVID-01F and Full-System
+Acceptance. Do not begin EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, LR-D04B,
+archive retrieval, or frozen future capabilities.
 
 ---
 

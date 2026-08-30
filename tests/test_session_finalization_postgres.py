@@ -17,7 +17,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from services.intelligence.authority import authoritative_evidence_ids
-from services.intelligence.segment_reviews import SEGMENT_LEARNING_REVIEW_PROMPT_VERSION
+from services.intelligence.segment_reviews import (
+    SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
+    SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+    SEGMENT_REVIEW_POLICY_VERSION,
+)
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
     CandidateEvent,
@@ -193,6 +197,7 @@ def _finding(
         "event_summary": summary,
         "source_message_ids": [str(message.id)],
         "candidate_event_ids": candidate_ids or [],
+        "historical_anchor_evidence_ids": [],
         "school_or_extended": "school",
         "transfer_context": "not_tested",
         "retention_context": "not_tested",
@@ -215,10 +220,10 @@ def _review(
     status: str = "COMPLETED",
     provider: str = "fixture-a",
     model: str = "segment-fixture-a",
-    schema_version: str = "segment-learning-review-v1",
+    schema_version: str = SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
     prompt_version: str = SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
     rubric_version: str = "evidence-rubric-v1",
-    review_policy_version: str = "segment-review-policy-v1",
+    review_policy_version: str = SEGMENT_REVIEW_POLICY_VERSION,
     output: dict[str, object] | None = None,
 ) -> SegmentLearningReview:
     review = SegmentLearningReview(
@@ -235,7 +240,7 @@ def _review(
         output=(
             output
             if output is not None
-            else ({"version": "segment-learning-review-v1", "findings": findings or []}
+            else ({"version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION, "findings": findings or []}
             if status == "COMPLETED"
             else None)
         ),
@@ -479,7 +484,7 @@ def test_strict_review_and_raw_lineage_validation_precedes_materialization(
             _, review_session, _ = _closed_lineage(session, student=student)
         else:
             output = {
-                "version": "segment-learning-review-v1",
+                    "version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
                 "findings": [finding],
                 "unexpected": "not permitted",
             }

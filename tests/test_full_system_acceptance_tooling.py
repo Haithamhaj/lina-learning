@@ -57,6 +57,7 @@ from scripts.run_full_system_acceptance import (
     validate_historical_snapshots,
     validate_reconstruction_output,
 )
+from services.intelligence.segment_reviews import SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION
 from services.platform.config import Settings
 from services.platform.db.models import (
     AIExecution,
@@ -315,7 +316,7 @@ def test_completed_review_sources_must_be_exact_segment_student_lineage() -> Non
     review = SimpleNamespace(
         status="COMPLETED",
         output={
-            "version": "segment-learning-review-v1",
+            "version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
             "findings": [
                 {
                     "source_message_ids": [str(student_message_id), str(tutor_message_id)],

@@ -73,3 +73,84 @@ evidence, not independent re-execution or Real-Lina/browser verification.
 The runtime artifact directory remains the only raw acceptance-artifact
 destination. Its JSON and Markdown artifacts omit Student/Tutor raw content,
 database credentials, provider secrets, and env contents.
+
+## SEG-EVID-01F Math-only fresh-start execution
+
+### CODE REVIEW / AUTOMATED
+
+The F correction keeps the approved source-grounding, Candidate-free
+provenance, and retention contracts strict. Focused PostgreSQL coverage passed
+`93`; the canonical Python suite passed `688`, with `6` skipped. These are
+Codex-reported executions, not independent re-execution.
+
+### REAL LUNA VERIFIED
+
+On a separately migrated copy of the local demo database, a fresh acceptance
+Student completed `12` normal Math Sessions through the production Tutor,
+Segment lifecycle, worker, and Model Gateway paths. The persisted ledger has
+`19` successful Tutor and `15` successful Segment Review executions, all
+`openai / gpt-5.6-luna`. Controlled Student inputs entered only through the
+normal runtime; no Tutor output, Finding, Event, Evidence, State, Pattern,
+Decision, or Card row was manually authored.
+
+The original initial-learning journey distinguished confusion and a bare wrong
+answer from grounded explicit wrong reasoning, preserved correction, and
+produced a Candidate-free, server-grounded TeachingMethod `strategy_outcome`.
+A changed Math application was conservatively reviewed as `transfer=not_tested`;
+no transfer was fabricated. The retention Reviewer received only bounded prior
+Session-authorized Evidence identity, exact concept, demonstration state,
+observed time, elapsed time, and inclusion reason. A real output once rewrote
+the anchored concept separator; strict validation failed closed. Prompt v5 now
+requires exact copying, and the normal retry completed a grounded `retained`
+Finding. No raw historic transcript, Card conclusion, or unrelated Evidence
+entered retention input.
+
+### DATABASE END-TO-END VERIFIED
+
+Every controlled Session was normally closed and received one Session
+Authority after deterministic finalization. An initial deliberately
+single-Session E replay failed before activation because other authoritative
+Sessions still used the superseded prompt identity; rollback preserved the live
+authority. The subsequent complete-scope E reprocess reran or reused compatible
+current-contract Reviews, staged deterministically, and activated atomically.
+Candidate-free Event/Evidence provenance remained exact and auditable. This is
+Codex-reported database evidence, not independent re-execution.
+
+### MULTI-SESSION INTELLIGENCE VERIFIED
+
+The `unit-fraction-comparison` support-need Pattern reached `RESOLVED` with
+three support and two counter links. Its authorized Evidence lineage is:
+supports `653e7095-b65a-4888-b66a-9d7a1f5e1338`,
+`0340169c-041c-4d52-a230-4c2b1eda8b49`, and
+`c662cd0e-6e9c-425c-ac96-87bd04d5d628`; counters
+`a7579048-df51-4591-a7ab-7d1eea619ae4` and
+`f747f6d6-6d5a-443e-84c0-7f408383a0cc`. The first independent correction
+created a valid counter; the final independently grounded self-correction
+completed the policy threshold. A separate misconception-recurrence Pattern
+reached `WEAKENING`. `STABLE` was not manufactured because the real diversity
+and time requirements were not met.
+
+### TUTOR PERSONALIZATION VERIFIED
+
+A later real Tutor turn selected six relevant Card sources: active Current
+State and Pattern rows only. Its context debug recorded zero session-history,
+older-continuity, and recent-exchange message IDs; the visible response stayed
+natural and exposed no internal label or metadata. The current independent
+Student demonstration resulted in a short next challenge rather than stale
+remediation. A related Decision View remained available from the authoritative
+projection; Decision Views are not separately injected by the Card contract.
+
+### NEGATIVE-MEMORY EXCLUSION VERIFIED
+
+A fresh later long-division Session selected `[]` Card intelligence sources and
+zero historical-message IDs. Its visible Tutor reply contained neither fraction
+history nor internal labels, and its Review created no Event/Evidence. Resolved
+and unrelated fraction intelligence therefore did not enter this Math context.
+
+### REAL-LINA VERIFIED
+
+`NO` — this is controlled, isolated real-model acceptance, not Lina validation.
+
+### BROWSER VERIFIED
+
+`NOT VERIFIED`.

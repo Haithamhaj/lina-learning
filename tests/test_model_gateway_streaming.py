@@ -80,7 +80,7 @@ def test_strict_non_tutor_schema_returns_its_complete_parsed_envelope() -> None:
     """Catches the OpenAI adapter assuming every strict task is a Tutor turn."""
 
     output = _normalize_output(
-        '{"version":"segment-learning-review-v1","findings":[]}',
+        '{"version":"segment-learning-review-v2","findings":[]}',
         {
             "response_schema": {
                 "name": "segment_learning_review_v1",
@@ -94,4 +94,4 @@ def test_strict_non_tutor_schema_returns_its_complete_parsed_envelope() -> None:
         },
     )
 
-    assert output == {"version": "segment-learning-review-v1", "findings": []}
+    assert output == {"version": "segment-learning-review-v2", "findings": []}

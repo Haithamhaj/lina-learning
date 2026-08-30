@@ -26,6 +26,8 @@ from services.platform.db.models import (
     CandidateEvent,
     CurrentLearningState,
     DecisionView,
+    IntelligenceProcessingRun,
+    IntelligenceSessionAuthority,
     Job,
     LearnerIntelligenceCard,
     LearnerPattern,
@@ -158,6 +160,7 @@ def _finding(student_message: LearningMessage, **overrides: object) -> dict[str,
         "event_summary": "The Student explained why equivalent fractions name the same amount.",
         "source_message_ids": [str(student_message.id)],
         "candidate_event_ids": [],
+        "historical_anchor_evidence_ids": [],
         "school_or_extended": "school",
         "transfer_context": "not_tested",
         "retention_context": "not_tested",
@@ -365,9 +368,10 @@ def test_review_prompt_requires_an_exact_cited_student_quote_for_misconception_e
         )
 
         instructions = str(provider.payloads[0]["instructions"])
-        assert SEGMENT_LEARNING_REVIEW_PROMPT_VERSION == "segment-learning-review-prompt-v3"
+        assert SEGMENT_LEARNING_REVIEW_PROMPT_VERSION == "segment-learning-review-prompt-v5"
         assert "exact normalized substring" in instructions
         assert "explicit_student_reasoning" in instructions
+        assert "copy its concept_ref exactly" in instructions
 
 
 def test_review_prompt_requires_strong_understanding_to_have_supported_reasoning(
@@ -418,6 +422,103 @@ def test_transfer_and_retention_contracts_fail_closed_without_authoritative_hist
         retention = _finding(student, dimensions=_dimensions(retention="retained"))
         with pytest.raises(SegmentReviewValidationError):
             review_completed_segment(session, learning_session=learning_session, segment=segment, gateway=_gateway(session, _Provider(_output(retention))))
+
+
+def test_retention_review_uses_only_bounded_prior_session_authority_anchors(
+    factory: sessionmaker[Session],
+) -> None:
+    """A delayed retention Finding needs an exact, minimal authoritative anchor."""
+
+    with factory.begin() as session:
+        student, learning_session, segment = _lineage(session)
+        prior_session = LearningSession(
+            student_id=student.id,
+            subject="MATH",
+            status="CLOSED",
+            closed_at=datetime(2026, 8, 20, 12, tzinfo=UTC),
+        )
+        session.add(prior_session)
+        session.flush()
+        prior_run = IntelligenceProcessingRun(
+            student_id=student.id,
+            rubric_version="evidence-rubric-v1",
+            policy_version="segment-review-policy-v1",
+            status="COMPLETED",
+            scope={"intelligence_pipeline": "segment-finalization-v1"},
+        )
+        session.add(prior_run)
+        session.flush()
+        session.add(
+            IntelligenceSessionAuthority(
+                student_id=student.id,
+                session_id=prior_session.id,
+                evidence_processing_run_id=prior_run.id,
+            )
+        )
+        prior_event = LearningEvent(
+            processing_run_id=prior_run.id,
+            session_id=prior_session.id,
+            subject="MATH",
+            concept_ref="equivalent_fractions",
+            event_type="independent_success",
+            description="Prior authorized demonstration.",
+            source_message_id=None,
+        )
+        session.add(prior_event)
+        session.flush()
+        prior_evidence = LearningEvidence(
+            event_id=prior_event.id,
+            concept_ref="equivalent_fractions",
+            dimensions=_dimensions(
+                understanding="demonstrated",
+                independence="independent",
+                reasoning_demonstration="coherent",
+            ),
+            relationship="supports",
+            source_ref="fixture:prior-authorized-evidence",
+        )
+        session.add(prior_evidence)
+        session.flush()
+        student_message = _message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            role="student",
+            content="Two fourths is one half because they name the same amount.",
+        )
+        finding = _finding(
+            student_message,
+            validated_event_type="retention_check",
+            retention_context="meaningfully_delayed",
+            historical_anchor_evidence_ids=[str(prior_evidence.id)],
+            dimensions=_dimensions(
+                understanding="demonstrated",
+                independence="independent",
+                reasoning_demonstration="coherent",
+                retention="retained",
+            ),
+        )
+        provider = _Provider(_output(finding))
+
+        outcome = review_completed_segment(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            gateway=_gateway(session, provider),
+        )
+
+        assert outcome.review.status == "COMPLETED"
+        request = json.loads(str(provider.payloads[0]["input"]))
+        assert request["historical_anchors"] == [
+            {
+                "elapsed_time": "P9D",
+                "prior_demonstration_state": "demonstrated",
+                "prior_evidence_id": str(prior_evidence.id),
+                "prior_observed_at": prior_session.closed_at.isoformat(),
+                "concept_ref": "equivalent_fractions",
+                "reason_for_inclusion": "prior_session_authorized_demonstration",
+            }
+        ]
 
 
 def test_retention_failure_relationship_is_rejected_without_historical_anchors(

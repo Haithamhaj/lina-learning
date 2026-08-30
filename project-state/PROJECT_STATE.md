@@ -2,16 +2,16 @@
 
 ## Current goal
 
-Full-System Acceptance is the active Learning Intelligence execution objective:
-prove the governed path from raw conversation through real Segment Review,
-Session-authorized learning memory, and real later Tutor personalization on an
-isolated acceptance database, then prove the same path from a clean fresh
-start. CTX-03 remains the approved, technically verified Context v2 direction.
+Full-System Acceptance is REVIEW pending independent acceptance: the governed
+path from raw conversation through real Segment Review, Session-authorized
+learning memory, and real later Tutor personalization was exercised on an
+isolated acceptance database and from a clean fresh start. CTX-03 remains the
+approved, technically verified Context v2 direction.
 SEG-EVID-01 is the approved Learning Intelligence semantic architecture.
 CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A/B/C are DONE / ACCEPTED;
 SEG-EVID-01D is DONE / CODE REVIEW VERIFIED / ACCEPTED;
 SEG-EVID-01E is DONE / CODE REVIEW VERIFIED / ACCEPTED, while SEG-EVID-01F is
-READY in its ordered dependency.
+REVIEW pending independent acceptance.
 EDU-ERR-01 remains blocked by SEG-EVID-01F.
 
 ## Current reality
@@ -56,8 +56,11 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
   `segment-review-policy-v1`; the actual `SEGMENT_LEARNING_REVIEW` worker
   handler persists safe FAILED state before retry and never enqueues Session
   Finalization.
-- C v1 has no automatic historical retrieval. Retention is always
-  `not_tested`, including no `retention_failure` relationship; cross-subject
+- Segment Review v2 admits bounded authoritative historical anchors only for
+  delayed retention: prior Session-authorized Evidence ID, exact concept ref,
+  prior demonstration state, observed time, elapsed time, and inclusion reason.
+  It never receives a full Card, Pattern conclusion, transcript, or profile.
+  Without an exact supplied anchor, retention remains `not_tested`; cross-subject
   findings remain staged/fail-closed. Invalid, stale, unsupported, or
   ungrounded Candidate hints are excluded before AI input while raw Segment
   Review continues. It creates no
@@ -131,6 +134,19 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
   and separate historical-reconstruction and clean fresh-start journeys.
   SEG-EVID-01D/E/F serve this one acceptance objective and do not reopen the
   accepted A/B/C decisions.
+- SEG-EVID-01F is review-ready, not independently accepted: Codex-reported
+  isolated Math acceptance completed 12 normal Sessions, 19 successful real
+  Luna Tutor calls, 15 successful real Luna Segment Reviews, deterministic
+  Session authorities, Candidate-free TeachingMethod outcome, bounded retained
+  anchor, complete-scope E reprocessing, and rollback/no-partial-activation.
+  A strict anchor-concept separator mismatch failed closed and was corrected by
+  prompt v5 exact-copy guidance. Real authorized Evidence exercised Pattern
+  support/counter, WEAKENING, and RESOLVED states. A later Card selected only
+  relevant State/Pattern sources with no historical transcript injection; an
+  unrelated long-division turn selected none. Changed-context transfer stayed
+  `not_tested` rather than being invented. Focused PostgreSQL `93 passed` and
+  canonical Python `688 passed, 6 skipped` are Codex-reported, not independently
+  re-executed. Real-Lina/browser remain NOT VERIFIED.
 - Track A is COMPLETE / ACCEPTED; the authenticated Tutor works with zero
   content, uses optional question-driven grounding, and remains safety-first.
 - CTX-03 preserves current-Segment-only context. `CONTINUE` stays in the
@@ -197,11 +213,12 @@ and RAG/curriculum remain separate authorities.
 
 ## Next recommended action
 
-SEG-EVID-01F — Real Model & Multi-Session Verification
+Independent acceptance review of SEG-EVID-01F — Real Model & Multi-Session
+Verification.
 
 CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A–C are DONE / ACCEPTED;
 SEG-EVID-01D is DONE / CODE REVIEW VERIFIED / ACCEPTED;
-SEG-EVID-01E is DONE / CODE REVIEW VERIFIED / ACCEPTED; SEG-EVID-01F is READY;
+SEG-EVID-01E is DONE / CODE REVIEW VERIFIED / ACCEPTED; SEG-EVID-01F is REVIEW;
 EDU-ERR-01 remains blocked by SEG-EVID-01F;
 SCOPE-01,
 SUBJ-01, REC-25, LR-D04B, archive retrieval, and frozen future capabilities
