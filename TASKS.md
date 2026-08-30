@@ -1036,8 +1036,8 @@ closed, or used to start REC-25 or LR-D04B.
 | **SUBJ-01** — Subject Attribution at Segment/Finding/Event Boundaries | 4 | DONE / CODE REVIEW VERIFIED / ACCEPTED | Segment Review v3 owns one primary Broad Subject; deterministic finalization propagates it through Event/Evidence and fail-closes conflicting Finding claims. Fresh retention history is prefiltered before Review input from only one coherent, non-authoritative v8 primary-Tutor-call provisional Broad Subject; missing, conflicting, unsupported, or ambiguous hints expose no history. Repeated v3 finalization is idempotent, and `extended_learning_event` requires source-grounded `EXTENDED` school context. Historical v2 remains audit-readable; no migration or extra normal-turn model call was introduced. | Independent GitHub review / Product Owner acceptance. Automated test execution remains CODEX-REPORTED; real Luna execution remains CODEX-REPORTED REAL LUNA VERIFIED. Browser and Real-Lina remain NOT VERIFIED and are not closure blockers. |
 | **DEC-01** — Mode / Strategy / Prior-Relation Calibration | 3 | DONE / CODE REVIEW VERIFIED / ACCEPTED | The one-primary-call PriorMethodRelation contract contrastively distinguishes ordinary direct continuation/direct answers (`CONTINUATION`), explicit dissatisfaction (`DID_NOT_HELP`), explicit helped signals (`HELPED`), same-method repeat requests, true topic switches (`NOT_RELEVANT`), and null. `tutor_turn_v8` is unchanged; no keyword/regex router, extra classifier, or extra Tutor call was introduced. | Independent GitHub review / Product Owner acceptance. Automated tests remain CODEX-REPORTED; real Luna remains CODEX-REPORTED REAL LUNA VERIFIED. Browser and Real-Lina remain NOT VERIFIED and are not closure blockers. |
 | **DEC-02** — TeachingMethod Attribution Fidelity | 4 | DONE / DEFECT NOT REPRODUCED / ACCEPTED | Bounded production-path diagnostic found no material false attribution between persisted `teaching_method_id` and the dominant visible Tutor representation. Legitimate registry overlap remains allowed; the bounded sample did not exercise SOCRATIC_FOCUS or SYMBOLIC_EXPLANATION. | Independent architecture/code review accepted. Automated tests remain CODEX-REPORTED; real Luna diagnostic remains CODEX-REPORTED REAL LUNA VERIFIED. Browser and Real-Lina remain NOT VERIFIED and are not closure blockers. |
-| **REP-01** — Over-Practice / Repetition Control | 3 | REVIEW / IMPLEMENTED + AUTOMATED VERIFIED + REAL-LUNA VERIFIED | The primary Tutor guidance now asks Luna to avoid low-information near-identical practice after repeated, independently reasoned success on the same current idea, while preserving useful reinforcement for fragile, supported, uncertain, contradictory, recently repaired, or genuinely different work. No fixed threshold or new runtime authority was added. | Awaiting independent GitHub / Product Owner review. Automated verification is CODEX-REPORTED; bounded real Luna verification is CODEX-REPORTED REAL LUNA VERIFIED. Browser and Real-Lina remain NOT VERIFIED. Do not begin LANG-01. |
-| **LANG-01** — Language Continuity | 3 | OPEN / STILL PRESENT | Numeric-only Student answers caused an English long-division thread to drift back to Arabic without an explicit language switch. | After REP-01. |
+| **REP-01** — Over-Practice / Repetition Control | 3 | DONE / CODE REVIEW VERIFIED / ACCEPTED | The one-primary-call Tutor guidance semantically favors meaningful variation, deeper reasoning, transfer, useful progression, restoring Student agency, or a natural close after repeated independently reasoned current-Segment success, rather than low-information near-identical drills. It does not infer mastery and preserves useful reinforcement for fragile, supported, uncertain, contradictory, recently repaired, or genuinely different work. | Independent GitHub review / Product Owner acceptance. Automated verification remains CODEX-REPORTED; real Luna verification remains CODEX-REPORTED REAL LUNA VERIFIED. Browser and Real-Lina remain NOT VERIFIED and are not closure blockers. |
+| **LANG-01** — Language Continuity | 3 | READY / NEXT APPROVED ACTION | Numeric-only Student answers caused an English long-division thread to drift back to Arabic without an explicit language switch. | REP-01 accepted. Do not begin in this documentation-only transition. |
 | **CAND-02** — Guided vs Independent Candidate Consistency | 3 | OPEN / STILL PRESENT | Equivalent learning behaviors alternate between guided_success and independent_success without a justified support difference. | Final C calibration after Tutor semantic/prompt changes. |
 | **EVID-01** — Session Evidence Consolidation HTTPError | 5 | OPEN LEGACY DEFECT / REMOVED FROM NEW CRITICAL PATH | Three historical `session_evidence` HTTPErrors produced no completed LearningEvent, LearningEvidence, or session authority output; root cause remains unknown. | Investigate/fix under SEG-EVID-01E only if the legacy route remains required for compatibility/reprocessing. |
 | **PERS-01** — End-to-End Personalization Validation | 5 | SUPERSEDED / ABSORBED INTO SEG-EVID-01F | SEG-EVID-01F proves Interaction → Segment Review → Session-authorized Evidence → State / Patterns → Card → later Tutor personalization. | Do not retain a duplicate validation gate. |
@@ -1053,9 +1053,10 @@ closed, or used to start REC-25 or LR-D04B.
    SEG-EVID-01C → SEG-EVID-01D → SEG-EVID-01E → SEG-EVID-01F accepted
    → SCOPE-01 policy clarification approved → SUBJ-01 subject-attribution accepted
    → DEC-01 calibration accepted → DEC-02 TeachingMethod Attribution Fidelity
-   accepted → REP-01 Over-Practice / Repetition Control (implementation awaiting independent review).
+   accepted → REP-01 Over-Practice / Repetition Control accepted → LANG-01
+   Language Continuity (next approved action).
    EDU-ERR-01 remains approved but deferred; its prior F blocker is cleared.
-3. **C — Tutor Semantic Calibration:** DEC-01 → DEC-02 accepted → REP-01 review → LANG-01
+3. **C — Tutor Semantic Calibration:** DEC-01 → DEC-02 accepted → REP-01 accepted → LANG-01
    → CAND-02 final.
 4. **D — Evidence / Personalization:** legacy EVID-01 compatibility is
    considered under SEG-EVID-01E; PERS-01 is absorbed into SEG-EVID-01F.
@@ -1156,10 +1157,9 @@ expansion remain frozen.
 - **Lifecycle:** UI-01 is **CLOSED** following real S3 browser use with no hang
   and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
-**Next action:** independent GitHub / Product Owner review of REP-01 —
-Over-Practice / Repetition Control. Browser and Real-Lina validation remain
-separate. Do not begin LANG-01, EDU-ERR-01, REC-25, LR-D04B, archive retrieval,
-or frozen future capabilities before that review.
+**Next action:** LANG-01 — Language Continuity. Browser and Real-Lina validation
+remain separate. Do not begin LANG-01, EDU-ERR-01, REC-25, LR-D04B, archive
+retrieval, or frozen future capabilities in this documentation-only transition.
 
 ---
 
