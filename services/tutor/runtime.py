@@ -28,6 +28,7 @@ from services.platform.config import get_settings
 from services.platform.db.models import CandidateEvent, LearningMessage, LearningSegment, LearningSession, ModelTask
 from services.platform.safety import ParentBoundaryResolution, SafetyAction, SafetyPolicyService
 from services.retrieval.service import RetrievalService
+from services.intelligence.subjects import BROAD_SUBJECT_KEYS, is_supported_broad_subject
 from services.tutor.capacity import (
     TutorContextCapacityExceeded,
     TutorContextCapacityLineage,
@@ -43,6 +44,7 @@ from services.tutor.candidate_events import (
     SuggestedAction,
     SuggestedActionKind,
     TUTOR_OUTPUT_RESPONSE_SCHEMA,
+    TUTOR_TURN_SCHEMA_VERSION,
     normalize_guided_learning_check,
     normalize_suggested_actions,
     parse_candidate_event_metadata,
@@ -138,6 +140,7 @@ class LocalTutorProvider:
                 "teaching_method_id": None,
                 "prior_method_relation": None,
                 "candidate_metadata": None,
+                "provisional_broad_subject": None,
             },
             input_tokens=20,
             output_tokens=18,
@@ -172,7 +175,7 @@ TUTOR_SHARED_INSTRUCTIONS = (
     "Set hidden candidate_metadata to null for greetings, thanks, generic chat, self-reported understanding, generic action selection alone, or when no meaningful observable learning signal occurred. "
     "Emit Candidate Event metadata only for a specific, source-linked observable learning signal such as solving, explaining, applying, self-correcting, or transferring an idea. "
     "Confusion is not a misconception. Uncertainty, a request for another explanation, a wrong answer without stated reasoning, and a calculation slip are not misconceptions by themselves. When the Student is confused, respond pedagogically and change support or representation when useful. A misconception_signal is allowed only when the Student-authored current raw message explicitly demonstrates a specific incorrect mental model, rule, relationship, or interpretation. When only an answer is wrong without stated reasoning, prefer incorrect_attempt when appropriate. Every misconception_signal must include misconception_evidence with version misconception-evidence-v1, a concise incorrect_model, the current Student source_message_id, and an explicit_student_reasoning field that must copy the supporting Student reasoning span exactly from that raw message; do not paraphrase or use Tutor text. "
-    "Never treat a chosen Tutor strategy as an outcome without an observable Student result. Never mention hidden metadata in text."
+    "Never treat a chosen Tutor strategy as an outcome without an observable Student result. provisional_broad_subject is optional, must be null for casual or ambiguous turns, and when present must select only the supplied controlled Broad Subject key from the current conversation. It is a non-authoritative runtime hint only: it is not Evidence, learner intelligence, or final Segment Subject authority. Never mention hidden metadata in text."
 )
 
 
@@ -224,6 +227,7 @@ def build_tutor_model_payload(
     decision_context += "\n\nTeachingStrategy definitions:\n" + "\n".join(f"- {item.identifier}: {item.description}" for item in TEACHING_STRATEGY_DEFINITIONS)
     decision_context += "\n\nActive TeachingMethod definitions:\n" + "\n".join(f"- {definition.method_id.value}: {definition.description}" for definition in teaching_method_definitions())
     decision_context += "\n\nPriorMethodRelation definitions:\n" + "\n".join(f"- {item.identifier}: {item.description}" for item in PRIOR_METHOD_RELATION_DEFINITIONS)
+    decision_context += "\n\nControlled Broad Subject keys for optional provisional_broad_subject:\n" + ", ".join(BROAD_SUBJECT_KEYS)
     decision_context += "\n\nChoose each semantic decision from the current conversation. All four decision fields may be null for a casual or non-instructional turn. A non-null TeachingMethod needs a non-null mode and strategy. A relation is only about the immediate previous persisted Tutor method. A different topic is not DID_NOT_HELP: use NOT_RELEVANT or null unless the Student actually judges that immediate prior representation. DID_NOT_HELP must not accompany the same method. Use EXPLICIT_REPEAT_REQUEST only when the selected method equals the immediate prior method; a request to return to an older, non-immediate representation is NOT_RELEVANT or null. The relation itself is never Candidate Evidence."
     prior_method_context = (
         f"\nPrevious Tutor TeachingMethod: {prior_method.teaching_method_id.value} "
@@ -608,6 +612,9 @@ class TutorRuntime:
             relation_value=result.output.get("prior_method_relation"),
             prior_method=prior_method,
         )
+        provisional_broad_subject = _validated_provisional_broad_subject(
+            result.output.get("provisional_broad_subject")
+        )
         candidate_metadata_status, candidate_metadata_error = self._persist_candidates(
             learning_session=learning_session,
             source_message=student_message,
@@ -634,6 +641,7 @@ class TutorRuntime:
             decision_status=teaching_decision.status,
             candidate_metadata_status=candidate_metadata_status,
             candidate_metadata_error=candidate_metadata_error,
+            provisional_broad_subject=provisional_broad_subject,
             ai_execution_id=result.execution_id,
             segment_id=resolved_segment.segment.id,
             parent_boundary=parent_audit,
@@ -859,6 +867,7 @@ class TutorRuntime:
         parent_boundary: dict[str, object] | None = None,
         capacity_lineage: TutorContextCapacityLineage | None = None,
         guided_check: PersistedGuidedLearningCheck | None = None,
+        provisional_broad_subject: str | None = None,
     ) -> TutorTurn:
         sources = _source_metadata(context)
         intelligence = [item.text for item in context.intelligence] if context else []
@@ -874,6 +883,8 @@ class TutorRuntime:
             "candidate_metadata_status": candidate_metadata_status,
             "suggested_actions": [action.model_dump() for action in suggested_actions],
             "guided_check": guided_check.model_dump(mode="json") if guided_check is not None else None,
+            "tutor_turn_schema_version": TUTOR_TURN_SCHEMA_VERSION,
+            "provisional_broad_subject": provisional_broad_subject,
         }
         if selected_method is not None:
             payload["teaching_method_registry_version"] = TEACHING_METHOD_REGISTRY_VERSION
@@ -916,6 +927,12 @@ class TutorRuntime:
         learning_session.last_activity_at = datetime.now(UTC)
         self._session.flush()
         return TutorTurn(text, suggested_actions, sources, intelligence, mode, strategy, safety.audit_metadata(), guided_check)
+
+
+def _validated_provisional_broad_subject(value: object) -> str | None:
+    """Keep the optional primary-call hint registry-bounded and non-authoritative."""
+
+    return value if isinstance(value, str) and is_supported_broad_subject(value) else None
 
 
 def _payload_from_context(

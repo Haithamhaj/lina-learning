@@ -11,9 +11,10 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from services.intelligence.segment_reviews import review_completed_segment
-from services.model_gateway.factory import create_segment_evidence_gateway
+from services.model_gateway.factory import create_segment_evidence_gateway, create_tutor_gateway
 from services.platform.db.connection import normalize_database_url
-from services.platform.db.models import LearningMessage, LearningSegment, LearningSession, Student, User
+from services.platform.db.models import AIExecution, LearningMessage, LearningSegment, LearningSession, ModelTask, Student, User
+from services.tutor.runtime import build_tutor_model_payload
 
 
 pytestmark = [
@@ -142,9 +143,9 @@ def test_real_luna_segment_reviewer_representative_cases(factory: sessionmaker[S
                 ("tutor", "What causes the moon phases?", None),
                 ("student", "They change because the Sun lights different parts of the Moon as it moves around Earth.", None),
             ],
-            lambda output: len(output["findings"]) >= 1 and any(
-                finding["subject_alignment"] in {"POSSIBLE_CROSS_SUBJECT", "UNCERTAIN"} for finding in output["findings"]
-            ),
+            lambda output: output["segment_kind"] == "LEARNING"
+            and output["primary_broad_subject"] == "SCIENCE"
+            and len(output["findings"]) >= 1,
         ),
     ]
 
@@ -165,3 +166,36 @@ def test_real_luna_segment_reviewer_representative_cases(factory: sessionmaker[S
             outcomes[name] = output
 
     assert set(outcomes) == {case[0] for case in cases}
+
+
+def test_real_luna_primary_tutor_call_keeps_provisional_subject_optional_and_single(
+    factory: sessionmaker[Session],
+) -> None:
+    """The v8 hint stays inside the one existing Tutor execution."""
+
+    with factory.begin() as session:
+        result = create_tutor_gateway(session).execute(
+            ModelTask.TUTOR,
+            build_tutor_model_payload(
+                question="Why do plants need sunlight to make food?"
+            ),
+        )
+        executions = list(session.query(AIExecution).filter_by(task="tutor").all())
+
+        assert result.output.get("provisional_broad_subject") in {
+            None,
+            "MATH",
+            "SCIENCE",
+            "LANGUAGE_ARTS",
+            "SOCIAL_STUDIES",
+            "COMPUTING",
+            "RELIGIOUS_STUDIES",
+            "ARTS",
+            "PHYSICAL_EDUCATION",
+            "GENERAL_KNOWLEDGE",
+            "OTHER",
+        }
+        assert len(executions) == 1
+        assert executions[0].provider == "openai"
+        assert executions[0].model == "gpt-5.6-luna"
+        assert executions[0].success is True

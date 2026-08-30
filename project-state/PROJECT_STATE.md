@@ -2,7 +2,7 @@
 
 ## Current goal
 
-Await independent review of the implemented, automated-verified, and real-Luna-verified **SUBJ-01 — Subject Attribution at Segment/Finding/Event Boundaries** slice.
+Await independent review of the **REVIEW / CORRECTION IMPLEMENTED + VERIFIED** `SUBJ-01 — Subject Attribution at Segment/Finding/Event Boundaries` slice.
 
 `SCOPE-01 — Cross-Subject Conversation & Subject Policy` is **DONE / APPROVED** and is governed by `docs/SUBJECT_SCOPE_POLICY.md`.
 
@@ -22,7 +22,7 @@ Full-System Learning Intelligence Acceptance remains **DONE / ACCEPTED**. The ac
 - Reprocessing remains externally Session/date-scoped with atomic authority activation and auditable prior generations.
 - Real-Lina validation remains deferred; browser verification remains separate and must not be claimed unless executed.
 - The current implementation is still Math-first, but Math is no longer the governing product assumption for Session-level Subject authority.
-- SUBJ-01 is implemented with Segment Review v3, deterministic conflict-fail-closed materialization, and downstream reviewed-Subject attribution. A bounded real `openai/gpt-5.6-luna` run passed the approved six semantic scenarios and Math → Science → Math atomic Session activation. No migration was required.
+- SUBJ-01 preserves Segment Review v3, deterministic conflict-fail-closed materialization, and downstream reviewed-Subject attribution. The accepted correction uses a coherent, primary-Tutor-call provisional Broad Subject only to prefilter fresh retention input: cross-Subject, absent, conflicting, unsupported, and ambiguous inputs fail closed to no anchors. Repeated v3 finalization is idempotent; `extended_learning_event` now requires source-grounded `EXTENDED` context. Automated PostgreSQL/canonical verification and bounded real `openai/gpt-5.6-luna` Segment Review/Tutor checks passed. No migration was required.
 - Browser and Real-Lina validation have not been run and must not be implied by the automated or synthetic real-model checks.
 
 ### SCOPE-01 approved policy

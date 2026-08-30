@@ -45,6 +45,7 @@ from services.tutor.candidate_events import (
     CandidateEventMetadataItem,
     CandidateEventType,
     MisconceptionEvidence,
+    TUTOR_TURN_SCHEMA_VERSION,
     persisted_guided_learning_check,
 )
 from services.tutor.teaching_methods import (
@@ -247,6 +248,15 @@ class SegmentLearningReviewV3Envelope(SegmentLearningReviewEnvelope):
     school_context: SegmentSchoolContext | None = Field(...)
     findings: list[SegmentReviewFindingV3] = Field(..., max_length=24)
 
+    @model_validator(mode="after")
+    def enforce_extended_event_school_relation(self) -> SegmentLearningReviewV3Envelope:
+        if any(
+            finding.validated_event_type == "extended_learning_event"
+            for finding in self.findings
+        ) and (self.school_context is None or self.school_context.school_relation != "EXTENDED"):
+            raise ValueError("extended_learning_event requires EXTENDED school context.")
+        return self
+
 
 @dataclass(frozen=True)
 class HistoricalEvidenceAnchor:
@@ -342,10 +352,12 @@ def review_completed_segment(
     try:
         messages = _complete_raw_segment(session, learning_session=learning_session, segment=segment)
         candidates = _valid_candidate_hints(session, learning_session=learning_session, messages=messages)
+        provisional_broad_subject = _coherent_provisional_broad_subject(messages)
         historical_anchors = _historical_anchors(
             session,
             learning_session=learning_session,
             segment=segment,
+            provisional_broad_subject=provisional_broad_subject,
         )
         payload = _model_payload(
             learning_session=learning_session,
@@ -585,6 +597,7 @@ def _historical_anchors(
     *,
     learning_session: LearningSession,
     segment: LearningSegment,
+    provisional_broad_subject: str | None,
 ) -> list[HistoricalEvidenceAnchor]:
     """Select only prior Session-authorized same-subject demonstrations.
 
@@ -593,7 +606,7 @@ def _historical_anchors(
     """
 
     reference_time = segment.closed_at
-    if reference_time is None:
+    if reference_time is None or not is_supported_broad_subject(provisional_broad_subject):
         return []
     rows = session.execute(
         select(
@@ -624,6 +637,7 @@ def _historical_anchors(
             LearningSession.student_id == learning_session.student_id,
             IntelligenceProcessingRun.student_id == learning_session.student_id,
             LearningEvent.session_id != learning_session.id,
+            LearningEvent.subject == provisional_broad_subject,
             LearningEvidence.concept_ref.is_not(None),
             LearningEvidence.concept_ref == LearningEvent.concept_ref,
             LearningEvidence.dimensions["understanding"].astext.in_(
@@ -663,6 +677,31 @@ def _historical_anchors(
             )
         )
     return anchors
+
+
+def _coherent_provisional_broad_subject(messages: list[LearningMessage]) -> str | None:
+    """Use one provenance-valid Tutor hint only to prefilter retention input.
+
+    Segment Review independently owns durable Subject attribution.  Any absent,
+    unsupported, differently-versioned, or conflicting hint fails closed to
+    no historical anchors.
+    """
+
+    hints: set[str] = set()
+    for message in messages:
+        if message.role != "tutor" or not isinstance(message.payload, dict):
+            continue
+        if "provisional_broad_subject" not in message.payload:
+            continue
+        if message.payload.get("tutor_turn_schema_version") != TUTOR_TURN_SCHEMA_VERSION:
+            return None
+        hint = message.payload.get("provisional_broad_subject")
+        if hint is None:
+            continue
+        if not is_supported_broad_subject(hint):
+            return None
+        hints.add(hint)
+    return next(iter(hints)) if len(hints) == 1 else None
 
 
 def persisted_review_historical_anchors(
@@ -878,7 +917,7 @@ def _model_payload(
 _PROMPT = (
     "Review the complete supplied raw Segment only. Raw interaction outranks optional provisional Candidate hints. "
     "Classify segment_kind as LEARNING or NON_LEARNING. A LEARNING Review must select exactly one primary_broad_subject from the supplied registry and may contain Findings for different concepts only within that Subject. A NON_LEARNING Review must return findings=[] with no academic Subject. For NON_LEARNING, school_context must be null. For LEARNING, trusted_school_source_refs is authoritative: when it is empty, school_context must use school_relation=UNKNOWN and null/empty school fields; never invent school structure or source refs. reported_broad_subject must be null unless an explicit compatibility claim uses an exact supplied Broad Subject registry key equal to primary_broad_subject; it may never establish a second Subject or contain a language, topic, or domain label. "
-    "Return findings=[] when no supported learning occurrence exists. Casual greetings, navigation, preferences, and Tutor explanation without observable Student outcome may have no finding. "
+    "An extended_learning_event Finding requires school_context.school_relation=EXTENDED. UNKNOWN never means EXTENDED, and an empty trusted_school_source_refs list must never manufacture EXTENDED context. Return findings=[] when no supported learning occurrence exists. Casual greetings, navigation, preferences, and Tutor explanation without observable Student outcome may have no finding. "
     "Confusion, a bare wrong answer, and an arithmetic slip are not misconception by themselves; explicit Student wrong reasoning may support one. For a misconception_signal, misconception_evidence must use version misconception-evidence-v1, cite its Student source within source_message_ids, and copy explicit_student_reasoning as an exact normalized substring of that cited Student message; never paraphrase it. If those conditions are unavailable, omit the misconception Finding. "
     "Use understanding=strong_demonstration only when reasoning_demonstration=well_supported and independence is not full_teaching; otherwise use a lower supported understanding value. "
     "When a later Student message corrects earlier reasoning, preserve both observations when supported and emit a separate self_correction Finding grounded in the correction; set self_correction to prompted or self_initiated only on that self_correction Finding. Set self_correction to not_observed on every other event type. "

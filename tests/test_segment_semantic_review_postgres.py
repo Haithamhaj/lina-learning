@@ -178,11 +178,11 @@ def _finding(student_message: LearningMessage, **overrides: object) -> dict[str,
     return finding
 
 
-def _output(*findings: dict[str, object]) -> dict[str, object]:
+def _output(*findings: dict[str, object], primary_broad_subject: str = "MATH") -> dict[str, object]:
     return {
         "version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
         "segment_kind": "LEARNING",
-        "primary_broad_subject": "MATH",
+        "primary_broad_subject": primary_broad_subject,
         "school_context": {
             "school_relation": "UNKNOWN",
             "school_subject_ref": None,
@@ -213,6 +213,86 @@ def _candidate_payload(
     }
     payload.update(overrides)
     return payload
+
+
+def _authorized_history(
+    session: Session,
+    *,
+    student: Student,
+    broad_subject: str,
+    concept_ref: str,
+) -> LearningEvidence:
+    """Create one prior authoritative retention anchor in a controlled Subject."""
+
+    prior_session = LearningSession(
+        student_id=student.id,
+        subject="MATH",
+        status="CLOSED",
+        closed_at=datetime(2026, 8, 20, 12, tzinfo=UTC),
+    )
+    session.add(prior_session)
+    session.flush()
+    run = IntelligenceProcessingRun(
+        student_id=student.id,
+        rubric_version="evidence-rubric-v1",
+        policy_version="segment-review-policy-v1",
+        status="COMPLETED",
+        scope={"intelligence_pipeline": "segment-finalization-v1"},
+    )
+    session.add(run)
+    session.flush()
+    session.add(
+        IntelligenceSessionAuthority(
+            student_id=student.id,
+            session_id=prior_session.id,
+            evidence_processing_run_id=run.id,
+        )
+    )
+    event = LearningEvent(
+        processing_run_id=run.id,
+        session_id=prior_session.id,
+        subject=broad_subject,
+        concept_ref=concept_ref,
+        event_type="independent_success",
+        description=f"Prior {broad_subject} demonstration.",
+        source_message_id=None,
+    )
+    session.add(event)
+    session.flush()
+    evidence = LearningEvidence(
+        event_id=event.id,
+        concept_ref=concept_ref,
+        dimensions=_dimensions(
+            understanding="demonstrated",
+            independence="independent",
+            reasoning_demonstration="coherent",
+        ),
+        relationship="supports",
+        source_ref=f"fixture:prior-{broad_subject.lower()}-evidence",
+    )
+    session.add(evidence)
+    session.flush()
+    return evidence
+
+
+def _provisional_subject_message(
+    session: Session,
+    *,
+    learning_session: LearningSession,
+    segment: LearningSegment,
+    broad_subject: str,
+) -> LearningMessage:
+    return _message(
+        session,
+        learning_session=learning_session,
+        segment=segment,
+        role="tutor",
+        content="A hidden provisional Subject hint was persisted with this Tutor turn.",
+        payload={
+            "tutor_turn_schema_version": "tutor_turn_v8",
+            "provisional_broad_subject": broad_subject,
+        },
+    )
 
 
 def test_empty_segment_review_completes_without_downstream_intelligence(factory: sessionmaker[Session]) -> None:
@@ -275,6 +355,220 @@ def test_raw_source_grounded_finding_is_valid_without_candidate(factory: session
         ]
         assert request["historical_anchors"] == []
         assert request["candidate_hints"] == []
+
+
+@pytest.mark.parametrize(
+    ("hint", "expected_subject", "excluded_subject"),
+    (("SCIENCE", "SCIENCE", "MATH"), ("MATH", "MATH", "SCIENCE")),
+)
+def test_retention_anchors_are_prefiltered_to_the_coherent_provisional_subject(
+    factory: sessionmaker[Session],
+    hint: str,
+    expected_subject: str,
+    excluded_subject: str,
+) -> None:
+    """A Math-opened technical Session must not leak Math history into Science Review input."""
+
+    with factory.begin() as session:
+        student, learning_session, segment = _lineage(session)
+        math_anchor = _authorized_history(
+            session,
+            student=student,
+            broad_subject="MATH",
+            concept_ref="equivalent_fractions",
+        )
+        science_anchor = _authorized_history(
+            session,
+            student=student,
+            broad_subject="SCIENCE",
+            concept_ref="plant_cells",
+        )
+        _provisional_subject_message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            broad_subject=hint,
+        )
+        student_message = _message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            role="student",
+            content="I can explain the current learning idea.",
+        )
+        provider = _Provider(
+            _output(_finding(student_message), primary_broad_subject=expected_subject)
+        )
+
+        outcome = review_completed_segment(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            gateway=_gateway(session, provider),
+        )
+
+        request = json.loads(str(provider.payloads[0]["input"]))
+        assert outcome.review.output["primary_broad_subject"] == expected_subject
+        assert {anchor["broad_subject"] for anchor in request["historical_anchors"]} == {
+            expected_subject
+        }
+        assert excluded_subject not in {
+            anchor["broad_subject"] for anchor in request["historical_anchors"]
+        }
+        assert {anchor["prior_evidence_id"] for anchor in request["historical_anchors"]} == {
+            str(science_anchor.id if hint == "SCIENCE" else math_anchor.id)
+        }
+
+
+def test_no_or_conflicting_provisional_subject_disables_retention_input(factory: sessionmaker[Session]) -> None:
+    """Ambiguous or absent hints keep Review semantic authority intact but expose no history."""
+
+    for hints in ([], ["MATH", "SCIENCE"]):
+        with factory.begin() as session:
+            student, learning_session, segment = _lineage(session)
+            _authorized_history(
+                session,
+                student=student,
+                broad_subject="MATH",
+                concept_ref="equivalent_fractions",
+            )
+            for hint in hints:
+                _provisional_subject_message(
+                    session,
+                    learning_session=learning_session,
+                    segment=segment,
+                    broad_subject=hint,
+                )
+            student_message = _message(
+                session,
+                learning_session=learning_session,
+                segment=segment,
+                role="student",
+                content="Plants use cells.",
+            )
+            provider = _Provider(
+                _output(_finding(student_message), primary_broad_subject="SCIENCE")
+            )
+
+            outcome = review_completed_segment(
+                session,
+                learning_session=learning_session,
+                segment=segment,
+                gateway=_gateway(session, provider),
+            )
+
+            request = json.loads(str(provider.payloads[0]["input"]))
+            assert provider.calls == 1
+            assert request["historical_anchors"] == []
+            assert outcome.review.output["primary_broad_subject"] == "SCIENCE"
+
+
+def test_wrong_provisional_subject_cannot_override_review_subject_or_create_retention(
+    factory: sessionmaker[Session],
+) -> None:
+    """A provisional Math hint cannot make a Science retention Finding durable."""
+
+    with factory.begin() as session:
+        student, learning_session, segment = _lineage(session)
+        math_anchor = _authorized_history(
+            session,
+            student=student,
+            broad_subject="MATH",
+            concept_ref="equivalent_fractions",
+        )
+        _provisional_subject_message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            broad_subject="MATH",
+        )
+        student_message = _message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            role="student",
+            content="A plant cell has a cell wall.",
+        )
+        invalid_retention = _finding(
+            student_message,
+            validated_event_type="retention_check",
+            concept_ref="equivalent_fractions",
+            retention_context="meaningfully_delayed",
+            historical_anchor_evidence_ids=[str(math_anchor.id)],
+            dimensions=_dimensions(
+                understanding="demonstrated",
+                independence="independent",
+                reasoning_demonstration="coherent",
+                retention="retained",
+            ),
+        )
+        provider = _Provider(
+            _output(invalid_retention, primary_broad_subject="SCIENCE")
+        )
+
+        with pytest.raises(SegmentReviewValidationError):
+            review_completed_segment(
+                session,
+                learning_session=learning_session,
+                segment=segment,
+                gateway=_gateway(session, provider),
+            )
+
+        request = json.loads(str(provider.payloads[0]["input"]))
+        assert {anchor["broad_subject"] for anchor in request["historical_anchors"]} == {"MATH"}
+        assert provider.calls == 1
+
+
+def test_provisional_subject_never_stamps_durable_event_authority(
+    factory: sessionmaker[Session],
+) -> None:
+    """The finalized Review Subject, not the retention-input hint, owns Event attribution."""
+
+    from services.intelligence.session_finalization import finalize_closed_session
+
+    with factory.begin() as session:
+        student, learning_session, segment = _lineage(session)
+        _authorized_history(
+            session,
+            student=student,
+            broad_subject="MATH",
+            concept_ref="equivalent_fractions",
+        )
+        _provisional_subject_message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            broad_subject="MATH",
+        )
+        student_message = _message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            role="student",
+            content="A plant cell has a cell wall.",
+        )
+        provider = _Provider(
+            _output(
+                _finding(student_message, concept_ref="plant_cells"),
+                primary_broad_subject="SCIENCE",
+            )
+        )
+
+        review = review_completed_segment(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            gateway=_gateway(session, provider),
+        )
+        outcome = finalize_closed_session(session, learning_session=learning_session)
+
+        request = json.loads(str(provider.payloads[0]["input"]))
+        assert review.review.output["primary_broad_subject"] == "SCIENCE"
+        assert {anchor["broad_subject"] for anchor in request["historical_anchors"]} == {"MATH"}
+        assert outcome.event_count == 1
+        assert session.query(LearningEvent).filter_by(
+            processing_run_id=outcome.processing_run.id
+        ).one().subject == "SCIENCE"
 
 
 @pytest.mark.parametrize("source_kind", ["hallucinated", "foreign", "tutor_only"])
@@ -494,6 +788,12 @@ def test_retention_review_uses_only_bounded_prior_session_authority_anchors(
         )
         session.add(prior_evidence)
         session.flush()
+        _provisional_subject_message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            broad_subject="MATH",
+        )
         student_message = _message(
             session,
             learning_session=learning_session,
@@ -590,6 +890,12 @@ def test_retention_review_uses_only_bounded_prior_session_authority_anchors(
         )
         session.add(new_segment)
         session.flush()
+        _provisional_subject_message(
+            session,
+            learning_session=new_session,
+            segment=new_segment,
+            broad_subject="MATH",
+        )
         _message(
             session,
             learning_session=new_session,

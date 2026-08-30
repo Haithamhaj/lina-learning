@@ -13,11 +13,19 @@ from services.tutor.teaching_decisions import PriorMethodRelation, TeachingMode,
 from services.tutor.teaching_methods import ACTIVE_TEACHING_METHODS
 
 
-def test_tutor_turn_v7_requires_parent_boundary_semantics_without_rewriting_other_metadata() -> None:
+def test_tutor_turn_v8_requires_optional_provisional_subject_without_rewriting_other_metadata() -> None:
     """SAFE-02 keeps one strict output contract for visible text and hidden decisions."""
 
-    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v7"
-    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata"]
+    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v8"
+    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject"]
+    assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["provisional_broad_subject"] == {
+        "type": ["string", "null"],
+        "enum": [
+            "MATH", "SCIENCE", "LANGUAGE_ARTS", "SOCIAL_STUDIES", "COMPUTING",
+            "RELIGIOUS_STUDIES", "ARTS", "PHYSICAL_EDUCATION", "GENERAL_KNOWLEDGE",
+            "OTHER", None,
+        ],
+    }
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_mode"] == {"type": ["string", "null"], "enum": [*(mode.value for mode in TeachingMode), None]}
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_strategy"] == {"type": ["string", "null"], "enum": [*(strategy.value for strategy in TeachingStrategy), None]}
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_method_id"] == {"type": ["string", "null"], "enum": [*(method.value for method in ACTIVE_TEACHING_METHODS), None]}

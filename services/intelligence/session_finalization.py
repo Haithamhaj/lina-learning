@@ -664,7 +664,11 @@ def _outcome_for_existing(
         ):
             if isinstance(review.output, dict):
                 try:
-                    envelope = SegmentLearningReviewEnvelope.model_validate(review.output)
+                    envelope = (
+                        SegmentLearningReviewV3Envelope.model_validate(review.output)
+                        if review.output.get("version") == SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION
+                        else SegmentLearningReviewEnvelope.model_validate(review.output)
+                    )
                 except ValidationError as error:
                     raise SessionFinalizationValidationError(
                         "Authoritative Review no longer has a strict persisted envelope."

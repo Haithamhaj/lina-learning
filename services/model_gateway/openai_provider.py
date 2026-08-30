@@ -261,7 +261,7 @@ def _normalize_output(
 
 def _is_tutor_response_schema(payload: dict[str, object]) -> bool:
     response_schema = payload.get("response_schema")
-    return isinstance(response_schema, dict) and response_schema.get("name") == "tutor_turn_v7"
+    return isinstance(response_schema, dict) and response_schema.get("name") == "tutor_turn_v8"
 
 
 def _teaching_decision_output(parsed: dict[str, object]) -> dict[str, object]:
@@ -275,6 +275,7 @@ def _teaching_decision_output(parsed: dict[str, object]) -> dict[str, object]:
         "segment_relation",
         "structured_segment_state",
         "parent_boundary",
+        "provisional_broad_subject",
     )
     return {field: parsed[field] for field in fields if field in parsed}
 

@@ -15,11 +15,12 @@ from services.tutor.parent_boundaries import (
     ParentBoundaryCategory,
     ParentBoundaryModelAction,
 )
+from services.intelligence.subjects import BROAD_SUBJECT_KEYS
 
 
 CANDIDATE_EVENT_SCHEMA_VERSION = "candidate-event-v1"
 MISCONCEPTION_EVIDENCE_SCHEMA_VERSION = "misconception-evidence-v1"
-TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v7"
+TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v8"
 MAX_SUGGESTED_ACTIONS = 4
 MAX_GUIDED_CHECK_CHOICES = 4
 CandidateEventType = Literal[
@@ -376,8 +377,12 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
                 {"type": "null"},
             ]
         },
+        "provisional_broad_subject": {
+            "type": ["string", "null"],
+            "enum": [*BROAD_SUBJECT_KEYS, None],
+        },
     },
-    "required": ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata"],
+    "required": ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject"],
 }
 
 

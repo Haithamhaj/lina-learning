@@ -639,6 +639,48 @@ def test_only_primary_subject_findings_materialize_with_complete_provenance(
         assert session.query(LearningEvent).filter_by(concept_ref="uncertain_topic").count() == 0
 
 
+def test_v3_finalization_reuses_existing_authority_without_duplicate_activation(
+    factory: sessionmaker[Session],
+) -> None:
+    """A completed v3 authority must be readable and idempotent on retry."""
+
+    finalize, _, _ = _finalization_api()
+    with factory.begin() as session:
+        student, learning_session, [(segment, message)] = _closed_lineage(session)
+        _review(
+            session,
+            student=student,
+            learning_session=learning_session,
+            segment=segment,
+            findings=[
+                _finding(message),
+                _finding(
+                    message,
+                    reported_broad_subject="SCIENCE",
+                    concept_ref="withheld_science_observation",
+                    summary="A conflicting finding remains staged.",
+                ),
+            ],
+        )
+
+        first = finalize(session, learning_session=learning_session)
+        second = finalize(session, learning_session=learning_session)
+
+        assert first.reused is False
+        assert second.reused is True
+        assert second.authority.id == first.authority.id
+        assert second.processing_run.id == first.processing_run.id
+        assert second.authority.evidence_processing_run_id == first.authority.evidence_processing_run_id
+        assert second.withheld_finding_count == 1
+        assert session.query(IntelligenceSessionAuthority).count() == 1
+        assert session.query(IntelligenceProcessingRun).count() == 1
+        assert session.query(LearningEvent).count() == 1
+        assert session.query(LearningEvidence).count() == 1
+        assert session.query(CurrentLearningState).count() == first.current_state_count
+        assert session.query(LearnerPattern).count() == first.pattern_count
+        assert session.query(DecisionView).count() == first.decision_view_count
+
+
 def test_candidate_free_finding_reaches_authority_projections_and_runtime_card(
     factory: sessionmaker[Session],
 ) -> None:
