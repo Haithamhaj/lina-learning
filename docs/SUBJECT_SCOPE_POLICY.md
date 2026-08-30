@@ -106,11 +106,11 @@ OTHER
 
 This registry is a stable analytical classification layer, **not** a claim about Lina's official school timetable.
 
-The registry can be changed/versioned later without redesigning Learning Intelligence.
+The registry can be changed/versioned later without redesigning Learning Intelligence. Implementation should therefore avoid a design that requires a database migration every time the registry is extended.
 
 ## 4.1 Science
 
-`SCIENCE` remains the stable Broad Subject. Physics, Chemistry, Biology, Astronomy, Earth Science, and similar areas may appear lower in the semantic hierarchy or as independent school subjects in later Grades.
+`SCIENCE` remains the stable Broad Subject. Physics, Chemistry, Biology, Astronomy, Earth Science, and similar areas may be recognized beneath that broad grouping or appear as independent school subjects in later Grades.
 
 For example, in a later Grade:
 
@@ -123,7 +123,7 @@ A school may split Science into Physics/Chemistry/Biology without requiring a ne
 
 ## 4.2 Language Arts
 
-Approved top-level organization:
+Approved broad grouping:
 
 ```text
 LANGUAGE_ARTS
@@ -133,29 +133,27 @@ LANGUAGE_ARTS
 └── future languages
 ```
 
-Language-specific structure may continue through a flexible Domain Path, for example:
+Arabic, English, and French are meaningful classifications beneath `LANGUAGE_ARTS`, but the Core does not require a fixed-depth runtime hierarchy when no school structure has been supplied.
+
+Examples without school structure:
 
 ```text
-LANGUAGE_ARTS
-→ Arabic
-→ Grammar
-→ concept/topic: nominal sentence
+broad_subject = LANGUAGE_ARTS
+concept/topic = Arabic grammar — nominal sentence
 ```
-
-or:
 
 ```text
-LANGUAGE_ARTS
-→ English
-→ Reading
-→ concept/topic: main idea
+broad_subject = LANGUAGE_ARTS
+concept/topic = English reading — main idea
 ```
+
+When a trusted outline/book provides a hierarchy, the optional school Domain Path may preserve structures such as `Arabic → Grammar` or `English → Reading`.
 
 Cross-language generalization is never automatic. Evidence from English does not by itself establish the same Pattern in Arabic or French.
 
 ## 4.3 Social Studies
 
-Approved top-level organization:
+Approved broad grouping:
 
 ```text
 SOCIAL_STUDIES
@@ -167,9 +165,11 @@ SOCIAL_STUDIES
 └── Saudi Culture
 ```
 
+These categories help semantic classification and may be represented more explicitly when school structure is available; they do not force a fixed hierarchy into every interaction.
+
 ## 4.4 Religious Studies
 
-Approved top-level organization:
+Approved broad grouping:
 
 ```text
 RELIGIOUS_STUDIES
@@ -182,49 +182,57 @@ RELIGIOUS_STUDIES
 └── other relevant domains
 ```
 
-The hierarchy is not required to have the same depth in every subject.
+The project must not assume that every school or Grade uses the same material names or hierarchy.
 
 ---
 
-# 5. Flexible Domain Path and Concept/Topic
+# 5. Core Classification vs Optional School Structure
 
-The system does **not** require one fixed `Broad Subject → Subdomain → Topic` depth for all subjects.
-
-The governing model is:
+The Core classification required for a Learning Segment is intentionally small:
 
 ```text
-Broad Subject                 ← controlled registry
-    ↓
-Flexible semantic Domain Path ← zero or more levels
-    ↓
-Concept / Topic               ← specific learning focus
+broad_subject       ← controlled registry
+concept/topic       ← semantic learning focus from the interaction
 ```
+
+These remain available even when there is no book, outline, weekly plan, or timetable.
+
+School structure is separate and optional:
+
+```text
+optional school context
+├── school_subject_ref
+├── school_domain_path
+├── unit
+├── lesson
+├── page
+└── source_refs
+```
+
+`school_domain_path`, `unit`, `lesson`, and similar curriculum-position fields must be grounded in an available trusted school/book source. They must not be invented merely to make the record look complete.
+
+The supplied school hierarchy may have any useful depth. The system must not force all subjects into one fixed `Subject → Subdomain → Topic` shape.
 
 Examples:
 
 ```text
-SCIENCE
-→ Astronomy
-→ concept/topic: stars
+Core only:
+broad_subject = SCIENCE
+concept/topic = stars / star light
+school context = null
 ```
 
 ```text
-LANGUAGE_ARTS
-→ Arabic
-→ Grammar
-→ concept/topic: nominal sentence
+With trusted outline:
+broad_subject = SCIENCE
+concept/topic = stars
+school_subject_ref = Science
+school_domain_path = [Space, Stars]
+unit = Unit 4
+lesson = Lesson 2
 ```
 
-```text
-RELIGIOUS_STUDIES
-→ Islamic Studies
-→ Fiqh
-→ concept/topic: pillars of prayer
-```
-
-The semantic `concept/topic` may be inferred from the conversation even when no school outline or book exists.
-
-A school-specific Domain Path must not be invented when the project has no school source supporting it.
+The school path is analytical/grounding context. It is not a prerequisite for teaching and does not change the meaning of learner Evidence by itself.
 
 ---
 
@@ -250,7 +258,7 @@ Learning Segment
 │
 └── optional school context
     ├── school_subject_ref
-    ├── domain_path
+    ├── school_domain_path
     ├── unit
     ├── lesson
     ├── page
@@ -410,8 +418,8 @@ segment_kind
 if LEARNING:
 → broad_subject
 → concept/topic
-→ flexible domain path when supportable
 → optional school subject mapping
+→ optional sourced school Domain Path / Unit / Lesson / Page
 → school relationship
 → normal learning findings/evidence dimensions
 ```
@@ -447,7 +455,7 @@ There is no normal semantic Session-level LLM call after Segment Reviews.
 
 For the new Segment Review pipeline:
 
-- a Learning Event must inherit Subject attribution from its authoritative Segment Review Finding, not blindly from a Session-level default Subject;
+- a Learning Event must inherit Subject attribution from its authoritative Segment Review Finding / reviewed Segment classification, not blindly from a Session-level default Subject;
 - a Session-level `subject` field may remain for legacy/current-entry compatibility but must not be the durable cross-subject intelligence authority;
 - Evidence must remain attached to the correct Segment/Finding/Event provenance;
 - incorrect or unresolved Subject attribution must fail closed rather than silently contaminate a different Subject;
@@ -518,7 +526,7 @@ Approved decisions include:
 4. Learning and Non-Learning/Casual Segments are distinct;
 5. Broad Subjects come from a controlled, versioned, extensible registry;
 6. `GENERAL_KNOWLEDGE` is for genuine learning, not casual chat;
-7. semantic Domain Path is flexible in depth;
+7. Core classification is `broad_subject + concept/topic`; school hierarchy is optional and source-grounded;
 8. Concept/Topic may be inferred without school data;
 9. school structure is optional enrichment and must not block learning;
 10. actual school subjects require trusted Grade/school provenance when represented as official school subjects;
