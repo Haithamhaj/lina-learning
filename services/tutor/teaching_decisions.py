@@ -51,11 +51,23 @@ TEACHING_STRATEGY_DEFINITIONS = (
 )
 
 PRIOR_METHOD_RELATION_DEFINITIONS = (
-    TeachingDecisionDefinition("CONTINUATION", "The prior method remains relevant without a clear helped or failed judgment."),
-    TeachingDecisionDefinition("DID_NOT_HELP", "The immediately prior representation did not sufficiently help or clarify."),
-    TeachingDecisionDefinition("HELPED", "The prior method helped conversationally; this is not effectiveness Evidence."),
+    TeachingDecisionDefinition("CONTINUATION", "The immediate prior method remains relevant and the Student has not clearly judged it helped, failed, or requested its repetition."),
+    TeachingDecisionDefinition("DID_NOT_HELP", "The Student clearly says the immediate prior representation did not help, clarify, remains confusing, or should change."),
+    TeachingDecisionDefinition("HELPED", "The Student clearly says the immediate prior representation helped or clarified; this is not effectiveness Evidence."),
     TeachingDecisionDefinition("EXPLICIT_REPEAT_REQUEST", "Lina explicitly asks to repeat the same prior representation."),
-    TeachingDecisionDefinition("NOT_RELEVANT", "A prior method exists but is not relevant to this learning turn or topic."),
+    TeachingDecisionDefinition("NOT_RELEVANT", "A prior method exists but is genuinely unrelated to this learning turn or topic, such as a true topic or goal switch."),
+)
+
+
+PRIOR_METHOD_RELATION_CALIBRATION_GUIDANCE = (
+    "PriorMethodRelation calibration: CONTINUATION applies when the immediate prior method remains relevant and the Student has not clearly evaluated it as helping, failing, or needing repetition. "
+    "Examples: \"وبعدين؟\" → CONTINUATION; \"طيب الخطوة الجاية؟\" → CONTINUATION; \"what next?\" → CONTINUATION; \"2 من 4\" → CONTINUATION when it directly answers the immediately prior Tutor question. "
+    "Do not infer DID_NOT_HELP from a short follow-up, direct answer, continued work, wrong answer, or need for more teaching. "
+    "DID_NOT_HELP requires a clear Student signal that the immediate prior representation did not help, did not clarify, remains confusing, or should change. "
+    "HELPED requires the Student to clearly say the immediate prior representation helped or clarified. Examples: \"آه هلا فهمت\" → HELPED; \"That makes sense now.\" → HELPED. Do not infer HELPED merely from a correct answer. "
+    "EXPLICIT_REPEAT_REQUEST requires an explicit request to repeat or use the same immediate prior representation. "
+    "NOT_RELEVANT applies when that method is genuinely unrelated to a new learning topic or goal, not an ordinary continuation. "
+    "Use null when no valid immediate prior persisted TeachingMethod exists or no meaningful relation can safely be asserted."
 )
 
 

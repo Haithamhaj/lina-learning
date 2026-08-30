@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from uuid import uuid4
 
 from services.tutor.candidate_events import TUTOR_OUTPUT_JSON_SCHEMA, TUTOR_OUTPUT_RESPONSE_SCHEMA
 from services.tutor.runtime import (
@@ -10,7 +11,12 @@ from services.tutor.runtime import (
     build_tutor_model_payload,
 )
 from services.tutor.teaching_decisions import PriorMethodRelation, TeachingMode, TeachingStrategy
-from services.tutor.teaching_methods import ACTIVE_TEACHING_METHODS
+from services.tutor.teaching_methods import (
+    ACTIVE_TEACHING_METHODS,
+    TEACHING_METHOD_REGISTRY_VERSION,
+    PriorTeachingMethodContext,
+    TeachingMethod,
+)
 
 
 def test_tutor_turn_v8_requires_optional_provisional_subject_without_rewriting_other_metadata() -> None:
@@ -113,6 +119,45 @@ def test_relation_guidance_distinguishes_a_new_topic_from_an_immediate_method_ou
 
     assert "A different topic is not DID_NOT_HELP" in str(payload["input"])
     assert "only when the selected method equals the immediate prior method" in str(payload["input"])
+
+
+@pytest.mark.parametrize(
+    ("question", "expected_relation"),
+    [
+        ("وبعدين؟", "CONTINUATION"),
+        ("2 من 4", "CONTINUATION"),
+        ("That makes sense now.", "HELPED"),
+    ],
+)
+def test_prior_method_relation_guidance_calibrates_the_reproduced_luna_cases(
+    question: str,
+    expected_relation: str,
+) -> None:
+    """DEC-01: short continuation and explicit-help signals need contrastive guidance."""
+
+    prior_method = PriorTeachingMethodContext(
+        tutor_message_id=uuid4(),
+        teaching_method_id=TeachingMethod.CONCRETE_EXAMPLE,
+        registry_version=TEACHING_METHOD_REGISTRY_VERSION,
+    )
+    prior_student = "Why is 1/2 equal to 2/4?"
+    prior_tutor = "Think of a pizza split into two equal pieces, then into four. What amount is shaded?"
+    payload = build_tutor_model_payload(
+        question=question,
+        immediate_exchange=[
+            {"message_id": str(uuid4()), "role": "student", "content": prior_student},
+            {"message_id": str(prior_method.tutor_message_id), "role": "tutor", "content": prior_tutor},
+        ],
+        prior_method=prior_method,
+    )
+    model_input = str(payload["input"])
+
+    assert prior_student in model_input
+    assert prior_tutor in model_input
+    assert "Previous Tutor TeachingMethod: CONCRETE_EXAMPLE" in model_input
+    assert f'"{question}" → {expected_relation}' in model_input
+    assert "Do not infer DID_NOT_HELP from a short follow-up, direct answer, continued work, wrong answer, or need for more teaching." in model_input
+    assert "HELPED requires the Student to clearly say the immediate prior representation helped or clarified." in model_input
 
 
 def test_tutor_instructions_require_calibrated_child_interaction_without_changing_evidence_authority() -> None:

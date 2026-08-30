@@ -75,6 +75,7 @@ from services.tutor.student_sessions import (
     latest_tutor_guided_check_choice,
 )
 from services.tutor.teaching_decisions import (
+    PRIOR_METHOD_RELATION_CALIBRATION_GUIDANCE,
     PRIOR_METHOD_RELATION_DEFINITIONS,
     TEACHING_MODE_DEFINITIONS,
     TEACHING_STRATEGY_DEFINITIONS,
@@ -227,6 +228,7 @@ def build_tutor_model_payload(
     decision_context += "\n\nTeachingStrategy definitions:\n" + "\n".join(f"- {item.identifier}: {item.description}" for item in TEACHING_STRATEGY_DEFINITIONS)
     decision_context += "\n\nActive TeachingMethod definitions:\n" + "\n".join(f"- {definition.method_id.value}: {definition.description}" for definition in teaching_method_definitions())
     decision_context += "\n\nPriorMethodRelation definitions:\n" + "\n".join(f"- {item.identifier}: {item.description}" for item in PRIOR_METHOD_RELATION_DEFINITIONS)
+    decision_context += "\n\n" + PRIOR_METHOD_RELATION_CALIBRATION_GUIDANCE
     decision_context += "\n\nControlled Broad Subject keys for optional provisional_broad_subject:\n" + ", ".join(BROAD_SUBJECT_KEYS)
     decision_context += "\n\nChoose each semantic decision from the current conversation. All four decision fields may be null for a casual or non-instructional turn. A non-null TeachingMethod needs a non-null mode and strategy. A relation is only about the immediate previous persisted Tutor method. A different topic is not DID_NOT_HELP: use NOT_RELEVANT or null unless the Student actually judges that immediate prior representation. DID_NOT_HELP must not accompany the same method. Use EXPLICIT_REPEAT_REQUEST only when the selected method equals the immediate prior method; a request to return to an older, non-immediate representation is NOT_RELEVANT or null. The relation itself is never Candidate Evidence."
     prior_method_context = (
