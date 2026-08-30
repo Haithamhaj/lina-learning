@@ -182,6 +182,22 @@ def test_tutor_instructions_require_calibrated_child_interaction_without_changin
         assert required_concept in instructions
 
 
+def test_tutor_guidance_avoids_low_information_drills_after_repeated_independent_success() -> None:
+    """REP-01: current repeated reasoning must guide Luna without a fixed threshold."""
+
+    instructions = TUTOR_SHARED_INSTRUCTIONS.casefold()
+
+    for required_concept in (
+        "repeated, independently reasoned success",
+        "near-identical practice item",
+        "meaningful variation, deeper reasoning, transfer, useful progression, or restore student agency",
+        "do not infer mastery",
+        "do not use a fixed number of correct answers",
+        "fragile, supported, uncertain, contradictory, or recently repaired",
+    ):
+        assert required_concept in instructions
+
+
 def test_language_switching_uses_current_turn_language_without_losing_recent_context() -> None:
     """Catches language switching that erases context or silently becomes a new learner/topic state."""
 
