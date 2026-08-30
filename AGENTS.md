@@ -9,22 +9,30 @@ This file is the compact operating map for Codex/AI agents working in this repos
 Read in this order when relevant:
 
 1. `docs/PROJECT_REFERENCE.md` — product purpose, boundaries, approved architecture, Tutor behavior, multimodal/artifact principles, Grade rules, system invariants.
-2. `docs/LEARNING_PRODUCT_ROADMAP.md` — approved product-evolution decisions, ordered capability roadmap, superseded assumptions, dependencies, and validation gates. Roadmap items are not executable until promoted to `TASKS.md`.
+2. `docs/LEARNING_PRODUCT_ROADMAP.md` — approved product-evolution decisions, ordered capability roadmap, superseded assumptions, dependencies, and validation gates. Roadmap items are not executable until promoted to executable task scope.
 3. `docs/LEARNING_INTELLIGENCE_SPEC.md` — Events, Evidence, Current State, Patterns, Intelligence Card, measurement rules, reprocessing.
 4. `docs/CHILD_SAFETY_POLICY.md` — non-overridable child safety and Parent Learning Boundaries.
 5. `docs/IMPLEMENTATION_PLAN.md` — execution architecture, phases, dependencies, gates, deferred work.
 6. `docs/TECHNOLOGY_REUSE_CATALOG.md` — approved reusable technology/component candidates and mandatory pre-build evaluation rules.
-7. `project-state/PROJECT_STATE.md` — current operational reality and next action.
-8. `TASKS.md` — actual executable work queue.
+7. `docs/SUBJECT_SCOPE_POLICY.md` — governing SCOPE-01 cross-subject, Broad Subject, optional school-context, and future School-Focused policy when subject scope is relevant.
+8. `docs/SUBJ_01_IMPLEMENTATION_SPEC.md` — approved bounded execution contract for SUBJ-01 while that task is active.
+9. `project-state/PROJECT_STATE.md` — current operational reality and next action.
+10. `TASKS.md` — durable task history and executable work queue, subject to an explicit newer task-specific governing spec/current-state transition approved by the Product Owner.
 
-### Roadmap coordination
+### Roadmap and task coordination
 
-The Roadmap records approved product-evolution decisions, sequencing, dependencies, and validation gates. It does not make work executable: an item must be promoted to `TASKS.md` with a concrete scope and status. If governing documents conflict, stop and surface the conflict rather than silently choosing a product direction.
+The Roadmap records approved product-evolution decisions, sequencing, dependencies, and validation gates. It does not by itself make work executable.
+
+Normally an item must be `READY` in `TASKS.md`. A newer Product Owner-approved task-specific governing spec may explicitly close a prerequisite, mark its successor `READY`, and temporarily supersede a stale status line in the large historical `TASKS.md`; that override must also be reflected in `project-state/PROJECT_STATE.md` and must name the exact bounded task. Do not generalize such an override to other tasks.
+
+**Current explicit transition:** `docs/SUBJECT_SCOPE_POLICY.md` closes `SCOPE-01` as `DONE / APPROVED`, `docs/SUBJ_01_IMPLEMENTATION_SPEC.md` makes `SUBJ-01` `READY`, and `project-state/PROJECT_STATE.md` records SUBJ-01 as the next action. Any older `TASKS.md` row still showing `SCOPE-01 = READY` or `SUBJ-01 = BLOCKED` is stale for these two task IDs only and must not block SUBJ-01 execution. Consolidate those historical task rows when safely editing `TASKS.md`; do not rewrite unrelated task history.
+
+If governing documents conflict outside an explicit approved override like the one above, stop and surface the conflict rather than silently choosing a product direction.
 
 ## Execution Rules
 
-- Execute only `READY` tasks from `TASKS.md`, normally one task or one tightly related task group at a time.
-- A Roadmap item is **not executable** merely because it is approved or ordered. It must first be promoted into `TASKS.md` with a concrete scope and status.
+- Execute only an explicitly `READY` task from the governing task queue/current approved task-specific spec, normally one task or one tightly related task group at a time.
+- A Roadmap item is **not executable** merely because it is approved or ordered. It must first be promoted into an executable task with concrete scope and status.
 - Do not skip dependencies or mandatory gates.
 - Prefer the simplest implementation that preserves approved boundaries and rebuildability.
 - **Reuse-first, not dependency-first:** before custom-building a substantial UI, chat, retrieval, or Learning Artifact subsystem, inspect the applicable candidates in `docs/TECHNOLOGY_REUSE_CATALOG.md`.
@@ -33,7 +41,7 @@ The Roadmap records approved product-evolution decisions, sequencing, dependenci
 - Keep the UX simple even when internals are modular.
 - Do not introduce a new infrastructure service, agent framework, graph database, dedicated vector DB, Redis/Celery, or microservice without explicit approval and demonstrated need.
 - Do not implement future phases merely because their interfaces are easy to scaffold.
-- Do not silently expand Math/Science scope into a generic education platform.
+- Do not silently expand the current Math-first implementation into a generic education platform; implement only the approved cross-subject core boundary needed by SUBJ-01.
 
 ## Protected Architectural Areas
 
@@ -52,6 +60,12 @@ The following require Product Owner approval before changing their meaning:
 - Current behavior outranking historical personalization.
 - Raw interaction and original student work preservation.
 - A Learning Thread is the session-local contiguous Conversation Segment; there is no third Thread entity.
+- One technical Session may contain multiple session-local Segments with different Subjects; one Learning Segment has one primary Broad Subject for durable Evidence attribution.
+- `LEARNING` and `NON_LEARNING / CASUAL` Segment semantics are distinct. Casual conversation is not academic Evidence, and `GENERAL_KNOWLEDGE` is reserved for genuine learning that lacks a better Broad Subject.
+- Broad Subject classification is controlled/versioned and separate from Lina's actual Grade/school Subject registry. School Subject, Domain Path, Unit, Lesson, Page, and curriculum-position metadata are optional/source-grounded and must not be invented when the source is absent.
+- School relationship uses `SCHOOL_ALIGNED`, `EXTENDED`, or `UNKNOWN`; absence of school material must not be treated automatically as `EXTENDED`.
+- For the new Segment Review path, durable Event/Evidence Subject authority comes from the reviewed Segment/Finding lineage, not blindly from a Session-level default Subject. Subject conflict or unresolved attribution fails closed rather than contaminating another Subject.
+- The future Adaptive/Open and School-Focused/Book-Led Parent policies share the same Learning Intelligence Core; no second Evidence/State/Pattern memory architecture is authorized.
 - A Durable Conversation Topic is optional Grade-scoped navigation metadata, never Learner Intelligence, Evidence, curriculum authority, or Safety authority.
 - Hybrid Segment Context is conversational continuity only: Current Multimodal Turn, Full Immediate Exchange, compact Structured Segment State, and relevance-selected complete raw Exchanges from the current Segment are separate from Learner Intelligence, Evidence, pedagogy, Safety, and RAG authority. Raw messages and original assets remain source authority.
 - A blind shared character window must not be the authority for conversation selection, and selected Immediate Exchange messages must not be positionally character-sliced. Capacity/token budgets are final guardrails calibrated from real usage, not a relevance algorithm.
@@ -65,6 +79,7 @@ The following require Product Owner approval before changing their meaning:
 - Parent/Admin-controlled Grade activation through new Grade books.
 - Compact Grade Transition Card rather than full prior-Grade runtime transfer.
 - Multimodal student input and separation of student originals from AI-derived annotations/reconstructions.
+- A photographed textbook/page is learning/school context, not learner Evidence by identity alone. A photographed Student solution may support Evidence only through the governed Vision/Segment Review path after that capability is separately approved.
 - Child-safety baseline and Parent Learning Boundary semantics, including explicit runtime policy enforcement rather than prompt-only enforcement.
 - Strategy-effectiveness anti-self-confirmation: Tutor strategy selection/use is not confirming Evidence without an observable Lina outcome.
 - TeachingStrategy (support/intervention flow) and TeachingMethod (pedagogical representation) are distinct and must not be collapsed.
@@ -72,7 +87,7 @@ The following require Product Owner approval before changing their meaning:
 - In the same primary Tutor call, Luna semantically determines the turn-level TeachingMode, TeachingStrategy, TeachingMethod, and relevant prior-method relation. Runtime code validates canonical values, lineage, safety, persistence, and structural consistency; it must not replace semantic understanding with keyword or phrase routing.
 - Selecting a method is not Evidence of effectiveness. Any method identity used by Evidence must come from persisted, project-owned Tutor-turn state, never be invented by Evidence processing.
 - Historical method ranking belongs only to LR-D04B after sufficient Evidence and approval; do not introduce MCP, agents, or infrastructure for this problem without approval.
-- Do not add a separate conversation classifier, summarizer, archive-retrieval layer, or memory service without measured evidence and Product Owner approval. CTX-03 is a separate implementation task.
+- Do not add a separate conversation classifier, Subject classifier, Topic classifier, summarizer, archive-retrieval layer, or memory service without measured evidence and Product Owner approval.
 - Modular Monolith architecture unless scaling evidence justifies a change.
 - Early Lina Calibration Checkpoint before Phase 3 and Real Lina Decision Gate after Phase 4, subject to the currently approved Roadmap sequencing corrections.
 
@@ -81,13 +96,14 @@ The following require Product Owner approval before changing their meaning:
 - Services request AI by task through the Model Gateway; do not call provider SDKs from arbitrary routes/services.
 - Normal Tutor turns target one primary Tutor call.
 - Tutor may emit hidden Candidate Event metadata; it does not directly write stable learner conclusions.
-- No extra normal-turn Evidence evaluator is authorized. Closed, structurally
+- No extra normal-turn Evidence evaluator or Subject/Topic classifier is authorized. Closed, structurally
   reviewable Segments may be reviewed asynchronously as background work, outside
   Tutor latency; deterministic reviewability does not decide educational meaning,
   and staged findings do not directly update personalization. Closed
   Session Finalization remains the durable activation boundary, is
   deterministic by default, and requires no broad semantic Session model call
   after Segment Reviews.
+- Segment Review is the authoritative semantic-analysis point for `LEARNING` vs `NON_LEARNING`, primary Broad Subject, concept/topic, and optional source-grounded school alignment in the new SUBJ-01 contract.
 - AI handles semantic/cognitive work, including the normal Tutor call's turn-level Mode, Strategy, Method, and prior-method-relation decision; deterministic code handles allowed-value validation, safety, counts, recency, lifecycle, weights, persistence, effective policy routing, and state transitions where practical. No extra classifier/model call is authorized for those Tutor decisions.
 - Safety/boundary enforcement must consume the explicit policy-engine decision contract; Tutor prompt text alone is not enforcement.
 - For teaching-strategy patterns, only observable Lina outcomes may confirm/challenge effectiveness; choosing the strategy because history recommended it is not Evidence.
@@ -128,7 +144,7 @@ A task is not complete because code exists. Before claiming completion:
 2. run relevant unit/contract/integration tests,
 3. verify no protected invariant was violated,
 4. inspect logs/output for the changed path when applicable,
-5. update `TASKS.md` status,
+5. update `TASKS.md` status when safely modifying the historical queue, or record an explicit task-specific governing transition if the approved task spec temporarily supersedes a stale queue row,
 6. update `project-state/PROJECT_STATE.md` if current reality or next action changed.
 
 When a test cannot be run, state exactly why and leave the task unverified rather than marking it complete.
