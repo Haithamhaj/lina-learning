@@ -2,7 +2,7 @@
 
 ## Current goal
 
-Full-System Acceptance is REVIEW pending independent acceptance: the governed
+Full-System Acceptance is DONE / ACCEPTED: the governed
 path from raw conversation through real Segment Review, Session-authorized
 learning memory, and real later Tutor personalization was exercised on an
 isolated acceptance database and from a clean fresh start. CTX-03 remains the
@@ -10,9 +10,10 @@ approved, technically verified Context v2 direction.
 SEG-EVID-01 is the approved Learning Intelligence semantic architecture.
 CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A/B/C are DONE / ACCEPTED;
 SEG-EVID-01D is DONE / CODE REVIEW VERIFIED / ACCEPTED;
-SEG-EVID-01E is DONE / CODE REVIEW VERIFIED / ACCEPTED, while SEG-EVID-01F is
-REVIEW pending independent acceptance.
-EDU-ERR-01 remains blocked by SEG-EVID-01F.
+SEG-EVID-01E is DONE / CODE REVIEW VERIFIED / ACCEPTED; SEG-EVID-01F is DONE /
+CODE REVIEW VERIFIED / ACCEPTED. EDU-ERR-01 remains approved with its prior F
+blocker cleared, but it is deferred behind the next approved SCOPE-01 → SUBJ-01
+product-boundary sequence.
 
 ## Current reality
 
@@ -134,7 +135,8 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
   and separate historical-reconstruction and clean fresh-start journeys.
   SEG-EVID-01D/E/F serve this one acceptance objective and do not reopen the
   accepted A/B/C decisions.
-- SEG-EVID-01F is review-ready, not independently accepted: Codex-reported
+- SEG-EVID-01F is independently **CODE REVIEW VERIFIED / ACCEPTED**:
+  Codex-reported
   isolated Math acceptance completed 12 normal Sessions, 19 successful real
   Luna Tutor calls, 15 successful real Luna Segment Reviews, deterministic
   Session authorities, Candidate-free TeachingMethod outcome, bounded retained
@@ -157,8 +159,21 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
   coverage passed (`117 passed`); canonical Python passed (`689 passed, 6
   skipped`); no new model call occurred. The retained
   isolated acceptance database is not configured in this checkout, so this
-  correction was not replayed there. SEG-EVID-01F and Full-System Acceptance
-  remain REVIEW; Real-Lina/browser remain NOT VERIFIED.
+  correction was not replayed there. PostgreSQL/Python execution results and
+  real-Luna execution counts remain Codex-reported, not independently
+  re-executed. Real-Lina/browser remain NOT VERIFIED.
+- Full-System Learning Intelligence Acceptance is independently accepted. The
+  accepted result includes the real Math multi-Session path; real Tutor and
+  Segment Review executions; Session-authorized Event/Evidence activation;
+  Current State lifecycle; Pattern support/counter/weakening/resolution;
+  Candidate-free provenance; grounded TeachingMethod outcome; bounded
+  authoritative retention anchors and persisted provenance across authority
+  replacement; current behavior outranking historical intelligence; relevant
+  later personalization; negative-memory exclusion; Session-scoped reprocessing
+  with atomic authority activation; and auditable old Evidence generations.
+  Implementation/code review is independently accepted; all PostgreSQL/Python
+  and real-Luna execution evidence remains Codex-reported. `REAL-LINA = NO`;
+  browser remains NOT VERIFIED.
 - Track A is COMPLETE / ACCEPTED; the authenticated Tutor works with zero
   content, uses optional question-driven grounding, and remains safety-first.
 - CTX-03 preserves current-Segment-only context. `CONTINUE` stays in the
@@ -194,6 +209,12 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
   no learner-style/psychological labels or second learner-memory/counter system.
 - Bounded authoritative historical anchors are allowed only when a rubric
   requires them. Cross-subject findings fail closed pending SCOPE-01/SUBJ-01.
+- The next product boundary is SCOPE-01 → SUBJ-01: one technical Session may
+  contain multiple session-local Segments / Learning Threads with potentially
+  different Subjects. Lina must not need a separate chat to move among Math,
+  Science, or future academic Subjects. SCOPE-01 clarifies/reconciles policy;
+  SUBJ-01 later implements Subject Attribution at Segment/Finding/Event
+  boundaries. The current Math-first vertical slice remains intact until then.
 - Full-System Acceptance evidence labels distinguish automated tests, real Luna,
   database end-to-end behavior, Tutor personalization, and browser execution
   when performed; `REAL-LINA VERIFIED = NO` until Lina validates it herself.
@@ -225,16 +246,15 @@ and RAG/curriculum remain separate authorities.
 
 ## Next recommended action
 
-Independent acceptance review of SEG-EVID-01F — Real Model & Multi-Session
-Verification.
+Begin SCOPE-01 — Cross-Subject Conversation & Subject Policy Reconciliation.
 
 CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A–C are DONE / ACCEPTED;
 SEG-EVID-01D is DONE / CODE REVIEW VERIFIED / ACCEPTED;
-SEG-EVID-01E is DONE / CODE REVIEW VERIFIED / ACCEPTED; SEG-EVID-01F is REVIEW;
-EDU-ERR-01 remains blocked by SEG-EVID-01F;
-SCOPE-01,
-SUBJ-01, REC-25, LR-D04B, archive retrieval, and frozen future capabilities
-remain deferred. Real-Lina validation remains deferred.
+SEG-EVID-01E and SEG-EVID-01F are DONE / CODE REVIEW VERIFIED / ACCEPTED;
+Full-System Acceptance is DONE / ACCEPTED. EDU-ERR-01 is approved with its
+prior F blocker cleared but deferred; SUBJ-01 remains blocked by SCOPE-01;
+REC-25, LR-D04B, archive retrieval, and frozen future capabilities remain
+deferred. Real-Lina validation remains deferred; browser remains NOT VERIFIED.
 
 ## Critical references
 

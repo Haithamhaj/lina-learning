@@ -463,7 +463,7 @@ contradictions are removed; historical Session Evidence is preserved; and no
 implementation code changed.
 
 ## Full-System Acceptance — Learning Intelligence
-**Status:** REVIEW
+**Status:** DONE / ACCEPTED
 **Dependencies:** SEG-EVID-01A–D accepted; SEG-EVID-01E–F completed in order.
 **Purpose:** Prove the governed path from raw conversation through real Segment
 Review, Session-authorized learning memory, and a later real Tutor
@@ -473,11 +473,20 @@ from a clean fresh start.
 `docs/FULL_SYSTEM_ACCEPTANCE_EXECUTION_SPEC.md`. This objective preserves raw
 source authority, requires real `openai / gpt-5.6-luna` Model Gateway evidence
 for AI-powered acceptance work, and protects the source database from writes.
-**Stages:** SEG-EVID-01D and SEG-EVID-01E are independently accepted;
-SEG-EVID-01F is REVIEW in the ordered implementation/verification stages
-serving this Full-System Acceptance objective;
-they are not independent product goals. Accepted SEG-EVID-01A/B/C records and
-all deferred/frozen work remain unchanged.
+**Stages / acceptance:** SEG-EVID-01D, SEG-EVID-01E, and SEG-EVID-01F are
+independently **CODE REVIEW VERIFIED / ACCEPTED** as the ordered stages serving
+this one objective; they are not separate product goals. The independently
+accepted result covers the real Math multi-Session path: real Tutor and Segment
+Review executions; Session-authorized Event/Evidence activation; Current State
+lifecycle; Pattern support/counter/weakening/resolution; Candidate-free
+provenance and TeachingMethod outcome; bounded authoritative retention anchors
+including persisted provenance across authority replacement; current behavior
+outranking history; relevant later personalization; negative-memory exclusion;
+Session-scoped reprocessing with atomic authority activation; and auditable old
+Evidence generations. PostgreSQL/Python results and real-Luna execution counts
+remain Codex-reported, not independently re-executed. `REAL-LINA VERIFIED =
+NO`; browser remains NOT VERIFIED. Accepted SEG-EVID-01A/B/C records and all
+deferred/frozen work remain unchanged.
 **Completion gate:** Historical isolated-database and separate fresh-start
 journeys demonstrate `Conversation → Segments → Reviews → Evidence → Memory →
 Tutor personalization` with evidence labels that distinguish automated, real
@@ -662,7 +671,7 @@ accepted. Automated, database, and model results remain Codex-reported unless
 independently re-executed.
 
 ## SEG-EVID-01F — Real Model & Multi-Session Verification
-**Status:** REVIEW
+**Status:** DONE / CODE REVIEW VERIFIED / ACCEPTED
 **Dependencies:** SEG-EVID-01E
 **Purpose:** Verify confusion, bare wrong answer, explicit misconception,
 correction/counter-evidence, TeachingMethod outcome, transfer, retention with
@@ -670,7 +679,8 @@ bounded historical anchors, multi-Session Pattern support/counter and
 weakening/resolution, Card updates only after Session activation, relevant
 future Tutor use, and current Student behavior above historical intelligence,
 as Stage F of Full-System Acceptance.
-**Current execution:** Review-ready, Codex-reported isolated Math acceptance
+**Current execution / acceptance:** Independently **CODE REVIEW VERIFIED /
+ACCEPTED**. Codex-reported isolated Math acceptance
 completed `12` normal Sessions, `19` successful real `openai / gpt-5.6-luna`
 Tutor executions, `15` successful real Luna Segment Review executions, and
 Session-authorized finalization. The bounded authoritative retention anchor
@@ -697,8 +707,9 @@ Codex-reported focused PostgreSQL correction coverage: `117 passed`; it reused
 no model output and did not rerun the real-Luna journey. Canonical Python:
 `689 passed, 6 skipped` (Codex-reported). The retained isolated
 acceptance database is not configured in this checkout, so no copied-database
-replay was performed for this correction. F remains REVIEW pending independent
-acceptance; Real-Lina/browser remain NOT VERIFIED.
+replay was performed for this correction. PostgreSQL/Python execution results
+and real-Luna counts remain Codex-reported, not independently re-executed.
+Real-Lina/browser remain NOT VERIFIED.
 
 ---
 
@@ -1020,9 +1031,9 @@ closed, or used to start REC-25 or LR-D04B.
 | **CTX-03** — Hybrid Segment Context Runtime | 5 | TECHNICAL CONTEXT RUNTIME VERIFIED / REAL-LINA VALIDATION DEFERRED | Current-Segment-only runtime: session-local Segment lineage and compact Structured Segment State are accepted; CTX-03C supplies complete immediate/recent/raw-semantic Exchange context from the latest Segment only, with temporary PostgreSQL/pgvector indexing and a shared query embedding. CTX-03D adds only a final deterministic capacity guardrail and private operational lineage; it does not re-rank relevance. Excludes prior-Segment reopening, prior-session/archive retrieval, memory service, retro-linking, extra classifier/summarizer calls, and external vector databases. | CTX-03E-A verified the technical runtime with real `gpt-5.6-luna` and `text-embedding-3-small`; Real-Lina validation remains deferred. |
 | **ACT-02** — NAVIGATION vs ANSWER_CHOICE Semantic Misuse | 4 | ACCEPTED / CLOSED | Generic Suggested Action clicks and legacy `ANSWER_CHOICE` clicks are non-evidentiary. Only a validated latest persisted Guided Learning Check answer with exact choice membership can enter bounded Candidate processing; forged, stale, cross-session, and non-member responses are rejected. Runtime owns final authority validation. Configured production build/browser verification was not run because this isolated worktree has no valid Clerk publishable key; it is non-blocking for this backend Evidence-authority closure. | CTX-03E-A technical gate is complete; Real-Lina validation is deferred and does not block Stabilization Track B. |
 | **CAND-01** — Confusion / Ambiguity Is Not Misconception | 4 | ACCEPTED / CLOSED | The strict Structured Output correction and source-grounded misconception protection are independently CODE REVIEW VERIFIED at `8efa6d5388c4d2e8599ea2a21cac0766a677e9b1`. Codex-reported focused/relevant and canonical Python execution: 544 passed, 5 skipped. Controlled real `gpt-5.6-luna` representative scenarios were run successfully by Codex through the Tutor/Model-Gateway path, not independently re-executed: confusion, a bare wrong answer, and an arithmetic slip did not become misconception signals; explicit wrong reasoning produced grounded `misconception-evidence-v1`. Turn-level Candidate remains provisional and Segment Review is the future durable semantic authority; this does not claim perfect turn-level Luna classification. | Accepted and closed. Real-Lina validation remains deferred and is not part of CAND-01 closure. |
-| **EDU-ERR-01** — Educational Error Classification Foundation | 4 | APPROVED / BLOCKED BY SEG-EVID-01F | Future versioned domain-general plus domain-specific Educational Error Registry: Raw Segment → Segment Review → confirmed educational-error classification → Session-authorized Evidence → existing support/counter Pattern lifecycle → Learner Intelligence. No Error Memory subsystem and no new counters. | After SEG-EVID-01F; then SCOPE-01/SUBJ-01. Do not implement in this commit. |
-| **SCOPE-01** — Science / Explore Inside Math Session | 3 | OPEN / PRODUCT POLICY DECISION REQUIRED | Cross-subject exploration policy is a Product Owner decision, not an engineering decision. | Product Owner decision before SUBJ-01. |
-| **SUBJ-01** — Cross-Subject Candidate Attribution | 4 | OPEN | S3 persisted a moon-phases Candidate with subject MATH / school; Evidence must not silently contaminate the wrong subject/thread. | SCOPE-01 decision first. |
+| **EDU-ERR-01** — Educational Error Classification Foundation | 4 | APPROVED / DEFERRED | Future versioned domain-general plus domain-specific Educational Error Registry: Raw Segment → Segment Review → confirmed educational-error classification → Session-authorized Evidence → existing support/counter Pattern lifecycle → Learner Intelligence. No Error Memory subsystem and no new counters. Its prior SEG-EVID-01F blocker is cleared, but it is not the next action. | Deferred while the approved SCOPE-01 → SUBJ-01 product-boundary sequence proceeds. Do not implement in this commit. |
+| **SCOPE-01** — Cross-Subject Conversation & Subject Policy | 3 | READY | Reconcile the approved one-technical-Session → multiple session-local Segments / Learning Threads → potentially different Subjects architecture with the current Math-first vertical slice. Lina must not need a separate chat to move among Math, Science, or future academic Subjects. This is product-policy clarification only, not Science production. | Next approved product-boundary work; SUBJ-01 follows. |
+| **SUBJ-01** — Subject Attribution at Segment/Finding/Event Boundaries | 4 | BLOCKED | Later implement correct Subject Attribution at the Segment, Finding, and Event intelligence boundaries. Existing Math-first behavior remains fail-closed; Evidence must not silently contaminate the wrong subject/thread. | SCOPE-01 policy clarification first. |
 | **DEC-01** — Mode / Strategy / Prior-Relation Calibration | 3 | OPEN / STILL PRESENT | S3 direct continuations remain NOT_RELEVANT or otherwise unstable. Do not replace Luna/Terra understanding with keyword routing. | Start C. |
 | **DEC-02** — TeachingMethod Attribution Fidelity | 4 | OPEN / STILL PRESENT | TeachingMethod must truthfully describe the visible Tutor representation. | DEC-01 first; required before LR-D04B. |
 | **REP-01** — Over-Practice / Repetition Control | 3 | OPEN / CONFIRMED | After repeated independent success, Tutor continued near-identical checks instead of progressing, changing task type, testing transfer, or restoring agency. | After Mode/Strategy/Method calibration. |
@@ -1039,8 +1050,9 @@ closed, or used to start REC-25 or LR-D04B.
    CTX-03 technical gate complete; Real-Lina final validation deferred.
 2. **B — Interaction / Evidence Hygiene:** ACT-02 CLOSED → CAND-01 strict
    schema compatibility correction → SEG-EVID-01A → SEG-EVID-01B →
-   SEG-EVID-01C → SEG-EVID-01D → SEG-EVID-01E → SEG-EVID-01F → EDU-ERR-01
-   → SCOPE-01 Product Owner decision → SUBJ-01.
+   SEG-EVID-01C → SEG-EVID-01D → SEG-EVID-01E → SEG-EVID-01F accepted
+   → SCOPE-01 policy clarification → SUBJ-01 subject-attribution work.
+   EDU-ERR-01 remains approved but deferred; its prior F blocker is cleared.
 3. **C — Tutor Semantic Calibration:** DEC-01 → DEC-02 → REP-01 → LANG-01
    → CAND-02 final.
 4. **D — Evidence / Personalization:** legacy EVID-01 compatibility is
@@ -1142,9 +1154,9 @@ expansion remain frozen.
 - **Lifecycle:** UI-01 is **CLOSED** following real S3 browser use with no hang
   and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
-**Next action:** Independent acceptance review of SEG-EVID-01F and Full-System
-Acceptance. Do not begin EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, LR-D04B,
-archive retrieval, or frozen future capabilities.
+**Next action:** Begin SCOPE-01 — Cross-Subject Conversation & Subject Policy
+Reconciliation. Do not begin SUBJ-01, EDU-ERR-01, REC-25, LR-D04B, archive
+retrieval, or frozen future capabilities in this state transition.
 
 ---
 
