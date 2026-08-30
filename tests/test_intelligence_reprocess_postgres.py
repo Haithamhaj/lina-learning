@@ -155,12 +155,11 @@ def _segment_finalization_session(
         "source_message_ids": [str(message.id)],
         "candidate_event_ids": [],
         "historical_anchor_evidence_ids": [],
-        "school_or_extended": "school",
         "transfer_context": "not_tested",
         "retention_context": "not_tested",
         "dimensions": _support_dimensions(),
         "relationship": "supports",
-        "subject_alignment": "SAME_AS_SESSION",
+        "reported_broad_subject": None,
         "teaching_method_id": None,
         "teaching_method_source_tutor_message_id": None,
         "misconception_evidence": None,
@@ -176,7 +175,21 @@ def _segment_finalization_session(
         provider="fixture",
         model="segment-fixture",
         status="COMPLETED",
-        output={"version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION, "findings": [finding]},
+        output={
+            "version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+            "segment_kind": "LEARNING",
+            "primary_broad_subject": "MATH",
+            "school_context": {
+                "school_relation": "UNKNOWN",
+                "school_subject_ref": None,
+                "school_domain_path": [],
+                "unit_ref": None,
+                "lesson_ref": None,
+                "page_refs": [],
+                "source_refs": [],
+            },
+            "findings": [finding],
+        },
         completed_at=closed_at,
     )
     session.add(review)
@@ -271,9 +284,20 @@ def test_segment_pipeline_reprocess_replaces_an_incompatible_review_without_mixi
                 del route, payload
                 calls += 1
                 return ModelResult(
-                    output={
-                        "version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
-                        "findings": [
+                        output={
+                            "version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+                            "segment_kind": "LEARNING",
+                            "primary_broad_subject": "MATH",
+                            "school_context": {
+                                "school_relation": "UNKNOWN",
+                                "school_subject_ref": None,
+                                "school_domain_path": [],
+                                "unit_ref": None,
+                                "lesson_ref": None,
+                                "page_refs": [],
+                                "source_refs": [],
+                            },
+                            "findings": [
                             {
                                 "validated_event_type": "learning_attempt",
                                 "concept_ref": "fractions",
@@ -281,12 +305,11 @@ def test_segment_pipeline_reprocess_replaces_an_incompatible_review_without_mixi
                                 "source_message_ids": [str(message.id)],
                                 "candidate_event_ids": [],
                                 "historical_anchor_evidence_ids": [],
-                                "school_or_extended": "school",
                                 "transfer_context": "not_tested",
                                 "retention_context": "not_tested",
                                 "dimensions": _support_dimensions(),
-                                "relationship": "supports",
-                                "subject_alignment": "SAME_AS_SESSION",
+                                    "relationship": "supports",
+                                    "reported_broad_subject": None,
                                 "teaching_method_id": None,
                                 "teaching_method_source_tutor_message_id": None,
                                 "misconception_evidence": None,
@@ -332,6 +355,17 @@ def test_segment_pipeline_reprocess_accepts_zero_findings_and_activates_only_aft
         )
         review.output = {
             "version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+            "segment_kind": "LEARNING",
+            "primary_broad_subject": "MATH",
+            "school_context": {
+                "school_relation": "UNKNOWN",
+                "school_subject_ref": None,
+                "school_domain_path": [],
+                "unit_ref": None,
+                "lesson_ref": None,
+                "page_refs": [],
+                "source_refs": [],
+            },
             "findings": [],
         }
         queued = enqueue_intelligence_reprocess(
@@ -998,3 +1032,92 @@ def test_reprocess_no_event_supersedes_old_state_and_pattern_contributions(
     assert {pattern.status for pattern in patterns} == {"RESOLVED"}
     assert historical_state.status != "ACTIVE"
     assert replacement_view is not None and replacement_view.evidence_ids == []
+
+
+def test_subject_reprocess_uses_authoritative_reviewed_event_subject_for_finalized_sessions(
+    factory: sessionmaker[Session],
+) -> None:
+    """A superseded Event cannot pull a Subject into a finalized-session rebuild."""
+
+    closed_at = datetime(2025, 2, 1, tzinfo=UTC)
+    with factory.begin() as session:
+        learning_session, _, message, _ = _segment_finalization_session(
+            session,
+            closed_at=closed_at,
+        )
+        candidate = session.query(CandidateEvent).filter_by(session_id=learning_session.id).one()
+        run = IntelligenceProcessingRun(
+            student_id=learning_session.student_id,
+            rubric_version="evidence-rubric-v1",
+            policy_version="segment-review-policy-v3",
+            status="COMPLETED",
+            scope={"session_id": str(learning_session.id)},
+        )
+        session.add(run)
+        session.flush()
+        session.add(
+            LearningEvent(
+                processing_run_id=run.id,
+                session_id=learning_session.id,
+                candidate_event_id=candidate.id,
+                subject="SCIENCE",
+                concept_ref="plant_cells",
+                event_type="learning_attempt",
+                description="Student compared plant-cell structures.",
+                source_message_id=message.id,
+            )
+        )
+        stale_run = IntelligenceProcessingRun(
+            student_id=learning_session.student_id,
+            rubric_version="evidence-rubric-v1",
+            policy_version="segment-review-policy-v3",
+            status="COMPLETED",
+            scope={"session_id": str(learning_session.id)},
+        )
+        session.add(stale_run)
+        session.flush()
+        session.add(
+            LearningEvent(
+                processing_run_id=stale_run.id,
+                session_id=learning_session.id,
+                candidate_event_id=candidate.id,
+                subject="MATH",
+                concept_ref="equivalent_fractions",
+                event_type="learning_attempt",
+                description="Superseded Math interpretation.",
+                source_message_id=message.id,
+            )
+        )
+        session.add(
+            IntelligenceSessionAuthority(
+                student_id=learning_session.student_id,
+                session_id=learning_session.id,
+                reprocess_run_id=None,
+                evidence_processing_run_id=run.id,
+            )
+        )
+        session.flush()
+
+        math_preview = preview_intelligence_reprocess(
+            session,
+            request=IntelligenceReprocessRequest(
+                student_id=learning_session.student_id,
+                subject="MATH",
+                start_at=closed_at,
+                end_at=closed_at,
+                evidence=_evidence_identity(model="fixture-evidence"),
+            ),
+        )
+        science_preview = preview_intelligence_reprocess(
+            session,
+            request=IntelligenceReprocessRequest(
+                student_id=learning_session.student_id,
+                subject="SCIENCE",
+                start_at=closed_at,
+                end_at=closed_at,
+                evidence=_evidence_identity(model="fixture-evidence"),
+            ),
+        )
+
+    assert math_preview.selected_session_ids == ()
+    assert science_preview.selected_session_ids == (learning_session.id,)

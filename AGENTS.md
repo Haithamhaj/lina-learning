@@ -149,6 +149,18 @@ A task is not complete because code exists. Before claiming completion:
 
 When a test cannot be run, state exactly why and leave the task unverified rather than marking it complete.
 
+### Real-model environment discovery
+
+For real-model/provider verification, the absence of `.env` in an active isolated worktree does **not** by itself mean provider configuration is unavailable.
+
+Use this discovery order:
+
+1. Inspect the active isolated worktree's environment/configuration normally.
+2. If required provider/model configuration is absent, inspect the original repository checkout's existing project environment configuration **read only**: `/Users/haitham/development/Lina Personal Learning System`.
+3. When available, use that existing configuration read only to execute verification from the isolated worktree.
+
+While implementation runs in an isolated worktree, the original checkout is otherwise read only. Never print, echo, display, copy, modify, commit, or hardcode secret values; never copy its `.env` into the isolated worktree or add environment files to Git. Report only which approved locations/configuration types were checked and whether required configuration was available. Do not report real-model verification blocked until both locations have been checked.
+
 ## Data / Migration Rules
 
 - Use migrations for schema changes.

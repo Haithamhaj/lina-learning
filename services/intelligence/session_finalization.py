@@ -19,6 +19,7 @@ from services.intelligence.segment_reviews import (
     SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
     SEGMENT_REVIEW_POLICY_VERSION,
     SegmentLearningReviewEnvelope,
+    SegmentLearningReviewV3Envelope,
     SegmentReviewValidationError,
     persisted_review_historical_anchors,
     review_completed_segment,
@@ -145,9 +146,8 @@ def finalize_closed_session(
         required_segments=required_segments,
     )
     withheld_count = sum(
-        finding.subject_alignment != "SAME_AS_SESSION"
-        for item in validated_reviews
-        for finding in item.envelope.findings
+        not _is_materializable_finding(item.envelope, finding)
+        for item in validated_reviews for finding in item.envelope.findings
     )
 
     with session.begin_nested():
@@ -258,9 +258,8 @@ def stage_closed_session_finalization(
             required_segments=required_segments,
         )
     withheld_count = sum(
-        finding.subject_alignment != "SAME_AS_SESSION"
-        for item in validated_reviews
-        for finding in item.envelope.findings
+        not _is_materializable_finding(item.envelope, finding)
+        for item in validated_reviews for finding in item.envelope.findings
     )
     run = IntelligenceProcessingRun(
         student_id=locked_session.student_id,
@@ -449,7 +448,11 @@ def _validate_persisted_review(
     )
     messages = {message.id: message for message in message_rows}
     try:
-        parsed_envelope = SegmentLearningReviewEnvelope.model_validate(review.output)
+        parsed_envelope = (
+            SegmentLearningReviewV3Envelope.model_validate(review.output)
+            if review.output.get("version") == SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION
+            else SegmentLearningReviewEnvelope.model_validate(review.output)
+        )
     except ValidationError as error:
         raise SessionFinalizationValidationError(
             "Persisted Segment Review output violates the strict envelope."
@@ -584,7 +587,7 @@ def _materialize_eligible_findings(
     event_count = 0
     for item in validated_reviews:
         for finding_index, finding in enumerate(item.envelope.findings):
-            if finding.subject_alignment != "SAME_AS_SESSION":
+            if not _is_materializable_finding(item.envelope, finding):
                 continue
             source_message_ids = [str(message_id) for message_id in finding.source_message_ids]
             candidate_event_ids = [str(candidate_id) for candidate_id in finding.candidate_event_ids]
@@ -597,7 +600,7 @@ def _materialize_eligible_findings(
                 segment_review_finding_index=finding_index,
                 candidate_event_ids=candidate_event_ids,
                 source_message_ids=source_message_ids,
-                subject=learning_session.subject,
+                subject=item.envelope.primary_broad_subject,
                 concept_ref=finding.concept_ref,
                 event_type=finding.validated_event_type,
                 description=finding.event_summary,
@@ -620,6 +623,22 @@ def _materialize_eligible_findings(
             event_count += 1
     session.flush()
     return event_count
+
+
+def _is_materializable_finding(
+    envelope: SegmentLearningReviewEnvelope,
+    finding: object,
+) -> bool:
+    """Fail closed unless one v3 Learning Review owns the Finding's Subject."""
+
+    if envelope.segment_kind != "LEARNING" or envelope.primary_broad_subject is None:
+        return False
+    reported_broad_subject = getattr(finding, "reported_broad_subject", None)
+    if reported_broad_subject not in (None, envelope.primary_broad_subject):
+        return False
+    if envelope.version == SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION:
+        return True
+    return getattr(finding, "subject_alignment", None) in (None, "SAME_AS_SESSION")
 
 
 def _outcome_for_existing(
@@ -651,7 +670,7 @@ def _outcome_for_existing(
                         "Authoritative Review no longer has a strict persisted envelope."
                     ) from error
                 withheld_count += sum(
-                    finding.subject_alignment != "SAME_AS_SESSION"
+                    not _is_materializable_finding(envelope, finding)
                     for finding in envelope.findings
                 )
     return SessionFinalizationOutcome(

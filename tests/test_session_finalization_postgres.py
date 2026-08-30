@@ -185,6 +185,7 @@ def _finding(
     *,
     candidate_ids: list[str] | None = None,
     alignment: str = "SAME_AS_SESSION",
+    reported_broad_subject: str | None = None,
     concept_ref: str = "equivalent_fractions",
     event_type: str = "learning_attempt",
     summary: str = "The Student explained an equivalent-fractions relationship.",
@@ -200,12 +201,11 @@ def _finding(
         "source_message_ids": [str(message.id)],
         "candidate_event_ids": candidate_ids or [],
         "historical_anchor_evidence_ids": [],
-        "school_or_extended": "school",
         "transfer_context": "not_tested",
         "retention_context": "not_tested",
         "dimensions": dimensions or _dimensions(),
         "relationship": relationship,
-        "subject_alignment": alignment,
+        "reported_broad_subject": reported_broad_subject,
         "teaching_method_id": teaching_method_id,
         "teaching_method_source_tutor_message_id": teaching_method_source_tutor_message_id,
         "misconception_evidence": None,
@@ -242,7 +242,21 @@ def _review(
         output=(
             output
             if output is not None
-            else ({"version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION, "findings": findings or []}
+            else ({
+                "version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+                "segment_kind": "LEARNING",
+                "primary_broad_subject": "MATH",
+                "school_context": {
+                    "school_relation": "UNKNOWN",
+                    "school_subject_ref": None,
+                    "school_domain_path": [],
+                    "unit_ref": None,
+                    "lesson_ref": None,
+                    "page_refs": [],
+                    "source_refs": [],
+                },
+                "findings": findings or [],
+            }
             if status == "COMPLETED"
             else None)
         ),
@@ -561,10 +575,10 @@ def test_compiled_finding_validation_blocks_all_activation(
         _assert_no_activation(session)
 
 
-def test_only_same_session_findings_materialize_with_complete_provenance(
+def test_only_primary_subject_findings_materialize_with_complete_provenance(
     factory: sessionmaker[Session],
 ) -> None:
-    """Catches cross-subject staging being silently attributed to Math or suppressing safe findings."""
+    """Catches a conflicting Finding Subject being silently attributed to the Review."""
 
     finalize, _, _ = _finalization_api()
     with factory.begin() as session:
@@ -589,13 +603,13 @@ def test_only_same_session_findings_materialize_with_complete_provenance(
                 safe,
                 _finding(
                     message,
-                    alignment="POSSIBLE_CROSS_SUBJECT",
+                    reported_broad_subject="SCIENCE",
                     concept_ref="plant_cells",
                     summary="A possible Science observation remains staged.",
                 ),
                 _finding(
                     message,
-                    alignment="UNCERTAIN",
+                    reported_broad_subject="SCIENCE",
                     concept_ref="uncertain_topic",
                     summary="An uncertain observation remains staged.",
                 ),

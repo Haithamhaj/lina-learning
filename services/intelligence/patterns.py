@@ -254,10 +254,9 @@ def _load_validated_evidence(session: Session, *, evidence_id: UUID) -> _Evidenc
         or learning_session.status != "CLOSED"
         or not is_supported_evidence_run_scope(run_scope)
         or run_scope.get("session_id") != str(learning_session.id)
-        or event.subject != "MATH"
         or evidence.concept_ref != event.concept_ref
     ):
-        raise PatternSourceError("Patterns require completed, validated TASK-021 Math Evidence.")
+        raise PatternSourceError("Patterns require completed, validated Evidence.")
     payload = _candidate_payload(candidate)
     observed_at = (
         (candidate.created_at if candidate is not None else None)

@@ -161,7 +161,6 @@ def _finding(student_message: LearningMessage, **overrides: object) -> dict[str,
         "source_message_ids": [str(student_message.id)],
         "candidate_event_ids": [],
         "historical_anchor_evidence_ids": [],
-        "school_or_extended": "school",
         "transfer_context": "not_tested",
         "retention_context": "not_tested",
         "dimensions": _dimensions(
@@ -170,7 +169,7 @@ def _finding(student_message: LearningMessage, **overrides: object) -> dict[str,
             reasoning_demonstration="coherent",
         ),
         "relationship": "supports",
-        "subject_alignment": "SAME_AS_SESSION",
+        "reported_broad_subject": None,
         "teaching_method_id": None,
         "teaching_method_source_tutor_message_id": None,
         "misconception_evidence": None,
@@ -180,7 +179,21 @@ def _finding(student_message: LearningMessage, **overrides: object) -> dict[str,
 
 
 def _output(*findings: dict[str, object]) -> dict[str, object]:
-    return {"version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION, "findings": list(findings)}
+    return {
+        "version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+        "segment_kind": "LEARNING",
+        "primary_broad_subject": "MATH",
+        "school_context": {
+            "school_relation": "UNKNOWN",
+            "school_subject_ref": None,
+            "school_domain_path": [],
+            "unit_ref": None,
+            "lesson_ref": None,
+            "page_refs": [],
+            "source_refs": [],
+        },
+        "findings": list(findings),
+    }
 
 
 def _candidate_payload(
@@ -368,7 +381,9 @@ def test_review_prompt_requires_an_exact_cited_student_quote_for_misconception_e
         )
 
         instructions = str(provider.payloads[0]["instructions"])
-        assert SEGMENT_LEARNING_REVIEW_PROMPT_VERSION == "segment-learning-review-prompt-v5"
+        assert SEGMENT_LEARNING_REVIEW_PROMPT_VERSION == "segment-learning-review-prompt-v8"
+        assert "For NON_LEARNING, school_context must be null" in instructions
+        assert "reported_broad_subject must be null" in instructions
         assert "exact normalized substring" in instructions
         assert "explicit_student_reasoning" in instructions
         assert "copy its concept_ref exactly" in instructions
@@ -512,6 +527,7 @@ def test_retention_review_uses_only_bounded_prior_session_authority_anchors(
         assert request["historical_anchors"] == [
             {
                 "elapsed_time": "P9D",
+                "broad_subject": "MATH",
                 "prior_demonstration_state": "demonstrated",
                 "prior_evidence_id": str(prior_evidence.id),
                 "prior_observed_at": prior_session.closed_at.isoformat(),
@@ -848,12 +864,11 @@ def test_valid_transfer_and_cross_subject_finding_remain_staged(factory: session
             student,
             validated_event_type="transfer_attempt",
             transfer_context="meaningfully_changed",
-            subject_alignment="POSSIBLE_CROSS_SUBJECT",
-            dimensions=_dimensions(transfer="demonstrated"),
+        dimensions=_dimensions(transfer="demonstrated"),
         )
         outcome = review_completed_segment(session, learning_session=learning_session, segment=segment, gateway=_gateway(session, _Provider(_output(finding))))
         assert outcome.review.output is not None
-        assert outcome.review.output["findings"][0]["subject_alignment"] == "POSSIBLE_CROSS_SUBJECT"
+        assert outcome.review.output["findings"][0]["reported_broad_subject"] is None
         assert session.query(LearningEvent).count() == 0
 
 

@@ -18,6 +18,11 @@ from services.intelligence.consolidation import (
     EvidenceDimensions,
     EvidenceRelationship,
 )
+from services.intelligence.subjects import (
+    BROAD_SUBJECT_REGISTRY_VERSION,
+    BROAD_SUBJECT_KEYS,
+    is_supported_broad_subject,
+)
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
 from services.platform.config import Settings, get_settings
 from services.platform.db.models import (
@@ -48,9 +53,10 @@ from services.tutor.teaching_methods import (
     is_supported_teaching_method,
 )
 
-SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION = "segment-learning-review-v2"
-SEGMENT_LEARNING_REVIEW_PROMPT_VERSION = "segment-learning-review-prompt-v5"
-SEGMENT_REVIEW_POLICY_VERSION = "segment-review-policy-v2"
+LEGACY_SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION = "segment-learning-review-v2"
+SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION = "segment-learning-review-v3"
+SEGMENT_LEARNING_REVIEW_PROMPT_VERSION = "segment-learning-review-prompt-v8"
+SEGMENT_REVIEW_POLICY_VERSION = "segment-review-policy-v3"
 HISTORICAL_ANCHOR_LIMIT = 8
 MEANINGFUL_RETENTION_DELAY = timedelta(days=7)
 
@@ -63,6 +69,8 @@ SegmentReviewEventType = Literal[
 TransferContext = Literal["not_tested", "near_identical", "meaningfully_changed"]
 RetentionContext = Literal["not_tested", "meaningfully_delayed"]
 SubjectAlignment = Literal["SAME_AS_SESSION", "POSSIBLE_CROSS_SUBJECT", "UNCERTAIN"]
+SegmentKind = Literal["LEARNING", "NON_LEARNING"]
+SchoolRelation = Literal["SCHOOL_ALIGNED", "EXTENDED", "UNKNOWN"]
 _SUPPORTED_SEGMENT_CANDIDATE_TYPES = frozenset(get_args(CandidateEventType)) - {"retention_check"}
 
 
@@ -95,7 +103,7 @@ class SegmentLearningReviewLineageError(ValueError):
 
 
 class SegmentReviewFinding(BaseModel):
-    """One staged semantic interpretation, never a durable intelligence update."""
+    """Shared v3 Finding semantics, never durable intelligence by themselves."""
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
@@ -105,12 +113,12 @@ class SegmentReviewFinding(BaseModel):
     source_message_ids: list[UUID] = Field(..., min_length=1, max_length=16)
     candidate_event_ids: list[UUID] = Field(..., max_length=16)
     historical_anchor_evidence_ids: list[UUID] = Field(..., max_length=HISTORICAL_ANCHOR_LIMIT)
-    school_or_extended: Literal["school", "extended"]
     transfer_context: TransferContext
     retention_context: RetentionContext
     dimensions: EvidenceDimensions
     relationship: EvidenceRelationship
-    subject_alignment: SubjectAlignment
+    # A non-authoritative compatibility/model claim used only for conflict detection.
+    reported_broad_subject: str | None = Field(...)
     teaching_method_id: TeachingMethod | None = Field(...)
     teaching_method_source_tutor_message_id: UUID | None = Field(...)
     misconception_evidence: MisconceptionEvidence | None = Field(...)
@@ -120,10 +128,60 @@ class SegmentReviewFinding(BaseModel):
         forbidden = ("visual learner", "learning style", "highly intelligent", "poor attention", "careless", "low motivation", "personality", "adhd")
         if any(label in self.event_summary.casefold() for label in forbidden):
             raise ValueError("Finding summary contains an unsupported learner label.")
-        if self.validated_event_type == "extended_learning_event" and self.school_or_extended != "extended":
-            raise ValueError("extended_learning_event must be marked extended.")
         if self.validated_event_type != "misconception_signal" and self.misconception_evidence is not None:
             raise ValueError("Only misconception findings may contain misconception evidence.")
+        if self.reported_broad_subject is not None and not is_supported_broad_subject(
+            self.reported_broad_subject
+        ):
+            raise ValueError("Finding Subject claim is outside the Broad Subject registry.")
+        return self
+
+
+class LegacySegmentReviewFinding(SegmentReviewFinding):
+    """v2-only Finding fields retained for historical audit parsing."""
+
+    school_or_extended: Literal["school", "extended"]
+    subject_alignment: SubjectAlignment | None = Field(...)
+
+    @model_validator(mode="after")
+    def enforce_legacy_school_contract(self) -> LegacySegmentReviewFinding:
+        if self.validated_event_type == "extended_learning_event" and self.school_or_extended != "extended":
+            raise ValueError("extended_learning_event must be marked extended.")
+        return self
+
+
+class SegmentReviewFindingV3(SegmentReviewFinding):
+    """v3 Finding deliberately excludes legacy relative-school fields."""
+
+
+class SegmentSchoolContext(BaseModel):
+    """Optional school alignment metadata; it never supplies teaching authority."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    school_relation: SchoolRelation
+    school_subject_ref: str | None = Field(..., min_length=1, max_length=128)
+    school_domain_path: list[str] = Field(..., max_length=16)
+    unit_ref: str | None = Field(..., min_length=1, max_length=128)
+    lesson_ref: str | None = Field(..., min_length=1, max_length=128)
+    page_refs: list[str] = Field(..., max_length=32)
+    source_refs: list[str] = Field(..., max_length=32)
+
+    @model_validator(mode="after")
+    def require_provenance_for_school_structure(self) -> SegmentSchoolContext:
+        has_structure = any(
+            (
+                self.school_subject_ref,
+                self.school_domain_path,
+                self.unit_ref,
+                self.lesson_ref,
+                self.page_refs,
+            )
+        )
+        if self.school_relation == "UNKNOWN" and (has_structure or self.source_refs):
+            raise ValueError("UNKNOWN school context must not carry school structure or sources.")
+        if self.school_relation != "UNKNOWN" and not self.source_refs:
+            raise ValueError("School structure requires trusted source provenance.")
         return self
 
 
@@ -132,8 +190,62 @@ class SegmentLearningReviewEnvelope(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    version: Literal[
+        LEGACY_SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+        SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+    ]
+    segment_kind: SegmentKind | None = Field(...)
+    primary_broad_subject: str | None = Field(...)
+    school_context: SegmentSchoolContext | None = Field(...)
+    findings: list[LegacySegmentReviewFinding] = Field(..., max_length=24)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_legacy_v2(cls, value: object) -> object:
+        if not isinstance(value, dict) or value.get("version") != LEGACY_SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION:
+            return value
+        normalized = dict(value)
+        normalized.setdefault("segment_kind", None)
+        normalized.setdefault("primary_broad_subject", None)
+        normalized.setdefault("school_context", None)
+        raw_findings = normalized.get("findings")
+        if isinstance(raw_findings, list):
+            normalized["findings"] = [
+                {**finding, "reported_broad_subject": finding.get("reported_broad_subject")}
+                if isinstance(finding, dict)
+                else finding
+                for finding in raw_findings
+            ]
+        return normalized
+
+    @model_validator(mode="after")
+    def enforce_subject_attribution_contract(self) -> SegmentLearningReviewEnvelope:
+        if self.version == LEGACY_SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION:
+            return self
+        if self.segment_kind is None:
+            raise ValueError("v3 Reviews must declare a Segment kind.")
+        if self.segment_kind == "LEARNING":
+            if not is_supported_broad_subject(self.primary_broad_subject):
+                raise ValueError("Learning Reviews require a supported primary Broad Subject.")
+            if self.school_context is None:
+                raise ValueError("Learning Reviews require an explicit School Context.")
+            return self
+        if self.primary_broad_subject is not None or self.school_context is not None or self.findings:
+            raise ValueError("Non-Learning Reviews have no academic Subject or Findings.")
+        return self
+
+
+class SegmentLearningReviewV3Envelope(SegmentLearningReviewEnvelope):
+    """The only Review shape accepted from the live v3 model route.
+
+    The parent envelope intentionally continues to parse v2 rows for audit and
+    reprocessing lineage.  Keeping the live response schema separate prevents
+    a provider from returning a historical contract to a v3 Review run.
+    """
+
     version: Literal[SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION]
-    findings: list[SegmentReviewFinding] = Field(..., max_length=24)
+    school_context: SegmentSchoolContext | None = Field(...)
+    findings: list[SegmentReviewFindingV3] = Field(..., max_length=24)
 
 
 @dataclass(frozen=True)
@@ -141,6 +253,7 @@ class HistoricalEvidenceAnchor:
     """Minimal, prior Session-authorized retention context for one Review."""
 
     evidence_id: UUID
+    broad_subject: str
     concept_ref: str
     prior_demonstration_state: str
     prior_observed_at: datetime
@@ -150,6 +263,7 @@ class HistoricalEvidenceAnchor:
     def model_input(self) -> dict[str, str]:
         return {
             "prior_evidence_id": str(self.evidence_id),
+            "broad_subject": self.broad_subject,
             "concept_ref": self.concept_ref,
             "prior_demonstration_state": self.prior_demonstration_state,
             "prior_observed_at": self.prior_observed_at.isoformat(),
@@ -159,8 +273,8 @@ class HistoricalEvidenceAnchor:
 
 
 SEGMENT_REVIEW_RESPONSE_SCHEMA: dict[str, object] = {
-    "name": "segment_learning_review_v1",
-    "schema": SegmentLearningReviewEnvelope.model_json_schema(),
+    "name": "segment_learning_review_v3",
+    "schema": SegmentLearningReviewV3Envelope.model_json_schema(),
 }
 
 
@@ -252,7 +366,7 @@ def review_completed_segment(
                 source_candidate_event_ids=tuple(candidate.id for candidate in candidates),
             ),
         )
-        envelope = validate_segment_review_output(
+        envelope = validate_live_segment_review_output(
             result.output,
             messages=messages,
             candidates=candidates,
@@ -484,6 +598,7 @@ def _historical_anchors(
     rows = session.execute(
         select(
             LearningEvidence.id,
+            LearningEvent.subject,
             LearningEvidence.concept_ref,
             LearningEvidence.dimensions,
             LearningSession.closed_at,
@@ -509,7 +624,6 @@ def _historical_anchors(
             LearningSession.student_id == learning_session.student_id,
             IntelligenceProcessingRun.student_id == learning_session.student_id,
             LearningEvent.session_id != learning_session.id,
-            LearningEvent.subject == learning_session.subject,
             LearningEvidence.concept_ref.is_not(None),
             LearningEvidence.concept_ref == LearningEvent.concept_ref,
             LearningEvidence.dimensions["understanding"].astext.in_(
@@ -523,9 +637,10 @@ def _historical_anchors(
         .limit(HISTORICAL_ANCHOR_LIMIT)
     ).all()
     anchors: list[HistoricalEvidenceAnchor] = []
-    for evidence_id, concept_ref, dimensions, observed_at in rows:
+    for evidence_id, broad_subject, concept_ref, dimensions, observed_at in rows:
         if (
-            not isinstance(concept_ref, str)
+            not is_supported_broad_subject(broad_subject)
+            or not isinstance(concept_ref, str)
             or not isinstance(dimensions, dict)
             or not isinstance(observed_at, datetime)
         ):
@@ -540,6 +655,7 @@ def _historical_anchors(
         anchors.append(
             HistoricalEvidenceAnchor(
                 evidence_id=evidence_id,
+                broad_subject=broad_subject,
                 concept_ref=concept_ref,
                 prior_demonstration_state=state,
                 prior_observed_at=observed_at,
@@ -569,7 +685,11 @@ def persisted_review_historical_anchors(
     if not isinstance(review.output, dict) or segment.closed_at is None:
         return []
     try:
-        envelope = SegmentLearningReviewEnvelope.model_validate(review.output)
+        envelope = (
+            SegmentLearningReviewV3Envelope.model_validate(review.output)
+            if review.output.get("version") == SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION
+            else SegmentLearningReviewEnvelope.model_validate(review.output)
+        )
     except ValidationError:
         return []
     requested_ids = {
@@ -585,6 +705,7 @@ def persisted_review_historical_anchors(
     rows = session.execute(
         select(
             LearningEvidence.id,
+            LearningEvent.subject,
             LearningEvidence.concept_ref,
             LearningEvidence.dimensions,
             LearningSession.closed_at,
@@ -602,7 +723,6 @@ def persisted_review_historical_anchors(
             LearningSession.student_id == learning_session.student_id,
             IntelligenceProcessingRun.student_id == learning_session.student_id,
             LearningEvent.session_id != learning_session.id,
-            LearningEvent.subject == learning_session.subject,
             LearningEvidence.concept_ref.is_not(None),
             LearningEvidence.concept_ref == LearningEvent.concept_ref,
             LearningEvidence.dimensions["understanding"].astext.in_(
@@ -614,9 +734,10 @@ def persisted_review_historical_anchors(
         )
     ).all()
     anchors: list[HistoricalEvidenceAnchor] = []
-    for evidence_id, concept_ref, dimensions, observed_at, source_session_id, run_id in rows:
+    for evidence_id, broad_subject, concept_ref, dimensions, observed_at, source_session_id, run_id in rows:
         if (
-            not isinstance(concept_ref, str)
+            not is_supported_broad_subject(broad_subject)
+            or not isinstance(concept_ref, str)
             or not isinstance(dimensions, dict)
             or not isinstance(observed_at, datetime)
         ):
@@ -638,6 +759,7 @@ def persisted_review_historical_anchors(
         anchors.append(
             HistoricalEvidenceAnchor(
                 evidence_id=evidence_id,
+                broad_subject=broad_subject,
                 concept_ref=concept_ref,
                 prior_demonstration_state=state,
                 prior_observed_at=observed_at,
@@ -738,18 +860,24 @@ def _model_payload(
         if method is not None and metadata.get("teaching_method_registry_version") == TEACHING_METHOD_REGISTRY_VERSION:
             teaching_methods.append({"source_tutor_message_id": str(tutor.id), "teaching_method_id": method.value, "teaching_method_registry_version": TEACHING_METHOD_REGISTRY_VERSION})
     content = {
-        "segment": {"student_id": str(learning_session.student_id), "session_id": str(learning_session.id), "segment_id": str(segment.id), "session_subject": learning_session.subject, "sequence": segment.sequence, "closed_at": segment.closed_at.isoformat() if segment.closed_at else None, "closure_reason": segment.closure_reason},
+        "segment": {"student_id": str(learning_session.student_id), "session_id": str(learning_session.id), "segment_id": str(segment.id), "sequence": segment.sequence, "closed_at": segment.closed_at.isoformat() if segment.closed_at else None, "closure_reason": segment.closure_reason},
         "raw_messages": [{"id": str(message.id), "role": message.role, "content": message.content, "created_at": message.created_at.isoformat()} for message in messages],
         "candidate_hints": candidate_hints,
         "guided_learning_checks": guided_checks,
         "teaching_methods": teaching_methods,
         "historical_anchors": [anchor.model_input() for anchor in historical_anchors],
+        "trusted_school_source_refs": [],
+        "broad_subject_registry": {
+            "version": BROAD_SUBJECT_REGISTRY_VERSION,
+            "keys": list(BROAD_SUBJECT_KEYS),
+        },
     }
     return {"instructions": _PROMPT, "input": json.dumps(content, sort_keys=True, separators=(",", ":")), "response_schema": SEGMENT_REVIEW_RESPONSE_SCHEMA}
 
 
 _PROMPT = (
     "Review the complete supplied raw Segment only. Raw interaction outranks optional provisional Candidate hints. "
+    "Classify segment_kind as LEARNING or NON_LEARNING. A LEARNING Review must select exactly one primary_broad_subject from the supplied registry and may contain Findings for different concepts only within that Subject. A NON_LEARNING Review must return findings=[] with no academic Subject. For NON_LEARNING, school_context must be null. For LEARNING, trusted_school_source_refs is authoritative: when it is empty, school_context must use school_relation=UNKNOWN and null/empty school fields; never invent school structure or source refs. reported_broad_subject must be null unless an explicit compatibility claim uses an exact supplied Broad Subject registry key equal to primary_broad_subject; it may never establish a second Subject or contain a language, topic, or domain label. "
     "Return findings=[] when no supported learning occurrence exists. Casual greetings, navigation, preferences, and Tutor explanation without observable Student outcome may have no finding. "
     "Confusion, a bare wrong answer, and an arithmetic slip are not misconception by themselves; explicit Student wrong reasoning may support one. For a misconception_signal, misconception_evidence must use version misconception-evidence-v1, cite its Student source within source_message_ids, and copy explicit_student_reasoning as an exact normalized substring of that cited Student message; never paraphrase it. If those conditions are unavailable, omit the misconception Finding. "
     "Use understanding=strong_demonstration only when reasoning_demonstration=well_supported and independence is not full_teaching; otherwise use a lower supported understanding value. "
@@ -772,12 +900,65 @@ def validate_segment_review_output(
     candidates: list[CandidateEvent],
     historical_anchors: list[HistoricalEvidenceAnchor] | None = None,
 ) -> SegmentLearningReviewEnvelope:
-    """Apply the compiled Finding contract to model or persisted Review output."""
+    """Parse a persisted Review row, including historical v2 audit output."""
 
     try:
-        envelope = SegmentLearningReviewEnvelope.model_validate(output)
+        envelope = (
+            SegmentLearningReviewV3Envelope.model_validate(output)
+            if output.get("version") == SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION
+            else SegmentLearningReviewEnvelope.model_validate(output)
+        )
     except ValidationError as error:
         raise SegmentReviewValidationError("SegmentReviewValidationError") from error
+    return _validate_review_findings(
+        envelope,
+        messages=messages,
+        candidates=candidates,
+        historical_anchors=historical_anchors,
+    )
+
+
+def validate_live_segment_review_output(
+    output: dict[str, object],
+    *,
+    messages: list[LearningMessage],
+    candidates: list[CandidateEvent],
+    historical_anchors: list[HistoricalEvidenceAnchor] | None = None,
+    trusted_school_source_refs: frozenset[str] = frozenset(),
+) -> SegmentLearningReviewEnvelope:
+    """Parse a live provider result under the executable v3-only contract."""
+
+    try:
+        envelope = SegmentLearningReviewV3Envelope.model_validate(output)
+    except ValidationError as error:
+        raise SegmentReviewValidationError("SegmentReviewValidationError") from error
+    school_context = envelope.school_context
+    if (
+        school_context is not None
+        and school_context.school_relation != "UNKNOWN"
+        and (
+            not trusted_school_source_refs
+            or not set(school_context.source_refs).issubset(trusted_school_source_refs)
+        )
+    ):
+        raise SegmentReviewValidationError("SegmentReviewValidationError")
+    return _validate_review_findings(
+        envelope,
+        messages=messages,
+        candidates=candidates,
+        historical_anchors=historical_anchors,
+    )
+
+
+def _validate_review_findings(
+    envelope: SegmentLearningReviewEnvelope,
+    *,
+    messages: list[LearningMessage],
+    candidates: list[CandidateEvent],
+    historical_anchors: list[HistoricalEvidenceAnchor] | None,
+) -> SegmentLearningReviewEnvelope:
+    """Apply compiled Finding checks after version-specific envelope parsing."""
+
     messages_by_id = {message.id: message for message in messages}
     candidates_by_id = {candidate.id: candidate for candidate in candidates}
     for finding in envelope.findings:
@@ -786,6 +967,7 @@ def validate_segment_review_output(
             messages_by_id=messages_by_id,
             candidates_by_id=candidates_by_id,
             historical_anchors_by_id={anchor.evidence_id: anchor for anchor in historical_anchors or []},
+            primary_broad_subject=envelope.primary_broad_subject,
         )
     return envelope
 
@@ -796,13 +978,18 @@ def _validate_finding(
     messages_by_id: dict[UUID, LearningMessage],
     candidates_by_id: dict[UUID, CandidateEvent],
     historical_anchors_by_id: dict[UUID, HistoricalEvidenceAnchor],
+    primary_broad_subject: str | None,
 ) -> None:
     sources = [messages_by_id.get(identifier) for identifier in finding.source_message_ids]
     if any(source is None for source in sources) or not any(source is not None and source.role == "student" for source in sources):
         raise SegmentReviewValidationError("SegmentReviewValidationError")
     if any(candidate_id not in candidates_by_id for candidate_id in finding.candidate_event_ids):
         raise SegmentReviewValidationError("SegmentReviewValidationError")
-    _validate_retention(finding, historical_anchors_by_id=historical_anchors_by_id)
+    _validate_retention(
+        finding,
+        historical_anchors_by_id=historical_anchors_by_id,
+        primary_broad_subject=primary_broad_subject,
+    )
     if finding.dimensions.transfer != "not_tested" and (finding.validated_event_type != "transfer_attempt" or finding.transfer_context != "meaningfully_changed"):
         raise SegmentReviewValidationError("SegmentReviewValidationError")
     if finding.dimensions.self_correction != "not_observed" and finding.validated_event_type != "self_correction":
@@ -821,6 +1008,7 @@ def _validate_retention(
     finding: SegmentReviewFinding,
     *,
     historical_anchors_by_id: dict[UUID, HistoricalEvidenceAnchor],
+    primary_broad_subject: str | None,
 ) -> None:
     tested = finding.dimensions.retention != "not_tested"
     if not tested:
@@ -838,6 +1026,7 @@ def _validate_retention(
         or finding.concept_ref is None
         or not anchors
         or any(anchor is None or anchor.concept_ref != finding.concept_ref for anchor in anchors)
+        or any(anchor is None or anchor.broad_subject != primary_broad_subject for anchor in anchors)
         or any(_duration_days(anchor.elapsed_time) < MEANINGFUL_RETENTION_DELAY.days for anchor in anchors if anchor is not None)
     ):
         raise SegmentReviewValidationError("SegmentReviewValidationError")

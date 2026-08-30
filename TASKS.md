@@ -1032,8 +1032,8 @@ closed, or used to start REC-25 or LR-D04B.
 | **ACT-02** — NAVIGATION vs ANSWER_CHOICE Semantic Misuse | 4 | ACCEPTED / CLOSED | Generic Suggested Action clicks and legacy `ANSWER_CHOICE` clicks are non-evidentiary. Only a validated latest persisted Guided Learning Check answer with exact choice membership can enter bounded Candidate processing; forged, stale, cross-session, and non-member responses are rejected. Runtime owns final authority validation. Configured production build/browser verification was not run because this isolated worktree has no valid Clerk publishable key; it is non-blocking for this backend Evidence-authority closure. | CTX-03E-A technical gate is complete; Real-Lina validation is deferred and does not block Stabilization Track B. |
 | **CAND-01** — Confusion / Ambiguity Is Not Misconception | 4 | ACCEPTED / CLOSED | The strict Structured Output correction and source-grounded misconception protection are independently CODE REVIEW VERIFIED at `8efa6d5388c4d2e8599ea2a21cac0766a677e9b1`. Codex-reported focused/relevant and canonical Python execution: 544 passed, 5 skipped. Controlled real `gpt-5.6-luna` representative scenarios were run successfully by Codex through the Tutor/Model-Gateway path, not independently re-executed: confusion, a bare wrong answer, and an arithmetic slip did not become misconception signals; explicit wrong reasoning produced grounded `misconception-evidence-v1`. Turn-level Candidate remains provisional and Segment Review is the future durable semantic authority; this does not claim perfect turn-level Luna classification. | Accepted and closed. Real-Lina validation remains deferred and is not part of CAND-01 closure. |
 | **EDU-ERR-01** — Educational Error Classification Foundation | 4 | APPROVED / DEFERRED | Future versioned domain-general plus domain-specific Educational Error Registry: Raw Segment → Segment Review → confirmed educational-error classification → Session-authorized Evidence → existing support/counter Pattern lifecycle → Learner Intelligence. No Error Memory subsystem and no new counters. Its prior SEG-EVID-01F blocker is cleared, but it is not the next action. | Deferred while the approved SCOPE-01 → SUBJ-01 product-boundary sequence proceeds. Do not implement in this commit. |
-| **SCOPE-01** — Cross-Subject Conversation & Subject Policy | 3 | READY | Reconcile the approved one-technical-Session → multiple session-local Segments / Learning Threads → potentially different Subjects architecture with the current Math-first vertical slice. Lina must not need a separate chat to move among Math, Science, or future academic Subjects. This is product-policy clarification only, not Science production. | Next approved product-boundary work; SUBJ-01 follows. |
-| **SUBJ-01** — Subject Attribution at Segment/Finding/Event Boundaries | 4 | BLOCKED | Later implement correct Subject Attribution at the Segment, Finding, and Event intelligence boundaries. Existing Math-first behavior remains fail-closed; Evidence must not silently contaminate the wrong subject/thread. | SCOPE-01 policy clarification first. |
+| **SCOPE-01** — Cross-Subject Conversation & Subject Policy | 3 | DONE / APPROVED | Approved governing cross-subject policy: one technical Session may contain multiple session-local Learning Segments with their own primary Broad Subjects; current Student intent outranks stale context; school context is optional/source-grounded. Governed by `docs/SUBJECT_SCOPE_POLICY.md`; this is policy clarification only, not Science production. | Closed by the approved policy; SUBJ-01 is the current implementation task. |
+| **SUBJ-01** — Subject Attribution at Segment/Finding/Event Boundaries | 4 | REVIEW / IMPLEMENTED + AUTOMATED VERIFIED + REAL-LUNA VERIFIED | Segment Review v3 owns one primary Broad Subject; deterministic finalization propagates it through Event/Evidence and fail-closes conflicting Finding claims. Real `openai/gpt-5.6-luna` exercised Math, Science with UNKNOWN source-free school context, casual non-learning, Language Arts, Social Studies, Religious Studies, and a Math → Science → Math technical Session with atomic activation. Historical v2 remains audit-readable; no extra normal-turn model call or migration was introduced. | Await independent GitHub Product Owner/reviewer inspection. Browser and Real-Lina validation remain separate and unverified. Do not mark DONE / ACCEPTED. |
 | **DEC-01** — Mode / Strategy / Prior-Relation Calibration | 3 | OPEN / STILL PRESENT | S3 direct continuations remain NOT_RELEVANT or otherwise unstable. Do not replace Luna/Terra understanding with keyword routing. | Start C. |
 | **DEC-02** — TeachingMethod Attribution Fidelity | 4 | OPEN / STILL PRESENT | TeachingMethod must truthfully describe the visible Tutor representation. | DEC-01 first; required before LR-D04B. |
 | **REP-01** — Over-Practice / Repetition Control | 3 | OPEN / CONFIRMED | After repeated independent success, Tutor continued near-identical checks instead of progressing, changing task type, testing transfer, or restoring agency. | After Mode/Strategy/Method calibration. |
@@ -1051,7 +1051,7 @@ closed, or used to start REC-25 or LR-D04B.
 2. **B — Interaction / Evidence Hygiene:** ACT-02 CLOSED → CAND-01 strict
    schema compatibility correction → SEG-EVID-01A → SEG-EVID-01B →
    SEG-EVID-01C → SEG-EVID-01D → SEG-EVID-01E → SEG-EVID-01F accepted
-   → SCOPE-01 policy clarification → SUBJ-01 subject-attribution work.
+   → SCOPE-01 policy clarification approved → SUBJ-01 subject-attribution work (current).
    EDU-ERR-01 remains approved but deferred; its prior F blocker is cleared.
 3. **C — Tutor Semantic Calibration:** DEC-01 → DEC-02 → REP-01 → LANG-01
    → CAND-02 final.
@@ -1154,9 +1154,10 @@ expansion remain frozen.
 - **Lifecycle:** UI-01 is **CLOSED** following real S3 browser use with no hang
   and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
-**Next action:** Begin SCOPE-01 — Cross-Subject Conversation & Subject Policy
-Reconciliation. Do not begin SUBJ-01, EDU-ERR-01, REC-25, LR-D04B, archive
-retrieval, or frozen future capabilities in this state transition.
+**Next action:** Obtain independent GitHub review for SUBJ-01. Browser and
+Real-Lina validation remain separate. Do not begin EDU-ERR-01, REC-25,
+LR-D04B, archive retrieval, or frozen future capabilities in this state
+transition.
 
 ---
 

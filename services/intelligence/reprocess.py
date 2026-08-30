@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from hashlib import sha256
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from services.intelligence.consolidation import (
@@ -44,6 +44,7 @@ from services.platform.db.models import (
     IntelligenceReprocessRun,
     IntelligenceReprocessSession,
     IntelligenceSessionAuthority,
+    LearningEvent,
     Job,
     LearningSession,
 )
@@ -424,7 +425,31 @@ def _selected_sessions(session: Session, *, request: IntelligenceReprocessReques
         LearningSession.status == "CLOSED",
     )
     if request.subject is not None:
-        query = query.where(LearningSession.subject == request.subject)
+        query = query.where(
+            or_(
+                (
+                    LearningSession.intelligence_pipeline
+                    == LEGACY_SESSION_EVIDENCE_PIPELINE
+                )
+                & (LearningSession.subject == request.subject),
+                (
+                    LearningSession.intelligence_pipeline
+                    == SESSION_FINALIZATION_PIPELINE
+                )
+                & LearningSession.id.in_(
+                    select(LearningEvent.session_id)
+                    .join(
+                        IntelligenceSessionAuthority,
+                        (IntelligenceSessionAuthority.session_id == LearningEvent.session_id)
+                        & (
+                            IntelligenceSessionAuthority.evidence_processing_run_id
+                            == LearningEvent.processing_run_id
+                        ),
+                    )
+                    .where(LearningEvent.subject == request.subject)
+                ),
+            )
+        )
     if request.session_ids:
         query = query.where(LearningSession.id.in_(request.session_ids))
     if request.start_at is not None:
