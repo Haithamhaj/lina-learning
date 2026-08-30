@@ -2,7 +2,7 @@
 
 ## Current goal
 
-Await independent review of the **REVIEW / CORRECTION IMPLEMENTED + VERIFIED** `SUBJ-01 — Subject Attribution at Segment/Finding/Event Boundaries` slice.
+`SUBJ-01 — Subject Attribution at Segment/Finding/Event Boundaries` is **DONE / CODE REVIEW VERIFIED / ACCEPTED**. The next approved action is `DEC-01 — Mode / Strategy / Prior-Relation Calibration`; it is not started by this state transition.
 
 `SCOPE-01 — Cross-Subject Conversation & Subject Policy` is **DONE / APPROVED** and is governed by `docs/SUBJECT_SCOPE_POLICY.md`.
 
@@ -22,8 +22,8 @@ Full-System Learning Intelligence Acceptance remains **DONE / ACCEPTED**. The ac
 - Reprocessing remains externally Session/date-scoped with atomic authority activation and auditable prior generations.
 - Real-Lina validation remains deferred; browser verification remains separate and must not be claimed unless executed.
 - The current implementation is still Math-first, but Math is no longer the governing product assumption for Session-level Subject authority.
-- SUBJ-01 preserves Segment Review v3, deterministic conflict-fail-closed materialization, and downstream reviewed-Subject attribution. The accepted correction uses a coherent, primary-Tutor-call provisional Broad Subject only to prefilter fresh retention input: cross-Subject, absent, conflicting, unsupported, and ambiguous inputs fail closed to no anchors. Repeated v3 finalization is idempotent; `extended_learning_event` now requires source-grounded `EXTENDED` context. Automated PostgreSQL/canonical verification and bounded real `openai/gpt-5.6-luna` Segment Review/Tutor checks passed. No migration was required.
-- Browser and Real-Lina validation have not been run and must not be implied by the automated or synthetic real-model checks.
+- SUBJ-01 is DONE / CODE REVIEW VERIFIED / ACCEPTED. It preserves Segment Review v3, deterministic conflict-fail-closed materialization, reviewed-Subject attribution, v8 primary-Tutor-call provisional Broad Subject prefiltering, retention provenance, and reprocessing behavior. Independent GitHub review verified the correction; automated test execution remains CODEX-REPORTED and bounded real `openai/gpt-5.6-luna` execution remains CODEX-REPORTED REAL LUNA VERIFIED. No migration was required.
+- Browser and Real-Lina remain NOT VERIFIED and must not be implied by automated or synthetic real-model checks; neither blocks SUBJ-01 closure.
 
 ### SCOPE-01 approved policy
 
@@ -110,16 +110,9 @@ Also protected:
 
 ## Next recommended action
 
-Obtain independent GitHub review of the SUBJ-01 commit. Keep browser and Real-Lina verification separate; do not mark SUBJ-01 DONE / ACCEPTED until the Product Owner records that decision.
+`DEC-01 — Mode / Strategy / Prior-Relation Calibration` is the next approved action. Do not begin it in this documentation-only transition.
 
-Required first implementation focus:
-
-```text
-independent GitHub review
-→ Product Owner acceptance decision
-```
-
-Do not begin `EDU-ERR-01`, REC-25, LR-D04B, Vision, School-Focused mode, archive retrieval, or other frozen/deferred capability tracks as part of SUBJ-01.
+Keep `EDU-ERR-01` APPROVED / DEFERRED, REC-25 blocked, LR-D04B deferred, and Vision, Voice, School-Focused mode, archive retrieval, and other frozen/deferred capability tracks out of this transition.
 
 ---
 
