@@ -215,3 +215,24 @@ def test_language_switching_uses_current_turn_language_without_losing_recent_con
     assert "current message on every turn" in TUTOR_SHARED_INSTRUCTIONS
     assert "language switch" in TUTOR_SHARED_INSTRUCTIONS
     assert "separate learner profiles" in TUTOR_SHARED_INSTRUCTIONS
+
+
+def test_tutor_language_guidance_keeps_neutral_math_turns_in_the_active_conversation_language() -> None:
+    """LANG-01: a neutral math response must not become a language switch."""
+
+    instructions = TUTOR_SHARED_INSTRUCTIONS.casefold()
+
+    for required_concept in (
+        "language-neutral",
+        "number, fraction, equation, mathematical expression, or answer-choice symbol",
+        "not a language switch",
+        "established primary conversational language",
+        "immediate active exchange/current context",
+        "clear explicit language switch overrides",
+        "do not choose arabic or english from neutral notation alone",
+        "only a clear current arabic or english message overrides",
+        "english active exchange followed by 21 stays primarily english",
+        "arabic active exchange followed by 21 stays primarily arabic",
+        "natural bilingual school/math terminology",
+    ):
+        assert required_concept in instructions
