@@ -10,8 +10,8 @@ start. CTX-03 remains the approved, technically verified Context v2 direction.
 SEG-EVID-01 is the approved Learning Intelligence semantic architecture.
 CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A/B/C are DONE / ACCEPTED;
 SEG-EVID-01D is DONE / CODE REVIEW VERIFIED / ACCEPTED;
-SEG-EVID-01E is REVIEW, while SEG-EVID-01F remains BLOCKED by its ordered
-dependency.
+SEG-EVID-01E is DONE / CODE REVIEW VERIFIED / ACCEPTED, while SEG-EVID-01F is
+READY in its ordered dependency.
 EDU-ERR-01 remains blocked by SEG-EVID-01F.
 
 ## Current reality
@@ -105,15 +105,16 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
   TeachingMethod strategy outcomes are accepted. Codex-run automated tests and
   real-model/copied-database acceptance evidence remain Codex-reported and were
   not independently re-executed.
-- SEG-EVID-01E is in **REVIEW**. Reprocessing remains externally
+- SEG-EVID-01E is independently **CODE REVIEW VERIFIED / ACCEPTED**.
+  Reprocessing remains externally
   Session/date-scoped while dispatching per persisted pipeline: legacy Sessions
   retain versioned `SESSION_EVIDENCE`; new Sessions reuse valid current Segment
   Reviews or rerun unavailable ones through the Segment gateway, then stage
   deterministic Event/Evidence with no live authority. Only a complete selected
   scope may atomically swap Session authorities and rebuild projections;
   staged run ownership, Session/pipeline, and contract identity are checked
-  before that swap. Candidate-free Event/Evidence and exact Review Finding
-  provenance remain intact.
+  before that swap. Rollback protection, Candidate-free Event/Evidence and exact
+  Review Finding provenance, and legacy audit compatibility remain intact.
 - Codex-reported E verification: focused PostgreSQL `14 passed`; relevant
   finalization/review/pattern/decision PostgreSQL `109 passed`; canonical Python
   `686 passed, 6 skipped`. A further isolated copy of the real-Luna historical
@@ -196,12 +197,12 @@ and RAG/curriculum remain separate authorities.
 
 ## Next recommended action
 
-Independent review of SEG-EVID-01E — Reprocessing & Authority Compatibility
+SEG-EVID-01F — Real Model & Multi-Session Verification
 
 CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A–C are DONE / ACCEPTED;
 SEG-EVID-01D is DONE / CODE REVIEW VERIFIED / ACCEPTED;
-SEG-EVID-01E is REVIEW; SEG-EVID-01F remains BLOCKED; EDU-ERR-01 remains
-blocked by SEG-EVID-01F;
+SEG-EVID-01E is DONE / CODE REVIEW VERIFIED / ACCEPTED; SEG-EVID-01F is READY;
+EDU-ERR-01 remains blocked by SEG-EVID-01F;
 SCOPE-01,
 SUBJ-01, REC-25, LR-D04B, archive retrieval, and frozen future capabilities
 remain deferred. Real-Lina validation remains deferred.

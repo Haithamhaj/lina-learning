@@ -473,8 +473,8 @@ from a clean fresh start.
 `docs/FULL_SYSTEM_ACCEPTANCE_EXECUTION_SPEC.md`. This objective preserves raw
 source authority, requires real `openai / gpt-5.6-luna` Model Gateway evidence
 for AI-powered acceptance work, and protects the source database from writes.
-**Stages:** SEG-EVID-01D is independently accepted; SEG-EVID-01E is in REVIEW and
-SEG-EVID-01F remains blocked in the ordered implementation/verification stages
+**Stages:** SEG-EVID-01D and SEG-EVID-01E are independently accepted;
+SEG-EVID-01F is READY in the ordered implementation/verification stages
 serving this Full-System Acceptance objective;
 they are not independent product goals. Accepted SEG-EVID-01A/B/C records and
 all deferred/frozen work remain unchanged.
@@ -624,7 +624,7 @@ and copied-database results above remain Codex-reported, not independently
 re-executed.
 
 ## SEG-EVID-01E — Reprocessing & Authority Compatibility
-**Status:** REVIEW
+**Status:** DONE
 **Dependencies:** SEG-EVID-01D
 **Purpose:** Implement legacy/new coexistence, Session-scoped external
 reprocessing, Segment-internal semantic rebuild, atomic activation, and legacy
@@ -652,9 +652,17 @@ strategy outcomes with six strategy-effectiveness Patterns and five
 non-insufficient strategy-effectiveness Decision Views. This is
 Codex-reported database evidence, not independent re-execution. Real-Lina and
 browser verification remain NOT VERIFIED.
+**Acceptance:** Independently **CODE REVIEW VERIFIED / ACCEPTED**:
+Session-scoped external reprocessing, per-pipeline legacy/new dispatch,
+Segment-internal semantic rebuild for new Sessions, reuse/rerun of
+current-contract Segment Reviews, deterministic staging without premature
+authority, complete-scope atomic Authority activation and rollback protection,
+Candidate-free provenance preservation, and legacy audit compatibility are
+accepted. Automated, database, and model results remain Codex-reported unless
+independently re-executed.
 
 ## SEG-EVID-01F — Real Model & Multi-Session Verification
-**Status:** BLOCKED
+**Status:** READY
 **Dependencies:** SEG-EVID-01E
 **Purpose:** Verify confusion, bare wrong answer, explicit misconception,
 correction/counter-evidence, TeachingMethod outcome, transfer, retention with
@@ -1105,9 +1113,8 @@ expansion remain frozen.
 - **Lifecycle:** UI-01 is **CLOSED** following real S3 browser use with no hang
   and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
-**Next action:** Independently review SEG-EVID-01E — Reprocessing & Authority
-Compatibility. Do not begin SEG-EVID-01F until E is accepted, or
-EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, LR-D04B, archive retrieval, or frozen
+**Next action:** SEG-EVID-01F — Real Model & Multi-Session Verification. Do not
+begin EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, LR-D04B, archive retrieval, or frozen
 future capabilities.
 
 ---
