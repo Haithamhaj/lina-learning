@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from services.intelligence.consolidation import EVIDENCE_RUBRIC_VERSION
 from services.intelligence.current_state import apply_processing_run_current_state
 from services.intelligence.decisions import apply_processing_run_decision_views
 from services.intelligence.patterns import apply_processing_run_patterns
@@ -19,9 +20,11 @@ from services.intelligence.segment_reviews import (
     SEGMENT_REVIEW_POLICY_VERSION,
     SegmentLearningReviewEnvelope,
     SegmentReviewValidationError,
+    review_completed_segment,
     validate_segment_review_output,
 )
-from services.intelligence.consolidation import EVIDENCE_RUBRIC_VERSION
+from services.model_gateway.gateway import ModelGateway
+from services.platform.config import Settings
 from services.platform.db.models import (
     CandidateEvent,
     CurrentLearningState,
@@ -29,15 +32,14 @@ from services.platform.db.models import (
     IntelligenceProcessingRun,
     IntelligenceSessionAuthority,
     LearnerPattern,
-    LearningEvidence,
     LearningEvent,
+    LearningEvidence,
     LearningMessage,
     LearningSegment,
     LearningSession,
     SegmentLearningReview,
 )
 from services.tutor.segment_lifecycle import is_segment_structurally_reviewable
-
 
 SESSION_FINALIZATION_PIPELINE = "segment-finalization-v1"
 
@@ -65,6 +67,16 @@ class SessionFinalizationOutcome:
     pattern_count: int
     decision_view_count: int
     reused: bool
+
+
+@dataclass(frozen=True)
+class StagedSessionFinalizationOutcome:
+    """One deterministic Segment-review generation, before authority activation."""
+
+    processing_run: IntelligenceProcessingRun
+    event_count: int
+    evidence_count: int
+    withheld_finding_count: int
 
 
 @dataclass(frozen=True)
@@ -125,20 +137,7 @@ def finalize_closed_session(
             authority=existing_authority,
         )
 
-    required_segments = [
-        segment
-        for segment in session.scalars(
-            select(LearningSegment)
-            .where(LearningSegment.session_id == locked_session.id)
-            .order_by(LearningSegment.sequence, LearningSegment.id)
-            .with_for_update()
-        )
-        if is_segment_structurally_reviewable(
-            session,
-            learning_session=locked_session,
-            segment=segment,
-        )
-    ]
+    required_segments = _reviewable_segments(session, learning_session=locked_session)
     validated_reviews = _validated_required_reviews(
         session,
         learning_session=locked_session,
@@ -208,6 +207,151 @@ def finalize_closed_session(
         decision_view_count=len(decisions),
         reused=False,
     )
+
+
+def stage_closed_session_finalization(
+    session: Session,
+    *,
+    learning_session: LearningSession,
+    review_gateway: ModelGateway | None = None,
+    review_settings: Settings | None = None,
+) -> StagedSessionFinalizationOutcome:
+    """Materialize a fresh reviewed-Segment generation without live authority.
+
+    Reprocessing uses this boundary to retain the existing live Session
+    Authority until its complete selected scope can atomically activate.
+    """
+
+    locked_session = session.execute(
+        select(LearningSession)
+        .where(LearningSession.id == learning_session.id)
+        .with_for_update()
+    ).scalar_one_or_none()
+    if locked_session is None or locked_session.student_id != learning_session.student_id:
+        raise SessionFinalizationValidationError("Session finalization lineage is invalid.")
+    if locked_session.status != "CLOSED" or locked_session.closed_at is None:
+        raise SessionFinalizationBlockedError("Only CLOSED Sessions may be finalized.")
+    if locked_session.intelligence_pipeline != SESSION_FINALIZATION_PIPELINE:
+        raise SessionFinalizationBlockedError(
+            "Only segment-finalization-v1 Sessions may use deterministic finalization."
+        )
+
+    required_segments = _reviewable_segments(session, learning_session=locked_session)
+    try:
+        validated_reviews = _validated_required_reviews(
+            session,
+            learning_session=locked_session,
+            required_segments=required_segments,
+        )
+    except SessionFinalizationBlockedError:
+        _refresh_unavailable_reviews(
+            session,
+            learning_session=locked_session,
+            required_segments=required_segments,
+            review_gateway=review_gateway,
+            review_settings=review_settings,
+        )
+        validated_reviews = _validated_required_reviews(
+            session,
+            learning_session=locked_session,
+            required_segments=required_segments,
+        )
+    withheld_count = sum(
+        finding.subject_alignment != "SAME_AS_SESSION"
+        for item in validated_reviews
+        for finding in item.envelope.findings
+    )
+    run = IntelligenceProcessingRun(
+        student_id=locked_session.student_id,
+        rubric_version=EVIDENCE_RUBRIC_VERSION,
+        policy_version=SEGMENT_REVIEW_POLICY_VERSION,
+        status="RUNNING",
+        scope=_processing_scope(
+            learning_session=locked_session,
+            validated_reviews=validated_reviews,
+        ),
+    )
+    session.add(run)
+    session.flush()
+    event_count = _materialize_eligible_findings(
+        session,
+        run=run,
+        learning_session=locked_session,
+        validated_reviews=validated_reviews,
+    )
+    run.status = "COMPLETED"
+    session.flush()
+    return StagedSessionFinalizationOutcome(
+        processing_run=run,
+        event_count=event_count,
+        evidence_count=event_count,
+        withheld_finding_count=withheld_count,
+    )
+
+
+def _reviewable_segments(
+    session: Session,
+    *,
+    learning_session: LearningSession,
+) -> list[LearningSegment]:
+    """Return only the structurally reviewable Segment lineage for one Session."""
+
+    return [
+        segment
+        for segment in session.scalars(
+            select(LearningSegment)
+            .where(LearningSegment.session_id == learning_session.id)
+            .order_by(LearningSegment.sequence, LearningSegment.id)
+            .with_for_update()
+        )
+        if is_segment_structurally_reviewable(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+        )
+    ]
+
+
+def _refresh_unavailable_reviews(
+    session: Session,
+    *,
+    learning_session: LearningSession,
+    required_segments: list[LearningSegment],
+    review_gateway: ModelGateway | None,
+    review_settings: Settings | None,
+) -> None:
+    """Reuse valid current Reviews; rerun only Segments without one.
+
+    A completed Review whose persisted output fails strict validation is *not*
+    coerced or replaced here: that is a provenance/integrity failure and must
+    fail closed.  Missing, stale-contract, pending, or failed Reviews are safe
+    to execute again through the normal Segment Review gateway.
+    """
+
+    unavailable: list[LearningSegment] = []
+    for segment in required_segments:
+        try:
+            _validated_required_reviews(
+                session,
+                learning_session=learning_session,
+                required_segments=[segment],
+            )
+        except SessionFinalizationBlockedError:
+            unavailable.append(segment)
+    if not unavailable:
+        return
+    if review_gateway is None:
+        raise SessionFinalizationBlockedError(
+            "Reprocessing requires a Segment Review gateway for unavailable current Reviews."
+        )
+    for segment in unavailable:
+        review_completed_segment(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            gateway=review_gateway,
+            settings=review_settings,
+        )
 
 
 def _validated_required_reviews(

@@ -10,7 +10,7 @@ start. CTX-03 remains the approved, technically verified Context v2 direction.
 SEG-EVID-01 is the approved Learning Intelligence semantic architecture.
 CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A/B/C are DONE / ACCEPTED;
 SEG-EVID-01D is DONE / CODE REVIEW VERIFIED / ACCEPTED;
-SEG-EVID-01E is READY, while SEG-EVID-01F remains BLOCKED by its ordered
+SEG-EVID-01E is REVIEW, while SEG-EVID-01F remains BLOCKED by its ordered
 dependency.
 EDU-ERR-01 remains blocked by SEG-EVID-01F.
 
@@ -105,6 +105,24 @@ EDU-ERR-01 remains blocked by SEG-EVID-01F.
   TeachingMethod strategy outcomes are accepted. Codex-run automated tests and
   real-model/copied-database acceptance evidence remain Codex-reported and were
   not independently re-executed.
+- SEG-EVID-01E is in **REVIEW**. Reprocessing remains externally
+  Session/date-scoped while dispatching per persisted pipeline: legacy Sessions
+  retain versioned `SESSION_EVIDENCE`; new Sessions reuse valid current Segment
+  Reviews or rerun unavailable ones through the Segment gateway, then stage
+  deterministic Event/Evidence with no live authority. Only a complete selected
+  scope may atomically swap Session authorities and rebuild projections;
+  staged run ownership, Session/pipeline, and contract identity are checked
+  before that swap. Candidate-free Event/Evidence and exact Review Finding
+  provenance remain intact.
+- Codex-reported E verification: focused PostgreSQL `14 passed`; relevant
+  finalization/review/pattern/decision PostgreSQL `109 passed`; canonical Python
+  `686 passed, 6 skipped`. A further isolated copy of the real-Luna historical
+  database reused eight valid Reviews, made zero new model executions, staged
+  and activated 34 Event/Evidence rows, and retained eight Candidate-free
+  strategy outcomes, six strategy-effectiveness Patterns, and five
+  non-insufficient strategy-effectiveness Decision Views. It is database
+  evidence reported by Codex, not independently re-executed. Real-Lina/browser
+  remain NOT VERIFIED.
 - Full-System Acceptance is governed by
   `docs/FULL_SYSTEM_ACCEPTANCE_EXECUTION_SPEC.md`. It requires a copied,
   isolated acceptance database with the source database untouched; actual
@@ -178,11 +196,11 @@ and RAG/curriculum remain separate authorities.
 
 ## Next recommended action
 
-SEG-EVID-01E — Reprocessing & Authority Compatibility
+Independent review of SEG-EVID-01E — Reprocessing & Authority Compatibility
 
 CAND-01 is ACCEPTED / CLOSED. SEG-EVID-01A–C are DONE / ACCEPTED;
 SEG-EVID-01D is DONE / CODE REVIEW VERIFIED / ACCEPTED;
-SEG-EVID-01E is READY; SEG-EVID-01F remains BLOCKED; EDU-ERR-01 remains
+SEG-EVID-01E is REVIEW; SEG-EVID-01F remains BLOCKED; EDU-ERR-01 remains
 blocked by SEG-EVID-01F;
 SCOPE-01,
 SUBJ-01, REC-25, LR-D04B, archive retrieval, and frozen future capabilities

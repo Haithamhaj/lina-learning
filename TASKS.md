@@ -473,7 +473,7 @@ from a clean fresh start.
 `docs/FULL_SYSTEM_ACCEPTANCE_EXECUTION_SPEC.md`. This objective preserves raw
 source authority, requires real `openai / gpt-5.6-luna` Model Gateway evidence
 for AI-powered acceptance work, and protects the source database from writes.
-**Stages:** SEG-EVID-01D is independently accepted; SEG-EVID-01E is READY and
+**Stages:** SEG-EVID-01D is independently accepted; SEG-EVID-01E is in REVIEW and
 SEG-EVID-01F remains blocked in the ordered implementation/verification stages
 serving this Full-System Acceptance objective;
 they are not independent product goals. Accepted SEG-EVID-01A/B/C records and
@@ -624,11 +624,34 @@ and copied-database results above remain Codex-reported, not independently
 re-executed.
 
 ## SEG-EVID-01E — Reprocessing & Authority Compatibility
-**Status:** READY
+**Status:** REVIEW
 **Dependencies:** SEG-EVID-01D
 **Purpose:** Implement legacy/new coexistence, Session-scoped external
 reprocessing, Segment-internal semantic rebuild, atomic activation, and legacy
 Session Evidence handling, as Stage E of Full-System Acceptance.
+**Implementation:** Reprocessing now dispatches each CLOSED selected Session by
+its persisted intelligence pipeline. Legacy `legacy-session-evidence-v1`
+Sessions retain the existing versioned `SESSION_EVIDENCE` path. New
+`segment-finalization-v1` Sessions enumerate structural Reviewable Segments,
+reuse only current-contract, provenance-valid Reviews, rerun unavailable
+Reviews through the Segment Model Gateway, and stage deterministic
+Event/Evidence without live authority. A completed selected scope alone can
+atomically replace all Session authorities and rebuild Current State, Pattern,
+and Decision Views. Staged-run ownership, Session/pipeline, and requested
+contract identities are validated before any authority mutation. The reprocess
+version set now records Segment Review schema/prompt/rubric/review-policy plus
+the finalization pipeline; provider/model remain execution provenance, not
+semantic compatibility.
+**Verification:** Codex-reported focused PostgreSQL E coverage: `14 passed`;
+relevant finalization/review/pattern/decision PostgreSQL coverage: `109 passed`;
+canonical Python: `686 passed, 6 skipped`; `git diff --check`: clean
+(Codex-reported). A copied isolated historical real-Luna database reused
+eight current-contract Reviews with no new model execution, staged and
+activated 34 Event/Evidence rows, and retained eight Candidate-free grounded
+strategy outcomes with six strategy-effectiveness Patterns and five
+non-insufficient strategy-effectiveness Decision Views. This is
+Codex-reported database evidence, not independent re-execution. Real-Lina and
+browser verification remain NOT VERIFIED.
 
 ## SEG-EVID-01F — Real Model & Multi-Session Verification
 **Status:** BLOCKED
@@ -1082,9 +1105,8 @@ expansion remain frozen.
 - **Lifecycle:** UI-01 is **CLOSED** following real S3 browser use with no hang
   and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
-**Next action:** Execute Full-System Acceptance beginning
-with SEG-EVID-01D — Session Finalization & Intelligence Activation. Do not
-begin SEG-EVID-01E–F until their ordered dependencies are complete, or
+**Next action:** Independently review SEG-EVID-01E — Reprocessing & Authority
+Compatibility. Do not begin SEG-EVID-01F until E is accepted, or
 EDU-ERR-01, SCOPE-01, SUBJ-01, REC-25, LR-D04B, archive retrieval, or frozen
 future capabilities.
 

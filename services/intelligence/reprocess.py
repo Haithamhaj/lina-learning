@@ -2,36 +2,56 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+import json
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from hashlib import sha256
-import json
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.intelligence.consolidation import (
-    ConsolidationVersion,
     EVIDENCE_RUBRIC_VERSION,
     SESSION_CONSOLIDATION_POLICY_VERSION,
     SESSION_EVIDENCE_PROMPT_VERSION,
     SESSION_EVIDENCE_SCHEMA_VERSION,
+    ConsolidationVersion,
+    EvidenceContractError,
     require_supported_consolidation_version,
 )
-from services.intelligence.current_state import CURRENT_STATE_POLICY_VERSION, require_supported_current_state_policy
-from services.intelligence.decisions import DECISION_VIEW_POLICY_VERSION, require_supported_decision_view_policy
-from services.intelligence.patterns import PATTERN_POLICY_VERSION, require_supported_pattern_policy
+from services.intelligence.current_state import (
+    CURRENT_STATE_POLICY_VERSION,
+    require_supported_current_state_policy,
+)
+from services.intelligence.decisions import (
+    DECISION_VIEW_POLICY_VERSION,
+    require_supported_decision_view_policy,
+)
+from services.intelligence.patterns import (
+    PATTERN_POLICY_VERSION,
+    require_supported_pattern_policy,
+)
+from services.intelligence.segment_reviews import (
+    SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
+    SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+    SEGMENT_REVIEW_POLICY_VERSION,
+)
+from services.model_gateway.gateway import ModelGateway
+from services.platform.config import Settings
 from services.platform.db.models import (
+    IntelligenceProcessingRun,
     IntelligenceReprocessRun,
     IntelligenceReprocessSession,
     IntelligenceSessionAuthority,
-    IntelligenceProcessingRun,
     Job,
     LearningSession,
 )
 from services.platform.jobs import enqueue_job
-
+from services.tutor.session_lifecycle import (
+    LEGACY_SESSION_EVIDENCE_PIPELINE,
+    SESSION_FINALIZATION_PIPELINE,
+)
 
 INTELLIGENCE_REPROCESS_JOB = "INTELLIGENCE_REPROCESS"
 
@@ -53,9 +73,25 @@ class EvidenceVersionSelection:
 
 
 @dataclass(frozen=True)
+class SegmentReviewVersionSelection:
+    """Semantic identity for finalization-backed reprocessing.
+
+    Provider and model are deliberately excluded: they describe execution
+    lineage, not whether a persisted strict Review satisfies this contract.
+    """
+
+    schema_version: str = SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION
+    prompt_version: str = SEGMENT_LEARNING_REVIEW_PROMPT_VERSION
+    rubric_version: str = EVIDENCE_RUBRIC_VERSION
+    review_policy_version: str = SEGMENT_REVIEW_POLICY_VERSION
+    finalization_pipeline: str = SESSION_FINALIZATION_PIPELINE
+
+
+@dataclass(frozen=True)
 class IntelligenceReprocessRequest:
     student_id: UUID
     evidence: EvidenceVersionSelection
+    segment_review: SegmentReviewVersionSelection = field(default_factory=SegmentReviewVersionSelection)
     subject: str | None = None
     session_ids: tuple[UUID, ...] = ()
     start_at: datetime | None = None
@@ -148,10 +184,15 @@ def process_intelligence_reprocess_session(
     reprocess_run_id: UUID,
     session_id: UUID,
     gateway: object,
+    segment_evidence_gateway: ModelGateway | None = None,
+    segment_review_settings: Settings | None = None,
 ) -> dict[str, object]:
     """Stage one closed session's Evidence interpretation for scope-level activation."""
 
     from services.intelligence.consolidation import consolidate_closed_session
+    from services.intelligence.session_finalization import (
+        stage_closed_session_finalization,
+    )
 
     reprocess_run = session.get(IntelligenceReprocessRun, reprocess_run_id, with_for_update=True)
     learning_session = session.get(LearningSession, session_id, with_for_update=True)
@@ -176,20 +217,30 @@ def process_intelligence_reprocess_session(
     item.started_at = datetime.now(UTC)
     session.flush()
     versions = reprocess_run.version_set
-    evidence_versions = versions["evidence"] if isinstance(versions.get("evidence"), dict) else {}
-    outcome = consolidate_closed_session(
-        session,
-        learning_session=learning_session,
-        gateway=gateway,  # type: ignore[arg-type]
-        version=ConsolidationVersion(
-            schema_version=str(evidence_versions.get("schema_version", SESSION_EVIDENCE_SCHEMA_VERSION)),
-            prompt_version=str(evidence_versions.get("prompt_version", SESSION_EVIDENCE_PROMPT_VERSION)),
-            rubric_version=str(evidence_versions.get("rubric_version", EVIDENCE_RUBRIC_VERSION)),
-            policy_version=str(evidence_versions.get("consolidation_policy_version", SESSION_CONSOLIDATION_POLICY_VERSION)),
-            provider=evidence_versions.get("provider") if isinstance(evidence_versions.get("provider"), str) else None,
-            model=evidence_versions.get("model") if isinstance(evidence_versions.get("model"), str) else None,
-        ),
-    )
+    if learning_session.intelligence_pipeline == SESSION_FINALIZATION_PIPELINE:
+        outcome = stage_closed_session_finalization(
+            session,
+            learning_session=learning_session,
+            review_gateway=segment_evidence_gateway,
+            review_settings=segment_review_settings,
+        )
+    elif learning_session.intelligence_pipeline == LEGACY_SESSION_EVIDENCE_PIPELINE:
+        evidence_versions = versions["evidence"] if isinstance(versions.get("evidence"), dict) else {}
+        outcome = consolidate_closed_session(
+            session,
+            learning_session=learning_session,
+            gateway=gateway,  # type: ignore[arg-type]
+            version=ConsolidationVersion(
+                schema_version=str(evidence_versions.get("schema_version", SESSION_EVIDENCE_SCHEMA_VERSION)),
+                prompt_version=str(evidence_versions.get("prompt_version", SESSION_EVIDENCE_PROMPT_VERSION)),
+                rubric_version=str(evidence_versions.get("rubric_version", EVIDENCE_RUBRIC_VERSION)),
+                policy_version=str(evidence_versions.get("consolidation_policy_version", SESSION_CONSOLIDATION_POLICY_VERSION)),
+                provider=evidence_versions.get("provider") if isinstance(evidence_versions.get("provider"), str) else None,
+                model=evidence_versions.get("model") if isinstance(evidence_versions.get("model"), str) else None,
+            ),
+        )
+    else:
+        raise ValueError("Unsupported Session intelligence pipeline for reprocessing.")
     result = {
         "session_id": str(learning_session.id),
         "processing_run_id": str(outcome.processing_run.id),
@@ -218,8 +269,14 @@ def activate_reprocess_scope(
     """
 
     from services.intelligence.current_state import rebuild_authoritative_current_states
-    from services.intelligence.decisions import DecisionViewPolicy, rebuild_authoritative_decision_views
-    from services.intelligence.patterns import PatternPolicy, rebuild_authoritative_patterns
+    from services.intelligence.decisions import (
+        DecisionViewPolicy,
+        rebuild_authoritative_decision_views,
+    )
+    from services.intelligence.patterns import (
+        PatternPolicy,
+        rebuild_authoritative_patterns,
+    )
 
     reprocess_run = session.get(IntelligenceReprocessRun, reprocess_run_id, with_for_update=True)
     if reprocess_run is None:
@@ -251,6 +308,13 @@ def activate_reprocess_scope(
         raise ValueError("Reprocess scope cannot activate until every selected session has completed.")
 
     versions = reprocess_run.version_set
+    _validate_staged_session_runs(
+        session,
+        reprocess_run=reprocess_run,
+        items_by_session=items_by_session,
+        selected_session_ids=selected_session_ids,
+        versions=versions,
+    )
     existing_authorities = {
         authority.session_id: authority
         for authority in session.execute(
@@ -386,7 +450,11 @@ def _sessions_with_matching_evidence(
     selected: list[LearningSession],
     evidence: EvidenceVersionSelection,
 ) -> set[UUID]:
-    session_ids = {item.id for item in selected}
+    session_ids = {
+        item.id
+        for item in selected
+        if item.intelligence_pipeline == LEGACY_SESSION_EVIDENCE_PIPELINE
+    }
     if not session_ids:
         return set()
     rows = session.execute(
@@ -416,6 +484,7 @@ def _sessions_with_matching_evidence(
 def _version_set(request: IntelligenceReprocessRequest) -> dict[str, object]:
     return {
         "evidence": asdict(request.evidence),
+        "segment_review": asdict(request.segment_review),
         "current_state_policy_version": request.current_state_policy_version,
         "pattern_policy_version": request.pattern_policy_version,
         "decision_policy_version": request.decision_policy_version,
@@ -436,6 +505,90 @@ def _validate_request_versions(request: IntelligenceReprocessRequest) -> None:
             model=request.evidence.model,
         )
     )
+    if (
+        request.segment_review.schema_version != SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION
+        or request.segment_review.prompt_version != SEGMENT_LEARNING_REVIEW_PROMPT_VERSION
+        or request.segment_review.rubric_version != EVIDENCE_RUBRIC_VERSION
+        or request.segment_review.review_policy_version != SEGMENT_REVIEW_POLICY_VERSION
+        or request.segment_review.finalization_pipeline != SESSION_FINALIZATION_PIPELINE
+    ):
+        raise EvidenceContractError("Segment Review interpretation version is not supported.")
+
+
+def _validate_staged_session_runs(
+    session: Session,
+    *,
+    reprocess_run: IntelligenceReprocessRun,
+    items_by_session: dict[UUID, IntelligenceReprocessSession],
+    selected_session_ids: tuple[UUID, ...],
+    versions: dict[str, object],
+) -> None:
+    """Prove each staged generation belongs to the selected pipeline and Session.
+
+    This runs before any authority mutation so a stale job or manually malformed
+    staging artifact cannot transiently point a live Session at the wrong run.
+    """
+
+    selected_sessions = {
+        learning_session.id: learning_session
+        for learning_session in session.scalars(
+            select(LearningSession)
+            .where(LearningSession.id.in_(selected_session_ids))
+            .with_for_update()
+        )
+    }
+    if set(selected_sessions) != set(selected_session_ids):
+        raise ValueError("Reprocess activation selected Session lineage is incomplete.")
+    evidence_versions = versions.get("evidence") if isinstance(versions.get("evidence"), dict) else {}
+    review_versions = versions.get("segment_review") if isinstance(versions.get("segment_review"), dict) else {}
+    for session_id in selected_session_ids:
+        learning_session = selected_sessions[session_id]
+        item = items_by_session[session_id]
+        assert item.evidence_processing_run_id is not None
+        staged_run = session.get(
+            IntelligenceProcessingRun,
+            item.evidence_processing_run_id,
+            with_for_update=True,
+        )
+        scope = staged_run.scope if staged_run is not None and isinstance(staged_run.scope, dict) else {}
+        if (
+            staged_run is None
+            or staged_run.status != "COMPLETED"
+            or staged_run.student_id != reprocess_run.student_id
+            or learning_session.student_id != reprocess_run.student_id
+            or learning_session.status != "CLOSED"
+            or scope.get("session_id") != str(session_id)
+            or (
+                learning_session.intelligence_pipeline == SESSION_FINALIZATION_PIPELINE
+                and scope.get("intelligence_pipeline") != SESSION_FINALIZATION_PIPELINE
+            )
+            or (
+                learning_session.intelligence_pipeline == LEGACY_SESSION_EVIDENCE_PIPELINE
+                and scope.get("intelligence_pipeline") not in (None, LEGACY_SESSION_EVIDENCE_PIPELINE)
+            )
+        ):
+            raise ValueError("Reprocess staged processing run does not match the selected Session lineage.")
+        if learning_session.intelligence_pipeline == SESSION_FINALIZATION_PIPELINE:
+            if (
+                staged_run.rubric_version != str(review_versions.get("rubric_version"))
+                or staged_run.policy_version != str(review_versions.get("review_policy_version"))
+                or scope.get("intelligence_pipeline") != review_versions.get("finalization_pipeline")
+                or scope.get("segment_review_schema_version") != review_versions.get("schema_version")
+                or scope.get("segment_review_prompt_version") != review_versions.get("prompt_version")
+                or scope.get("segment_review_rubric_version") != review_versions.get("rubric_version")
+                or scope.get("segment_review_policy_version") != review_versions.get("review_policy_version")
+            ):
+                raise ValueError("Reprocess staged Segment Review contract does not match the request.")
+        elif learning_session.intelligence_pipeline == LEGACY_SESSION_EVIDENCE_PIPELINE:
+            if (
+                staged_run.rubric_version != str(evidence_versions.get("rubric_version"))
+                or staged_run.policy_version != str(evidence_versions.get("consolidation_policy_version"))
+                or scope.get("consolidation_schema_version") != evidence_versions.get("schema_version")
+                or scope.get("prompt_version") != evidence_versions.get("prompt_version")
+            ):
+                raise ValueError("Reprocess staged legacy Evidence contract does not match the request.")
+        else:
+            raise ValueError("Reprocess staged Session uses an unsupported intelligence pipeline.")
 
 
 def _idempotency_key(student_id: UUID, scope: dict[str, object], version_set: dict[str, object]) -> str:

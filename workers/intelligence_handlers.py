@@ -229,6 +229,12 @@ def register_intelligence_handlers(
                         reprocess_run_id=reprocess_run_id,
                         session_id=target_session_id,
                         gateway=evidence_gateway_factory(session),
+                        segment_evidence_gateway=(
+                            segment_evidence_gateway_factory(session)
+                            if segment_evidence_gateway_factory is not None
+                            else None
+                        ),
+                        segment_review_settings=segment_review_settings,
                     )
                     results.append(result)
             except Exception as error:  # noqa: BLE001 -- one Session failure is durably aggregated into the bounded reprocess result.

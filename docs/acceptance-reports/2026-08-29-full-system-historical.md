@@ -8,6 +8,8 @@
 - Database end-to-end verification: `CODEX-REPORTED ON ISOLATED DATABASE`
 - Candidate-free strategy-outcome downstream correction replay:
   `COMPLETED / CODEX-REPORTED`
+- SEG-EVID-01E reprocessing/authority compatibility replay:
+  `COMPLETED / CODEX-REPORTED`
 - Tutor personalization verification: `COMPLETED IN THE SEPARATE FULL-SYSTEM JOURNEY`
 - Browser / Real-Lina verification: `NO`
 
@@ -40,11 +42,31 @@ Malformed provenance remains excluded; Candidate-free misconception Findings
 still do not fabricate a recurrence identity. The replay is deterministic and
 uses already-persisted real-Luna Reviews; it is not a new AI execution.
 
+## SEG-EVID-01E reprocessing replay
+
+On a further isolated copy of that acceptance database, the actual reprocess
+worker reused the eight current-contract, provenance-valid Segment Reviews for
+the historical Session. It staged a fresh deterministic run with `34` Events
+and `34` Evidence rows before authority activation; only then did it swap the
+Session authority and rebuild the authoritative Current State, Pattern, and
+Decision projections. The activated run retained `8` Candidate-free,
+Review-grounded `strategy_outcome` Events, `6` strategy-effectiveness Patterns,
+and `5` non-insufficient strategy-effectiveness Decision Views (within `11`
+Patterns and `20` Decision Views for that run).
+
+The worker completed one reprocess Session and recorded a completed reprocess
+run. The model-execution ledger changed by `0`: no new Segment Review was
+required, so this is deterministic reuse of persisted real-Luna Review
+artifacts, not a new real-model execution. The original acceptance database
+and raw history were not written. This is Codex-reported copied-database
+evidence, not independent re-execution or Real-Lina/browser verification.
+
 ## Verification taxonomy
 
-- Focused PostgreSQL finalization/pattern/decision coverage: `74 passed`
+- Focused E PostgreSQL reprocessing coverage: `14 passed`; relevant
+  finalization/review/pattern/decision regression coverage: `109 passed`
   (Codex-reported).
-- Canonical Python suite: `682 passed, 6 skipped` (Codex-reported).
+- Canonical Python suite: `686 passed, 6 skipped` (Codex-reported).
 - `git diff --check`: clean (Codex-reported).
 - Real-Lina/browser validation: `NOT VERIFIED`.
 

@@ -2,51 +2,68 @@
 
 from __future__ import annotations
 
-import os
 import json
+import os
 from datetime import UTC, datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
+from services.intelligence.card import build_learner_intelligence_card
+from services.intelligence.consolidation import EvidenceContractError
+from services.intelligence.current_state import (
+    CurrentStatePolicyError,
+    apply_evidence_to_current_state,
+)
+from services.intelligence.decisions import DecisionViewPolicyError
+from services.intelligence.patterns import (
+    PatternPolicyError,
+    apply_evidence_to_patterns,
+)
 from services.intelligence.reprocess import (
+    INTELLIGENCE_REPROCESS_JOB,
     EvidenceVersionSelection,
     IntelligenceReprocessRequest,
-    INTELLIGENCE_REPROCESS_JOB,
     activate_reprocess_scope,
     enqueue_intelligence_reprocess,
     preview_intelligence_reprocess,
+    process_intelligence_reprocess_session,
 )
-from services.intelligence.card import build_learner_intelligence_card
-from services.intelligence.current_state import CurrentStatePolicyError, apply_evidence_to_current_state
-from services.intelligence.consolidation import EvidenceContractError
-from services.intelligence.decisions import DecisionViewPolicyError
-from services.intelligence.patterns import PatternPolicyError, apply_evidence_to_patterns
+from services.intelligence.segment_reviews import (
+    SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
+    SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+    SEGMENT_REVIEW_POLICY_VERSION,
+)
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
     CandidateEvent,
     CurrentLearningState,
     DecisionView,
+    IntelligenceProcessingRun,
     IntelligenceReprocessRun,
     IntelligenceReprocessSession,
-    IntelligenceProcessingRun,
     IntelligenceSessionAuthority,
-    LearnerPattern,
     LearnerIntelligenceCard,
-    LearningEvidence,
+    LearnerPattern,
     LearningEvent,
+    LearningEvidence,
     LearningMessage,
+    LearningSegment,
     LearningSession,
     ModelTask,
+    SegmentLearningReview,
     Student,
     User,
 )
+from services.tutor.session_lifecycle import (
+    LEGACY_SESSION_EVIDENCE_PIPELINE,
+    SESSION_FINALIZATION_PIPELINE,
+)
 from workers.intelligence_handlers import register_intelligence_handlers
 from workers.job_worker import JobHandlerRegistry, run_once
-
 
 pytestmark = pytest.mark.skipif(
     not os.getenv("DATABASE_URL"),
@@ -63,7 +80,13 @@ def factory() -> sessionmaker[Session]:
     engine.dispose()
 
 
-def _closed_session(session: Session, *, closed_at: datetime, student: Student | None = None) -> LearningSession:
+def _closed_session(
+    session: Session,
+    *,
+    closed_at: datetime,
+    student: Student | None = None,
+    pipeline: str = LEGACY_SESSION_EVIDENCE_PIPELINE,
+) -> LearningSession:
     if student is None:
         user = User(identity_provider="fixture", external_subject=uuid4().hex, role="STUDENT")
         session.add(user)
@@ -71,7 +94,13 @@ def _closed_session(session: Session, *, closed_at: datetime, student: Student |
         student = Student(user_id=user.id)
         session.add(student)
         session.flush()
-    learning_session = LearningSession(student_id=student.id, subject="MATH", status="CLOSED", closed_at=closed_at)
+    learning_session = LearningSession(
+        student_id=student.id,
+        subject="MATH",
+        status="CLOSED",
+        intelligence_pipeline=pipeline,
+        closed_at=closed_at,
+    )
     session.add(learning_session)
     session.flush()
     message = LearningMessage(session_id=learning_session.id, role="student", content="I solved it.", payload={})
@@ -97,6 +126,63 @@ def _closed_session(session: Session, *, closed_at: datetime, student: Student |
     return learning_session
 
 
+def _segment_finalization_session(
+    session: Session,
+    *,
+    closed_at: datetime,
+    student: Student | None = None,
+) -> tuple[LearningSession, LearningSegment, LearningMessage, SegmentLearningReview]:
+    learning_session = _closed_session(
+        session,
+        closed_at=closed_at,
+        student=student,
+        pipeline=SESSION_FINALIZATION_PIPELINE,
+    )
+    segment = LearningSegment(
+        session_id=learning_session.id,
+        sequence=1,
+        closed_at=closed_at,
+        closure_reason="SESSION_CLOSED",
+    )
+    session.add(segment)
+    session.flush()
+    message = session.query(LearningMessage).filter_by(session_id=learning_session.id).one()
+    message.segment_id = segment.id
+    finding = {
+        "validated_event_type": "learning_attempt",
+        "concept_ref": "fractions",
+        "event_summary": "The Student attempted an equivalent-fractions explanation.",
+        "source_message_ids": [str(message.id)],
+        "candidate_event_ids": [],
+        "school_or_extended": "school",
+        "transfer_context": "not_tested",
+        "retention_context": "not_tested",
+        "dimensions": _support_dimensions(),
+        "relationship": "supports",
+        "subject_alignment": "SAME_AS_SESSION",
+        "teaching_method_id": None,
+        "teaching_method_source_tutor_message_id": None,
+        "misconception_evidence": None,
+    }
+    review = SegmentLearningReview(
+        student_id=learning_session.student_id,
+        session_id=learning_session.id,
+        segment_id=segment.id,
+        schema_version=SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+        prompt_version=SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
+        rubric_version="evidence-rubric-v1",
+        review_policy_version=SEGMENT_REVIEW_POLICY_VERSION,
+        provider="fixture",
+        model="segment-fixture",
+        status="COMPLETED",
+        output={"version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION, "findings": [finding]},
+        completed_at=closed_at,
+    )
+    session.add(review)
+    session.flush()
+    return learning_session, segment, message, review
+
+
 def _evidence_identity(*, model: str = "fixture-evidence") -> EvidenceVersionSelection:
     return EvidenceVersionSelection(provider="fixture", model=model)
 
@@ -109,6 +195,201 @@ def _support_dimensions() -> dict[str, str]:
         "strategy_effectiveness": "not_evaluable", "persistence": "not_observed",
         "confidence_calibration": "not_observed",
     }
+
+
+def test_segment_pipeline_reprocess_stages_candidate_free_review_without_session_evidence(
+    factory: sessionmaker[Session],
+) -> None:
+    """A compatible Segment Review stages deterministic Evidence, never legacy consolidation."""
+
+    with factory.begin() as session:
+        learning_session, segment, _message, review = _segment_finalization_session(
+            session,
+            closed_at=datetime(2026, 8, 30, tzinfo=UTC),
+        )
+        queued = enqueue_intelligence_reprocess(
+            session,
+            request=IntelligenceReprocessRequest(
+                student_id=learning_session.student_id,
+                session_ids=(learning_session.id,),
+                evidence=_evidence_identity(),
+            ),
+        )
+
+        class ForbiddenLegacyProvider:
+            def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+                del route, payload
+                raise AssertionError("legacy Session Evidence must not run")
+
+        result = process_intelligence_reprocess_session(
+            session,
+            reprocess_run_id=queued.reprocess_run.id,
+            session_id=learning_session.id,
+            gateway=ModelGateway(
+                session,
+                routes={ModelTask.SESSION_EVIDENCE: ModelRoute("fixture", "fixture-evidence")},
+                providers={"fixture": ForbiddenLegacyProvider()},
+            ),
+        )
+
+        assert session.get(SegmentLearningReview, review.id) is not None
+        assert session.query(IntelligenceSessionAuthority).count() == 0
+        assert result["event_count"] == 1
+        event = session.query(LearningEvent).one()
+        evidence = session.query(LearningEvidence).one()
+        assert event.segment_id == segment.id
+        assert event.segment_review_id == review.id
+        assert event.candidate_event_id is None
+        assert evidence.concept_ref == "fractions"
+
+
+def test_segment_pipeline_reprocess_replaces_an_incompatible_review_without_mixing_contracts(
+    factory: sessionmaker[Session],
+) -> None:
+    """A stale Review is retained for audit while the current contract is rerun."""
+
+    with factory.begin() as session:
+        learning_session, segment, message, stale_review = _segment_finalization_session(
+            session,
+            closed_at=datetime(2026, 8, 30, tzinfo=UTC),
+        )
+        stale_review.prompt_version = "segment-learning-review-prompt-v2"
+        queued = enqueue_intelligence_reprocess(
+            session,
+            request=IntelligenceReprocessRequest(
+                student_id=learning_session.student_id,
+                session_ids=(learning_session.id,),
+                evidence=_evidence_identity(),
+            ),
+        )
+        calls = 0
+
+        class SegmentProvider:
+            def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+                nonlocal calls
+                del route, payload
+                calls += 1
+                return ModelResult(
+                    output={
+                        "version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+                        "findings": [
+                            {
+                                "validated_event_type": "learning_attempt",
+                                "concept_ref": "fractions",
+                                "event_summary": "The Student attempted an equivalent-fractions explanation.",
+                                "source_message_ids": [str(message.id)],
+                                "candidate_event_ids": [],
+                                "school_or_extended": "school",
+                                "transfer_context": "not_tested",
+                                "retention_context": "not_tested",
+                                "dimensions": _support_dimensions(),
+                                "relationship": "supports",
+                                "subject_alignment": "SAME_AS_SESSION",
+                                "teaching_method_id": None,
+                                "teaching_method_source_tutor_message_id": None,
+                                "misconception_evidence": None,
+                            }
+                        ],
+                    }
+                )
+
+        result = process_intelligence_reprocess_session(
+            session,
+            reprocess_run_id=queued.reprocess_run.id,
+            session_id=learning_session.id,
+            gateway=object(),
+            segment_evidence_gateway=ModelGateway(
+                session,
+                routes={ModelTask.SEGMENT_EVIDENCE: ModelRoute("fixture", "segment-fixture")},
+                providers={"fixture": SegmentProvider()},
+            ),
+        )
+
+        current_review = session.query(SegmentLearningReview).filter_by(
+            segment_id=segment.id,
+            prompt_version=SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
+            status="COMPLETED",
+        ).one()
+        event = session.query(LearningEvent).one()
+
+        assert calls == 1
+        assert result["processing_run_id"] == str(event.processing_run_id)
+        assert stale_review.prompt_version == "segment-learning-review-prompt-v2"
+        assert current_review.id != stale_review.id
+        assert event.segment_review_id == current_review.id
+        assert session.query(IntelligenceSessionAuthority).count() == 0
+
+
+def test_segment_pipeline_reprocess_accepts_zero_findings_and_activates_only_after_staging(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        learning_session, _segment, _message, review = _segment_finalization_session(
+            session,
+            closed_at=datetime(2026, 8, 30, tzinfo=UTC),
+        )
+        review.output = {
+            "version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+            "findings": [],
+        }
+        queued = enqueue_intelligence_reprocess(
+            session,
+            request=IntelligenceReprocessRequest(
+                student_id=learning_session.student_id,
+                session_ids=(learning_session.id,),
+                evidence=_evidence_identity(),
+            ),
+        )
+        result = process_intelligence_reprocess_session(
+            session,
+            reprocess_run_id=queued.reprocess_run.id,
+            session_id=learning_session.id,
+            gateway=object(),
+        )
+        assert result["event_count"] == 0
+        assert session.query(LearningEvent).count() == 0
+        assert session.query(LearningEvidence).count() == 0
+        assert session.query(IntelligenceSessionAuthority).count() == 0
+
+        activation = activate_reprocess_scope(session, reprocess_run_id=queued.reprocess_run.id)
+        authority = session.query(IntelligenceSessionAuthority).one()
+        assert activation["status"] == "COMPLETED"
+        assert authority.evidence_processing_run_id == UUID(str(result["processing_run_id"]))
+        assert session.query(LearningEvidence).count() == 0
+
+
+def test_reprocess_activation_rejects_a_staged_run_with_mismatched_session_scope(
+    factory: sessionmaker[Session],
+) -> None:
+    """A stale/misbound staging artifact can never steal Session authority."""
+
+    with factory.begin() as session:
+        learning_session, _segment, _message, _review = _segment_finalization_session(
+            session,
+            closed_at=datetime(2026, 8, 30, tzinfo=UTC),
+        )
+        queued = enqueue_intelligence_reprocess(
+            session,
+            request=IntelligenceReprocessRequest(
+                student_id=learning_session.student_id,
+                session_ids=(learning_session.id,),
+                evidence=_evidence_identity(),
+            ),
+        )
+        result = process_intelligence_reprocess_session(
+            session,
+            reprocess_run_id=queued.reprocess_run.id,
+            session_id=learning_session.id,
+            gateway=object(),
+        )
+        staged_run = session.get(IntelligenceProcessingRun, UUID(str(result["processing_run_id"])))
+        assert staged_run is not None
+        staged_run.scope = {**staged_run.scope, "session_id": str(uuid4())}
+        session.flush()
+
+        with pytest.raises(ValueError, match="staged processing run"):
+            activate_reprocess_scope(session, reprocess_run_id=queued.reprocess_run.id)
+        assert session.query(IntelligenceSessionAuthority).count() == 0
 
 
 def test_bounded_preview_and_same_version_request_are_idempotent(factory: sessionmaker[Session]) -> None:
@@ -143,6 +424,13 @@ def test_bounded_preview_and_same_version_request_are_idempotent(factory: sessio
         assert first.reprocess_run.id != different_model.reprocess_run.id
         assert first.reprocess_run.version_set["evidence"]["provider"] == "fixture"
         assert first.reprocess_run.version_set["evidence"]["model"] == "fixture-evidence"
+        assert first.reprocess_run.version_set["segment_review"] == {
+            "schema_version": SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
+            "prompt_version": SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
+            "rubric_version": "evidence-rubric-v1",
+            "review_policy_version": SEGMENT_REVIEW_POLICY_VERSION,
+            "finalization_pipeline": SESSION_FINALIZATION_PIPELINE,
+        }
         assert session.get(LearningSession, other.id) is not None
 
 
@@ -174,7 +462,7 @@ def test_changed_evidence_version_creates_separate_reprocess_request(factory: se
             session_ids=(target.id,),
             evidence=EvidenceVersionSelection(provider="fixture", model="fixture-evidence", prompt_version="unsupported-prompt-v9"),
         )
-        first = enqueue_intelligence_reprocess(session, request=base)
+        enqueue_intelligence_reprocess(session, request=base)
         with pytest.raises(EvidenceContractError, match="Evidence interpretation"):
             enqueue_intelligence_reprocess(session, request=changed)
 
@@ -657,7 +945,7 @@ def test_reprocess_no_event_supersedes_old_state_and_pattern_contributions(
                 evidence_processing_run_id=old_run.id,
             )
         )
-        queued = enqueue_intelligence_reprocess(
+        enqueue_intelligence_reprocess(
             session,
             request=IntelligenceReprocessRequest(
                 student_id=student.id,
