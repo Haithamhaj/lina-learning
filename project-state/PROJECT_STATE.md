@@ -2,7 +2,7 @@
 
 ## Current goal
 
-`SUBJ-01 — Subject Attribution at Segment/Finding/Event Boundaries` is **DONE / CODE REVIEW VERIFIED / ACCEPTED**. `DEC-01 — Mode / Strategy / Prior-Relation Calibration` is **DONE / CODE REVIEW VERIFIED / ACCEPTED**. The next approved action is `DEC-02 — TeachingMethod Attribution Fidelity`; do not begin it in this documentation-only transition.
+`SUBJ-01 — Subject Attribution at Segment/Finding/Event Boundaries` is **DONE / CODE REVIEW VERIFIED / ACCEPTED**. `DEC-01 — Mode / Strategy / Prior-Relation Calibration` is **DONE / CODE REVIEW VERIFIED / ACCEPTED**. `DEC-02 — TeachingMethod Attribution Fidelity` is **DONE / DEFECT NOT REPRODUCED / ACCEPTED**. The next approved action is `REP-01 — Over-Practice / Repetition Control`; do not begin it in this documentation-only transition.
 
 `SCOPE-01 — Cross-Subject Conversation & Subject Policy` is **DONE / APPROVED** and is governed by `docs/SUBJECT_SCOPE_POLICY.md`.
 
@@ -25,6 +25,7 @@ Full-System Learning Intelligence Acceptance remains **DONE / ACCEPTED**. The ac
 - SUBJ-01 is DONE / CODE REVIEW VERIFIED / ACCEPTED. It preserves Segment Review v3, deterministic conflict-fail-closed materialization, reviewed-Subject attribution, v8 primary-Tutor-call provisional Broad Subject prefiltering, retention provenance, and reprocessing behavior. Independent GitHub review verified the correction; automated test execution remains CODEX-REPORTED and bounded real `openai/gpt-5.6-luna` execution remains CODEX-REPORTED REAL LUNA VERIFIED. No migration was required.
 - Browser and Real-Lina remain NOT VERIFIED and must not be implied by automated or synthetic real-model checks; neither blocks SUBJ-01 closure.
 - DEC-01 is DONE / CODE REVIEW VERIFIED / ACCEPTED. It retains one primary Tutor call and `tutor_turn_v8`. Its compact, canonical PriorMethodRelation guidance contrastively requires `CONTINUATION` for short direct continuations/direct answers absent a Student evaluation, `DID_NOT_HELP` only for explicit dissatisfaction, and `HELPED` only for explicit helped signals. Independent GitHub review verified the bounded correction. Automated verification remains CODEX-REPORTED and bounded real `openai/gpt-5.6-luna` verification remains CODEX-REPORTED REAL LUNA VERIFIED; Browser and Real-Lina remain NOT VERIFIED.
+- DEC-02 is DONE / DEFECT NOT REPRODUCED / ACCEPTED. Independent architecture/code review accepted the bounded diagnostic: visible Tutor text and TeachingMethod identity come from the same primary `tutor_turn_v8` Luna call; raw method identity equals the persisted Tutor-message value with `teaching-method-registry-v1` provenance; and Segment Review requires persisted method ID → exact Tutor message → later Student outcome. The sample exercised CONCRETE_EXAMPLE, VISUAL_REPRESENTATION, WORKED_EXAMPLE, ANALOGY, and DECOMPOSITION; SOCRATIC_FOCUS and SYMBOLIC_EXPLANATION were not exercised. Automated verification remains CODEX-REPORTED and real `openai/gpt-5.6-luna` diagnostic remains CODEX-REPORTED REAL LUNA VERIFIED; Browser and Real-Lina remain NOT VERIFIED.
 
 ### SCOPE-01 approved policy
 
@@ -112,7 +113,7 @@ Also protected:
 
 ## Next recommended action
 
-`DEC-02 — TeachingMethod Attribution Fidelity` is the next approved action. Do not begin DEC-02 in this documentation-only transition.
+`REP-01 — Over-Practice / Repetition Control` is the next approved action. Do not begin REP-01 in this documentation-only transition.
 
 Keep `EDU-ERR-01` APPROVED / DEFERRED, REC-25 blocked, LR-D04B deferred, and Vision, Voice, School-Focused mode, archive retrieval, and other frozen/deferred capability tracks out of this transition.
 
