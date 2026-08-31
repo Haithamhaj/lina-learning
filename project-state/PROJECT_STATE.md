@@ -4,10 +4,10 @@
 
 Execute the Product Owner-approved **Daily-Use Lina Release 1** sequence one task at a time until Lina can begin stable private daily use.
 
-`DOC-SYNC-01` is **DONE / ACCEPTED**.  
-`RL-01A — Accepted Runtime Alignment` is **DONE / ACCEPTED**.  
-`RL-01B — Fresh Shared Application DB & Runtime Composition` is **DONE / ACCEPTED**.  
-`RL-01C — Clerk + OpenAI Operational Verification` is **IN PROGRESS / BLOCKED ON CLERK SESSION-TOKEN ROLE CLAIM**.
+- `DOC-SYNC-01` — **DONE / ACCEPTED**
+- `RL-01A — Accepted Runtime Alignment` — **DONE / ACCEPTED**
+- `RL-01B — Fresh Shared Application DB & Runtime Composition` — **DONE / ACCEPTED**
+- `RL-01C — Clerk + OpenAI Operational Verification` — **IN PROGRESS / FINAL AUTH-ISOLATION CHECKS REMAIN**
 
 Current execution overlay: `project-state/DAILY_USE_RELEASE_TASKS.md`.  
 `TASKS.md` remains the preserved historical ledger.
@@ -20,19 +20,18 @@ Current execution overlay: `project-state/DAILY_USE_RELEASE_TASKS.md`.
 - Fresh shared local Daily-Use PostgreSQL 17.8 + pgvector 0.8.1 was created from zero and migrated to Alembic head `f5a1c2d3e4b6`; no historical experimental interaction data was imported.
 - Web, API, and Worker run from the aligned `ctx03` worktree against the same fresh shared application database.
 - Test/validation Students and Lina may coexist in the same DB under isolated Student identities. Lina's real longitudinal baseline is Student-scoped, not database-scoped.
-- OpenAI operational verification on the fresh runtime is **VERIFIED** through the existing Model Gateway:
+- OpenAI operational verification is **VERIFIED** through the existing Model Gateway:
   - Tutor: OpenAI / `gpt-5.6-luna` — verified real execution.
   - Segment Review transport: OpenAI / `gpt-5.6-luna` — verified strict structured transport without durable intelligence activation.
   - Embedding: OpenAI / `text-embedding-3-small` — verified 1536-dimensional execution.
-  - AI execution ledger recorded success, latency, provider/model/task lineage.
-- Real local-browser Clerk sign-in has now been completed successfully for both a launch-test Student identity and a second launch-test Parent identity.
-- The launch-test Parent has Clerk `publicMetadata.role = PARENT_ADMIN`, and the Lina Web `/parent` surface recognizes that role correctly.
-- A direct authenticated browser call to `GET /api/v1/auth/me` succeeded with HTTP `200`, proving Clerk JWT/JWKS transport and backend token verification are operational.
-- That same backend response reported `role = STUDENT`, while the frontend reported `PARENT_ADMIN`. Root cause is now identified: `public_metadata.role` is not currently included in the Clerk session token claims consumed by the backend.
-- This is a Clerk session-token configuration gap, not a database/authorization redesign requirement. The preferred fix is to add a compact custom session claim for `role`, sourced from `user.public_metadata.role`, then refresh/re-sign-in and re-run the backend role check.
-- Real-auth Parent→Student authorization and cross-Student isolation remain pending until the backend JWT sees `PARENT_ADMIN`.
-- `REAL-AUTH CROSS-STUDENT ISOLATION = NOT VERIFIED — CLERK ROLE CLAIM BLOCKER`.
-- No tracked source/schema/dependency changes were made during RL-01C verification so far.
+  - AI execution ledger records provider/model/task, success, latency, and usage lineage.
+- Real local-browser Clerk sign-in is verified for a launch-test Student identity and a launch-test Parent identity.
+- Launch-test Parent has `publicMetadata.role = PARENT_ADMIN` in Clerk.
+- Clerk session-token customization now includes the user's public metadata, and after sign-out/sign-in the backend `GET /api/v1/auth/me` returns HTTP `200` with `role = PARENT_ADMIN` for the launch-test Parent.
+- Therefore Clerk JWT/JWKS transport, signed backend role authority, and Parent frontend role recognition are all **VERIFIED**.
+- Remaining RL-01C closure work is application-owned authorization only: bootstrap/verify the local Parent User, create the explicit Parent→Sandbox Test Student relationship, and verify linked access / unrelated-Student denial / Student→Parent denial / no browser-supplied identity override under real Clerk auth.
+- `REAL-AUTH CROSS-STUDENT ISOLATION = PARTIALLY VERIFIED — FINAL RELATIONSHIP/ACCESS CHECKS PENDING`.
+- No tracked source/schema/dependency change was required to fix the Clerk role issue; the fix was Clerk development-instance session-token configuration.
 - RL-01D has not started and remains blocked until RL-01C closes.
 
 ---
@@ -50,7 +49,7 @@ Current execution overlay: `project-state/DAILY_USE_RELEASE_TASKS.md`.
 9. Initial Voice is Audio → STT → transcript → normal Tutor; raw audio is not retained after successful STT.
 10. AI capabilities remain behind Model Gateway; OpenAI is an operational provider, not permanent architecture.
 11. Replit is a candidate private host after local proof, not product architecture.
-12. Clerk role authority for backend requests must come from a verified session-token claim or another explicitly approved backend authority; frontend-readable metadata alone is not sufficient backend authorization.
+12. Backend role authority must come from signed Clerk session-token claims; frontend-readable metadata alone is not sufficient authorization.
 
 ---
 
@@ -65,26 +64,14 @@ Raw learning interaction
 → relevant later learning personalization
 ```
 
-Also protected:
-
-- one primary Tutor model call per normal turn;
-- current behavior outranks historical personalization;
-- deterministic Session Finalization and no partial activation;
-- Candidate metadata remains provisional;
-- Student Core Profile, Personal Facts, conversation context, Safety, RAG, and Learner Intelligence remain separate authorities;
-- cross-Student isolation across conversation, assets, future Personal Facts, Learning Intelligence, and authorization;
-- original Student work remains source; annotations/reconstructions are derived;
-- no Redis/Celery, graph database, second learner-memory system, microservice split, or deployment redesign without demonstrated need.
+Also protected: one primary Tutor model call per normal turn; current behavior outranks history; deterministic Session Finalization; separate Student Core Profile / Personal Facts / conversation context / Safety / RAG / Learner Intelligence authorities; cross-Student isolation; original Student work as source; no Redis/Celery, graph database, second learner-memory system, microservice split, or deployment redesign without demonstrated need.
 
 ---
 
 ## Active risks
 
-- **AUTH-R2 — Clerk Role Missing From Backend Session Token — Criticality 5**  
-  Real browser login works and JWT verification returns `200`, but the backend still sees `STUDENT` because the Parent role currently exists only in Clerk public metadata / frontend-visible user data, not the signed session-token claims consumed by the API.
-
-- **ISO-R1 — Cross-Student Runtime Isolation Under Real Auth — Criticality 5**  
-  Structural/synthetic isolation and contract tests pass, but real Clerk-authenticated Parent/Student isolation cannot close until backend role authority is corrected and re-verified.
+- **ISO-R1 — Real-auth Parent/Student relationship isolation not fully closed — Criticality 5**  
+  Parent JWT role is now verified. Final RL-01C work must prove application-owned Parent→Student linkage, denial for unrelated Students, Student→Parent denial, and no client-supplied identity override.
 
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**
 - **PF-R1 — Personal Facts Not Yet Implemented — Criticality 4**
@@ -98,11 +85,10 @@ Also protected:
 
 ### RL-01C — Clerk + OpenAI Operational Verification
 
-**Status:** IN PROGRESS / BLOCKED ON CLERK SESSION-TOKEN ROLE CLAIM  
-**Authority:** `project-state/DAILY_USE_RELEASE_TASKS.md`  
-**Dependency:** RL-01B **DONE / ACCEPTED**
+**Status:** IN PROGRESS — final real-auth authorization/isolation checks remain  
+**Authority:** `project-state/DAILY_USE_RELEASE_TASKS.md`
 
-### Verified within RL-01C
+### Verified
 
 - OpenAI Tutor route — VERIFIED.
 - OpenAI Segment Review transport — VERIFIED.
@@ -110,24 +96,29 @@ Also protected:
 - AI execution ledger / secret boundaries — VERIFIED.
 - Clerk JWKS reachability and unauthenticated denial — VERIFIED.
 - Real browser Clerk sign-in — VERIFIED.
-- Frontend Parent-role recognition from Clerk public metadata — VERIFIED.
-- Backend authenticated JWT/JWKS transport — VERIFIED (`/api/v1/auth/me` returns `200`).
+- Frontend Parent-role recognition — VERIFIED.
+- Backend JWT/JWKS verification — VERIFIED.
+- Backend signed Parent role (`PARENT_ADMIN`) — VERIFIED.
 
 ### Remaining closure gate
 
-1. Add a compact Clerk custom session-token claim that exposes the backend role from `user.public_metadata.role` (prefer direct `role` claim rather than embedding all public metadata).
-2. Refresh/re-sign-in so a new session token is minted.
-3. Confirm `/api/v1/auth/me` returns `PARENT_ADMIN` for the launch-test Parent.
-4. Bootstrap/verify the corresponding local Parent User and explicit Parent→Sandbox Test Student relationship.
-5. Verify linked Parent access, unrelated Student denial, Student→Parent denial, and no browser-supplied identity override under real Clerk auth.
-
-Do not execute RL-01D until this gate is closed.
+1. Bootstrap/verify launch-test Parent as application `User(role=PARENT_ADMIN)` using the verified Clerk subject.
+2. Link that Parent explicitly to the existing Sandbox Test Student using the existing server-side relationship boundary.
+3. Ensure at least one unrelated synthetic Student exists for denial testing.
+4. Verify under real Clerk auth:
+   - Parent admin shell allowed;
+   - Student shell denied to Parent;
+   - linked Student summary allowed;
+   - unrelated Student summary denied without enumeration;
+   - launch-test Student cannot access Parent surface;
+   - browser-supplied Student/session IDs cannot cross ownership boundaries.
+5. Do not execute RL-01D.
 
 ---
 
 ## Next recommended action
 
-Update the Clerk development instance session-token customization to include a direct role claim from the user's public metadata, refresh the Parent session, and re-run the authenticated backend role check.
+Return to Codex to finish only the remaining RL-01C application-owned Parent/Student bootstrap and real-auth isolation checks. No further Clerk dashboard changes are expected unless those checks reveal a new concrete blocker.
 
 ---
 
