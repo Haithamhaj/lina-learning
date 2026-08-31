@@ -14,8 +14,8 @@ RL-01A Accepted Runtime Alignment — DONE / ACCEPTED
 → RL-01B Fresh Shared DB + Runtime Composition — DONE / ACCEPTED
 → RL-01C Clerk + OpenAI Operational Verification — DONE / ACCEPTED
 → RL-01D Controlled Full Intelligence Loop — DONE / ACCEPTED
-→ TASK-027A Student Core Profile — READY
-→ PF-01 Personal Facts Contract — BLOCKED
+→ TASK-027A Student Core Profile — DONE / ACCEPTED
+→ PF-01 Personal Facts Contract — READY
 → PF-02 Personal Facts Extraction/Reconciliation — BLOCKED
 → PF-03 Relevant Facts in Tutor Context — BLOCKED
 → FE-01 Lina Visual System & Reuse Decision — BLOCKED
@@ -33,8 +33,7 @@ Post-launch work is not a Release-1 blocker: measured RAG evaluation, selected r
 
 ## RL-01A — Accepted Runtime Alignment
 
-**Status:** DONE / ACCEPTED  
-**Accepted result:** isolated worktree aligned to accepted `codex/ctx-03`; protected original checkout untouched; baseline verification passed; stale runtime references classified.
+**Status:** DONE / ACCEPTED
 
 ---
 
@@ -43,50 +42,25 @@ Post-launch work is not a Release-1 blocker: measured RAG evaluation, selected r
 **Status:** DONE / ACCEPTED  
 **Accepted commit:** `dc76195bcb9ba7577b5f6dbbf0804f5bff6c43ff`
 
-**Accepted result:**
-- fresh shared PostgreSQL 17.8 + pgvector 0.8.1 application database created from zero and migrated to Alembic head `f5a1c2d3e4b6`;
-- no historical experimental interaction data imported;
-- aligned Web + API + Worker run from current `codex/ctx-03` against the same DB;
-- standard Worker command `npm run dev:worker` added and worker claim/complete/retry/restart smoke passed;
-- shared DB Student isolation verified structurally/synthetically;
-- Lina real longitudinal baseline remains Student-scoped and unstarted.
+**Accepted result:** fresh shared PostgreSQL/pgvector DB, aligned Web/API/Worker runtime, standard Worker command, Worker recovery smoke, and Student-scoped shared-DB isolation.
 
 ---
 
 ## RL-01C — Clerk + OpenAI Operational Verification
 
-**Status:** DONE / ACCEPTED  
-**Dependencies:** RL-01B accepted
+**Status:** DONE / ACCEPTED
 
-**Accepted result:**
-- real OpenAI Tutor, Segment Review transport, and embedding routes verified through Model Gateway;
-- AI execution lineage/usage ledger verified;
-- real Clerk Student/Parent browser auth and signed backend role authority verified;
-- explicit Parent→Sandbox Test Student relationship established;
-- linked Parent access, unrelated Student denial, Student→Parent denial, and client-supplied identity override denial verified;
-- **REAL-AUTH CROSS-STUDENT ISOLATION = VERIFIED** for implemented auth/session paths;
-- no Lina real identity/history used.
+**Accepted result:** real Clerk Student/Parent auth and signed backend roles, explicit Parent→Student authorization, real OpenAI Tutor/Segment Review/embedding routes through Model Gateway, AI execution lineage, and real-auth cross-Student isolation.
 
 ---
 
 ## RL-01D — Controlled Full Intelligence Loop
 
-**Status:** DONE / ACCEPTED  
-**Dependencies:** RL-01C accepted
+**Status:** DONE / ACCEPTED
 
-**Accepted result:**
-- real multi-turn Tutor interaction completed with exactly one primary Tutor model call per normal turn;
-- FastAPI/SSE request/stream transaction-lock defect was identified, minimally corrected, regression-tested, and committed as `3af613484266e2c21d9e91a20d09ef217b05c16e`;
-- natural Session/Segment closure, real Segment Learning Review, and deterministic Session Intelligence Finalization completed without manual DB mutation;
-- semantic Session LLM calls remained `0`;
-- source-linked Events, Evidence, Current State, Patterns, and Decision Views materialized from the finalized Session;
-- one first Segment Review provider attempt ended in a durable `TimeoutError`, then the configured automatic Worker retry succeeded; final Review completed with no unrecoverable job and no partial intelligence activation;
-- recoverable provider failure is accepted as operational behavior, not a correctness failure;
-- a later same-denominator-fractions Session selected five compact relevant Current State/Pattern intelligence entries from prior finalized learning; no full prior transcript, archived Session, or Personal Facts were injected;
-- a separate later `7 × 8` Session selected no fraction-specific Learner Intelligence;
-- `RELEVANT PRIOR INTELLIGENCE SELECTION = PASS`;
-- `IRRELEVANT FRACTION INTELLIGENCE EXCLUSION = PASS`;
-- cross-Student scoping remained intact and no Lina real identity/history was used.
+**Accepted result:** real multi-turn Tutor interaction with one primary call per normal turn; natural Session/Segment lifecycle; real Segment Learning Review; deterministic Session Finalization with zero semantic Session LLM calls; source-linked Event/Evidence/State/Pattern/Decision materialization; relevant later intelligence selection without full historical transcript; irrelevant fraction intelligence excluded from an unrelated Math question; healthy recovery from a transient review-provider failure; cross-Student scoping preserved.
+
+**Accepted streaming fix:** `3af613484266e2c21d9e91a20d09ef217b05c16e`.
 
 ---
 
@@ -94,48 +68,153 @@ Post-launch work is not a Release-1 blocker: measured RAG evaluation, selected r
 
 ## TASK-027A — Student Core Profile & Tutor Student Context
 
-**Status:** READY  
+**Status:** DONE / ACCEPTED  
 **Dependencies:** RL-01D accepted  
-**Purpose:** Establish Parent/System-authoritative Student identity/context and provide a compact governed Student Core Context to the Tutor, separate from Personal Facts and Learner Intelligence.
+**Accepted commit:** `57a763bbd538157c6503c10f64d0010a91dc2c46`  
+**Alembic head:** `f9b1c2d3e4f5`
 
-**Expected output:**
-- audit and reuse existing Student / Grade / GradePeriod structures rather than creating a second identity/profile model unnecessarily;
-- define the canonical Parent/System-authoritative Student Core Profile boundary;
-- support child identity/display name and date of birth when supplied;
-- derive age from date of birth rather than independently maintaining age;
-- resolve active Grade / GradePeriod from application-owned records;
-- build a compact Student Core Context for normal Tutor requests;
-- keep Student Core Context separate from Conversation Context, Safety, RAG, Personal Facts, and Learner Intelligence;
-- preserve one primary Tutor model call per normal turn;
-- preserve cross-Student isolation and source/authority boundaries.
+**Accepted result:**
+- existing Student identity reused; nullable `date_of_birth` added;
+- age derived deterministically and never stored independently;
+- GradePeriod reused with Student-scoped deterministic effective-period resolution;
+- future Grade scheduling preserves the current effective Grade through the day before transition and rejects conflicting overlaps;
+- linked Parent/System Core Profile GET/PUT boundary established;
+- Tutor receives only compact `display_name`, `age_years`, and effective `grade_level`;
+- raw DOB/IDs/Parent metadata excluded from model-facing Core Context;
+- Personal Facts and Learner Intelligence remain separate;
+- existing Retrieval caller uses resolved effective grade without RAG redesign;
+- one primary Tutor model call remains unchanged;
+- cross-Student Core Profile isolation verified.
 
-**Verification:**
-- existing Student/Grade structures are reused where fit;
-- DOB-derived age behavior is deterministic and date-boundary tested;
-- active Grade/GradePeriod selection is deterministic and Student-scoped;
-- Tutor payload/context contains only bounded Student Core fields and no unrelated Parent/internal metadata;
-- Student Core Context is distinguishable from Personal Facts and learning-derived intelligence;
-- current Tutor, auth, Session, Safety, Retrieval, and Learning Intelligence tests remain green;
-- no second learner-memory/profile authority is introduced.
-
-**Explicit exclusions:** Personal Facts implementation (`PF-01+`), frontend redesign, Voice, Vision, annotation, RAG redesign, Artifacts, deployment, Science expansion, Parent Insights, and unrelated deferred tasks.
-
-**Stop condition:** Stop after TASK-027A verification/report. Do not start `PF-01` in the same run.
+---
 
 ## PF-01 — Personal Facts Contract
-**Status:** BLOCKED  
-**Dependencies:** TASK-027A accepted  
-**Purpose:** Durable Student-asserted factual context with source lineage, temporal lifecycle, support/contradiction/supersession; no psychological/personality/learning inference.
+
+**Status:** READY  
+**Dependencies:** TASK-027A accepted
+
+**Purpose:** Define the durable Student-scoped contract for factual context the Student tells the system about herself/her world. This is the semantic/data boundary for personal memory, not extraction or Tutor use yet.
+
+### Approved source authority
+
+- Personal Facts are **Student-asserted**.
+- They come from what the Student tells the system about herself/her world.
+- Parent claims do not automatically become Student Personal Facts.
+- The system does not need to establish objective external truth before preserving a Student assertion as personal context.
+
+### Required contract output
+
+PF-01 must define:
+
+1. **Qualification boundary**
+   - what is a durable Personal Fact;
+   - what is merely ephemeral/current-conversation context;
+   - what must never be stored as a Personal Fact.
+
+2. **Fact representation**
+   - stable fact identity/key/category;
+   - normalized value/statement;
+   - current lifecycle status;
+   - source Student message/interaction lineage;
+   - first-observed / last-observed timestamps;
+   - support/repetition metadata where useful.
+
+3. **Temporal/reconciliation semantics**
+   - repeated support;
+   - contradiction;
+   - invalidation;
+   - supersession;
+   - current vs historical/superseded facts;
+   - history preserved rather than silently overwritten/deleted.
+
+4. **Safety/privacy boundaries**
+   - do not store unsafe sensitive personal information merely because the child said it;
+   - comply with `docs/CHILD_SAFETY_POLICY.md`;
+   - no hidden broad child-surveillance profile.
+
+5. **Semantic exclusions**
+   - no personality analysis;
+   - no psychological interpretations/diagnosis;
+   - no intelligence labels;
+   - no learning-style labels;
+   - no global character judgments;
+   - no transcript summaries masquerading as facts;
+   - no Learner Intelligence/Evidence copied into Personal Facts;
+   - no Student Core Profile duplication merely to create a second memory.
+
+6. **Authority separation**
+
+```text
+Student Core Profile = Parent/System-authoritative application facts
+Personal Facts       = Student-asserted factual personal context
+Learner Intelligence = learning-derived evidence-backed state
+Conversation Context = current/raw conversational continuity
+```
+
+7. **Parent inspection**
+   - Parent may inspect stored Personal Facts for the linked Student;
+   - inspection does not make Parent a Personal-Fact source;
+   - no separate hidden child-facts store is required under the current approved decision.
+
+8. **Isolation/rebuildability**
+   - every Personal Fact is Student-scoped;
+   - source lineage is sufficient to audit/rebuild derived current state;
+   - Student A facts can never enter Student B context.
+
+### Important product examples to resolve in the contract
+
+The contract should classify examples such as:
+
+- “I like drawing.”
+- “My cat is called Luna.”
+- “Sara is my best friend.”
+- “I’m going to Jeddah next weekend.”
+- “I’m tired today.”
+- repeated mentions of football without an explicit “I like football.”
+- “I’m bad at math.”
+- “I’m shy.”
+- “I’m 14 / I’m in Grade 8” when Parent/System Core Profile says otherwise.
+
+The contract must distinguish literal Student assertions from derived interest/personality inference. Repetition alone must not silently become a psychological or personality conclusion.
+
+### Verification
+
+- contract clearly distinguishes durable vs ephemeral vs prohibited memory;
+- temporal/supersession examples are deterministic enough for PF-02 to implement ADD / UPDATE / SUPERSEDE / NOOP;
+- no Personal Fact can become Learning Evidence merely through existence;
+- Parent inspection and Student-scoped authorization are specified;
+- child-safety/private-information storage boundaries are explicit;
+- no second memory/profile platform is introduced.
+
+### Explicit exclusions
+
+PF-01 does **not** implement:
+- LLM/model extraction;
+- Worker jobs;
+- ADD/UPDATE/SUPERSEDE/NOOP execution;
+- Tutor Personal Facts selection/injection;
+- Parent Insights;
+- frontend memory UI;
+- graph/Graphiti or generic memory frameworks;
+- PF-02 or PF-03.
+
+**Stop condition:** Stop after the Personal Facts contract/design is produced for Product Owner review. Do not start PF-02.
+
+---
 
 ## PF-02 — Personal Facts Extraction & Reconciliation
+
 **Status:** BLOCKED  
 **Dependencies:** PF-01 accepted  
 **Purpose:** Async Worker + Model Gateway extraction/reconciliation using ADD / UPDATE / SUPERSEDE / NOOP; no extra normal Tutor-turn call.
 
+---
+
 ## PF-03 — Relevant Personal Facts in Tutor Context
+
 **Status:** BLOCKED  
 **Dependencies:** PF-02 accepted  
-**Purpose:** Relevance-bounded Facts as a separate Tutor input beside conversation, Student Core Context, Learner Intelligence, optional RAG, and Safety; preserve one primary Tutor call.
+**Purpose:** Relevance-bounded Personal Facts as a separate Tutor input beside Conversation Context, Student Core Context, Learner Intelligence, optional RAG, and Safety; preserve one primary Tutor call.
 
 ---
 
@@ -143,13 +222,11 @@ Post-launch work is not a Release-1 blocker: measured RAG evaluation, selected r
 
 ## FE-01 — Lina Visual System & Reuse Decision
 **Status:** BLOCKED  
-**Dependencies:** PF-03 accepted  
-**Purpose:** One coherent age-appropriate visual system. Evaluate shadcn, existing assistant-ui decision, Motion/Motion Primitives, ThreeUI/Three.js, Magic UI, React Bits, 21st.dev, Aceternity, Cult UI as ADOPT / PARTIAL ADOPT / VISUAL REFERENCE / REJECT.
+**Dependencies:** PF-03 accepted
 
 ## FE-02 — Daily Student Experience
 **Status:** BLOCKED  
-**Dependencies:** FE-01 accepted  
-**Purpose:** Polished Lina home + Tutor thread/composer, bilingual RTL/LTR, responsive UX, mic/photo affordances, purposeful motion, no internal analytics exposure.
+**Dependencies:** FE-01 accepted
 
 ---
 
@@ -157,18 +234,15 @@ Post-launch work is not a Release-1 blocker: measured RAG evaluation, selected r
 
 ## TASK-032 — Voice Input / STT
 **Status:** BLOCKED  
-**Dependencies:** FE-02 accepted; RL-01C Model Gateway operational  
-**Approved flow:** audio → STT → transcript → normal Tutor. Raw audio not retained after successful STT. No speech-to-speech requirement for Release 1.
+**Dependencies:** FE-02 accepted; RL-01C Model Gateway operational
 
 ## TASK-033 — Student Image / Handwriting / Drawing Understanding
 **Status:** BLOCKED  
-**Dependencies:** TASK-032 accepted; durable/private storage; RL-01C Model Gateway operational  
-**Purpose:** Original private image + Multimodal Turn + Vision interpretation; ambiguity asks clarification; original remains source authority.
+**Dependencies:** TASK-032 accepted; durable/private storage; RL-01C Model Gateway operational
 
 ## TASK-034 — Annotate Original Image First
 **Status:** BLOCKED  
-**Dependencies:** TASK-033 accepted  
-**Purpose:** Derived annotation on original first; clean React/SVG/interactive reconstruction only when annotation is insufficient. Derived output never replaces Student source Evidence.
+**Dependencies:** TASK-033 accepted
 
 ---
 
@@ -176,31 +250,24 @@ Post-launch work is not a Release-1 blocker: measured RAG evaluation, selected r
 
 ## DEPLOY-01 — Lina Private Daily Environment
 **Status:** BLOCKED  
-**Dependencies:** TASK-034 accepted  
-**Purpose:** Proven Web + API + Worker + shared persistent PostgreSQL/pgvector + Clerk + Model Gateway/OpenAI + durable private object storage in one stable private environment. Replit is a candidate, not architecture.
+**Dependencies:** TASK-034 accepted
 
 ## LINA-R1 — Clean Real-Use Baseline
 **Status:** BLOCKED  
-**Dependencies:** DEPLOY-01 accepted  
-**Purpose:** Begin Lina's actual longitudinal use under her own clean Student identity. Test Student data may coexist in the shared DB but must never enter Lina's history/context/authorization scope.
+**Dependencies:** DEPLOY-01 accepted
 
 ---
 
 # Post-Launch — Not Release 1 Blockers
 
 ## RAG-EVAL-01 — Measured Retrieval Evaluation
-**Status:** BLOCKED  
-**Dependencies:** representative real Grade-5 use/questions  
-**Rule:** current Docling + PostgreSQL/pgvector remains baseline unless measured comparison proves a material advantage for an alternative.
+**Status:** BLOCKED
 
 ## TASK-035 — Interactive Learning Artifacts
-**Status:** BLOCKED  
-**Dependencies:** explicit Product Owner promotion after real use  
-**Renderer baseline:** React/SVG + Motion + JSXGraph + React Konva + MathLive. Image generation remains optional/deferred illustrative output, not default teaching renderer.
+**Status:** BLOCKED
 
 ## PARENT-INSIGHT-01 — Facts × Learning Exploration
-**Status:** BLOCKED / FUTURE / DATA-DEPENDENT  
-**Purpose:** Explore Parent-facing insights only after sufficient Personal Facts + Learning Intelligence history. No psychological/personality diagnosis, unsupported talent labeling, or write-back into source layers.
+**Status:** BLOCKED / FUTURE / DATA-DEPENDENT
 
 ---
 
