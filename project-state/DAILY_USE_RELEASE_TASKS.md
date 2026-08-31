@@ -12,8 +12,8 @@
 ```text
 RL-01A Accepted Runtime Alignment — DONE / ACCEPTED
 → RL-01B Fresh Shared DB + Runtime Composition — DONE / ACCEPTED
-→ RL-01C Clerk + OpenAI Operational Verification — READY
-→ RL-01D Controlled Full Intelligence Loop — BLOCKED
+→ RL-01C Clerk + OpenAI Operational Verification — DONE / ACCEPTED
+→ RL-01D Controlled Full Intelligence Loop — READY
 → TASK-027A Student Core Profile — BLOCKED
 → PF-01 Personal Facts Contract — BLOCKED
 → PF-02 Personal Facts Extraction/Reconciliation — BLOCKED
@@ -41,61 +41,83 @@ Post-launch work is not a Release-1 blocker: measured RAG evaluation, selected r
 ## RL-01B — Fresh Shared Application DB & Runtime Composition
 
 **Status:** DONE / ACCEPTED  
-**Dependencies:** RL-01A accepted  
 **Accepted commit:** `dc76195bcb9ba7577b5f6dbbf0804f5bff6c43ff`
 
 **Accepted result:**
 - fresh shared PostgreSQL 17.8 + pgvector 0.8.1 application database created from zero and migrated to Alembic head `f5a1c2d3e4b6`;
 - no historical experimental interaction data imported;
-- persistent local database resource `lina-learning-daily-use-postgres` established;
-- aligned Web + API + Worker run from the current `codex/ctx-03` worktree against the same database;
-- stale old-checkout API stopped;
-- `npm run dev:worker` added as the standard Worker startup command;
-- Worker claim/complete/retry/restart smoke verification passed;
-- one synthetic Sandbox Test Learner exists with zero learning history; Lina's real Student identity/history has not been created;
-- implemented learning paths were verified Student-scoped; future Personal Facts isolation remains to be implemented in PF tasks;
-- Python suite `715 passed, 7 skipped`; web build/typecheck and `git diff --check` passed.
-
-**Shared database invariant:** Test/validation Students and Lina may coexist in this database under separate Student identities. Cross-Student isolation is Criticality 5. Lina's real longitudinal baseline is Student-scoped, not database-scoped.
+- aligned Web + API + Worker run from current `codex/ctx-03` against the same DB;
+- standard Worker command `npm run dev:worker` added and worker claim/complete/retry/restart smoke passed;
+- shared DB Student isolation verified structurally/synthetically;
+- Lina real longitudinal baseline remains Student-scoped and unstarted.
 
 ---
 
 ## RL-01C — Clerk + OpenAI Operational Verification
 
-**Status:** READY  
-**Dependencies:** RL-01B accepted  
-**Purpose:** Make the aligned fresh runtime usable with real Clerk identity and real OpenAI-backed Model Gateway routes without creating parallel auth/provider integrations.
+**Status:** DONE / ACCEPTED  
+**Dependencies:** RL-01B accepted
 
-**Expected output:**
-- verify the exact current Clerk configuration path and use it safely with the aligned Web/API;
-- verify real browser Clerk session/JWT/JWKS flow against the fresh shared application database;
-- establish/verify a controlled launch-test Parent/Student identity path without creating Lina's real longitudinal history prematurely;
-- verify Parent ↔ Student authorization and cross-Student isolation through the real auth path;
-- verify server-side OpenAI configuration through the existing Model Gateway;
-- verify real Tutor, Segment Review, and embedding routes through the Gateway;
-- verify AI execution lineage/usage logging without exposing secrets;
-- preserve one primary Tutor call and all accepted Safety/Session/Segment boundaries.
+**Accepted result:**
+- real OpenAI Tutor route verified through Model Gateway using `gpt-5.6-luna`;
+- real Segment Review transport verified through Model Gateway using `gpt-5.6-luna` without durable intelligence activation;
+- real embedding route verified using `text-embedding-3-small` with 1536 dimensions;
+- AI execution ledger recorded provider/model/task, success, latency, and usage lineage;
+- real Clerk browser sign-in verified for launch-test Student and Parent identities;
+- Clerk session-token customization now carries signed role authority from user public metadata;
+- backend `/api/v1/auth/me` verifies Parent as `PARENT_ADMIN` and Student as `STUDENT`;
+- launch-test Parent application User created as `PARENT_ADMIN`, with explicit Parent→Sandbox Test Student relationship;
+- Parent real-auth matrix passed: `/auth/me` 200 `PARENT_ADMIN`; Parent shell 200; Student shell 403; linked Student summary 200; unrelated Student summary 404;
+- Student real-auth matrix passed: `/auth/me` 200 `STUDENT`; Student shell 200; Parent shell 403; spoofed `student_id` did not grant another Student identity/session; foreign Session GET/POST both 404;
+- **REAL-AUTH CROSS-STUDENT ISOLATION = VERIFIED** for implemented auth/session paths;
+- browser-supplied Student/session identifiers do not override server-owned Clerk-subject → Student ownership;
+- no Lina real identity/history was used, and no code/schema/dependency change was needed for Clerk role authority.
 
-**Verification:**
-- real browser auth works on the aligned runtime;
-- protected Student/Parent boundaries hold;
-- one controlled real Tutor execution succeeds for a launch-test Student;
-- a bounded real Segment Review transport check and embedding execution succeed through Model Gateway without running the full Session finalization journey;
-- no provider key reaches browser/Git/log output;
-- no arbitrary direct OpenAI SDK integration is added outside the provider adapter;
-- Lina's real Student identity remains unused/clean unless an identity-only bootstrap is explicitly unavoidable and produces zero learning history.
-
-**Explicit exclusions:** full Session→Review→Finalization→Evidence→Card proof (RL-01D), Personal Facts, frontend redesign, Voice, Vision, annotation, RAG changes, Artifacts, Replit deployment, MATH-01, ID-01 fixes unless reproduced as an auth blocker.
-
-**Stop condition:** Stop after RL-01C verification/report. Do not execute RL-01D.
+**Boundary retained:** future Personal Facts isolation is not claimed until PF tasks implement that domain.
 
 ---
 
 ## RL-01D — Controlled Full Intelligence Loop
 
-**Status:** BLOCKED  
+**Status:** READY  
 **Dependencies:** RL-01C accepted  
-**Purpose:** Prove on a controlled launch-test Student the complete accepted path: real Tutor → Segment → Worker Review → deterministic Session Finalization → Event/Evidence → State/Patterns/Decision Views/Card → relevant later Tutor personalization. No manual DB mutation.
+**Purpose:** Prove on a controlled launch-test Student the complete accepted path:
+
+```text
+real Tutor
+→ Segment persistence/closure
+→ Worker Segment Learning Review
+→ deterministic Session Finalization
+→ Event / Evidence
+→ Current State / Patterns / Decision Views
+→ Learner Intelligence Card
+→ later Tutor receives relevant intelligence
+```
+
+**Expected output:**
+- one controlled learning Session using real Tutor/OpenAI on the launch-test Student;
+- Session/Segment lifecycle advances through normal application/Worker behavior without manual DB mutation;
+- required Segment Review runs and validates;
+- deterministic Session Finalization activates one coherent durable intelligence generation;
+- Events/Evidence remain source-linked;
+- Current State/Patterns/Decision Views/Card update only from Session-authorized intelligence;
+- a later launch-test Student Session receives relevant Card/intelligence context;
+- an unrelated later question does not receive stale irrelevant intelligence;
+- one primary Tutor call per normal turn remains intact;
+- controlled validation data remains clearly separate from Lina's future real longitudinal baseline.
+
+**Verification:**
+- no manual DB updates used to force lifecycle/intelligence progression;
+- no extra semantic Session LLM call after Segment Reviews;
+- no stuck unrecoverable jobs;
+- Session Finalization remains deterministic and no partial activation occurs;
+- source→Segment Review→Event/Evidence→State/Pattern/Card lineage is inspectable;
+- relevant later personalization is observable without full transcript injection;
+- cross-Student isolation remains intact.
+
+**Explicit exclusions:** TASK-027A, Personal Facts, frontend redesign, Voice, Vision, annotation, RAG changes, Learning Artifacts, Replit deployment, MATH-01, Science, Parent Insight analysis.
+
+**Stop condition:** Stop after RL-01D verification/report. Do not start TASK-027A in the same run.
 
 ---
 
