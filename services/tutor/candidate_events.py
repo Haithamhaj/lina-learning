@@ -336,12 +336,17 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
                                 "additionalProperties": False,
                                 "properties": {
                                     "event_type": {"type": "string", "enum": list(CandidateEventType.__args__)},
-                                    "concept_ref": {"type": ["string", "null"]},
-                                    "summary": {"type": "string"},
-                                    "signal": {"type": "string"},
-                                    "source_message_ids": {"type": "array", "items": {"type": "string"}},
+                                    "concept_ref": {"type": ["string", "null"], "minLength": 1, "maxLength": 128},
+                                    "summary": {"type": "string", "minLength": 1, "maxLength": 500},
+                                    "signal": {"type": "string", "minLength": 1, "maxLength": 128},
+                                    "source_message_ids": {
+                                        "type": "array",
+                                        "minItems": 1,
+                                        "maxItems": 4,
+                                        "items": {"type": "string", "format": "uuid"},
+                                    },
                                     "school_or_extended": {"type": "string", "enum": ["school", "extended"]},
-                                    "observed_student_outcome": {"type": ["string", "null"]},
+                                    "observed_student_outcome": {"type": ["string", "null"], "minLength": 1, "maxLength": 500},
                                     "misconception_evidence": {
                                         "anyOf": [
                                             {

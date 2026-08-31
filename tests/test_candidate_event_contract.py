@@ -7,6 +7,8 @@ import pytest
 from services.intelligence.consolidation import ConsolidatedEvent
 from services.tutor.candidate_events import (
     CandidateEventContractError,
+    CandidateEventMetadataItem,
+    TUTOR_OUTPUT_JSON_SCHEMA,
     parse_candidate_event_metadata,
 )
 
@@ -102,3 +104,37 @@ def test_historical_current_focus_signal_remains_readable_by_evidence_consolidat
     )
 
     assert event.event_type == "current_focus_signal"
+
+
+def test_model_candidate_schema_mirrors_direct_runtime_field_bounds() -> None:
+    """CAND-03: Luna must not be allowed to emit ordinary values runtime rejects."""
+
+    runtime_fields = CandidateEventMetadataItem.model_json_schema()["properties"]
+    model_fields = (
+        TUTOR_OUTPUT_JSON_SCHEMA["properties"]["candidate_metadata"]["anyOf"][0]
+        ["properties"]["candidates"]["items"]["properties"]
+    )
+
+    def string_bounds(schema: object) -> tuple[int | None, int | None]:
+        assert isinstance(schema, dict)
+        variants = schema.get("anyOf", [schema])
+        assert isinstance(variants, list)
+        string_schema = next(
+            item for item in variants
+            if isinstance(item, dict)
+            and (item.get("type") == "string" or "string" in item.get("type", []))
+        )
+        return string_schema.get("minLength"), string_schema.get("maxLength")
+
+    for field in ("concept_ref", "summary", "signal", "observed_student_outcome"):
+        assert string_bounds(model_fields[field]) == string_bounds(runtime_fields[field])
+
+    assert (
+        model_fields["source_message_ids"].get("minItems"),
+        model_fields["source_message_ids"].get("maxItems"),
+        model_fields["source_message_ids"]["items"].get("format"),
+    ) == (
+        runtime_fields["source_message_ids"].get("minItems"),
+        runtime_fields["source_message_ids"].get("maxItems"),
+        runtime_fields["source_message_ids"]["items"].get("format"),
+    )
