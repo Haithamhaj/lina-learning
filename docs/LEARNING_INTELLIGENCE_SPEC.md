@@ -2,7 +2,7 @@
 
 ## LEARNING_INTELLIGENCE_SPEC.md
 
-**Status:** Approved governing specification; SEG-EVID architecture approved, implementation pending
+**Status:** Approved governing specification; **implemented / Full-System Acceptance completed / limited Real-Lina use observed / longitudinal real-use validation pending**  
 **Authority:** Governing specification for the Learning Intelligence subsystem  
 **Audience:** Product owner, ChatGPT, Codex, AI agents, developers, reviewers  
 **Depends on:** `PROJECT_REFERENCE.md`  
@@ -41,7 +41,11 @@ The durable source is the original interaction history. All higher-level intelli
 
 > **Learning Intelligence is an evidence-grounded interpretation of Lina's learning history, not a permanent label about Lina.**
 
-The detailed implementation may evolve, but it must preserve the contracts and invariants in this specification unless the project owner explicitly changes them.
+The detailed implementation may evolve, but it must preserve the contracts and invariants in this specification unless the Product Owner explicitly changes them.
+
+## 1.1 Real-Use Verification Scope
+
+Limited real Lina use has occurred: Lina herself participated in part of a real Tutor interaction, and the persisted interaction was subsequently continued and used during testing/calibration. This does not establish stable daily Lina use, a complete recurring Lina cross-session intelligence loop, or longitudinal personalization across multiple natural Lina sessions. Those remain separate validation horizons.
 
 ---
 
@@ -80,6 +84,8 @@ Tutor Personalization / Parent Insights
 
 The system separates **what happened**, **what it suggests**, **what has become a repeated pattern**, and **what decision should be made now**.
 
+The current accepted implementation follows the same authority model: Segment Review interprets completed learning episodes; Session Finalization is the deterministic durable activation boundary. Historical legacy Session Evidence generations remain auditable and compatible where required, but they are not the primary current semantic architecture.
+
 ## 2.1 Raw Interaction
 
 The original interaction record. Examples:
@@ -115,10 +121,11 @@ Review may produce supported staged findings with zero Candidate IDs.
 A Session-authorized structured learning occurrence derived from one completed
 Segment semantic review. Its conceptual lineage includes `session_id`,
 `segment_id`, `segment_review_id`, optional `candidate_event_ids[]`, potentially
-multiple `source_refs[]`, and `processing_run_id`. This is a governing contract,
-not a claim that the current database implementation already supports it.
+multiple `source_refs[]`, and `processing_run_id`.
 
-It describes **what happened in that context**, not a general conclusion about Lina.
+The accepted implementation supports this Segment/Finding/Event/Evidence lineage for the current Segment-finalization path. Historical legacy rows remain separately auditable.
+
+A Validated Learning Event describes **what happened in that context**, not a general conclusion about Lina.
 
 ## 2.4 Evidence
 
@@ -444,17 +451,17 @@ It may instead indicate:
 
 ## 8.7 Strategy Effectiveness
 
-This dimension evaluates the **teaching strategy**, not Lina.
+This dimension evaluates the **teaching strategy/method outcome**, not Lina as a person.
 
 | State | Definition |
 |---|---|
-| `not_evaluable` | No meaningful outcome can be linked to the strategy. |
-| `ineffective` | Strategy did not improve the relevant learning state in that interaction. |
+| `not_evaluable` | No meaningful outcome can be linked to the strategy/method. |
+| `ineffective` | The intervention did not improve the relevant learning state in that interaction. |
 | `unclear` | Outcome is ambiguous or mixed. |
-| `helped` | Observable improvement followed the strategy. |
-| `enabled_independent_success` | Strategy was followed by meaningful independent understanding/application. |
+| `helped` | Observable improvement followed the intervention. |
+| `enabled_independent_success` | The intervention was followed by meaningful independent understanding/application. |
 
-Examples of strategy identity:
+Examples of representation/method identity include:
 
 - concrete example,
 - visual fraction representation,
@@ -516,13 +523,13 @@ task_context
 curriculum_level
 relative_challenge
 representation_type
-school_or_extended
+school_relationship
 source_modality
 elapsed_since_related_evidence
 same_session_or_delayed
 concept_scope
 artifact_used
-strategy_used
+teaching_method_used
 ```
 
 ## 9.1 Task Novelty
@@ -621,7 +628,7 @@ A single strong meaningful event may create or update a Current State item.
 
 ## 11.1 Current State Types
 
-Initial types include:
+Initial/current types include concepts such as:
 
 ```text
 active_difficulty
@@ -635,30 +642,15 @@ important_recent_change
 
 ## 11.2 Recent Learning Context
 
-Recent Learning Context is conversational context, not Evidence-derived Current
-Learning State. It may use relevant recent messages or topic metadata to help
-an ambiguous continuation such as “Continue.”
+Recent Learning Context is conversational context, not Evidence-derived Current Learning State. It may use relevant recent messages or topic metadata to help an ambiguous continuation such as “Continue.”
 
-It does not represent where Lina is supposed to be in the curriculum, what she
-is required to study now, or what questions she is allowed to ask. The current
-question remains highest authority; relevance comes before recency.
+It does not represent where Lina is supposed to be in the curriculum, what she is required to study now, or what questions she is allowed to ask. The current question remains highest authority; relevance comes before recency.
 
-Historical `current_school_focus` Current State rows remain preserved for audit
-but are excluded from runtime Learner Intelligence Card selection.
+Historical `current_school_focus` Current State rows remain preserved for audit but are excluded from runtime Learner Intelligence Card selection. **Current School Focus is not an active product authority.**
 
-Optional Durable Conversation Topic metadata may assist bounded conversation
-navigation or audit, but it is neither Evidence nor Learner Intelligence and
-cannot create a learner conclusion. It does not directly update Current State,
-Patterns, the Intelligence Card, or personalization.
+Optional Durable Conversation Topic metadata may assist bounded conversation navigation or audit, but it is neither Evidence nor Learner Intelligence and cannot create a learner conclusion. It does not directly update Current State, Patterns, the Intelligence Card, or personalization.
 
-Likewise, Structured Segment State and conversation retrieval metadata may be
-compact, session-local, source-linked, and rebuildable conversational context.
-They may reference raw messages or complete Exchanges, but are not Candidate
-Evidence, Learning Evidence, Current Learning State, Learner Pattern, or
-Learner Intelligence. They cannot create learner conclusions or bypass the
-protected Raw Interaction → completed Segment semantic review →
-Session-authorized Validated Learning Event / Evidence path. Candidate metadata
-may assist this path but is not required.
+Likewise, Structured Segment State and conversation retrieval metadata are compact, session-local, source-linked, and rebuildable conversational context. They may reference raw messages or complete Exchanges, but are not Candidate Evidence, Learning Evidence, Current Learning State, Learner Pattern, or Learner Intelligence. They cannot create learner conclusions or bypass the protected Raw Interaction → completed Segment semantic review → Session-authorized Validated Learning Event / Evidence path. Candidate metadata may assist this path but is not required.
 
 ## 11.3 Current State Lifecycle
 
@@ -680,15 +672,9 @@ Some short-lived states may expire automatically when they are no longer relevan
 
 Old current-state information must not remain in runtime merely because it was once true.
 
-Resolution can occur through:
+Resolution can occur through direct counter-evidence, successful independent application, explicit loop closure, deterministic expiry policy, or replacement by newer state.
 
-- direct counter-evidence,
-- successful independent application,
-- explicit loop closure,
-- deterministic expiry policy for short-lived state,
-- replacement by a newer state.
-
-Resolved state remains available historically but is removed from active runtime intelligence.
+Resolved state remains historically available but is removed from active runtime intelligence.
 
 ---
 
@@ -724,18 +710,7 @@ The counts and timestamps are system-computed.
 
 ## 12.2 Pattern Identity
 
-Semantically equivalent descriptions must map to the same normalized pattern where possible.
-
-These should not become separate patterns:
-
-```text
-"benefits from breaking long word problems into steps"
-"decomposition helps on lengthy math word problems"
-```
-
-A stable `pattern_key` or normalized pattern taxonomy should be preferred over free-form text identity.
-
-The human-readable description may evolve without changing pattern identity.
+Semantically equivalent descriptions must map to the same normalized pattern where possible. A stable `pattern_key` or normalized taxonomy is preferred over free-form identity. Human-readable wording may evolve without changing identity.
 
 ---
 
@@ -753,23 +728,11 @@ cross-subject
 global
 ```
 
-Example progression:
-
-```text
-Equivalent Fractions
-    ↓ repeated in other fraction tasks
-Math representation context
-    ↓ repeated across multiple Math concepts
-Math subject pattern
-    ↓ repeated meaningfully in Science and other contexts
-Cross-subject / Global candidate
-```
-
-Generalization is never automatic merely because the wording sounds general.
+Generalization is never automatic because wording sounds general.
 
 > **Scope follows evidence. Evidence does not follow the desired scope.**
 
-A pattern may also shrink in scope if later evidence shows that the original generalization was too broad.
+A pattern may shrink if later evidence shows the original scope was too broad.
 
 ---
 
@@ -789,43 +752,12 @@ weakening
 resolved / superseded
 ```
 
-## 14.1 Candidate
-
-An emerging repeated signal that is not yet trusted enough for meaningful historical personalization.
-
-## 14.2 Active
-
-Enough relevant evidence exists for the pattern to be useful as a contextual teaching prior.
-
-## 14.3 Stable
-
-The pattern has remained meaningfully supported across sufficient time/context diversity to be treated as established learner intelligence.
-
-Stable does not mean permanent.
-
-## 14.4 Weakening
-
-Recent, relevant counter-evidence or improvement reduces the pattern's current usefulness.
-
-## 14.5 Resolved
-
-The pattern no longer describes Lina's current learning state sufficiently to remain in Current Intelligence.
-
-It is removed from the runtime card but remains historically available.
-
-## 14.6 Superseded
-
-A newer pattern more accurately explains the same area.
-
-Example:
-
-```text
-Old:
-Requires decomposition for long Math word problems.
-
-New:
-Generally handles long Math word problems independently; decomposition remains useful only when multiple irrelevant details are present.
-```
+- **Candidate:** emerging repeated signal not yet trusted for historical personalization.
+- **Active:** enough relevant evidence to be a useful contextual prior.
+- **Stable:** supported across sufficient time/context diversity; still not permanent.
+- **Weakening:** recent relevant counter-evidence/improvement reduces usefulness.
+- **Resolved:** no longer current enough for runtime Card; retained historically.
+- **Superseded:** a newer scoped pattern explains the area more accurately.
 
 ---
 
@@ -833,7 +765,7 @@ Generally handles long Math word problems independently; decomposition remains u
 
 Pattern strength/relevance is determined by deterministic policy, not free AI judgment.
 
-The initial policy must consider:
+The policy considers:
 
 ```text
 frequency
@@ -846,58 +778,9 @@ counter-evidence
 pattern scope
 ```
 
-Conceptually:
+Exact coefficients are calibration parameters rather than fixed truth in this specification.
 
-```text
-Pattern relevance = f(
-    frequency,
-    recency,
-    evidence quality,
-    context similarity,
-    context diversity,
-    counter-evidence
-)
-```
-
-The exact mathematical function and coefficients are calibration parameters, not fixed truth in this document.
-
-## 15.1 Recency
-
-New evidence generally carries more relevance for current personalization than old evidence.
-
-Old evidence remains historically valid but may have low current weight.
-
-## 15.2 Frequency
-
-Repeated evidence strengthens a pattern, but raw counts alone must never govern promotion.
-
-## 15.3 Context Diversity
-
-Repeated evidence across independent contexts is stronger than repeated evidence from near-identical tasks in one lesson.
-
-Example:
-
-```text
-3 signals in the same exercise set
-<
-3 comparable signals across different concepts/sessions
-```
-
-## 15.4 Counter-Evidence
-
-Recent strong counter-evidence may outweigh larger quantities of older evidence.
-
-Do not use simplistic arithmetic such as:
-
-```text
-5 old negative events - 4 new positive events = still negative
-```
-
-Time and quality matter.
-
-## 15.5 Evidence Quality
-
-Independent transfer should normally contribute more than heavily guided repetition, but the final mapping is deterministic and versioned.
+Recent strong counter-evidence may outweigh larger quantities of older evidence. Repeated near-identical evidence in one exercise set is weaker generalization support than comparable evidence across independent contexts.
 
 ---
 
@@ -905,23 +788,7 @@ Independent transfer should normally contribute more than heavily guided repetit
 
 Resolved patterns are absent from current runtime intelligence.
 
-If a new event resembles a resolved historical pattern:
-
-```text
-New meaningful signal
-       ↓
-Historical similarity trigger
-       ↓
-Relevant resolved pattern lookup
-       ↓
-Possible recurrence context
-       ↓
-Collect new evidence
-```
-
-A single new signal does not automatically reactivate the old pattern.
-
-Historical context informs interpretation; current evidence decides whether the pattern should return.
+If a new event resembles a resolved historical pattern, historical context may be inspected, but a single new signal does not automatically reactivate the old pattern. Fresh evidence decides whether it returns.
 
 ---
 
@@ -929,78 +796,25 @@ Historical context informs interpretation; current evidence decides whether the 
 
 ## 17.1 Session Lifecycle
 
-A session closes automatically after configurable inactivity.
-
-A short configurable grace window may allow Lina to return and continue the same session.
-
-The exact inactivity duration is an implementation calibration parameter.
+A session closes automatically after configurable inactivity plus grace. Exact timing is an implementation calibration parameter.
 
 ## 17.2 Learning Thread = Session-local Segment
 
-A Learning Thread is the session-local contiguous Segment; `thread_id` is that
-Segment identity. It is not a third entity. A Session may contain several
-Segments as Lina changes topics or intent naturally.
+A Learning Thread is the session-local contiguous Segment; `thread_id` is that Segment identity. It is not a third entity. A technical Session may contain several Segments as Lina changes topic or subject naturally.
 
-Example:
-
-```text
-Session
-├── Math / Adding Fractions
-├── Science / Why is the sky blue?
-└── Math / Homework continuation
-```
-
-Thread/Segment resolution is internal. Lina is not required to create a new
-chat manually when she changes topic. A return to the same topic after an
-intervening Segment creates a new Segment; it may reuse the same optional
-`conversation_topic_ref`.
-
-Events and evidence are associated with the relevant thread/context.
-
-A Durable Conversation Topic is optional Grade-scoped conversation-navigation
-metadata. It may help audit/context, but cannot be Evidence authority,
-personalization, a learner characteristic, curriculum authority, or Safety
-authority. Segment summaries, topic references, and aliases can never be the
-sole source for Evidence; raw `source_refs` (message IDs and asset/source refs
-where applicable) preserve lineage.
+A return to the same topic after an intervening Segment creates a new Segment. Optional Durable Conversation Topic may link navigation across Segments but is not Evidence, personalization, curriculum, or Safety authority.
 
 ## 17.3 Segment Completion and Candidate Capture
 
-A prior Segment becomes complete whenever governed CTX-03 transition policy
-successfully persists a new LearningSegment, regardless of whether the model
-relation was `NEW_SEGMENT` or `UNCERTAIN`. `CONTINUE` remains in the current
-Segment. Session closure completes the final Segment.
+A prior Segment becomes complete whenever the governed transition successfully persists a new LearningSegment; Session closure completes the final Segment.
 
-The primary Tutor call may emit hidden Candidate Event metadata alongside the student-facing response.
-
-Example:
-
-```json
-{
-  "meaningful_event": true,
-  "candidates": [
-    {
-      "type": "learning_attempt",
-      "concept_ref": "equivalent_fractions",
-      "signal": "needed_light_hint"
-    }
-  ]
-}
-```
-
-This avoids an additional event-extractor LLM call after every message. The
-hints remain provisional and are never the only route to intelligence.
+The primary Tutor call may emit Candidate Event metadata alongside the Student-facing response. This avoids an extra event-extractor call after every message. The hints remain provisional and are never the only route to intelligence.
 
 ## 17.4 Segment Learning Review and Session Intelligence Finalization
 
-Structural reviewability is the complete deterministic pre-review gate. A
-Segment is reviewable only when it is durably closed, has valid Session/Segment
-ownership lineage, and contains at least one persisted raw Student interaction
-assigned to that Segment. This gate rejects only structurally empty or invalid
-records; it must not determine whether learning meaning occurred or require a
-Candidate, Guided Check, TeachingMethod, TeachingMode, TeachingStrategy,
-Tutor response, concept, message length, event type, topic classification, or
-minimum Exchange count. Those are optional source context for semantic Review.
+Structural reviewability is the deterministic pre-review gate. A Segment is reviewable when it is durably closed, has valid Session/Segment ownership lineage, and contains at least one persisted raw Student interaction assigned to that Segment.
+
+This gate must not determine whether learning meaning occurred or require Candidate, Guided Check, TeachingMethod, Tutor response, concept, keyword, message length, or minimum Exchange count.
 
 ```text
 Closed structurally reviewable Segment
@@ -1011,77 +825,28 @@ Staged findings (zero is valid; no personalization update)
       ↓
 Session CLOSED + every structurally reviewable Segment accounted for
       ↓
-compatible review versions + provenance validation
+compatible Review versions + provenance validation
       ↓
 deterministic Session Intelligence Finalization
       ↓
 Validated Learning Events / Evidence / downstream activation
 ```
 
-Segment Review is semantic authority for the completed learning episode. Session
-Finalization is the durable activation authority: it is deterministic by
-default, makes no broad semantic Session call after Segment Reviews by default,
-and permits no partial activation.
+Segment Review is semantic authority for the completed learning episode. Session Finalization is durable activation authority: deterministic by default, no broad semantic Session call after Segment Reviews by default, and no partial activation.
 
-The expected Review set for Session Finalization is every closed Segment that
-satisfies this same structural-reviewability rule. Candidate, Guided Check,
-TeachingMethod, or Exchange-count presence must not change that set.
-
-Normal new-session context does not automatically load prior raw transcripts or
-archived Segments. Historical conversation lookup and semantic archive retrieval
-remain deferred on-demand work, not part of normal Tutor context.
-
-When a rubric logically requires authoritative historical comparison, such as
-retention, Segment Review may receive bounded structured anchors:
-`prior_evidence_id`, `concept_ref`, `prior_demonstration_state`,
-`prior_observed_at`, `elapsed_time`, and `reason_for_inclusion`. It does not
-receive the full Card, broad Pattern conclusions, a full prior Session
-transcript, or a free-form learner profile summary by default.
+When a rubric logically requires authoritative historical comparison such as retention, Segment Review may receive bounded structured anchors. It does not receive a full prior transcript, broad learner profile, or arbitrary historical memory dump.
 
 ## 17.5 Sessions Without Meaningful Learning
 
-Every session remains stored.
-
-If no meaningful learning/evidence/state change occurred:
-
-- keep the normal session record,
-- do not create unnecessary intelligence objects,
-- do not create a full learning card.
-
-A structurally reviewable Segment may still be reviewed and return
-`findings = []`; that valid semantic result does not create intelligence.
-
-If meaningful learning occurred, create an Intelligence Delta for that session.
+Every Session remains stored. A structurally reviewable Segment may validly return `findings=[]`; that result creates no unnecessary intelligence.
 
 ---
 
 # 18. Session Intelligence Delta
 
-Do not store a duplicate full Learner Intelligence Card after every meaningful session.
+The architecture need not persist a duplicate full Learner Intelligence Card after every Session. Historical change may instead be represented through compact deltas/processing lineage and authoritative State/Pattern generations.
 
-Store a compact delta such as:
-
-```json
-{
-  "session_id": "...",
-  "added_states": [],
-  "resolved_states": [],
-  "patterns_created": [],
-  "patterns_strengthened": [],
-  "patterns_weakened": [],
-  "patterns_resolved": [],
-  "important_learning_changes": []
-}
-```
-
-This creates a useful historical intelligence sequence without duplicating the entire current state.
-
-Periodic full snapshots may be created for:
-
-- important checkpoints,
-- debugging/reprocessing boundaries,
-- end of Grade,
-- explicitly configured periodic analysis.
+Any delta/snapshot mechanism remains derived and must preserve source authority and rebuildability.
 
 ---
 
@@ -1089,233 +854,98 @@ Periodic full snapshots may be created for:
 
 ## 19.1 Definition
 
-The card represents:
+The Card answers:
 
 > **What currently matters about Lina's learning for a better interaction now?**
 
-It is a compact materialized state derived from events, evidence, current states, and patterns.
+It is a compact runtime projection derived from authorized Current State and Patterns. It is not raw history, a complete Grade record, transcript summary, permanent profile, or arbitrary AI scoring table.
 
-It is not:
+## 19.2 Recommended Runtime Organization
 
-- raw history,
-- a complete Grade record,
-- a transcript summary,
-- a list of every concept,
-- a permanent personality profile,
-- a collection of arbitrary AI scores.
-
-## 19.2 Recommended Card Sections
+Conceptually the Card may surface compact entries such as:
 
 ```text
-CURRENT CONTEXT
-- active Grade
-- current school focus
-- active thread context when relevant
-
-CURRENT LEARNING STATE
-- active difficulty
-- active misconception
-- open learning loops
-- current retention concern
+RELEVANT CURRENT LEARNING STATE
+- active difficulty / misconception / open loop when relevant
 
 RELEVANT PATTERNS
-- active/stable high-value patterns
-- recent useful strategy patterns
+- active/stable evidence-supported patterns matching the current question/context
 
-RECENT CHANGES
-- growing independence
-- weakening old pattern
-- recently resolved state
+RECENT MEANINGFUL CHANGES
+- growing independence / weakening or resolved prior state when relevant
 
 TEACHING INTELLIGENCE
-- strategies that have recently helped
-- strategies with weak recent value
+- evidence-supported contextual method/strategy outcomes when relevant
 ```
 
-The card need not expose these sections literally to Lina or the Parent UI; they define internal intelligence organization.
+**Current School Focus is not a Card authority.** Relevant current subject, current question, or conversational context may guide selection, but stale school-position metadata must not control the Card or Tutor.
 
 ## 19.3 Card Compaction
 
-The Current Intelligence Card must have a configurable size/token budget.
-
-When over budget, the system prioritizes:
-
-1. current active state,
-2. current subject/context relevance,
-3. recent high-value patterns,
-4. stable relevant patterns,
-5. important recent changes.
-
-The system drops or excludes from runtime:
-
-- resolved patterns,
-- obsolete state,
-- unrelated subject details,
-- low-relevance historical entries,
-- redundant descriptions.
-
-Historical records remain elsewhere.
+Card size is bounded. Prioritize current active state, direct current-question relevance, recent high-value patterns, stable relevant patterns, and important changes. Exclude resolved, obsolete, unrelated, or redundant entries from runtime while preserving history elsewhere.
 
 ## 19.4 Card Update
 
-The card is refreshed only after successful Session intelligence
-activation/finalization, not after every message. Staged Segment findings do
-not enter the Card.
+The Card is built/selected from Session-authorized intelligence only. Staged Segment findings do not enter it before Session finalization.
 
 ---
 
 # 20. Runtime Intelligence Selection
 
-Even the Current Intelligence Card is not automatically injected in full into every Tutor turn.
-
-The runtime flow is:
+Even the Card is not injected in full into every Tutor turn.
 
 ```text
-Learner Intelligence Card
+Authorized Current State / Patterns
         ↓
-Context Selector
+Learner Intelligence Card projection
+        ↓
+Question/context relevance selection
         ↓
 Relevant Intelligence Slice
         ↓
 Tutor
 ```
 
-A Math fraction question should not receive unrelated Science-specific patterns unless a pattern is genuinely cross-subject/global and relevant.
-
-This is both an accuracy and cost requirement.
+A substantive unmatched current question should not inherit stale intelligence merely because it is recent. Current demonstrated behavior remains higher authority than historical personalization.
 
 ---
 
 # 21. Tutor Consumption Rules
 
-The Tutor uses learner intelligence as contextual guidance, not mandatory behavior.
-
 Priority order:
 
 ```text
-1. What Lina is demonstrating right now
+1. What Lina demonstrates now
 2. Current Learning State
-3. Relevant recent patterns
-4. Relevant stable historical patterns
-5. Curriculum context
-6. Generic teaching strategy
+3. Relevant recent intelligence
+4. Relevant stable Patterns
+5. Curriculum/reference context
+6. Generic teaching policy
 ```
-
-## 21.1 Current Behavior Overrides History
 
 > **Never personalize away demonstrated independence.**
 
-If a historical pattern says Lina often needs decomposition, but she is currently solving the problem independently, the Tutor must not intervene merely because the pattern exists.
-
-## 21.2 Patterns Are Priors, Not Rules
-
-A pattern may make one strategy more likely to be useful. It does not force that strategy.
-
-## 21.3 Personalization Should Be Felt, Not Announced
-
-The Tutor should not routinely say:
-
-> "Because you usually need visual explanations..."
-
-It should simply adapt naturally:
-
-> "Let's try looking at it another way."
-
-Parent/Admin may inspect why the adaptation occurred.
+Patterns are priors, not mandatory Tutor rules. Personalization should be felt through useful support/representation rather than announced as a learner label.
 
 ---
 
 # 22. Teaching Strategy and Method Intelligence
 
-Teaching strategies are tracked as contextual interventions.
+Teaching strategies are contextual interventions. TeachingMethod records the pedagogical representation used by that intervention and is distinct from support strategy.
 
-Example strategy record:
+The primary Tutor call's method choice or prior-method relation is not outcome Evidence. Repeated source-grounded Student outcomes may create `strategy_effectiveness` Patterns, but these must remain scoped to supported concept/context and never become fixed learning-style labels.
 
-```text
-strategy: concrete_fraction_representation
-scope: equivalent_fractions
-used_after: two unsuccessful conceptual attempts
-outcome: enabled independent follow-up
-```
-
-Repeated outcomes may create patterns such as:
-
-> Concrete representation has often helped when equivalent fractions are initially unclear.
-
-Do not convert this into:
-
-> Lina is a visual learner.
-
-Strategy intelligence may weaken or resolve over time as Lina develops.
-
-TeachingMethod records the pedagogical representation used by that intervention; it is not a synonym for TeachingStrategy. The primary Tutor call's semantic method choice or prior-method relation is not outcome Evidence. Repeated source-grounded outcomes may create `strategy_effectiveness` patterns, but they must stay scoped to the supported concept/context, such as “Concrete representation has often helped when equivalent fractions were initially unclear.” They must never become a fixed learning-style label. Historical method influence on later ranking is a later evidence-dependent capability, not an inference from a single current interaction.
+Historical method influence on later ranking is an evidence-dependent capability; do not infer stable preferences from a single interaction.
 
 ---
 
 # 23. Mastery, Confidence & Other Decision Views
 
-## 23.1 Governing Principle
+Mastery, evidence confidence, retention, independence, and strategy-effectiveness views are derived and versioned.
 
-> **Mastery is a decision view over evidence, not learner memory.**
+Parent-facing states may use interpretable categories such as `Needs Support`, `Developing`, `Demonstrated`, `Strong`, and evidence-confidence `Low / Medium / High`.
 
-The same applies to evidence confidence and retention views.
-
-The system may change its decision algorithm later without losing historical truth.
-
-## 23.2 Parent-Facing Mastery States
-
-Initial recommended vocabulary:
-
-```text
-Needs Support
-Developing
-Demonstrated
-Strong
-```
-
-Exact mapping from evidence to these states belongs to a versioned decision policy.
-
-Avoid displaying false precision such as:
-
-```text
-Mastery = 83.47%
-```
-
-## 23.3 Evidence Confidence
-
-Recommended parent-facing states:
-
-```text
-Low
-Medium
-High
-```
-
-Confidence should be computed from factors such as:
-
-- amount of meaningful evidence,
-- recency,
-- evidence quality,
-- context diversity,
-- independence,
-- consistency/counter-evidence.
-
-It does not describe Lina's confidence. It describes the system's confidence in the decision view.
-
-## 23.4 Retention View
-
-Recommended states may include:
-
-```text
-Not Enough Evidence
-Needs Revisit
-Developing Stability
-Stable
-```
-
-Again, the mapping is derived and versioned.
-
-## 23.5 Historical Understanding vs Current Recall
+Avoid pseudo-precision such as `83.47% mastery` as if scientifically exact.
 
 The system must be able to represent:
 
@@ -1325,333 +955,152 @@ Current recall: needs refresh
 Retention: needs strengthening
 ```
 
-rather than rewriting history as if the original understanding never occurred.
+rather than rewriting history as if prior learning never occurred.
 
 ---
 
 # 24. Parent Challenges & Re-Validation
 
-The Parent/Admin may challenge an intelligence conclusion but does not manually overwrite it.
+Parent/Admin may challenge an intelligence conclusion but does not manually overwrite it.
 
-Flow:
-
-```text
-Parent challenge/hypothesis
-        ↓
-Review request
-        ↓
-Relevant evidence inspection
-        ↓
-Optional future targeted learning opportunity
-        ↓
-New evidence
-        ↓
-Pattern/state updated normally
-```
-
-Example:
-
-> Parent: "I think this reasoning pattern may only be true in fractions."
-
-The system may mark the interpretation for scope re-validation rather than directly changing the learner profile to the parent's opinion.
+A challenge may trigger Evidence inspection, scope review, or a future targeted learning opportunity. New Evidence updates state through the normal governed path.
 
 ---
 
 # 25. Grade Transition Intelligence
 
-Grade transition is simple and parent/admin controlled.
+Grade transition is Parent/Admin-controlled. When a new Grade is activated, carry a compact transition view of important stable/unresolved intelligence rather than the complete previous Grade runtime/history.
 
-## 25.1 Trigger
-
-A new Grade becomes active when the Parent/Admin uploads/activates the new Grade's books/content.
-
-The system does not need to infer that Lina moved to a new Grade.
-
-## 25.2 Transition Card
-
-When moving from Grade 5 to Grade 6, carry a **compact transition card**, not the complete Grade 5 learner state.
-
-It may include:
-
-```text
-stable important learning patterns
-important unresolved foundational gaps
-stable successful teaching strategies
-important retention characteristics
-important extended-learning capabilities
-important unresolved observations
-```
-
-It should not contain:
-
-- every Grade 5 concept,
-- every mastery view,
-- every session,
-- every resolved temporary difficulty,
-- the full Intelligence Card history.
-
-Grade 6 is governed primarily by Grade 6 books and Grade 6 interactions.
-
-If a Grade 6 lesson exposes an old foundational gap, the Tutor explains/refreshed it naturally and continues the Grade 6 lesson.
-
-No complex cross-grade prerequisite engine is required in the initial architecture.
+The next Grade is primarily governed by its own current interaction and Grade context. Missing prior foundations can be refreshed naturally without requiring a universal cross-grade prerequisite engine.
 
 ---
 
 # 26. Historical Intelligence & Archive
 
-The system keeps historical data for analysis, traceability, and possible future reprocessing.
+Historical data remains available for traceability, longitudinal analysis, reprocessing, and investigating recurrence. It is **not normal runtime context by default**.
 
-The history may contain:
-
-- raw sessions,
-- messages,
-- voice transcripts,
-- original student images,
-- events,
-- evidence,
-- session intelligence deltas,
-- pattern history,
-- resolved patterns,
-- periodic snapshots,
-- tutor adaptation events,
-- Grade transition cards.
-
-Historical information is **not runtime context by default**.
-
-It can be queried later for:
-
-- longitudinal analysis,
-- auditing a conclusion,
-- reprocessing with improved rubrics,
-- investigating possible recurrence of a resolved pattern.
+Normal new-session Tutor context does not inject prior-session raw transcripts or archived Segments. Historical lookup/archive semantic retrieval remains a separately gated seam.
 
 ---
 
 # 27. Multimodal Evidence Rules
 
-Multimodal work is a first-class evidence source.
+Multimodal work is an approved first-class Evidence source when the capability is implemented and authorized.
 
-## 27.1 Text
+- **Text:** original Lina text is raw source.
+- **Voice:** transcript is retained; raw audio is not retained under current approved direction after successful STT.
+- **Handwriting/drawing/photo:** original image remains source; Vision interpretation is derived.
+- **Ambiguity:** if uncertain interpretation can change Evidence meaning, clarify rather than guess.
+- **Annotation/reconstruction:** derived teaching artifacts never replace original Student work.
 
-Original Lina text is raw source.
-
-A logical Multimodal Turn may combine text, speech transcript, image/assets,
-raw asset references, and derived interpretation. The whole Turn may provide
-conversation context, while original raw records remain source authority.
-
-## 27.2 Voice
-
-Current policy:
-
-```text
-Audio
-→ STT
-→ Transcript stored
-→ Raw audio not retained
-```
-
-The transcript becomes the stored source record for current voice interactions.
-
-No speaking/pronunciation assessment is assumed.
-
-## 27.3 Handwritten Work
-
-The original uploaded image is the evidence source.
-
-Vision interpretation is derived.
-
-If the important content is materially ambiguous, the Tutor should clarify before treating the ambiguous interpretation as strong evidence.
-
-## 27.4 Drawings
-
-Drawings may demonstrate:
-
-- conceptual relationships,
-- causal understanding,
-- missing components,
-- misconceptions,
-- model/diagram understanding.
-
-The system evaluates learning content, not artistic quality.
-
-## 27.5 Annotated Original
-
-Default visual response priority:
-
-```text
-Understand original
-→ annotate original image first
-→ continue teaching
-```
-
-The annotated image is a derived teaching artifact.
-
-It must never overwrite or replace the original student work as evidence.
-
-## 27.6 Clean Reconstruction
-
-If annotation is insufficient, the system may produce:
-
-- clean SVG,
-- HTML visual,
-- interactive learning artifact,
-- simplified reconstructed diagram.
-
-The reconstruction is a derived teaching artifact and cannot be treated as if Lina created it.
+Current multimodal production capability remains sequencing-gated; these rules govern it when promoted.
 
 ---
 
 # 28. Interactive Artifact Evidence
 
-Learning artifacts may produce meaningful events when Lina's interaction has educational significance.
+Meaningful artifact interaction may become a learning occurrence when it demonstrates understanding, correction, transfer, or other approved learning meaning.
 
-Examples:
-
-- correctly aligning equivalent fractions,
-- placing an item correctly on a number line,
-- assembling a science process in the correct sequence,
-- adjusting a variable and explaining the observed effect,
-- correcting a visual model after feedback.
-
-Do not record meaningless interaction telemetry as learner intelligence.
-
-Examples that normally do not become evidence by themselves:
-
-- hovering,
-- random clicking,
-- opening the canvas,
-- dragging without an educational outcome.
-
-Each artifact should expose meaningful semantic interaction events rather than raw UI noise.
+Opening, hovering, random clicking, or raw drag telemetry is not Evidence by itself. Artifact systems should emit semantic interaction events rather than treating UI noise as learner intelligence.
 
 ---
 
 # 29. Traceability
 
-Every important intelligence conclusion must be traceable downstream to evidence and upstream to original interaction sources.
-
-Conceptually:
+Every important intelligence conclusion must be traceable downstream to Evidence and upstream to original interaction sources.
 
 ```text
-Pattern
+Pattern / Current State / Decision View
   ↓
 Evidence refs
   ↓
 Learning Event
   ↓
-Session / Message / Student Image / Artifact Interaction
+Segment Review Finding / processing lineage
+  ↓
+Raw Student interaction / original asset
 ```
 
-The Parent/Admin inspection path should be able to answer:
+Parent/Admin inspection should eventually answer:
 
 > **Why does the system believe this?**
 
-without requiring a developer to manually search the database.
+without requiring a developer to manually reconstruct lineage.
 
 ---
 
 # 30. Processing Versioning
 
-Derived intelligence must record how it was produced.
-
-At minimum, processing lineage must support:
+Derived intelligence records how it was produced. Lineage supports, as relevant:
 
 ```text
 processing_run_id
-model/provider
+provider/model
 prompt_version
 schema_version
 segment_review_schema_version
 segment_review_prompt_version
 segment_review_rubric_version
 segment_review_policy_version
-session_finalization_policy_version
+session_finalization_pipeline/policy
 evidence_rubric_version
 pattern_policy_version
 decision_policy_version
 timestamp
 ```
 
-The implementation may normalize these through shared processing-run records rather than duplicating every field on every table.
-
-The requirement is lineage, not a specific schema.
+The requirement is complete lineage, not a specific duplication strategy.
 
 ---
 
 # 31. Reprocessing & Rebuildability
-
-The architecture must support rebuilding intelligence from historical source data.
 
 Canonical rebuild path:
 
 ```text
 Raw Interactions
       ↓
-enumerate completed Segments
+enumerate completed/reviewable Segments
       ↓
 re-run/reuse Segment Reviews under selected versions
       ↓
-stage complete Session Evidence generation
+stage complete Session generation
       ↓
-atomic authority activation
+atomic Session authority activation
       ↓
-Pattern Policy vN
+Current State / Patterns / Decision Views
       ↓
-Current State / Patterns
-      ↓
-Learner Intelligence Card
-      ↓
-Decision Views
+on-demand Learner Intelligence Card
 ```
 
-Use cases:
-
-- evidence rubric improved,
-- pattern rules improved,
-- model changed,
-- extraction prompt improved,
-- a systematic classification error is discovered,
-- a historical period needs re-analysis.
-
-The system should support bounded reprocessing by date/Grade/session range where practical rather than requiring full-history rebuild every time.
-
-Reprocessing creates versioned derived outputs and preserves the original raw source.
+Reprocessing may be bounded by date/Grade/Session scope. Prior generations remain auditable. Partial selected-scope failure must not replace a coherent previous authority.
 
 ---
 
 # 32. Observability & Human Audit
 
-The system is expected to improve through real use and review.
-
-The product owner and development process should be able to inspect:
+The system improves through real use and review. Product/development audit should be able to inspect:
 
 - raw transcript/source interaction,
-- Candidate Events,
-- Segment review IDs and Segment IDs,
-- staged findings, review model/version, and review failures,
-- which reviews composed an activated Session generation,
-- validated events,
-- evidence outputs,
-- pattern changes,
-- current card changes,
-- Tutor strategy used,
-- Tutor model call,
-- prompt/model version,
-- input/output tokens,
-- latency,
-- estimated API cost,
-- processing errors,
+- Candidate metadata,
+- Segment and Segment Review lineage,
+- staged findings and Review failures,
+- Session authority/finalization generation,
+- Events/Evidence,
+- Current State/Pattern changes,
+- Card selection,
+- Tutor teaching decisions,
+- AI execution/provider/model/usage/cost,
 - reprocessing history.
 
-The governing development loop is:
+Development loop:
 
 ```text
 Real usage
    ↓
 Observe
    ↓
-Audit against agreed rubric
+Audit against governing rubric
    ↓
 Identify systematic error
    ↓
@@ -1662,272 +1111,122 @@ Reprocess relevant history
 Compare result
 ```
 
-The goal is not to guarantee that AI never produces an incorrect event or evidence item.
-
-The goal is:
-
 > **No important intelligence should be untraceable, irreparable, or impossible to rebuild.**
 
 ---
 
 # 33. Human Audit Standard
 
-When reviewing a sample of generated intelligence, evaluators should compare the system against this specification rather than personal intuition alone.
+For reviewed Event/Evidence items, ask:
 
-For each reviewed event/evidence item, ask:
-
-1. Did a meaningful learning event actually occur?
-2. Did the event description stay contextual rather than generalize about Lina?
-3. Does each evidence dimension match the approved rubric definition?
+1. Did meaningful learning actually occur?
+2. Did description remain contextual rather than generalize about Lina?
+3. Does each Evidence dimension match the approved rubric?
 4. Was support/independence interpreted correctly?
-5. Was transfer truly tested or merely repeated practice?
-6. Was self-correction genuinely self-initiated or prompted?
-7. Is a retention event genuinely delayed enough to represent retention under current policy?
-8. Did the event create/update a Current State appropriately?
-9. Did the Pattern Engine apply deterministic policy correctly?
-10. Is the resulting personalization useful without becoming a rigid label?
+5. Was transfer truly tested?
+6. Was self-correction self-initiated or prompted?
+7. Is retention genuinely delayed/authorized by historical lineage?
+8. Did Current State update appropriately?
+9. Did deterministic Pattern policy apply correctly?
+10. Is resulting personalization useful without becoming rigid?
 
-Audit disagreements should lead to rubric/policy refinement when they reveal systematic ambiguity.
+Systematic audit disagreements should refine rubric/policy rather than create ad-hoc exceptions.
 
 ---
 
 # 34. Intelligence Invariants
 
-These rules are non-negotiable unless explicitly changed by the project owner.
+These rules are non-negotiable unless Product Owner explicitly changes them:
 
-1. **Raw learner work remains the historical source.**
-2. **Derived intelligence must be traceable and rebuildable.**
-3. **A Candidate Event is not Evidence.**
-4. **A single ordinary event does not create a stable learner pattern.**
-5. **Current Learning State and Learner Patterns are different constructs.**
-6. **Current behavior outranks historical personalization.**
-7. **Patterns are teaching priors, not mandatory rules.**
-8. **Patterns begin at the narrowest scope supported by evidence.**
-9. **Pattern generalization requires evidence across wider contexts.**
-10. **Old patterns may weaken, resolve, and disappear from Current Intelligence.**
-11. **Resolved patterns remain historical and may be inspected if similar signals recur.**
-12. **Retention failure does not erase previous demonstrated learning.**
-13. **Mastery and confidence are derived Decision Views, not source truth.**
-14. **Do not store arbitrary AI-generated percentages as learner facts.**
-15. **Do not create psychological, personality, intelligence, or learning-style labels.**
-16. **Teaching-strategy effectiveness is context-specific until evidence supports broader scope.**
-17. **The Tutor may emit Candidate Events but does not directly declare stable patterns.**
-18. **Frequency, recency, weighting, lifecycle, and scope promotion are governed by deterministic policy.**
-19. **Normal conversation remains raw history and does not automatically enter Intelligence.**
-20. **Multimodal AI reconstructions never replace Lina's original work as evidence.**
-21. **Only meaningful artifact interactions become learning evidence.**
-22. **The Current Intelligence Card must remain compact and relevance-driven.**
-23. **Full historical intelligence is not injected into normal Tutor context.**
-24. **Grade transition carries a compact intelligence card, not the previous Grade's full state.**
-25. **No irreversible AI judgment is allowed in the Learning Intelligence architecture.**
-26. **TeachingMethod selection/use is not evidence of effectiveness; an observable Student outcome and persisted project-owned method lineage are required.**
-27. **A Learning Thread / `thread_id` is the session-local Segment identity; its metadata does not replace raw message or asset lineage.**
-28. **Durable Conversation Topic and Segment metadata are navigation context only and create no learner conclusion, Evidence, personalization, Safety, or curriculum authority.**
-29. **Normal Tutor context does not inject prior-session raw history or automatic historical semantic archive retrieval.**
-30. **Segment Review is semantic authority for completed learning episodes; Session remains durable activation authority.**
-31. **Staged Segment findings are not Learner Intelligence, and no partial Session intelligence activation is allowed.**
-32. **Candidate Events are optional provisional hints; no second learner-memory/counter system is authorized.**
+1. Raw learner work remains historical source authority.
+2. Derived intelligence is traceable and rebuildable.
+3. Candidate Event is not Evidence.
+4. A single ordinary event does not create a stable Pattern.
+5. Current State and Learner Patterns are distinct.
+6. Current behavior outranks historical personalization.
+7. Patterns are teaching priors, not mandatory rules.
+8. Patterns begin at narrowest evidence-supported scope.
+9. Pattern generalization requires wider-context Evidence.
+10. Patterns may weaken/resolve and leave runtime while remaining historical.
+11. Retention failure does not erase prior demonstrated learning.
+12. Mastery/confidence are derived Decision Views, not source truth.
+13. Do not store arbitrary AI percentages as learner facts.
+14. No psychological/personality/intelligence/fixed learning-style labels.
+15. TeachingMethod selection/use is not effectiveness Evidence.
+16. Tutor may emit Candidate metadata but does not directly declare stable Patterns.
+17. Frequency, recency, weighting, lifecycle, and scope promotion are deterministic/versioned.
+18. Normal conversation remains raw history and does not automatically become Intelligence.
+19. Multimodal AI reconstruction never replaces Lina's original work.
+20. Only meaningful artifact interactions become Evidence.
+21. Card stays compact and relevance-driven.
+22. Full historical intelligence/transcripts are not injected into normal Tutor context.
+23. Learning Thread / `thread_id` is session-local Segment identity.
+24. Durable Conversation Topic and Segment metadata are navigation/context only, not learner/Safety/curriculum authority.
+25. Segment Review is semantic authority for completed learning episodes.
+26. Session Finalization is durable activation authority; no partial activation.
+27. Candidate metadata is optional provisional context; no second learner-memory system is authorized.
+28. Current School Focus is not an active learning-path or Card authority.
+29. School relationship and Broad Subject are separate; absent school source is `UNKNOWN`, not automatically `EXTENDED`.
+30. No second normal-turn classifier/summarizer/evidence call is introduced without explicit Product Owner approval and measured need.
 
 ---
 
 # 35. Open Calibration Parameters
 
-The following are intentionally **not fixed** until real Lina usage provides data.
+The following remain configurable/versioned and should evolve from real usage rather than be guessed permanently:
 
-They must be configurable/versioned rather than hardcoded across business logic.
+- Pattern support/promotion/diversity/recency/counter-evidence thresholds.
+- Current State expiry/resolution windows.
+- Session inactivity/grace and operational review capacity.
+- Card entry/character budgets and relevance policy.
+- Decision-view mappings.
+- Evidence-quality weighting.
+- Retention elapsed-time rules and authoritative-anchor requirements.
 
-## 35.1 Pattern Parameters
-
-- minimum support before `candidate → active`,
-- requirements for `active → stable`,
-- evidence diversity threshold,
-- recency decay curve,
-- counter-evidence strength,
-- weakening threshold,
-- resolution threshold,
-- recurrence lookup threshold,
-- scope-promotion requirements.
-
-## 35.2 Current State Parameters
-
-- expiry by state type,
-- resolution rules,
-- recent-strategy usefulness window,
-- open-loop persistence rules.
-
-## 35.3 Session Parameters
-
-- inactivity timeout,
-- grace window,
-- structural reviewability rule (not semantic eligibility),
-- Segment review capacity,
-- max staged findings per Segment,
-- Session finalization completeness rules,
-- review cost thresholds.
-
-## 35.4 Intelligence Card Parameters
-
-- target token/size budget,
-- maximum active pattern count,
-- maximum recent changes,
-- ranking/compaction policy.
-
-## 35.5 Decision View Parameters
-
-- evidence-to-mastery mapping,
-- evidence-confidence derivation,
-- retention-view mapping,
-- treatment of incomplete evidence.
-
-## 35.6 Evidence Quality Parameters
-
-- relative weight of independent vs guided performance,
-- relative value of transfer,
-- delayed evidence weighting,
-- evidence-quality mapping from support/novelty/challenge.
-
-These parameters are expected to evolve through observability, audit, and real use.
+These are calibration parameters, not hidden learner truth.
 
 ---
 
-# 36. Initial Validation Scenarios
+# 36. Initial / Regression Validation Scenarios
 
-The implementation should support a compact set of scenario tests against this specification.
+The subsystem should preserve scenario coverage for:
 
-## Scenario A — Repeated Misconception
-
-Lina makes a similar conceptual error across multiple relevant interactions.
-
-Expected:
-
-```text
-meaningful events created
-→ current misconception may become active
-→ repeated evidence may create candidate pattern
-→ Tutor adapts
-→ later correction/resolution updates state and pattern normally
-```
-
-## Scenario B — Fast Understanding
-
-Lina demonstrates understanding quickly and independently.
-
-Expected:
-
-```text
-strong current evidence
-→ no unnecessary repetition
-→ optional deeper/transfer task
-→ independence evidence captured
-```
-
-## Scenario C — Text Fails, Visual Helps
-
-Text explanation is unsuccessful. Interactive/visual representation helps and Lina later applies the concept independently.
-
-Expected:
-
-```text
-strategy outcome evidence
-→ possible narrow strategy-effectiveness pattern
-→ no "visual learner" label
-```
-
-## Scenario D — Old Difficulty Resolves
-
-An old active pattern is followed by repeated strong recent independent successes.
-
-Expected:
-
-```text
-old pattern weakens
-→ resolves/supersedes when policy threshold is met
-→ leaves Current Intelligence Card
-→ remains historical
-```
-
-## Scenario E — Retention Failure
-
-Lina previously demonstrated a concept and later cannot recall it after meaningful elapsed time.
-
-Expected:
-
-```text
-prior understanding remains historical truth
-+ retention_failure evidence
-+ current revisit need
-```
-
-Not:
-
-```text
-old mastery erased
-```
-
-## Scenario F — Drawing/Handwriting Evidence
-
-Lina submits original handwritten/drawn work.
-
-Expected:
-
-```text
-original stored
-→ vision interpretation derived
-→ evidence linked to original
-→ annotation/reconstruction stored separately
-```
-
-## Scenario G — Multi-Thread Session
-
-One session contains Math, Science exploration, then Math again.
-
-Expected:
-
-```text
-one technical session
-→ multiple learning threads
-→ events attached to correct thread/subject
-→ no cross-topic evidence contamination
-```
-
-## Scenario H — Grade Transition
-
-Parent/Admin activates Grade 6 books.
-
-Expected:
-
-```text
-Grade 6 becomes active
-→ Grade 5 remains archive
-→ compact transition intelligence available
-→ Grade 6 learning is driven by Grade 6 books/context
-```
+- repeated misconception with later correction/counter-evidence,
+- fast independent understanding,
+- text fails / another representation helps without creating a learning-style label,
+- old difficulty weakens/resolves,
+- retention failure without rewriting prior learning,
+- future drawing/handwriting Evidence preserving original source,
+- multi-Subject/Segment Session without Evidence contamination,
+- Grade transition using compact intelligence,
+- Candidate-free raw-Segment-supported learning findings,
+- irrelevant historical intelligence exclusion,
+- current behavior overriding prior personalization,
+- reprocessing with atomic authority replacement.
 
 ---
 
-# 37. Definition of Done for the Learning Intelligence Core
+# 37. Implemented Core Status and Remaining Real-Use Validation
 
-The Learning Intelligence core is ready for real Lina use when all of the following are true:
+The Learning Intelligence core has passed Full-System Acceptance at the code/technical system level under the project's recorded evidence labels. The accepted implementation includes:
 
-1. Raw interaction sources are retained according to project policy.
-2. The Tutor can emit optional provisional Candidate hints without a separate extractor call per message.
-3. Every closed Segment with valid lineage and persisted Student raw interaction
-   is reviewed asynchronously after governed completion; Session closure
-   completes the final Segment.
-4. Deterministic Session Finalization can produce structured validated events and
-   Evidence only after every structurally reviewable Segment Review is complete.
-5. Evidence follows the approved categorical rubrics.
-6. Current Learning State is distinct from long-term Patterns.
-7. Pattern frequency, recency, counter-evidence, scope, and lifecycle are deterministic and versioned.
-8. Patterns can weaken and resolve rather than accumulate permanently.
-9. The Current Intelligence Card remains compact.
-10. Tutor context receives only relevant intelligence.
-11. Parent/Admin can inspect why an important conclusion exists.
-12. Mastery/confidence views can be recalculated without rewriting historical evidence.
-13. Historical raw interactions can be reprocessed with a newer rubric/policy.
-14. AI processing lineage and token/API usage are observable.
-15. Multimodal original work remains distinct from AI annotations/reconstructions.
-16. The first Math vertical slice demonstrates that intelligence from one meaningful session can improve a later Tutor interaction without loading the full old transcript.
+1. retained raw interaction sources according to project policy;
+2. optional same-primary-call Candidate metadata;
+3. structurally reviewable completed Segments;
+4. asynchronous Segment Learning Review;
+5. strict source/provenance validation;
+6. staged findings that are inactive before Session authorization;
+7. deterministic Session Finalization;
+8. Session-authorized Events/Evidence;
+9. Current State and deterministic Pattern lifecycle;
+10. compact relevant Card projection;
+11. later Tutor consumption of relevant intelligence in technical acceptance paths;
+12. versioned reprocessing and authority replacement;
+13. AI execution lineage and usage observability.
+
+This acceptance must not be overstated. **Stable recurring Lina use, the complete naturally recurring cross-session Lina loop, and longitudinal personalization across multiple real Lina sessions remain validation work.** Limited real Lina interaction has occurred, but it is not equivalent to longitudinal validation.
+
+Parent inspectability and deferred multimodal/product expansion are separate product-loop/capability horizons; their incompleteness does not mean the Learning Intelligence architecture itself is “implementation pending.”
 
 ---
 
@@ -1935,43 +1234,23 @@ The Learning Intelligence core is ready for real Lina use when all of the follow
 
 ## `PROJECT_REFERENCE.md`
 
-Defines:
+Defines stable product intent, user roles, learning philosophy, Tutor architecture, content/RAG direction, multimodal/artifact principles, Grade behavior, safety principles, product capability classification, and protected overall architecture.
 
-- product intent,
-- user roles,
-- learning philosophy,
-- Tutor architecture,
-- Content/Docling/RAG direction,
-- multimodal interaction,
-- interactive learning artifacts,
-- Grade behavior,
-- child safety and parent boundaries,
-- overall architecture.
-
-This document must remain consistent with it.
+This specification must remain consistent with it.
 
 ## `IMPLEMENTATION_PLAN.md`
 
-Will define:
-
-- implementation phases,
-- concrete service/module boundaries,
-- schema implementation choices,
-- dependencies,
-- build order,
-- testing strategy,
-- decision gate,
-- what to build now vs later.
+Defines implementation direction, concrete service/module boundaries, dependencies, sequencing principles, testing strategy, and deferred complexity. Current execution state belongs in `PROJECT_STATE.md` / `TASKS.md`, not in this specification.
 
 ## `CHILD_SAFETY_POLICY.md`
 
-Will define:
-
-- non-overridable child-safety baseline,
-- age-appropriate handling requirements,
-- enforcement of Parent Learning Boundaries.
+Defines non-overridable child-safety baseline, age-appropriate handling, and Parent Learning Boundary semantics/enforcement.
 
 Learning Intelligence must not create or preserve prohibited psychological/personality inference merely because such information could theoretically be extracted.
+
+## `LEARNING_PRODUCT_ROADMAP.md`
+
+Defines approved product-evolution sequencing and capability gates. A roadmap item does not become executable until explicitly promoted.
 
 ---
 
@@ -1979,8 +1258,8 @@ Learning Intelligence must not create or preserve prohibited psychological/perso
 
 The subsystem should be judged by this question:
 
-> **Can we explain what the system currently believes about Lina's learning, show the evidence that led there, observe how that belief changes over time, and rebuild it when our analysis improves?**
+> **Can we explain what the system currently believes about Lina's learning, show the Evidence that led there, observe how that belief changes over time, and rebuild it when our analysis improves?**
 
 If yes, the Learning Intelligence architecture is working as intended.
 
-If the system produces conclusions that cannot be traced, reviewed, recalculated, or corrected from the learning history, the implementation has violated this specification.
+If the system produces conclusions that cannot be traced, reviewed, recalculated, or corrected from learning history, the implementation has violated this specification.
