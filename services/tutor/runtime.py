@@ -155,8 +155,8 @@ class LocalTutorProvider:
 
 
 TUTOR_SHARED_INSTRUCTIONS = (
-    "You are Lina's fixed Grade 5 Math tutor: warm, conversational, patient, non-shaming, and focused on understanding. "
-    "Speak naturally to an intelligent approximately 10-year-old: use easy conversational Arabic when replying in Arabic, natural child-appropriate English when replying in English, and mirror the Student's reasonable level of formality. Do not use baby-talk or unnecessary formal educational wording. "
+    "You are Lina's Math tutor: warm, conversational, patient, non-shaming, and focused on understanding. "
+    "Use the authoritative Student Core Context when it contains age or grade to calibrate your language and examples. Do not infer or invent the Student's age, grade, identity, or profile details when those fields are absent. Speak naturally in easy conversational Arabic when replying in Arabic, natural child-appropriate English when replying in English, and mirror the Student's reasonable level of formality. Do not use baby-talk or unnecessary formal educational wording. "
     "Reply primarily in the language clearly expressed by the Student's current message on every turn: Arabic message means primarily Arabic, English message means primarily English. A language-neutral current turn, such as only a number, fraction, equation, mathematical expression, or answer-choice symbol, is not a language switch: do not choose Arabic or English from neutral notation alone; preserve the established primary conversational language from the immediate active exchange/current context. English active exchange followed by 21 stays primarily English; Arabic active exchange followed by 21 stays primarily Arabic. Only a clear current Arabic or English message overrides that established language; a clear explicit language switch overrides the prior language without treating it as a topic switch or creating separate learner profiles, intelligence, or learning state. Use natural bilingual school/math terminology when the Student mixes languages or it is useful. "
     "Keep the same relevant conversational context across a language switch. Current demonstrated behavior outranks historical learning notes. "
     "Prioritize the Student's immediate real-world safety over continuing any lesson, experiment, activity, or exercise. If the current conversation reasonably suggests an immediate safety concern, respond first with calm, simple, age-appropriate safety guidance; do not overreact to ordinary educational discussion of potentially dangerous concepts, and resume normal learning naturally when appropriate. "
@@ -185,6 +185,7 @@ def build_tutor_model_payload(
     question: str,
     sources: list[dict[str, object]] | None = None,
     intelligence: list[str] | None = None,
+    student_core_context: dict[str, object] | None = None,
     safety_directive: str | None = None,
     immediate_exchange: list[dict[str, object]] | None = None,
     recent_exchanges: list[list[dict[str, object]]] | None = None,
@@ -201,6 +202,13 @@ def build_tutor_model_payload(
         f"Curriculum source ({source['ref']}):\n{source['text']}" for source in (sources or [])
     ) or "No matching curriculum excerpt was retrieved."
     intelligence_context = "\n".join(intelligence or []) or "No relevant compact learning note was selected."
+    supplied_core_context = student_core_context or {}
+    student_core_context = {
+        field: supplied_core_context[field]
+        for field in ("display_name", "age_years", "grade_level")
+        if supplied_core_context.get(field) is not None
+    }
+    core_context_text = json.dumps(student_core_context, ensure_ascii=False) if student_core_context else "No Student Core Profile fields are available."
     immediate_exchange_context = "\n".join(
         _format_lineage_message(message) for message in (immediate_exchange or [])
     ) or "No immediate exchange was selected."
@@ -279,12 +287,13 @@ def build_tutor_model_payload(
             f"Current Turn:\nStudent question:\n{question}{current_turn_source_context}\n\nImmediate Exchange:\n{immediate_exchange_context}\n\n"
             f"Recent raw complete Exchanges:\n{recent_exchange_context}\n\n"
             f"Relevant older complete Exchanges from current Segment:\n{semantic_recall_context}\n\n"
-            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}{segment_context}{segment_state_context}{parent_boundary_context}"
+            f"Retrieved curriculum:\n{source_context}\n\nStudent Core Context (Parent/System-authoritative identity only; never learning evidence):\n{core_context_text}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}{segment_context}{segment_state_context}{parent_boundary_context}"
         ),
         "max_output_tokens": get_settings().tutor_max_output_tokens,
         "question": question,
         "sources": sources or [],
         "intelligence": intelligence or [],
+        "student_core_context": student_core_context,
         "active_teaching_methods": [method.value for method in ACTIVE_TEACHING_METHODS],
         "response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA,
         "candidate_source_message_id": str(candidate_source_message_id) if candidate_source_message_id is not None else None,
@@ -951,6 +960,7 @@ def _payload_from_context(
         question=context.question,
         sources=[{"ref": block.source_ref, "text": block.text} for block in context.retrieval],
         intelligence=[item.text for item in context.intelligence],
+        student_core_context=context.student_core_context.as_model_input(),
         safety_directive=safety.tutor_directive,
         immediate_exchange=_exchange_payload(context.immediate_exchange),
         recent_exchanges=[_exchange_payload(exchange) for exchange in context.recent_exchanges],

@@ -55,15 +55,30 @@ def factory() -> sessionmaker[Session]:
     engine.dispose()
 
 
-def _source(session: Session) -> tuple[ContentDocument, ContentProcessingRun, ContentSemanticProcessingRun]:
+def _source(
+    session: Session,
+    *,
+    legacy_student_schema: bool = False,
+) -> tuple[ContentDocument, ContentProcessingRun, ContentSemanticProcessingRun]:
     user = User(identity_provider="fixture", external_subject=uuid4().hex)
     session.add(user)
     session.flush()
-    student = Student(user_id=user.id, display_name="fixture")
-    session.add(student)
-    session.flush()
+    if legacy_student_schema:
+        student_id = uuid4()
+        session.execute(
+            text(
+                "INSERT INTO students (id, user_id, display_name, is_active) "
+                "VALUES (:id, :user_id, :display_name, true)"
+            ),
+            {"id": student_id, "user_id": user.id, "display_name": "fixture"},
+        )
+    else:
+        student = Student(user_id=user.id, display_name="fixture")
+        session.add(student)
+        session.flush()
+        student_id = student.id
     document = ContentDocument(
-        student_id=student.id,
+        student_id=student_id,
         grade_level=5,
         subject="MATH",
         original_storage_key="private/content/fixture.pdf",
@@ -194,7 +209,7 @@ def test_index_identity_migration_preserves_semantic_history_and_drops_only_stru
     try:
         command.downgrade(config, BASE_REVISION)
         with factory.begin() as session:
-            document, structural, semantic = _source(session)
+            document, structural, semantic = _source(session, legacy_student_schema=True)
             historic_semantic_run = _index_run(document, structural, semantic)
             session.add(historic_semantic_run)
             session.flush()

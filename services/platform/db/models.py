@@ -1022,6 +1022,7 @@ class Student(Base):
         nullable=False,
     )
     display_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,

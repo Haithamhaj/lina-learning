@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 import os
 from uuid import uuid4
 
@@ -14,9 +14,11 @@ from services.intelligence.current_state import CURRENT_STATE_POLICY_VERSION
 from services.intelligence.patterns import PATTERN_POLICY_VERSION
 from services.intelligence.selection import select_relevant_intelligence
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete
+from services.platform.core_profile import set_active_grade_period
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
     CurrentLearningState,
+    GradePeriod,
     IntelligenceProcessingRun,
     LearnerPattern,
     LearningMessage,
@@ -29,6 +31,7 @@ from services.platform.safety import SafetyAction, SafetyDecision
 from services.retrieval.service import CurrentFocus, RetrievedBlock
 from services.tutor.context import ContextBudget, TutorContextBuilder
 from services.tutor.runtime import TutorRuntime, build_tutor_model_payload
+import services.tutor.context as tutor_context_module
 
 
 pytestmark = pytest.mark.skipif(
@@ -163,6 +166,107 @@ def test_context_keeps_current_question_bounds_history_and_uses_task014_retrieva
         }
     ]
     assert context.character_count <= len(context.question) + 100 + 100
+
+
+def test_context_projects_only_the_current_students_effective_core_profile(
+    factory: sessionmaker[Session],
+) -> None:
+    """TASK-027A: compact Core Context and retrieval grade are Student-scoped."""
+
+    retrieval = RecordingRetrieval()
+    today = date.today()
+    with factory.begin() as session:
+        student, learning_session, _ = _seed(session)
+        student.display_name = "Lina"
+        student.date_of_birth = date(today.year - 10, today.month, today.day)
+        session.add(
+            GradePeriod(
+                student_id=student.id,
+                grade_level=4,
+                starts_on=date(today.year, 1, 1),
+                is_active=True,
+            )
+        )
+        other_student, _, _ = _seed(session)
+        other_student.display_name = "Other Student"
+        other_student.date_of_birth = date(today.year - 12, today.month, today.day)
+        session.add(
+            GradePeriod(
+                student_id=other_student.id,
+                grade_level=6,
+                starts_on=date(today.year, 1, 1),
+                is_active=True,
+            )
+        )
+        session.flush()
+
+        context = TutorContextBuilder(
+            session,
+            retrieval_service=retrieval,  # type: ignore[arg-type]
+        ).build(
+            learning_session=learning_session,
+            question="How do I compare fractions?",
+        )
+
+    assert context.student_core_context.as_model_input() == {
+        "display_name": "Lina",
+        "age_years": 10,
+        "grade_level": 4,
+    }
+    assert "Other Student" not in context.student_core_context.as_model_input().values()
+    assert retrieval.calls[0]["grade_level"] == 4
+
+
+def test_context_and_retrieval_follow_a_scheduled_grade_transition(
+    factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TASK-027A: Tutor uses the same effective grade before and on transition day."""
+
+    today = date(2026, 8, 31)
+    future_start = date(2026, 9, 15)
+
+    class ScheduledDate(date):
+        @classmethod
+        def today(cls) -> date:
+            return cls.as_of
+
+    ScheduledDate.as_of = today
+    monkeypatch.setattr(tutor_context_module, "date", ScheduledDate)
+    retrieval = RecordingRetrieval()
+    with factory.begin() as session:
+        student, learning_session, _ = _seed(session)
+        session.add(
+            GradePeriod(
+                student_id=student.id,
+                grade_level=5,
+                starts_on=date(2026, 8, 1),
+                is_active=True,
+            )
+        )
+        session.flush()
+        set_active_grade_period(
+            session,
+            student_id=student.id,
+            grade_level=6,
+            starts_on=future_start,
+            ends_on=None,
+            as_of=today,
+        )
+
+        before = TutorContextBuilder(
+            session,
+            retrieval_service=retrieval,  # type: ignore[arg-type]
+        ).build(learning_session=learning_session, question="How do I compare fractions?")
+        ScheduledDate.as_of = future_start
+        on_transition = TutorContextBuilder(
+            session,
+            retrieval_service=retrieval,  # type: ignore[arg-type]
+        ).build(learning_session=learning_session, question="How do I compare fractions?")
+
+    assert before.student_core_context.as_model_input() == {"grade_level": 5}
+    assert on_transition.student_core_context.as_model_input() == {"grade_level": 6}
+    assert [call["grade_level"] for call in retrieval.calls] == [5, 6]
 
 
 def test_context_uses_the_supplied_current_turn_id_when_student_text_repeats(
@@ -408,7 +512,18 @@ def test_ctx02_runtime_keeps_the_full_immediate_exchange_in_one_call_input(
     )
     follow_up = "ما زبطت معي الصو في عيوني"
     with factory.begin() as session:
-        _, learning_session, _ = _seed(session)
+        student, learning_session, _ = _seed(session)
+        today = date.today()
+        student.display_name = "Lina"
+        student.date_of_birth = date(today.year - 10, today.month, today.day)
+        session.add(
+            GradePeriod(
+                student_id=student.id,
+                grade_level=4,
+                starts_on=date(today.year, 1, 1),
+                is_active=True,
+            )
+        )
         base = datetime.now(UTC)
         older_recent_turn = "Older current-session continuity: we were comparing shadows."
         older_too_large_turn = "Older bounded history: " + ("x" * 580)
@@ -482,6 +597,12 @@ def test_ctx02_runtime_keeps_the_full_immediate_exchange_in_one_call_input(
     assert "Immediate Exchange:" in model_input
     assert "[... earlier Tutor context omitted ...]" not in model_input
     assert model_input.count(follow_up) == 1
+    assert provider.payloads[0]["student_core_context"] == {
+        "display_name": "Lina",
+        "age_years": 10,
+        "grade_level": 4,
+    }
+    assert "date_of_birth" not in model_input
     assert "Bounded older current-session continuity:" not in model_input
     assert len(provider.payloads) == 1
     assert model_input.index("Current Turn:") < model_input.index("Immediate Exchange:")

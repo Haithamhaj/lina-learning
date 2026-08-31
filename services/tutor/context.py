@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from uuid import UUID
 
 from sqlalchemy import select
@@ -12,6 +13,7 @@ from services.intelligence.card import CardBudget, build_learner_intelligence_ca
 from services.intelligence.selection import RelevantIntelligence
 from services.model_gateway.factory import create_embedding_gateway
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
+from services.platform.core_profile import StudentCoreContext, student_core_context
 from services.platform.db.models import LearningExchangeEmbedding, LearningMessage, LearningSession, ModelTask
 from services.retrieval.service import CurrentFocus, QueryEmbedding, RetrievedBlock, RetrievalService
 from services.tutor.exchanges import SEMANTIC_RECALL_MIN_COSINE_SIMILARITY, ConversationExchangeContext, complete_exchanges_for_segment, immediate_exchange_for_current_turn, persist_exchange_embedding, serialize_exchange
@@ -62,6 +64,7 @@ class TutorContext:
     retrieval: tuple[RetrievedBlock, ...]
     intelligence: tuple[RelevantIntelligence, ...]
     debug: TutorContextDebug
+    student_core_context: StudentCoreContext = StudentCoreContext(None, None, None)
     immediate_exchange: ConversationExchangeContext | None = None
     recent_exchanges: tuple[ConversationExchangeContext, ...] = ()
     semantic_recall_exchanges: tuple[ConversationExchangeContext, ...] = ()
@@ -153,10 +156,15 @@ class TutorContextBuilder:
             state_source_ids=set(latest_state.source_message_ids) if latest_state is not None else set(),
             question=question,
         )
+        core_context = student_core_context(
+            self._session,
+            student_id=learning_session.student_id,
+            as_of=date.today(),
+        )
         retrieval_kwargs: dict[str, object] = {
             "student_id": learning_session.student_id,
             "question": question,
-            "grade_level": grade_level,
+            "grade_level": core_context.grade_level if core_context.grade_level is not None else grade_level,
             "subject": learning_session.subject,
             "focus": effective_focus,
             "character_budget": self._budget.retrieval_characters,
@@ -196,6 +204,7 @@ class TutorContextBuilder:
             session_messages=(),
             retrieval=retrieval,
             intelligence=intelligence,
+            student_core_context=core_context,
             debug=TutorContextDebug(
                 focus=effective_focus,
                 session_message_ids=(),

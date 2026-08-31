@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import date
 from uuid import UUID, uuid4
 
 import pytest
@@ -21,6 +22,7 @@ from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
     LearningMessage,
     LearningSession,
+    GradePeriod,
     ParentStudentRelationship,
     Student,
     User,
@@ -52,6 +54,7 @@ def postgres_session_factory() -> sessionmaker[Session]:
         User.__table__,
         Student.__table__,
         ParentStudentRelationship.__table__,
+        GradePeriod.__table__,
         LearningSession.__table__,
         LearningMessage.__table__,
     ):
@@ -136,6 +139,160 @@ def test_verified_parent_with_explicit_link_can_read_only_linked_student(
 
     assert response.status_code == 200
     assert response.json() == {"id": str(linked_id), "display_name": "Lina"}
+
+
+def test_linked_parent_can_read_and_update_only_core_profile_fields(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    with postgres_session_factory.begin() as session:
+        parent = _parent(session, "parent-core")
+        student = _student(session, "student-core", "Before")
+        grant_parent_student_access(session, parent_user_id=parent.id, student_id=student.id)
+        student_id = student.id
+
+    client = _client(postgres_session_factory, _parent_principal("parent-core"))
+    try:
+        update = client.put(
+            f"/api/v1/parent/students/{student_id}/core-profile",
+            json={
+                "display_name": "Lina",
+                "date_of_birth": "2015-08-31",
+                "active_grade_period": {"grade_level": 5, "starts_on": "2026-08-01"},
+            },
+        )
+        read = client.get(f"/api/v1/parent/students/{student_id}/core-profile")
+    finally:
+        _clear_overrides()
+
+    expected = {
+        "id": str(student_id),
+        "display_name": "Lina",
+        "date_of_birth": "2015-08-31",
+        "age_years": 11,
+        "grade_level": 5,
+    }
+    assert update.status_code == 200
+    assert update.json() == expected
+    assert read.status_code == 200
+    assert read.json() == expected
+
+
+def test_parent_schedules_future_grade_without_blanking_current_grade(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    with postgres_session_factory.begin() as session:
+        parent = _parent(session, "parent-schedule")
+        student = _student(session, "student-schedule", "Lina")
+        grant_parent_student_access(session, parent_user_id=parent.id, student_id=student.id)
+        session.add(
+            GradePeriod(
+                student_id=student.id,
+                grade_level=5,
+                starts_on=date(2026, 8, 1),
+                is_active=True,
+            )
+        )
+        student_id = student.id
+
+    client = _client(postgres_session_factory, _parent_principal("parent-schedule"))
+    try:
+        response = client.put(
+            f"/api/v1/parent/students/{student_id}/core-profile",
+            json={"active_grade_period": {"grade_level": 6, "starts_on": "2026-09-15"}},
+        )
+    finally:
+        _clear_overrides()
+
+    with postgres_session_factory() as session:
+        periods = list(
+            session.query(GradePeriod)
+            .filter_by(student_id=student_id)
+            .order_by(GradePeriod.starts_on)
+        )
+
+    assert response.status_code == 200
+    assert response.json()["grade_level"] == 5
+    assert [(period.grade_level, period.starts_on, period.ends_on, period.is_active) for period in periods] == [
+        (5, date(2026, 8, 1), date(2026, 9, 14), True),
+        (6, date(2026, 9, 15), None, True),
+    ]
+
+
+def test_parent_core_profile_denies_unlinked_student_and_student_role(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    with postgres_session_factory.begin() as session:
+        parent = _parent(session, "parent-core")
+        linked = _student(session, "student-linked", "Linked")
+        other = _student(session, "student-other", "Other")
+        grant_parent_student_access(session, parent_user_id=parent.id, student_id=linked.id)
+        other_id = other.id
+
+    parent_client = _client(postgres_session_factory, _parent_principal("parent-core"))
+    try:
+        unlinked = parent_client.get(f"/api/v1/parent/students/{other_id}/core-profile")
+    finally:
+        _clear_overrides()
+
+    student_client = _client(
+        postgres_session_factory,
+        AuthenticatedPrincipal(subject="student-linked", role=UserRole.STUDENT),
+    )
+    try:
+        denied_role = student_client.get(f"/api/v1/parent/students/{other_id}/core-profile")
+    finally:
+        _clear_overrides()
+
+    assert unlinked.status_code == 404
+    assert unlinked.json()["detail"] == "Student not found."
+    assert denied_role.status_code == 403
+
+
+def test_parent_core_profile_rejects_future_date_of_birth(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    with postgres_session_factory.begin() as session:
+        parent = _parent(session, "parent-core")
+        student = _student(session, "student-core", "Lina")
+        grant_parent_student_access(session, parent_user_id=parent.id, student_id=student.id)
+        student_id = student.id
+
+    client = _client(postgres_session_factory, _parent_principal("parent-core"))
+    try:
+        response = client.put(
+            f"/api/v1/parent/students/{student_id}/core-profile",
+            json={"date_of_birth": "2999-01-01"},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Date of birth cannot be in the future."
+
+
+def test_parent_core_profile_reports_conflicting_effective_grade_periods(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    with postgres_session_factory.begin() as session:
+        parent = _parent(session, "parent-core")
+        student = _student(session, "student-core", "Lina")
+        grant_parent_student_access(session, parent_user_id=parent.id, student_id=student.id)
+        student_id = student.id
+        session.add_all(
+            [
+                GradePeriod(student_id=student.id, grade_level=5, starts_on=date(2026, 8, 1), is_active=True),
+                GradePeriod(student_id=student.id, grade_level=6, starts_on=date(2026, 8, 15), is_active=True),
+            ]
+        )
+
+    client = _client(postgres_session_factory, _parent_principal("parent-core"))
+    try:
+        response = client.get(f"/api/v1/parent/students/{student_id}/core-profile")
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Student has multiple effective GradePeriods for the requested date."
 
 
 def test_parent_without_an_explicit_link_receives_non_enumerating_denial(

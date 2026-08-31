@@ -91,24 +91,29 @@ def _closed_lineage(session: Session) -> tuple[Student, LearningSession, Learnin
     return student, learning_session, segment
 
 
-def _legacy_lineage(session: Session) -> tuple[Student, UUID]:
+def _legacy_lineage(session: Session) -> tuple[UUID, UUID]:
     """Create only columns available before the SEG-EVID-01A migration."""
 
     user = User(identity_provider="fixture", external_subject=uuid4().hex)
     session.add(user)
     session.flush()
-    student = Student(user_id=user.id, display_name="Fixture Student")
-    session.add(student)
-    session.flush()
+    student_id = uuid4()
+    session.execute(
+        text(
+            "INSERT INTO students (id, user_id, display_name, is_active) "
+            "VALUES (:id, :user_id, :display_name, true)"
+        ),
+        {"id": student_id, "user_id": user.id, "display_name": "Fixture Student"},
+    )
     learning_session_id = uuid4()
     session.execute(
         text(
             "INSERT INTO learning_sessions (id, student_id, subject) "
             "VALUES (:id, :student_id, 'MATH')"
         ),
-        {"id": learning_session_id, "student_id": student.id},
+        {"id": learning_session_id, "student_id": student_id},
     )
-    return student, learning_session_id
+    return student_id, learning_session_id
 
 
 def _review(
@@ -133,9 +138,9 @@ def _review(
     return _review_class()(**values)
 
 
-def _processing_run(session: Session, student: Student) -> IntelligenceProcessingRun:
+def _processing_run(session: Session, student: Student | UUID) -> IntelligenceProcessingRun:
     run = IntelligenceProcessingRun(
-        student_id=student.id,
+        student_id=student if isinstance(student, UUID) else student.id,
         rubric_version="learning-rubric-v1",
         policy_version="session-policy-v1",
     )
@@ -597,8 +602,8 @@ def test_segment_review_migration_backfills_legacy_lineage_and_safe_downgrade(
     try:
         command.downgrade(config, PRIOR_REVISION)
         with factory.begin() as session:
-            student, learning_session_id = _legacy_lineage(session)
-            processing_run = _processing_run(session, student)
+            student_id, learning_session_id = _legacy_lineage(session)
+            processing_run = _processing_run(session, student_id)
             message = LearningMessage(
                 session_id=learning_session_id,
                 role="student",

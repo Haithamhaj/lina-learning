@@ -165,7 +165,8 @@ def test_tutor_instructions_require_calibrated_child_interaction_without_changin
 
     instructions = TUTOR_SHARED_INSTRUCTIONS.casefold()
     for required_concept in (
-        "approximately 10-year-old",
+        "authoritative student core context",
+        "do not infer or invent the student's age",
         "one concept or one or two small steps",
         "change representation or support",
         "zero to three emojis",
@@ -180,6 +181,7 @@ def test_tutor_instructions_require_calibrated_child_interaction_without_changin
         "copy the supporting student reasoning span",
     ):
         assert required_concept in instructions
+    assert "approximately 10-year-old" not in instructions
 
 
 def test_candidate_guidance_contrastively_defines_support_for_the_observed_target_response() -> None:
@@ -261,3 +263,34 @@ def test_tutor_language_guidance_keeps_neutral_math_turns_in_the_active_conversa
         "natural bilingual school/math terminology",
     ):
         assert required_concept in instructions
+
+
+def test_tutor_payload_keeps_student_core_context_separate_and_bounded() -> None:
+    payload = build_tutor_model_payload(
+        question="Can we practice fractions?",
+        intelligence=["A separate learning note."],
+        student_core_context={
+            "display_name": "Lina",
+            "age_years": 10,
+            "grade_level": 5,
+            "date_of_birth": "2015-08-31",
+            "student_id": "student-private-id",
+            "personal_facts": ["private fact"],
+            "learner_intelligence": ["must not enter Core Context"],
+        },
+    )
+
+    assert payload["student_core_context"] == {
+        "display_name": "Lina",
+        "age_years": 10,
+        "grade_level": 5,
+    }
+    assert "date_of_birth" not in payload["student_core_context"]
+    assert "student_id" not in payload["student_core_context"]
+    assert "personal_facts" not in payload["student_core_context"]
+    assert "learner_intelligence" not in payload["student_core_context"]
+    assert "2015-08-31" not in payload["input"]
+    assert "student-private-id" not in payload["input"]
+    assert "private fact" not in payload["input"]
+    assert "must not enter Core Context" not in payload["input"]
+    assert payload["intelligence"] == ["A separate learning note."]
