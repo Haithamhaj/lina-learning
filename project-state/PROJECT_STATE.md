@@ -8,7 +8,7 @@ Execute the Product Owner-approved **Daily-Use Lina Release 1** sequence one tas
 - `RL-01A — Accepted Runtime Alignment` — **DONE / ACCEPTED**
 - `RL-01B — Fresh Shared Application DB & Runtime Composition` — **DONE / ACCEPTED**
 - `RL-01C — Clerk + OpenAI Operational Verification` — **DONE / ACCEPTED**
-- `RL-01D — Controlled Full Intelligence Loop` — **IN PROGRESS / BLOCKED ON TUTOR STREAM TRANSACTION LOCK**
+- `RL-01D — Controlled Full Intelligence Loop` — **IN PROGRESS / FINAL ACCEPTANCE JOURNEY READY**
 
 Current execution overlay: `project-state/DAILY_USE_RELEASE_TASKS.md`.  
 `TASKS.md` remains the preserved historical ledger.
@@ -31,11 +31,15 @@ Current execution overlay: `project-state/DAILY_USE_RELEASE_TASKS.md`.
 - Backend JWT/JWKS verification is verified: Parent resolves to `PARENT_ADMIN`; Student resolves to `STUDENT`.
 - Launch-test Parent exists locally as application `User(role=PARENT_ADMIN)` and is explicitly linked to the Sandbox Test Student.
 - **REAL-AUTH CROSS-STUDENT ISOLATION = VERIFIED** for implemented auth/session paths. Browser-supplied Student/session identifiers are locators only; authorization remains anchored to verified Clerk subject and server-owned Student ownership.
-- RL-01D has partially proven the integrated Learning Intelligence path on the fresh runtime: natural Session closure, real Segment Learning Review, deterministic Session Finalization, one validated Event/Evidence path, Current State materialization, Candidate Patterns, Decision Views, job health, and cross-Student scoping all executed successfully. Pattern non-promotion after one Session was correctly insufficient evidence.
-- RL-01D later-personalization acceptance is not yet complete because the controlled multi-turn Tutor scenario has not completed reliably through the normal FastAPI/SSE path.
-- The earlier suspected OpenAI/provider timeout was not reproducible. Instrumented provider and TutorRuntime calls completed well within the existing 30-second blocking-operation timeout.
-- A reproducible application blocker is now identified before OpenAI is reached: the request-scoped DB session resolves the authenticated Student using a `SELECT ... FOR UPDATE` lock, then the `StreamingResponse` generator opens a second DB session. That stream session attempts to insert `safety_audits` for the same Student and waits on the outer request transaction's Student-row lock / FK check. The observed wait is PostgreSQL `Lock / transactionid`; no Model Gateway call begins.
-- The blocker is therefore a **stream transaction-boundary bug**, not an OpenAI reliability problem. No timeout/retry change is approved.
+- RL-01D has partially proven the integrated Learning Intelligence path on the fresh runtime: natural Session closure, real Segment Learning Review, deterministic Session Finalization, validated Event/Evidence materialization, Current State, Candidate Patterns, Decision Views, Worker/job health, and cross-Student scoping all executed successfully. Pattern non-promotion after one Session was correctly insufficient evidence.
+- The earlier suspected OpenAI/provider timeout was not reproduced and is not the accepted cause of the Tutor stream failure.
+- The actual application blocker was confirmed as a FastAPI/SSE transaction-boundary lock: the request-scoped transaction held a Student `FOR UPDATE` lock while the independent stream Session attempted to flush `SafetyAudit(student_id FK)`.
+- `RL-01D-R3` corrected that boundary by completing request-side auth/ownership/action validation, copying plain stream inputs, and committing the request Session before the independent stream transaction begins. The correction preserves Student ownership and first-identity persistence without removing `FOR UPDATE`, weakening Safety, changing model timeout, or adding retries.
+- `RL-01D-R3 FIX = ACCEPTED` and is committed/pushed as `3af613484266e2c21d9e91a20d09ef217b05c16e`.
+- Regression verification passed for the previous PostgreSQL lock, first-identity creation, provider-failure ledger/recovery, and Student streaming/session behavior.
+- Real post-fix smoke passed for three consecutive Tutor turns through FastAPI/SSE + real OpenAI: three `StreamComplete`, exactly one primary Tutor call per turn, three persisted SafetyAudits, six alternating Student/Tutor messages, three successful AIExecution rows, and zero observed PostgreSQL lock waits.
+- The final RL-01D acceptance journey has **not** yet been run after this accepted correction.
+- Remaining RL-01D proof is limited to one fresh meaningful multi-turn Session through normal lifecycle/Review/Finalization, followed by relevant later Learner Intelligence selection and an unrelated-context exclusion control.
 - Future Personal Facts isolation remains unimplemented/unverified until PF tasks.
 - No Lina real Student identity/history has been created or used.
 
@@ -55,7 +59,7 @@ Current execution overlay: `project-state/DAILY_USE_RELEASE_TASKS.md`.
 10. AI capabilities remain behind Model Gateway; OpenAI is an operational provider, not permanent architecture.
 11. Replit is a candidate private host after local proof, not product architecture.
 12. Backend role authority comes from signed Clerk session-token claims; frontend-readable metadata alone is not backend authorization.
-13. RL-01D stream correction must fix the request/stream transaction boundary without adding model retries, changing provider timeout, weakening Student ownership locks globally, or redesigning Safety/DB architecture.
+13. The accepted Tutor-stream correction is a transaction-lifetime fix only. Do not reintroduce the previous lock, remove ownership locking globally, change provider timeout, or add hidden Tutor retries without a new demonstrated requirement.
 
 ---
 
@@ -86,11 +90,8 @@ Also protected:
 
 ## Active risks
 
-- **RL-R5 — Tutor Streaming Request/Stream Transaction Lock — Criticality 5**  
-  The normal FastAPI streaming route can self-block before OpenAI: the request-scoped transaction holds a Student row lock while the separate stream-session transaction tries to persist a `SafetyAudit` FK to the same Student. This must be corrected and regression-tested before RL-01D can resume.
-
 - **RL-R4 — Later Relevant/Irrelevant Intelligence Selection Not Yet Proven — Criticality 5**  
-  The downstream intelligence materialization path is partially proven, but RL-01D still requires a completed meaningful multi-turn Session followed by relevant later intelligence selection and an unrelated-context exclusion control.
+  The materialization path is proven on controlled data, but RL-01D still requires one final post-fix acceptance journey showing meaningful multi-turn learning → normal finalization → relevant later intelligence selection, plus exclusion of stale fraction intelligence from an unrelated Math question.
 
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**
 - **PF-R1 — Personal Facts Not Yet Implemented — Criticality 4**
@@ -104,7 +105,7 @@ Also protected:
 
 ### RL-01D — Controlled Full Intelligence Loop
 
-**Status:** IN PROGRESS / BLOCKED ON TUTOR STREAM TRANSACTION LOCK  
+**Status:** IN PROGRESS / FINAL ACCEPTANCE JOURNEY READY  
 **Authority:** `project-state/DAILY_USE_RELEASE_TASKS.md`  
 **Dependency:** RL-01C **DONE / ACCEPTED**
 
@@ -116,11 +117,18 @@ Also protected:
 - correctly insufficient Pattern evidence;
 - Worker/job health;
 - cross-Student scoping;
-- provider-level and TutorRuntime streaming can complete normally when bypassing the blocking FastAPI request/stream transaction boundary.
+- normal provider/Tutor streaming;
+- FastAPI/SSE request/stream transaction lock root cause and accepted correction;
+- post-fix real three-turn Tutor smoke with one primary Tutor call per turn and durable Safety/AI/message persistence.
 
-**Current blocker:** release the request-scoped Student lock before the independent stream-owned transaction begins, while preserving authenticated ownership and first-identity behavior. Add a deterministic PostgreSQL regression test for the safety-audit/stream path. Do not change OpenAI timeout or add hidden retries.
-
-**Remaining RL-01D acceptance after the correction:** complete a meaningful three-turn Tutor Session through the real route, allow normal lifecycle/Review/Finalization, verify relevant Learner Intelligence selection in a later Session, and verify unrelated fraction intelligence is excluded from an unrelated Math question.
+**Remaining acceptance gate:**
+1. Run one fresh controlled non-Lina meaningful three-turn learning Session through the real authenticated application path.
+2. Allow normal Session/Segment lifecycle, real Segment Review, and deterministic Session Finalization without manual DB mutation.
+3. Inspect the resulting Event/Evidence/State/Pattern/Decision View/Card delta and lineage.
+4. Start a later Session for the same Student and verify relevant finalized intelligence is actually selected into compact Tutor context without full prior transcript injection.
+5. Run an unrelated Math control and verify stale fraction-specific intelligence is not blindly selected.
+6. Confirm one primary Tutor call per normal turn, zero semantic Session LLM calls, healthy jobs, and Student isolation.
+7. Stop for Product Owner review. Do not start TASK-027A in the same run.
 
 **Boundary:** Do not start TASK-027A, Personal Facts, frontend redesign, Voice, Vision, RAG changes, Artifacts, deployment, Science, or Parent Insights in this task.
 
@@ -128,7 +136,7 @@ Also protected:
 
 ## Next recommended action
 
-Execute a bounded RL-01D transaction-boundary correction and regression verification only. Return the diff/results for review before resuming the final RL-01D acceptance journey. Do not start TASK-027A.
+Execute the **final RL-01D acceptance journey only** on one fresh controlled non-Lina Student using the accepted post-fix runtime. Do not repeat the timeout investigation, authorization audit, or transaction-lock investigation unless a new concrete failure reproduces them. Do not start TASK-027A.
 
 ---
 
