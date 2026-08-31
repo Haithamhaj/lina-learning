@@ -2,217 +2,252 @@
 
 ## Purpose
 
-This file is the compact operating map for Codex/AI agents working in this repository. Do not duplicate the full product specification here. Read the governing documents needed for the task before changing code.
+This file is the compact operating map for Codex/AI agents working in this repository. It does not duplicate the full product specification. Read the governing documents relevant to the current task before changing code.
 
 ## Governing References
 
 Read in this order when relevant:
 
-1. `docs/PROJECT_REFERENCE.md` — stable approved product purpose, boundaries, architecture, Tutor behavior, multimodal/artifact principles, Grade rules, system invariants.
-2. `docs/LEARNING_PRODUCT_ROADMAP.md` — approved product-evolution decisions, ordered capability roadmap, superseded assumptions, dependencies, and validation gates. Roadmap items are not executable until promoted to executable task scope.
-3. `docs/LEARNING_INTELLIGENCE_SPEC.md` — canonical Events, Evidence, Current State, Patterns, Segment Review, Session authority, Intelligence Card, measurement rules, reprocessing.
+1. `docs/PROJECT_REFERENCE.md` — stable approved product truth and protected product boundaries.
+2. `docs/LEARNING_PRODUCT_ROADMAP.md` — approved product-evolution direction; roadmap presence alone is not execution approval.
+3. `docs/LEARNING_INTELLIGENCE_SPEC.md` — canonical Learning Intelligence semantics and authority.
 4. `docs/CHILD_SAFETY_POLICY.md` — non-overridable child safety and Parent Learning Boundaries.
-5. `docs/IMPLEMENTATION_PLAN.md` — execution architecture, phases, dependencies, gates, deferred work.
-6. `docs/TECHNOLOGY_REUSE_CATALOG.md` — approved reusable technology/component candidates and mandatory pre-build evaluation rules.
-7. `docs/SUBJECT_SCOPE_POLICY.md` — governing SCOPE-01 cross-subject, Broad Subject, optional school-context, and future School-Focused policy when subject scope is relevant.
-8. `docs/SUBJ_01_IMPLEMENTATION_SPEC.md` — historical bounded execution contract for accepted SUBJ-01; do not treat its former transition as current work.
-9. `project-state/PROJECT_STATE.md` — **current operational reality and current next action**.
-10. `TASKS.md` — durable task history and executable/current task state, subject to an explicit newer Product Owner-approved task-specific governing transition recorded in Project State.
+5. `docs/IMPLEMENTATION_PLAN.md` — technical implementation direction, sequencing, gates, and deferred architecture.
+6. `docs/TECHNOLOGY_REUSE_CATALOG.md` — approved reuse candidates and mandatory fit checks.
+7. `docs/SUBJECT_SCOPE_POLICY.md` — accepted cross-subject policy when relevant.
+8. `project-state/PROJECT_STATE.md` — **current operational reality and current next action**.
+9. `TASKS.md` — durable historical/executable task ledger.
 
 ### Document authority and task coordination
 
-Different documents own different truth:
-
 - `PROJECT_REFERENCE.md` owns stable product truth.
 - `LEARNING_INTELLIGENCE_SPEC.md` owns Learning Intelligence semantics.
-- `LEARNING_PRODUCT_ROADMAP.md` owns approved product evolution/sequencing, not current execution.
-- `IMPLEMENTATION_PLAN.md` owns technical implementation direction, not current next-task status.
-- `PROJECT_STATE.md` owns current operational truth and current next action.
-- `TASKS.md` owns durable task/execution state.
+- `LEARNING_PRODUCT_ROADMAP.md` owns approved evolution direction, not current execution.
+- `IMPLEMENTATION_PLAN.md` owns technical implementation direction.
+- `PROJECT_STATE.md` owns current operational truth and next action.
+- `TASKS.md` owns durable task history and current task records.
 
-The Roadmap records approved product-evolution decisions, sequencing, dependencies, and validation gates. It does not by itself make work executable.
+Normally Codex executes only a task explicitly marked `READY`. A newer Product Owner-approved bounded transition recorded in `PROJECT_STATE.md` may override stale historical sequencing for that bounded task and must not be generalized.
 
-Normally an item must be `READY` in `TASKS.md`. A newer Product Owner-approved task-specific governing spec/current-state transition may explicitly override a stale historical row or absent current row for one bounded task; that override must be reflected in `PROJECT_STATE.md` and must not be generalized.
+## Current Product Owner Transition — Daily-Use Lina Release 1
 
-**Current transition rule:** `DOC-SYNC-01` is **DONE / ACCEPTED**. `RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification` is the **NEXT APPROVED TRACK**. `project-state/PROJECT_STATE.md` is the explicit Product Owner-approved bounded authority for its first stage: **CURRENT REALITY AUDIT ONLY**. `TASKS.md` remains the preserved historical ledger and does not currently contain a dedicated RL-01 row. This override applies to the RL-01 audit stage only; the audit must stop before implementation/config/deployment change, and verified blockers/minimum changes must be reviewed before any later execution stage.
+`DOC-SYNC-01` is **DONE / ACCEPTED**.
 
-No existing historical record automatically promotes `MATH-01`, `ID-01`, `EDU-ERR-01`, `REC-25`, `LR-D04B`, Voice, Vision, Science production, Learning Canvas, Artifact Engine, Parent Dashboard expansion, or a deployment redesign.
+`RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification` completed its **Current Reality Audit** stage. The audit found an operational-composition problem rather than a missing learning architecture: the accepted code contains Web, API, Worker, PostgreSQL/pgvector integration, Clerk, Model Gateway/OpenAI routes, Session lifecycle, Segment Review, deterministic Session Finalization, and downstream Learning Intelligence, but the historical/current operational environment was not aligned as one current revision/runtime and the standard workflow did not launch Worker.
 
-If governing documents conflict outside an explicit approved override, stop and surface the conflict rather than silently choosing a product direction.
+The Product Owner clarified that the existing historical database is **experimental/test data**. It is not a production baseline to preserve or migrate as Lina's longitudinal real-use history. Real Lina use will begin from a fresh current-schema database.
+
+The Product Owner approved a **launch-first Daily-Use Lina Release 1** sequence. The sequence is recorded in `PROJECT_STATE.md` and the launch overlay in `TASKS.md`. It deliberately promotes capabilities in order, not simultaneously.
+
+**Only the current `READY` task is executable. At this transition, that task is `RL-01A — Accepted Runtime Alignment`.**
+
+Do not start RL-01B, Personal Facts, Frontend redesign, Voice, Vision, deployment, RAG evaluation, Artifacts, Science, Parent Insight analysis, MATH-01, ID-01, EDU-ERR-01, REC-25, or LR-D04B in the same run unless they are later explicitly promoted.
+
+## Daily-Use Release 1 Sequence
+
+The approved order is:
+
+```text
+RL-01A Accepted Runtime Alignment
+→ RL-01B Fresh DB + Runtime Composition
+→ RL-01C Clerk + OpenAI Operational Verification
+→ RL-01D Controlled Full Intelligence Loop
+→ TASK-027A Student Core Profile
+→ PF-01 Personal Facts Contract
+→ PF-02 Personal Facts Extraction/Reconciliation
+→ PF-03 Relevant Facts in Tutor Context
+→ FE-01 Lina Visual System & Reuse Decision
+→ FE-02 Daily Student Experience
+→ TASK-032 Voice / STT
+→ TASK-033 Vision / Student Work
+→ TASK-034 Original-Image Annotation
+→ DEPLOY-01 Private Daily Environment
+→ LINA-R1 Clean Real-Use Baseline
+```
+
+Post-launch work includes measured RAG evaluation, selected learning artifacts, Science expansion when promoted, and future Parent Facts × Learning insight exploration after sufficient real data exists.
 
 ## Execution Rules
 
-- Execute only an explicitly `READY` task or the exact Product Owner-approved current bounded task from the governing task/state records, normally one task or one tightly related task group at a time.
-- A Roadmap item is **not executable** merely because it is approved or ordered. It must first be promoted into executable scope.
-- Do not skip dependencies or mandatory gates.
-- Prefer the simplest implementation that preserves approved boundaries and rebuildability.
-- **Reuse-first, not dependency-first:** before custom-building a substantial UI, chat, retrieval, or Learning Artifact subsystem, inspect the applicable candidates in `docs/TECHNOLOGY_REUSE_CATALOG.md`.
-- For any catalog item marked `EVALUATE BEFORE CUSTOM BUILD`, record an `ADOPT / PARTIAL ADOPT / REJECT` decision and rationale before the equivalent custom infrastructure is considered complete.
-- Reuse package/component-level capabilities when useful; do not adopt an entire platform merely to obtain one feature.
-- Keep the UX simple even when internals are modular.
-- Do not introduce a new infrastructure service, agent framework, graph database, dedicated vector DB, Redis/Celery, microservice, or deployment redesign without explicit approval and demonstrated need.
-- Do not implement future phases merely because their interfaces are easy to scaffold.
-- The current production proving ground is Math-first. Math + Science, Voice, Vision, handwriting/drawing Evidence, visual/interactive artifacts, broader Parent UX, and Grade production remain approved product direction but frozen until explicitly promoted.
-- Replit configuration is an environment convenience, not product architecture.
-- **RL-01 is not a deployment redesign project.** During its audit stage, inspect existing runtime/configuration/process wiring first; classify implemented-but-inactive behavior accurately; do not create a subsystem for a configuration or process-startup gap.
+- Execute one `READY` task at a time unless a task explicitly defines a tightly related bounded group.
+- Do not skip dependencies or promote later tasks because they appear easy.
+- Do not silently revive historical phase gates that have been superseded by the current approved release sequence.
+- Prefer the simplest implementation that preserves approved boundaries, provenance, and rebuildability.
+- **Reuse-first, not dependency-first:** inspect applicable candidates in `docs/TECHNOLOGY_REUSE_CATALOG.md` before custom-building substantial UI/chat/RAG/artifact infrastructure.
+- For any candidate marked `EVALUATE BEFORE CUSTOM BUILD`, record `ADOPT / PARTIAL ADOPT / REJECT` with rationale.
+- Do not introduce microservices, Redis/Celery, a graph database, dedicated vector DB, new memory platform, generic agent framework, or deployment redesign without explicit approval and demonstrated need.
+- Replit is an environment convenience/candidate host, not product architecture.
+- Current hybrid Retrieval remains the launch baseline. Do not redesign RAG during foundation tasks.
+- Current production proving ground remains Math-first until another Subject task is explicitly promoted.
 
-## Protected Architectural Areas
+## Protected Architecture — Learning Intelligence
 
-The following require Product Owner approval before changing their meaning:
+The accepted learning path is:
 
-- Raw interaction → completed Segment semantic review → Session-authorized
-  Evidence → Current State / Patterns → Learner Intelligence Card →
-  personalization architecture. Segment semantic review is protected;
-  Session remains the durable intelligence-authority boundary. Staged Segment
-  findings are not Learner Intelligence, Candidate Events are provisional
-  hints rather than mandatory Evidence authority, and no second learner-memory
-  system is authorized. Current behavior and the existing Pattern
-  counters/lifecycle remain protected.
-- Learning Intelligence Rubric semantics and Pattern Rules.
-- Mastery/confidence as derived decision views, not source truth.
-- Current behavior outranking historical personalization.
-- Raw interaction and original student work preservation.
-- A Learning Thread is the session-local contiguous Conversation Segment; there is no third Thread entity.
-- One technical Session may contain multiple session-local Segments with different Subjects; one Learning Segment has one primary Broad Subject for durable Evidence attribution.
-- `LEARNING` and `NON_LEARNING / CASUAL` Segment semantics are distinct. Casual conversation is not academic Evidence, and `GENERAL_KNOWLEDGE` is reserved for genuine learning that lacks a better Broad Subject.
-- Broad Subject classification is controlled/versioned and separate from Lina's actual Grade/school Subject registry. School Subject, Domain Path, Unit, Lesson, Page, and curriculum-position metadata are optional/source-grounded and must not be invented when the source is absent.
-- School relationship uses `SCHOOL_ALIGNED`, `EXTENDED`, or `UNKNOWN`; absence of school material must not be treated automatically as `EXTENDED`.
-- For the current Segment Review path, durable Event/Evidence Subject authority comes from the reviewed Segment/Finding lineage, not blindly from a Session-level default Subject. Subject conflict or unresolved attribution fails closed rather than contaminating another Subject.
-- The future Adaptive/Open and School-Focused/Book-Led Parent policies share the same Learning Intelligence Core; no second Evidence/State/Pattern memory architecture is authorized.
-- A Durable Conversation Topic is optional Grade-scoped navigation metadata, never Learner Intelligence, Evidence, curriculum authority, or Safety authority.
-- Hybrid Segment Context is conversational continuity only: Current Multimodal Turn, Full Immediate Exchange, compact Structured Segment State, and relevance-selected complete raw Exchanges from the current Segment are separate from Learner Intelligence, Evidence, pedagogy, Safety, and RAG authority. Raw messages and original assets remain source authority.
-- A blind shared character window must not be the authority for conversation selection, and selected Immediate Exchange messages must not be positionally character-sliced. Capacity/token budgets are final guardrails calibrated from real usage, not a relevance algorithm.
-- Do not inject a full Session or prior-session raw transcripts into normal Tutor input. No extra classifier or summarizer model call, archive retrieval, memory service, or CTX-03 runtime work is authorized without measured need and Product Owner approval.
-- Structured Segment State is compact, source-linked, rebuildable conversational metadata only. It cannot become Evidence, Learner Intelligence, personalization, curriculum authority, or a Safety decision.
-- Parent-owned Student Core Profile facts remain separate from Evidence-derived Learner Intelligence and conversation memory/context. Agents must not convert Parent factual profile fields into learning conclusions.
-- Tutor availability is independent of whether curriculum/book grounding is available; grounding improves the interaction but must not become permission to learn.
-- Retrieval is driven by the current question; school plans and curriculum position do not control what Lina is allowed or expected to ask now.
-- Book and trusted references are grounding sources, not Teaching Authority. The Tutor may change explanation method when useful.
-- Curriculum semantic extraction is optional enrichment and must not be a prerequisite for basic Tutor availability or learner-intelligence concept identification.
-- **Current School Focus is superseded as a learning-path authority. Do not recreate it.**
-- Parent/Admin-controlled Grade activation through new Grade books.
-- Compact Grade Transition Card rather than full prior-Grade runtime transfer.
-- Multimodal student input and separation of student originals from AI-derived annotations/reconstructions.
-- A photographed textbook/page is learning/school context, not learner Evidence by identity alone. A photographed Student solution may support Evidence only through the governed Vision/Segment Review path after that capability is separately approved.
-- Child-safety baseline and Parent Learning Boundary semantics, including explicit runtime policy enforcement rather than prompt-only enforcement.
-- Strategy-effectiveness anti-self-confirmation: Tutor strategy selection/use is not confirming Evidence without an observable Lina outcome.
-- TeachingStrategy (support/intervention flow) and TeachingMethod (pedagogical representation) are distinct and must not be collapsed.
-- Teaching Methods remain a small, project-owned, versioned registry; they must not become a giant mutable Tutor persona or prompt.
-- In the same primary Tutor call, Luna semantically determines the turn-level TeachingMode, TeachingStrategy, TeachingMethod, and relevant prior-method relation. Runtime code validates canonical values, lineage, safety, persistence, and structural consistency; it must not replace semantic understanding with keyword or phrase routing.
-- Selecting a method is not Evidence of effectiveness. Any method identity used by Evidence must come from persisted, project-owned Tutor-turn state, never be invented by Evidence processing.
-- Historical method ranking belongs only to LR-D04B after sufficient Evidence and approval; do not introduce MCP, agents, or infrastructure for this problem without approval.
-- Do not add a separate conversation classifier, Subject classifier, Topic classifier, summarizer, archive-retrieval layer, or memory service without measured evidence and Product Owner approval.
-- Modular Monolith architecture unless scaling evidence justifies a change.
-- Limited Real-Lina interaction is verified; stable recurring/daily Lina use and longitudinal cross-session personalization remain separate verification horizons. Do not collapse those labels.
+```text
+Raw learning interaction
+→ optional provisional Candidate hints
+→ completed structurally reviewable Segment
+→ Segment Learning Review / staged findings
+→ deterministic Session Intelligence Finalization
+→ Session-authorized Event/Evidence
+→ Current Learning State / Patterns
+→ Learner Intelligence Card
+→ relevant later learning personalization
+```
 
-## AI/Model Rules
+Protect these invariants:
 
-- Services request AI by task through the Model Gateway; do not call provider SDKs from arbitrary routes/services.
-- Normal Tutor turns target one primary Tutor call.
-- Tutor may emit hidden Candidate Event metadata; it does not directly write stable learner conclusions.
-- No extra normal-turn Evidence evaluator or Subject/Topic classifier is authorized. Closed, structurally
-  reviewable Segments may be reviewed asynchronously as background work, outside
-  Tutor latency; deterministic reviewability does not decide educational meaning,
-  and staged findings do not directly update personalization. Closed
-  Session Finalization remains the durable activation boundary, is
-  deterministic by default, and requires no broad semantic Session model call
-  after Segment Reviews.
-- Segment Review is the authoritative semantic-analysis point for `LEARNING` vs `NON_LEARNING`, primary Broad Subject, concept/topic, and optional source-grounded school alignment in the accepted SUBJ-01 contract.
-- AI handles semantic/cognitive work, including the normal Tutor call's turn-level Mode, Strategy, Method, and prior-method-relation decision; deterministic code handles allowed-value validation, safety, counts, recency, lifecycle, weights, persistence, effective policy routing, and state transitions where practical. No extra classifier/model call is authorized for those Tutor decisions.
-- Safety/boundary enforcement must consume the explicit policy-engine decision contract; Tutor prompt text alone is not enforcement.
-- For teaching-strategy patterns, only observable Lina outcomes may confirm/challenge effectiveness; choosing the strategy because history recommended it is not Evidence.
-- Log task, provider, model, tokens/usage, latency, estimated cost, success/failure, and fallback.
-- Current real provider support may use OpenAI, but provider/model selection remains behind Model Gateway and must not be hardwired as permanent product architecture.
+- **Segment interprets; Session commits.**
+- Candidate ≠ Evidence.
+- One primary Tutor model call per normal Student turn.
+- No second normal-turn classifier, summarizer, critic, profile agent, or evidence evaluator.
+- Current demonstrated behavior outranks historical personalization.
+- Never personalize away demonstrated independence.
+- Selecting/using a TeachingMethod is not evidence that it worked.
+- TeachingStrategy and TeachingMethod remain separate.
+- Luna/primary Tutor call semantically determines allowed turn-level Mode/Strategy/Method/prior relation; deterministic runtime validates/persists canonical values and lineage.
+- Current School Focus is superseded as learning-path authority and must not be recreated.
+- Book/content availability improves grounding but is never Tutor permission.
+- Curriculum semantics are optional enrichment, not a prerequisite for Tutor or Learning Intelligence.
+- Full prior-session transcripts are not injected into normal Tutor context.
+- A Learning Thread is the session-local contiguous Segment; no third Thread entity.
+- Durable Conversation Topic is optional navigation metadata, not Learner Intelligence, Evidence, Safety, or curriculum authority.
+- Hybrid Segment Context uses Current Multimodal Turn + Full Immediate Exchange + compact Structured Segment State + relevance-selected complete current-Segment Exchanges; capacity is a guardrail, not a relevance algorithm.
 
-## Content Rules
+## Personal Facts — Approved Separate Context Layer
 
-- Preserve the approved native Docling + PostgreSQL/pgvector Hybrid Retrieval direction; do not restart RAG design without a concrete blocker.
-- Preserve original uploaded books/documents and source provenance.
-- Docling is the baseline structural document-understanding layer.
-- Educational semantics are a separate, optional derived enrichment layer.
-- Basic retrieval-ready content must not require semantic taxonomy completion once the Track A correction is implemented.
-- Prefer structural/hierarchical retrieval; do not make blind fixed-token chunking the primary strategy.
-- Reprocessing must be possible from the original source.
-- Future trusted web references and Student-captured pages should enter through the existing Learning Source / Retrieval boundary rather than create a parallel RAG subsystem.
+Personal Facts are a new approved Daily-Use Release 1 capability, but are not executable until PF-01 is `READY`.
 
-## Learning Artifact Rules
+Purpose:
 
-- Learning Artifacts are approved product direction but are **not currently executable unless explicitly promoted**.
-- Before building a generic custom Artifact DSL/renderer layer, evaluate the approved OpenMAIC package-level renderer/DSL candidate; do not adopt the OpenMAIC platform architecture by default.
-- Prefer typed Artifact Specifications and reusable renderers.
-- Approved renderer direction: native React/SVG, Motion, JSXGraph, React Konva, MathLive when the capability is promoted and the concrete use case requires them.
-- Custom generated HTML/SVG is fallback-only and must be sandboxed/sanitized.
-- Artifact failure must never block the Tutor conversation.
-- Visual motion must serve a learning objective, not decoration alone.
-- A bounded Math readability fix does not automatically unfreeze the full Artifact Engine or Learning Canvas.
+> Preserve durable facts the Student tells the system about herself so future interactions know the person they are speaking with.
 
-## UI / Experience Reuse Rules
+Protected boundaries:
 
-- Use shadcn/ui as the baseline functional component layer unless a concrete task-level conflict is documented.
-- Before hand-building full Student thread/composer/chat plumbing, evaluate `assistant-ui` against the FastAPI/SSE, attachment, persistence, custom message-part, and safety requirements in the reuse catalog.
-- For Lina-facing visual design, inspect approved child/education visual references and component/motion sources, but preserve one coherent design system suitable for roughly age 10 rather than preschool styling.
-- Motion is purposeful: orientation, feedback, explanation, celebration, or interaction — not visual noise.
+- Personal Facts are **separate from Learner Intelligence**, Evidence, Student Core Profile, Conversation Context, Safety, and curriculum grounding.
+- The source is the Student's own assertions/interactions. Parent-supplied claims do not automatically become the Student's Personal Facts.
+- A Personal Fact is not required to be externally verified objective truth; it represents what the Student has asserted about herself/world for personalization continuity.
+- Store facts, not personality analysis, psychological interpretations, intelligence labels, learning-style labels, transcript summaries, or global character judgments.
+- Personal Facts may be temporal/revisable: support, contradiction, invalidation, supersession, first/last observation, and source-message provenance should remain available.
+- Relevant Personal Facts may later enter Tutor context as a separate bounded input.
+- Personal Facts never become Learning Evidence merely because they exist.
+- Learning Intelligence does not copy itself into Personal Facts merely to create a second memory.
+- Future Parent Insights may combine Personal Facts and Learning Intelligence for analysis, but derived insights must not write back as facts or learning truth without their own governed evidence.
+- Parent may inspect stored Personal Facts; no separate hidden-child-facts store is required under the current Product Owner decision.
+
+## Student Core Profile
+
+Student Core Profile remains separate from Personal Facts and Learner Intelligence.
+
+It owns Parent/System-authoritative application facts such as child identity, date of birth when supplied, derived age, and active Grade/Grade Period linkage. Age should be derived from date of birth rather than manually maintained.
+
+Parent facts in Core Profile must not be transformed into learning conclusions.
+
+## Multimodal / Visual Decisions
+
+The following are approved for the Daily-Use Release sequence but remain blocked until their task is promoted:
+
+### Voice
+
+```text
+Audio
+→ Speech-to-Text
+→ Transcript
+→ normal Tutor pipeline
+```
+
+Current policy: retain transcript; do not retain raw audio after successful STT. No speech-to-speech requirement for Release 1.
+
+### Student Images / Vision
+
+- Preserve the original Student image/work as the raw source.
+- Vision interpretation is derived and may be uncertain.
+- If a critical region is ambiguous, ask Lina a simple clarification rather than inventing certainty.
+- Default visual correction path is **annotation on a derived copy of the original image**.
+- Clean React/SVG/interactive reconstruction is fallback when annotation is insufficient.
+- Annotation/reconstruction never replaces the original source and is not evidence of what Lina originally produced.
+
+### Teaching Visuals — Renderer First
+
+The primary teaching-visual strategy is deterministic/reusable renderers, not image generation:
+
+- React/SVG
+- Motion
+- JSXGraph
+- React Konva
+- MathLive
+
+Optional later: Rough.js, Recharts, p5.js, React Flow when a real use case requires them.
+
+OpenAI or other image generation is **optional/deferred/illustrative**, not the default teaching renderer. Artifact failure must never block learning.
+
+## UI / Frontend Direction
+
+Frontend improvement is part of the approved launch sequence, but begins only when FE-01 is promoted.
+
+Target Student experience:
+
+> playful + intelligent + polished + personal, suitable for approximately age 10; not preschool and not a corporate chatbot.
+
+Reuse candidates include shadcn/ui, assistant-ui fit assessment, Motion/Motion Primitives, ThreeUI/Three.js selective use, Magic UI, React Bits, 21st.dev, Aceternity UI, and Cult UI. Do not stack them indiscriminately. FE-01 must classify relevant candidates as `ADOPT / PARTIAL ADOPT / VISUAL REFERENCE / REJECT` and establish one coherent design system.
+
+ThreeUI/Three.js may be used selectively for high-value visual moments/background/3D experiences when performance and readability remain acceptable; they do not become the application architecture.
+
+## Retrieval / RAG Rules
+
+- Keep the current native Docling + PostgreSQL/pgvector Hybrid Retrieval path for launch.
+- Preserve metadata filtering, lexical + vector retrieval, ranking/context budgets, and source provenance.
+- Do not replace it with OpenAI File Search, LlamaIndex, or another framework by assumption.
+- A post-launch evaluation may compare alternatives on a real Grade-5 golden set for retrieval quality, provenance, Arabic/English behavior, latency, cost, dependency complexity, and rebuildability.
+- Adopt a replacement only if measured evidence shows a material advantage behind the existing Retrieval boundary.
+
+## AI / Model Rules
+
+- Application domains request AI tasks through Model Gateway; do not call provider SDKs arbitrarily from routes/services.
+- Current operational provider may be OpenAI, but provider/model is replaceable architecture.
+- Daily-Use Release tasks may add future task routes such as `personal_fact_extraction`, `speech_to_text`, and `vision_student_work` when their task is promoted.
+- Keep AI usage/cost lineage observable.
+- Use deterministic code for state, counts, lifecycle, reconciliation validation, and plumbing where practical.
+- Do not introduce an additional AI call without identifiable product value.
+
+## Child Safety
+
+All Student-facing paths — Tutor, Voice, Vision, annotations, artifacts, future web/reference tools — remain subject to `docs/CHILD_SAFETY_POLICY.md`.
+
+Parent settings may restrict family-sensitive topics further but may never weaken the non-overridable system safety baseline.
+
+Personal Facts must not become a route for storing unsafe sensitive information beyond the approved product/safety policy.
 
 ## Verification Rules
 
 A task is not complete because code exists. Before claiming completion:
 
-1. run the task's listed verification,
-2. run relevant unit/contract/integration tests,
-3. verify no protected invariant was violated,
-4. inspect logs/output for the changed path when applicable,
-5. update `TASKS.md` status when safely modifying the historical queue, or record an explicit task-specific governing transition if the approved task spec temporarily supersedes a stale queue row,
-6. update `project-state/PROJECT_STATE.md` if current reality or next action changed,
-7. distinguish independent code review, Codex-reported automated execution, real-model verification, browser verification, limited Real-Lina use, stable daily Real-Lina use, and longitudinal Real-Lina validation rather than collapsing them into one label.
+1. run the task's listed verification;
+2. run relevant unit/contract/integration tests;
+3. verify protected invariants remain intact;
+4. inspect changed-path runtime/log behavior when applicable;
+5. update `TASKS.md` status safely;
+6. update `project-state/PROJECT_STATE.md` if current reality/next action changes;
+7. distinguish code review, automated execution, real-model verification, browser verification, limited historical Real-Lina use, stable daily Real-Lina use, and longitudinal validation;
+8. stop at the task boundary and return for Product Owner review before promoting the next task.
 
-When a test cannot be run, state exactly why and leave that evidence category unverified rather than marking it complete.
+When verification cannot be run, state exactly why and keep that evidence category unverified.
 
-### Real-model environment discovery and protected local work
+## Protected Local Work / Secrets
 
 Implementation work belongs in the isolated worktree:
 
 `/Users/haitham/development/lina-learning-ctx03`
 
-For real-model/provider verification, the absence of `.env` in that isolated worktree does **not** by itself mean provider configuration is unavailable. If required configuration is absent, the original repository checkout may be inspected **read only** for existing local environment/provider configuration when needed.
+The original checkout may be inspected **read only** for existing local configuration when the isolated worktree lacks it. Never implement changes in the original checkout.
 
-Never print, echo, display, copy, modify, commit, or hardcode secret values; never copy an original checkout `.env` into the isolated worktree or add environment files to Git. Report only which approved configuration locations/types were checked and whether required configuration was available.
+Known protected original-checkout Eureka-related dirty files must not be stashed, reset, cleaned, overwritten, formatted, or modified.
 
-The original checkout may not be used for implementation changes. Known protected local Eureka-related dirty files there include:
+Never print, echo, copy, expose, commit, or hardcode secret values. Do not copy an original `.env` into the isolated worktree. Report only whether required configuration is present/absent/invalid when auditing configuration.
 
-- `scripts/verify_eureka_semantic_representation.py`
-- `services/content/semantics.py`
-- `tests/test_eureka_semantic_verifier.py`
-- `tests/test_semantic_batch_planning.py`
+## Current Next Action
 
-Never stash, reset, clean, overwrite, or incidentally refactor them.
+Read `project-state/PROJECT_STATE.md` and execute **RL-01A — Accepted Runtime Alignment only**.
 
-## Data / Migration Rules
-
-- Use migrations for schema changes.
-- Avoid destructive migrations unless explicitly approved and backed by a migration/rebuild path.
-- Derived learning intelligence must remain versioned and rebuildable.
-- Preserve provenance from derived data to raw source/processing run.
-
-## Approval Required Before
-
-- changing governing product/architecture meaning or protected invariants,
-- weakening child-safety behavior,
-- changing approved rubric state meanings,
-- bypassing the Model Gateway,
-- adding a new core infrastructure dependency not already approved/evaluated by the technology reuse process,
-- changing architecture from Modular Monolith,
-- continuing past a mandatory decision gate without recorded approval,
-- deleting raw learner history or original source files,
-- promoting a deferred approved capability into implementation.
-
-## Project-State Discipline
-
-`project-state/PROJECT_STATE.md` is a short operational snapshot, not a diary or changelog. Keep only:
-
-- current goal,
-- current reality,
-- active decisions,
-- protected areas,
-- active risks,
-- next recommended action,
-- critical references.
+Stop after RL-01A verification/report. Do not execute RL-01B or any feature work in the same run.
