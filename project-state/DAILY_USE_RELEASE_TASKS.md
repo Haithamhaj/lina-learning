@@ -33,37 +33,27 @@ Post-launch work is not a Release-1 blocker: measured RAG evaluation, selected r
 
 ## RL-01A — Accepted Runtime Alignment
 
-**Status:** READY  
+**Status:** DONE / ACCEPTED  
 **Dependencies:** Product Owner-approved RL-01 Current Reality Audit; `DOC-SYNC-01` accepted  
 **Purpose:** Align the isolated implementation worktree and runtime reference to the accepted `codex/ctx-03` revision before any database/runtime/feature activation.
 
-**Expected output:**
-- resolve/fetch the accepted remote `codex/ctx-03` HEAD;
-- safely align `/Users/haitham/development/lina-learning-ctx03` to that revision;
-- preserve protected dirty files in the original checkout and make no implementation changes there;
-- verify tracked worktree state and remote relationship;
-- classify stale runtime/process/config references still pointing at the older original checkout/runtime;
-- confirm whether acceptance commits after the previously audited local revision are documentation/governance-only or expose any unexpected runtime change;
-- run appropriate baseline automated verification on the aligned revision;
-- report exact resulting HEAD and blockers to RL-01B.
+**Accepted result:**
+- isolated worktree `/Users/haitham/development/lina-learning-ctx03` aligned from local `d93f104b3afb21741429229e7c2fa4584e7779ac` to remote/current `db0a7b05c6a6ec3d9e6b8914200eb6b2f80e37e9`;
+- branch `codex/ctx-03`, ahead/behind `0/0`, tracked state clean;
+- `.acceptance-artifacts/` preserved untracked;
+- original checkout and protected Eureka-related local modifications untouched;
+- baseline `af7264cd05e1bb9f6e794005802758521c57d509` → current HEAD diff verified documentation/governance-only, with no runtime/schema/migration/config implementation change;
+- Python disposable-PostgreSQL verification passed `715 passed, 7 skipped`;
+- web build/typecheck, migration single-head `f5a1c2d3e4b6`, and `git diff --check` passed;
+- live API remains stale from old original checkout; Web/Worker not running; DB/Clerk/Model configuration remains sourced from the old checkout. These are RL-01B/RL-01C concerns, not RL-01A failures.
 
-**Verification:**
-- isolated worktree is on the accepted branch/HEAD or a clearly documented newer accepted fast-forward;
-- original protected checkout remains untouched;
-- no secrets printed/copied/committed;
-- no feature/runtime/schema change introduced;
-- baseline verification result recorded;
-- exact stale/current runtime references classified.
-
-**Explicit exclusions:** fresh DB creation, migrations against historical DB, Worker activation against real data, Clerk changes, OpenAI configuration changes, Personal Facts, Frontend, Voice, Vision, deployment, RAG changes, Artifacts, MATH-01, ID-01.
-
-**Stop condition:** Stop after report/verification. Do not start RL-01B.
+**Verification:** ACCEPTED on 2026-08-31 from the Codex RL-01A report. No task-authored tracked implementation files changed.
 
 ---
 
 ## RL-01B — Fresh Real-Use Database & Runtime Composition
 
-**Status:** BLOCKED  
+**Status:** READY  
 **Dependencies:** RL-01A accepted  
 **Purpose:** Establish the clean current-schema database and one aligned local runtime composition that will become the technical baseline for real Lina use.
 
