@@ -1038,7 +1038,8 @@ closed, or used to start REC-25 or LR-D04B.
 | **DEC-02** — TeachingMethod Attribution Fidelity | 4 | DONE / DEFECT NOT REPRODUCED / ACCEPTED | Bounded production-path diagnostic found no material false attribution between persisted `teaching_method_id` and the dominant visible Tutor representation. Legitimate registry overlap remains allowed; the bounded sample did not exercise SOCRATIC_FOCUS or SYMBOLIC_EXPLANATION. | Independent architecture/code review accepted. Automated tests remain CODEX-REPORTED; real Luna diagnostic remains CODEX-REPORTED REAL LUNA VERIFIED. Browser and Real-Lina remain NOT VERIFIED and are not closure blockers. |
 | **REP-01** — Over-Practice / Repetition Control | 3 | DONE / CODE REVIEW VERIFIED / ACCEPTED | The one-primary-call Tutor guidance semantically favors meaningful variation, deeper reasoning, transfer, useful progression, restoring Student agency, or a natural close after repeated independently reasoned current-Segment success, rather than low-information near-identical drills. It does not infer mastery and preserves useful reinforcement for fragile, supported, uncertain, contradictory, recently repaired, or genuinely different work. | Independent GitHub review / Product Owner acceptance. Automated verification remains CODEX-REPORTED; real Luna verification remains CODEX-REPORTED REAL LUNA VERIFIED. Browser and Real-Lina remain NOT VERIFIED and are not closure blockers. |
 | **LANG-01** — Language Continuity | 3 | DONE / CODE REVIEW VERIFIED / ACCEPTED | The same-primary-Tutor language guidance treats language-neutral mathematical notation as a continuation rather than a language switch: neutral notation cannot select Arabic or English, while immediate/current conversational language, clear current-language switches, and natural bilingual terminology remain authoritative. | Independent GitHub review / Product Owner acceptance. Automated verification remains CODEX-REPORTED; real Luna verification remains CODEX-REPORTED REAL LUNA VERIFIED. Browser and Real-Lina remain NOT VERIFIED and are not closure blockers. |
-| **CAND-02** — Guided vs Independent Candidate Consistency | 3 | READY / NEXT APPROVED ACTION | Equivalent learning behaviors alternate between guided_success and independent_success without a justified support difference. | LANG-01 accepted. Do not begin in this documentation-only transition. |
+| **CAND-02** — Guided vs Independent Candidate Consistency | 3 | INSTABILITY REPRODUCED — ROOT CAUSE NOT VERIFIED / NEXT APPROVED ACTION | In the same semantic condition—general teaching, then a new unhinted task, then successful Student work—bounded real-Luna reruns emitted `guided_success` once and `independent_success` twice. Missing contrastive definitions remain a hypothesis, not a verified root cause. | Focused semantic investigation is the next approved action. Do not begin CAND-02 implementation in this documentation-only transition. |
+| **CAND-03** — Candidate Output / Runtime Constraint Alignment | 3 | DONE / CODE REVIEW VERIFIED / ACCEPTED | The model-facing Candidate structured-output schema now mirrors the existing runtime contract for direct field bounds and UUID/cardinality constraints. The parity regression test derives runtime constraints from `CandidateEventMetadataItem.model_json_schema()` and compares them with the Tutor schema. Candidate meanings, `candidate-event-v1`, Tutor guidance, and runtime semantic processing are unchanged. | Independent GitHub review / Product Owner acceptance. Automated tests remain CODEX-REPORTED; real Luna persistence verification remains CODEX-REPORTED REAL LUNA VERIFIED. Browser and Real-Lina remain NOT VERIFIED and are not closure blockers. |
 | **EVID-01** — Session Evidence Consolidation HTTPError | 5 | OPEN LEGACY DEFECT / REMOVED FROM NEW CRITICAL PATH | Three historical `session_evidence` HTTPErrors produced no completed LearningEvent, LearningEvidence, or session authority output; root cause remains unknown. | Investigate/fix under SEG-EVID-01E only if the legacy route remains required for compatibility/reprocessing. |
 | **PERS-01** — End-to-End Personalization Validation | 5 | SUPERSEDED / ABSORBED INTO SEG-EVID-01F | SEG-EVID-01F proves Interaction → Segment Review → Session-authorized Evidence → State / Patterns → Card → later Tutor personalization. | Do not retain a duplicate validation gate. |
 | **MATH-01** — Structured Math Readability | 4 | OPEN / CONFIRMED | Plain-text long-division alignment is not reliably readable in proportional chat rendering; a future minimal structured Math representation is needed. | Independent; do not unfreeze the Artifact Engine. |
@@ -1054,11 +1055,13 @@ closed, or used to start REC-25 or LR-D04B.
    → SCOPE-01 policy clarification approved → SUBJ-01 subject-attribution accepted
    → DEC-01 calibration accepted → DEC-02 TeachingMethod Attribution Fidelity
    accepted → REP-01 Over-Practice / Repetition Control accepted → LANG-01
-   Language Continuity accepted → CAND-02 Guided vs Independent Candidate
-   Consistency (next approved action).
+   Language Continuity accepted → CAND-03 Candidate Output / Runtime Constraint
+   Alignment accepted → CAND-02 Guided vs Independent Candidate Consistency
+   (instability reproduced / root cause not verified; next approved action).
    EDU-ERR-01 remains approved but deferred; its prior F blocker is cleared.
 3. **C — Tutor Semantic Calibration:** DEC-01 → DEC-02 accepted → REP-01 accepted → LANG-01 accepted
-   → CAND-02 final.
+   → CAND-02 focused semantic investigation (instability reproduced / root cause
+   not verified).
 4. **D — Evidence / Personalization:** legacy EVID-01 compatibility is
    considered under SEG-EVID-01E; PERS-01 is absorbed into SEG-EVID-01F.
 5. **E — Independent Product / Platform:** MATH-01 and ID-01 are independent
@@ -1158,8 +1161,9 @@ expansion remain frozen.
 - **Lifecycle:** UI-01 is **CLOSED** following real S3 browser use with no hang
   and no refresh. The remaining stabilization work is recorded in TODO v2.1.
 
-**Next action:** CAND-02 — Guided vs Independent Candidate Consistency. Browser
-and Real-Lina validation remain separate. Do not begin CAND-02, EDU-ERR-01,
+**Next action:** CAND-02 — Guided vs Independent Candidate Consistency
+(`INSTABILITY REPRODUCED — ROOT CAUSE NOT VERIFIED`). Browser and Real-Lina
+validation remain separate. Do not begin CAND-02 implementation, EDU-ERR-01,
 REC-25, LR-D04B, archive retrieval, or frozen future capabilities in this
 documentation-only transition.
 
