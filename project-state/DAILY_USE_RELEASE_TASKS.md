@@ -32,30 +32,20 @@ Post-launch work is not a Release-1 blocker: measured RAG evaluation, selected r
 ---
 
 ## RL-01A — Accepted Runtime Alignment
-
 **Status:** DONE / ACCEPTED
 
----
-
 ## RL-01B — Fresh Shared Application DB & Runtime Composition
-
 **Status:** DONE / ACCEPTED  
 **Accepted commit:** `dc76195bcb9ba7577b5f6dbbf0804f5bff6c43ff`
 
 **Accepted result:** fresh shared PostgreSQL/pgvector DB, aligned Web/API/Worker runtime, standard Worker command, Worker recovery smoke, and Student-scoped shared-DB isolation.
 
----
-
 ## RL-01C — Clerk + OpenAI Operational Verification
-
 **Status:** DONE / ACCEPTED
 
 **Accepted result:** real Clerk Student/Parent auth and signed backend roles, explicit Parent→Student authorization, real OpenAI Tutor/Segment Review/embedding routes through Model Gateway, AI execution lineage, and real-auth cross-Student isolation.
 
----
-
 ## RL-01D — Controlled Full Intelligence Loop
-
 **Status:** DONE / ACCEPTED
 
 **Accepted result:** real multi-turn Tutor interaction with one primary call per normal turn; natural Session/Segment lifecycle; real Segment Learning Review; deterministic Session Finalization with zero semantic Session LLM calls; source-linked Event/Evidence/State/Pattern/Decision materialization; relevant later intelligence selection without full historical transcript; irrelevant fraction intelligence excluded from an unrelated Math question; healthy recovery from a transient review-provider failure; cross-Student scoping preserved.
@@ -93,112 +83,175 @@ Post-launch work is not a Release-1 blocker: measured RAG evaluation, selected r
 **Status:** READY  
 **Dependencies:** TASK-027A accepted
 
-**Purpose:** Define the durable Student-scoped contract for factual context the Student tells the system about herself/her world. This is the semantic/data boundary for personal memory, not extraction or Tutor use yet.
+**Purpose:** Define the simple, durable Student-scoped contract for explicit factual context the Student tells the system about herself/her ordinary world. PF-01 is the semantic/data boundary for personal memory, not extraction or Tutor use yet.
 
 ### Approved source authority
 
 - Personal Facts are **Student-asserted**.
-- They come from what the Student tells the system about herself/her world.
+- They come from explicit Student statements about herself/her ordinary world.
 - Parent claims do not automatically become Student Personal Facts.
-- The system does not need to establish objective external truth before preserving a Student assertion as personal context.
+- Repeated topic discussion without an explicit assertion does not become an inferred preference, interest, personality trait, or talent.
 
-### Required contract output
+### Approved simple model
 
-PF-01 must define:
+Release 1 uses:
 
-1. **Qualification boundary**
-   - what is a durable Personal Fact;
-   - what is merely ephemeral/current-conversation context;
-   - what must never be stored as a Personal Fact.
+```text
+Personal Fact
++
+Personal Fact Observations
+```
 
-2. **Fact representation**
-   - stable fact identity/key/category;
-   - normalized value/statement;
-   - current lifecycle status;
-   - source Student message/interaction lineage;
-   - first-observed / last-observed timestamps;
-   - support/repetition metadata where useful.
+A Fact is identified by:
+- `student_id`;
+- controlled category;
+- stable `fact_key` representing the topic/semantic slot;
+- normalized value representing the explicit assertion.
 
-3. **Temporal/reconciliation semantics**
-   - repeated support;
-   - contradiction;
-   - invalidation;
-   - supersession;
-   - current vs historical/superseded facts;
-   - history preserved rather than silently overwritten/deleted.
+Example:
 
-4. **Safety/privacy boundaries**
-   - do not store unsafe sensitive personal information merely because the child said it;
-   - comply with `docs/CHILD_SAFETY_POLICY.md`;
-   - no hidden broad child-surveillance profile.
+```text
+fact_key = preference:drawing
+value = LIKE
+```
 
-5. **Semantic exclusions**
-   - no personality analysis;
-   - no psychological interpretations/diagnosis;
-   - no intelligence labels;
-   - no learning-style labels;
-   - no global character judgments;
-   - no transcript summaries masquerading as facts;
-   - no Learner Intelligence/Evidence copied into Personal Facts;
-   - no Student Core Profile duplication merely to create a second memory.
+A different explicit value for the same key is a separate Fact, not an overwrite:
 
-6. **Authority separation**
+```text
+preference:drawing = LIKE
+preference:drawing = DISLIKE
+```
+
+The current value for a `fact_key` is determined at read time from the most recently observed explicit Fact. Older Facts remain historical context.
+
+### Observation / count contract
+
+Every explicit support for an exact Fact creates a source-linked Observation.
+
+The Fact exposes or can cheaply derive:
+- `support_count`;
+- `first_observed_at`;
+- `last_observed_at`.
+
+Repeated explicit support strengthens the historical relationship by increasing count and refreshing recency. Do **not** store arbitrary confidence percentages.
+
+Observation rows/source lineage remain the trustworthy basis for count/history; a cached count is allowed only if it remains rebuildable from observations.
+
+### Qualification boundary
+
+Good Release-1 Personal Facts include ordinary durable personal context such as:
+- explicit preferences/favorites/interests;
+- recurring activities;
+- pets;
+- ordinary non-sensitive relationships;
+- other safe durable personal context that can make later conversation naturally personalized.
+
+Not Personal Facts:
+- one-off future plans or calendar events;
+- temporary daily states;
+- inferred interests from repetition alone;
+- transcript summaries;
+- Core Profile competitors such as authoritative age/Grade;
+- Learning Intelligence/Evidence or academic judgments;
+- personality/psychology/diagnosis/intelligence/learning-style/talent conclusions;
+- unsafe sensitive personal information.
+
+Examples:
+- “I like drawing.” → Personal Fact.
+- “I play basketball every Thursday.” → Personal Fact.
+- “I’m going to Jeddah next weekend.” → Conversation Context only.
+- “I’m tired today.” → Conversation Context only.
+- repeated football discussion without “I like football.” → no Personal Fact.
+- “I’m bad at math.” → not Personal Fact; current conversation may respond naturally, while learning conclusions require the Learning Intelligence evidence path.
+- “I’m shy.” → conversation-only; no personality memory.
+
+`TEMPORAL_EVENT` is not part of the Release-1 Personal Facts taxonomy.
+
+### Safety/privacy boundary
+
+Do not persist sensitive child information into Personal Facts merely because it appears in conversation, including credentials, precise address/live location, contact details, financial/account information, highly sensitive medical/private information, sexual/private information, or safety-risk secrets. Existing raw-history and Safety policies remain separate authorities.
+
+### Authority separation
 
 ```text
 Student Core Profile = Parent/System-authoritative application facts
 Personal Facts       = Student-asserted factual personal context
 Learner Intelligence = learning-derived evidence-backed state
 Conversation Context = current/raw conversational continuity
+Safety               = safety authority
+RAG                  = curriculum/reference grounding
 ```
 
-7. **Parent inspection**
-   - Parent may inspect stored Personal Facts for the linked Student;
-   - inspection does not make Parent a Personal-Fact source;
-   - no separate hidden child-facts store is required under the current approved decision.
+Personal Facts never become Learning Evidence merely because they exist.
 
-8. **Isolation/rebuildability**
-   - every Personal Fact is Student-scoped;
-   - source lineage is sufficient to audit/rebuild derived current state;
-   - Student A facts can never enter Student B context.
+### Parent inspection
 
-### Important product examples to resolve in the contract
+- Parent may inspect stored Personal Facts for the linked Student.
+- Parent may see the Fact plus count/first/last-observed support/history where useful.
+- Inspection does not make Parent a Personal-Fact source.
+- No separate hidden child-facts database is required.
 
-The contract should classify examples such as:
+### Isolation/rebuildability
 
-- “I like drawing.”
-- “My cat is called Luna.”
-- “Sara is my best friend.”
-- “I’m going to Jeddah next weekend.”
-- “I’m tired today.”
-- repeated mentions of football without an explicit “I like football.”
-- “I’m bad at math.”
-- “I’m shy.”
-- “I’m 14 / I’m in Grade 8” when Parent/System Core Profile says otherwise.
+- every Fact and Observation is Student-scoped;
+- every Observation traces to a Student-authored source message/interaction;
+- Student A Facts can never be selected/reconciled/displayed for Student B;
+- Fact counts/current state remain reconstructable from source-linked observations/history.
 
-The contract must distinguish literal Student assertions from derived interest/personality inference. Repetition alone must not silently become a psychological or personality conclusion.
+### Release-1 retrieval direction for PF-03
+
+Personal Facts are optional Tutor assistance, not a teaching dependency.
+
+Do **not** add a vector-memory platform and do **not** mix Personal Facts into curriculum RAG.
+
+Preferred PF-03 direction:
+- Student-scoped PostgreSQL indexes;
+- derive/select the current Fact per `fact_key` by latest explicit observation;
+- deterministic cheap lexical/key relevance against the current question;
+- bounded small result set/character budget;
+- recency and count may order already-relevant candidates;
+- if no clearly relevant Personal Fact exists, inject none;
+- no extra normal-turn model call.
+
+Vector/embedding retrieval may be reconsidered only if real Personal Fact volume or measured recall needs later justify it.
+
+### PF-02 handoff direction
+
+Keep reconciliation simple:
+- new `(student_id, fact_key, value)` → `ADD` Fact + first Observation;
+- same exact Fact asserted again → `SUPPORT` existing Fact with another Observation;
+- same `fact_key` with a different explicit value → `ADD` a new historical Fact for that key; latest explicit Fact becomes current at read time;
+- ineligible/sensitive/inferred/authority-conflicting statement → `NOOP`.
+
+Do not require a complex supersession/invalidation state machine for Release 1.
 
 ### Verification
 
-- contract clearly distinguishes durable vs ephemeral vs prohibited memory;
-- temporal/supersession examples are deterministic enough for PF-02 to implement ADD / UPDATE / SUPERSEDE / NOOP;
-- no Personal Fact can become Learning Evidence merely through existence;
-- Parent inspection and Student-scoped authorization are specified;
-- child-safety/private-information storage boundaries are explicit;
-- no second memory/profile platform is introduced.
+PF-01 is complete only when the contract unambiguously defines:
+- explicit durable vs conversation-only vs prohibited memory;
+- `fact_key` + normalized value identity;
+- observation/source lineage;
+- support count + first/last observed history;
+- latest-explicit-current behavior for conflicting values;
+- child-sensitive storage exclusions;
+- Parent inspection;
+- cross-Student isolation;
+- cheap optional retrieval direction that remains separate from RAG and Learning Intelligence.
 
 ### Explicit exclusions
 
 PF-01 does **not** implement:
 - LLM/model extraction;
 - Worker jobs;
-- ADD/UPDATE/SUPERSEDE/NOOP execution;
+- Fact/Observation database models or migration;
 - Tutor Personal Facts selection/injection;
+- vector Personal Facts retrieval;
 - Parent Insights;
 - frontend memory UI;
 - graph/Graphiti or generic memory frameworks;
 - PF-02 or PF-03.
 
-**Stop condition:** Stop after the Personal Facts contract/design is produced for Product Owner review. Do not start PF-02.
+**Stop condition:** Stop after the revised Personal Facts contract/design is produced for Product Owner review. Do not start PF-02.
 
 ---
 
@@ -206,7 +259,7 @@ PF-01 does **not** implement:
 
 **Status:** BLOCKED  
 **Dependencies:** PF-01 accepted  
-**Purpose:** Async Worker + Model Gateway extraction/reconciliation using ADD / UPDATE / SUPERSEDE / NOOP; no extra normal Tutor-turn call.
+**Purpose:** Async Worker + Model Gateway extraction of explicit safe Personal Facts, normalized to `fact_key` + value, then simple Student-scoped reconciliation using `ADD / SUPPORT / NOOP`; a different explicit value for the same key is added as a new historical Fact rather than overwriting older history. No extra normal Tutor-turn call.
 
 ---
 
@@ -214,7 +267,7 @@ PF-01 does **not** implement:
 
 **Status:** BLOCKED  
 **Dependencies:** PF-02 accepted  
-**Purpose:** Relevance-bounded Personal Facts as a separate Tutor input beside Conversation Context, Student Core Context, Learner Intelligence, optional RAG, and Safety; preserve one primary Tutor call.
+**Purpose:** Cheap deterministic relevance-bounded Personal Facts as a separate optional Tutor input beside Conversation Context, Student Core Context, Learner Intelligence, optional curriculum RAG, and Safety. Use PostgreSQL indexes/simple relevance first; no vector-memory platform unless later measured need justifies it. Preserve one primary Tutor call.
 
 ---
 
