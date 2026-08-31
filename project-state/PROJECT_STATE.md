@@ -2,70 +2,82 @@
 
 ## Current goal
 
-`DOC-SYNC-01 — Product Truth & Governing Documentation Synchronization` is **DONE / ACCEPTED** following Product Owner approval on 2026-08-31 and the final review-only governance/scope audit.
+Move from accepted architecture and completed current-reality audit into the **Daily-Use Lina Release 1** execution sequence approved by the Product Owner on 2026-08-31.
 
-`RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification` is the **NEXT APPROVED TRACK**.
+`DOC-SYNC-01 — Product Truth & Governing Documentation Synchronization` is **DONE / ACCEPTED**.
 
-The first RL-01 stage is **CURRENT REALITY AUDIT ONLY**:
+`RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification` has completed its **CURRENT REALITY AUDIT** stage. The audit verified that the current architecture is implemented, while the actual operational environment is not yet aligned as one current revision/runtime: the live historical database/runtime are older than the accepted code, and the Worker is not part of the standard running composition.
+
+The Product Owner has also clarified that the existing historical database is **experimental/test data** and is not the real-use baseline to preserve. Real Lina use will begin from a **fresh database** on the current schema.
+
+The approved execution sequence is launch-first and intentionally sequential:
 
 ```text
-CURRENT REALITY
-→ GAP
-→ ROOT CAUSE
-→ MINIMAL OPERATIONAL CHANGE
-→ VERIFICATION
-→ ACCEPTANCE
+RL-01A Accepted Runtime Alignment
+→ RL-01B Fresh DB + Runtime Composition
+→ RL-01C Clerk + OpenAI Operational Verification
+→ RL-01D Controlled Full Intelligence Loop
+→ TASK-027A Student Core Profile
+→ PF-01 Personal Facts Contract
+→ PF-02 Personal Facts Extraction/Reconciliation
+→ PF-03 Relevant Facts in Tutor Context
+→ FE-01 Lina Visual System & Reuse Decision
+→ FE-02 Daily Student Experience
+→ TASK-032 Voice / STT
+→ TASK-033 Vision / Student Work
+→ TASK-034 Original-Image Annotation
+→ DEPLOY-01 Private Daily Environment
+→ LINA-R1 Clean Real-Use Baseline
+→ post-launch RAG evaluation / artifacts / later parent insight exploration
 ```
 
-Do not implement, re-platform, or redesign deployment before that audit identifies a verified blocker and the minimum required change.
+Only **RL-01A** is currently executable. Do not start later tasks early.
 
 ---
 
 ## Current reality
 
-- The current implemented proving ground is a Math-first authenticated Student Tutor with persistent conversation, SSE streaming, child-safety enforcement, optional grounding, and relevant learner-intelligence context.
-- Full-System Learning Intelligence Acceptance is **DONE / ACCEPTED**. The canonical architecture is **Segment-Scoped Semantic Review + Session-Scoped Intelligence Authority**.
-- Segment Review is the semantic-analysis unit. Session Finalization is deterministic and remains the durable Event/Evidence authority.
-- One primary Tutor model call per normal Student turn is protected. No second normal-turn classifier, summarizer, or evidence call is approved.
-- Candidate metadata remains provisional. Candidate ≠ Evidence. Raw interaction remains source authority.
-- Current demonstrated behavior outranks historical personalization.
-- `SCOPE-01`, `SUBJ-01`, `DEC-01`, `DEC-02`, `REP-01`, `LANG-01`, `CAND-03`, and `CAND-02` are accepted. Do not reopen them without a newly reproduced defect from real use.
-- **Limited Real-Lina use has occurred.** Lina herself participated in part of a real persisted Tutor interaction; that interaction was then continued and used in subsequent testing/calibration.
-- Limited Real-Lina interaction does **not** prove stable daily use, a complete recurring Lina `Session → Review → Evidence → Card → later Tutor` loop, or longitudinal real-use personalization across multiple natural sessions. Those remain unverified.
-- Voice/STT, Vision/photo input, handwriting/drawing evidence, visual/interactive learning artifacts, Science production, broader Parent Intelligence UX, and Grade-transition production remain **approved product directions but sequenced/frozen for implementation** until explicitly promoted.
-- Curriculum/book availability is optional grounding. The current Student question remains authoritative; no book or semantic extraction is required for Tutor availability.
-- The repository contains a complete Worker entrypoint and DB-backed job system, but the current standard `.replit` Project workflow starts Web + API only. Treat that as an audit finding to verify against the actual chosen/current environment, not permission for deployment redesign.
-- A single reliable daily-use environment combining Web, API, Worker, persistent DB, Clerk identity, and a real Model Gateway route has not yet been verified end-to-end. RL-01 exists to establish that operational reality and prove the recurring intelligence chain with minimum change.
-- `MATH-01 — Structured Math Readability` remains **OPEN / CONFIRMED / Criticality 4** and is independent of RL-01.
-- `ID-01 — Concurrent First-Identity Creation Race` remains **OPEN / INVESTIGATION REQUIRED / Criticality 3**; root cause must be reproduced before any fix.
-- `EDU-ERR-01` remains approved/deferred; `REC-25` remains blocked; `LR-D04B` remains future/evidence-dependent. None is automatically promoted.
+- The accepted remote branch is `codex/ctx-03` at `af7264cd05e1bb9f6e794005802758521c57d509` at the time this release plan was approved.
+- The prior local audit observed an isolated worktree at an older local revision and an older live runtime/database. Therefore the first execution task is revision/runtime alignment, not feature work.
+- Full-System Learning Intelligence Acceptance remains **DONE / ACCEPTED**. Canonical authority remains **Segment-Scoped Semantic Review + Session-Scoped deterministic Intelligence Finalization**.
+- One primary Tutor model call per normal Student turn remains protected.
+- Existing DB-backed jobs/Worker, PostgreSQL/pgvector, Clerk integration, Model Gateway/OpenAI route, hybrid retrieval, object-storage abstraction, and Student Tutor path are implemented foundations.
+- The current standard project workflow starts Web + API but does not start the Worker. This is an operational composition gap, not a missing Learning Intelligence subsystem.
+- The historical/test database will not be migrated as Lina's real-use baseline. The real-use baseline will start from a fresh migrated database with no experimental interaction history.
+- Limited historical Real-Lina interaction remains a verified historical fact, but it will not be treated as the longitudinal production baseline.
+- Current hybrid RAG is already project-owned Docling + PostgreSQL/pgvector lexical/vector retrieval with provenance. It remains the baseline; replacement requires a later measured evaluation, not assumption.
 
 ---
 
 ## Active decisions
 
-1. **Product purpose:** Lina Learning is a personal AI learning system whose differentiator is evidence-grounded longitudinal learning intelligence and personalization, not basic LLM Q&A or book RAG.
-2. **Current question authority:** Lina's current question/behavior outranks stale curriculum context and historical personalization.
-3. **Grounding:** books, school material, captured pages, and trusted references are optional grounding sources, not teaching authority or permission to learn.
-4. **Learning Intelligence:** Segment interprets; Session commits. Staged Segment findings are inactive until deterministic Session authorization.
-5. **Normal Tutor path:** one primary Tutor model call; no extra normal-turn classifier/summarizer/evidence chain.
-6. **Provider boundary:** application domains use the Model Gateway. The currently implemented real provider route is OpenAI, but provider/model choice is replaceable and evidence-driven.
-7. **Deployment boundary:** Replit may be a convenient environment, but it is not product architecture. Deployment target is an operational choice.
-8. **Approved deferred breadth:** Math + Science, multimodal input, visual/interactive representations, and Parent inspectability remain intentional product direction even when not required for the current proving ground.
-9. **Real-use verification:** limited Lina interaction is historical fact; stable daily/longitudinal Lina use is a separate verification horizon.
-10. **RL-01 boundary:** RL-01 is operational verification/stabilization of the existing system, not a deployment redesign project.
+1. **Launch-first execution:** finish the smallest reliable private daily-use product so Lina can start using it, then expand from real use.
+2. **Fresh real-use data:** the current historical database is experimental. Real Lina use begins from a clean database on the current schema.
+3. **Personal Facts:** add a separate Personal Facts layer containing durable facts asserted by the Student about herself. It is separate from Student Core Profile, Conversation Context, and Learning Intelligence.
+4. **Personal Facts boundaries:** no personality/psychological diagnosis, no learning conclusions, no transcript-summary memory, and no conversion of Personal Facts into Learning Evidence.
+5. **Fact evolution:** facts are source-linked, temporal, revisable, and may be supported, contradicted, or superseded over time.
+6. **Parent visibility:** Parent may see the stored Personal Facts. Parent-supplied claims do not become the Student's Personal Facts merely because the Parent asserted them.
+7. **Future parent insights:** combining Personal Facts with Learning Intelligence for exploratory Parent insights is intentionally deferred until real data exists. No talent-detection/ML architecture is authorized now.
+8. **Renderer-first visual teaching:** accurate reusable React/SVG/renderer paths are the primary learning-visual strategy. OpenAI image generation is optional/deferred and not the default teaching renderer.
+9. **Student image feedback:** preserve the original Student image as raw source; annotation on the original is the default derived visual response; clean reconstruction is fallback when annotation is insufficient.
+10. **Frontend is launch scope:** Lina's Student UX must become visually engaging, child-appropriate, polished, and coherent before daily use. Reuse candidates must be evaluated selectively rather than stacking many UI libraries.
+11. **Voice:** initial Voice is Audio → STT → transcript → normal Tutor path. No speech-to-speech requirement for Release 1; successful STT does not retain raw audio under current policy.
+12. **Vision:** Student work/photo understanding is promoted into the launch sequence after the core environment and frontend foundations are verified.
+13. **RAG:** keep current hybrid retrieval for launch. Post-launch RAG evaluation may compare current native retrieval with LlamaIndex/Docling and OpenAI retrieval options using a real golden set.
+14. **Provider boundary:** AI capabilities remain behind Model Gateway; application domains do not hardwire OpenAI SDK calls directly.
+15. **Deployment:** Replit remains a candidate private daily-use host, not architecture. Final deployment follows proof of the current composition.
 
 ---
 
 ## Protected areas
 
 ```text
-Raw interaction provenance
+Raw learning interaction
 → completed Segment semantic interpretation
 → Session-authorized Event/Evidence
 → Current State / Patterns
 → Learner Intelligence Card
-→ relevant later personalization
+→ relevant later learning personalization
 ```
 
 Also protected:
@@ -73,51 +85,79 @@ Also protected:
 - current behavior outranking history;
 - one primary Tutor model call per normal turn;
 - deterministic Session Finalization and no partial Session activation;
-- exact Segment Review/Finding/Event/Evidence provenance;
-- Candidate metadata remaining provisional only;
-- Safety, conversation context, optional school/RAG context, Student Core Profile, and Learner Intelligence remaining separate authorities;
-- original books/student work remaining distinct from AI-derived interpretations/artifacts;
-- no second learner-memory/counter system;
-- no resurrection of Current School Focus authority, mandatory curriculum semantics, or semantic Session summarization;
-- no host/provider choice becoming permanent product architecture without an explicit decision.
+- Candidate metadata remaining provisional;
+- Personal Facts remaining separate from Learner Intelligence and never becoming Learning Evidence by identity;
+- Student Core Profile remaining authoritative Parent/System factual state, distinct from Student-asserted Personal Facts;
+- Safety, conversation context, RAG, Personal Facts, Student Core Profile, and Learner Intelligence remaining separate inputs/authorities;
+- original Student images/work remaining raw source; annotations/reconstructions remain derived;
+- no graph database, second learner-memory system, Redis/Celery, microservice split, or deployment redesign without demonstrated need;
+- current hybrid Retrieval domain remaining replaceable and provenance-preserving;
+- no future Parent Insight conclusion writing back into Personal Facts or Learning Intelligence.
 
 ---
 
 ## Active risks
 
-- **RL-R1 — Integrated Real-Use Operational Loop Unverified — Criticality 5**  
-  Existing Web, API, Worker, persistent DB, Clerk identity, and real model route have not yet been verified together as one reliable recurring Lina environment.
+- **RL-R1 — Accepted Runtime Not Yet Unified — Criticality 5**  
+  Local/current operational execution must first align to the accepted revision and stop using stale runtime components as authority.
 
-- **UX-R1 — Daily-Use Experience Remains Text-Heavy — Criticality 4**  
-  The current proving ground is usable for Math/Text validation but does not yet include the approved Voice, Vision, and richer visual-representation capabilities expected for a natural child learning experience.
+- **RL-R2 — Daily Runtime Composition Unverified — Criticality 5**  
+  Fresh PostgreSQL + current Web + API + Worker + Clerk + real Model Gateway route have not yet been proven together as one recurring environment.
+
+- **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**  
+  Current Student UI is a proving surface, not yet the approved Daily-Use Lina frontend with Voice/photo affordances and richer visual identity.
+
+- **PF-R1 — Personal Facts Not Yet Captured — Criticality 4**  
+  The real-use database should ideally begin with Personal Facts support so this durable user-context stream starts from Lina's first clean sessions.
+
+- **VISION-R1 — Durable Student Asset Hosting Required Before Daily Vision — Criticality 4**  
+  Local storage is adequate for controlled verification but daily photographed work requires durable/private storage and restart-safe access.
 
 - **MATH-01 — Structured Math Readability — Criticality 4**  
-  Plain-text long-division alignment is not reliably readable in proportional chat rendering. Any future fix must remain a bounded representation correction, not an implicit Artifact Engine unfreeze.
+  Remains independent. Renderer-first direction does not silently authorize the full Artifact Engine before its scheduled task.
 
 - **ID-01 — Concurrent First-Identity Creation Race — Criticality 3**  
-  One concurrent creation failure made a lookup→create race plausible but unproven. Diagnose before changing identity logic.
+  Remains investigation-only until reproduced; it must not block unrelated launch work unless the real auth verification reproduces it.
+
+---
+
+## Current executable task
+
+### RL-01A — Accepted Runtime Alignment
+
+**Status:** READY  
+**Boundary:** Repository/runtime alignment only. Do not create the fresh production baseline DB, start Worker against real data, implement Personal Facts, redesign frontend, add Voice/Vision, deploy, or change RAG in this task.
+
+**Goal:** Align the isolated implementation worktree and runtime reference to the current accepted `codex/ctx-03` revision and produce a verified starting point for RL-01B.
+
+**Required outcome:**
+
+- fetch/resolve the accepted remote branch/HEAD;
+- fast-forward/safely align the isolated worktree without touching protected dirty files in the original checkout;
+- verify tracked worktree state;
+- identify which existing runtime/process/config references are stale versus current;
+- confirm no unexpected runtime/code divergence was introduced by the documentation-only acceptance commits;
+- run the appropriate baseline verification for the aligned revision;
+- report the exact resulting HEAD and any blocker to RL-01B;
+- stop.
 
 ---
 
 ## Next recommended action
 
-Run **RL-01 Current Reality Audit** only.
+Execute **RL-01A only**, verify it, update task/project state, and return for review before RL-01B is promoted.
 
-The audit must determine the actual current Web/API/Model Gateway/Auth/DB/Worker/Session Lifecycle/Segment Review/Session Finalization/downstream-intelligence/next-session-personalization/storage/runtime-environment state, classify each link, identify only true Gate-A blockers, and propose the minimum change set.
-
-**Stop after the audit.** Do not make implementation/config/deployment changes during the audit. If a genuine Product/Deployment decision remains after technical inspection, surface one blocking question to the Product Owner.
-
-Do not promote MATH-01, ID-01, EDU-ERR-01, REC-25, LR-D04B, Voice, Vision, Science, Learning Canvas, Artifact Engine, Parent Dashboard expansion, or another deployment architecture during RL-01 Current Reality Audit.
+Do not execute RL-01B or any feature track in the same run.
 
 ---
 
 ## Critical references
 
-- `AGENTS.md` — agent operating rules and protected areas
-- `docs/PROJECT_REFERENCE.md` — stable approved product truth
-- `docs/LEARNING_INTELLIGENCE_SPEC.md` — Learning Intelligence semantic contract
-- `docs/LEARNING_PRODUCT_ROADMAP.md` — approved product evolution/sequencing
-- `docs/IMPLEMENTATION_PLAN.md` — implementation direction
-- `docs/CHILD_SAFETY_POLICY.md` — child safety and Parent Boundary policy
-- `TASKS.md` — durable execution/task state
-- `project-state/SYSTEM_MAP.html` — architecture map plus readiness overlay
+- `AGENTS.md`
+- `docs/PROJECT_REFERENCE.md`
+- `docs/IMPLEMENTATION_PLAN.md`
+- `docs/LEARNING_INTELLIGENCE_SPEC.md`
+- `docs/CHILD_SAFETY_POLICY.md`
+- `docs/TECHNOLOGY_REUSE_CATALOG.md`
+- `TASKS.md`
+- `project-state/SYSTEM_MAP.html`
