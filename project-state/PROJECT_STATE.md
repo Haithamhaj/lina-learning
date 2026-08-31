@@ -2,7 +2,7 @@
 
 ## Current goal
 
-`SUBJ-01 — Subject Attribution at Segment/Finding/Event Boundaries` is **DONE / CODE REVIEW VERIFIED / ACCEPTED**. `DEC-01 — Mode / Strategy / Prior-Relation Calibration` is **DONE / CODE REVIEW VERIFIED / ACCEPTED**. `DEC-02 — TeachingMethod Attribution Fidelity` is **DONE / DEFECT NOT REPRODUCED / ACCEPTED**. `REP-01 — Over-Practice / Repetition Control` is **DONE / CODE REVIEW VERIFIED / ACCEPTED**. `LANG-01 — Language Continuity` is **DONE / CODE REVIEW VERIFIED / ACCEPTED**. `CAND-03 — Candidate Output / Runtime Constraint Alignment` is **DONE / CODE REVIEW VERIFIED / ACCEPTED**. The next approved action is `CAND-02 — Guided vs Independent Candidate Consistency`, currently **INSTABILITY REPRODUCED — ROOT CAUSE NOT VERIFIED**; do not begin implementation in this documentation-only transition.
+`SUBJ-01 — Subject Attribution at Segment/Finding/Event Boundaries` is **DONE / CODE REVIEW VERIFIED / ACCEPTED**. `DEC-01 — Mode / Strategy / Prior-Relation Calibration` is **DONE / CODE REVIEW VERIFIED / ACCEPTED**. `DEC-02 — TeachingMethod Attribution Fidelity` is **DONE / DEFECT NOT REPRODUCED / ACCEPTED**. `REP-01 — Over-Practice / Repetition Control` is **DONE / CODE REVIEW VERIFIED / ACCEPTED**. `LANG-01 — Language Continuity` is **DONE / CODE REVIEW VERIFIED / ACCEPTED**. `CAND-03 — Candidate Output / Runtime Constraint Alignment` is **DONE / CODE REVIEW VERIFIED / ACCEPTED**. `CAND-02 — Guided vs Independent Candidate Consistency` is **REVIEW / IMPLEMENTED + AUTOMATED VERIFIED + REAL-LUNA VERIFIED**; its root cause was missing contrastive Candidate semantics in the shared primary-Tutor guidance. The next approved action is independent review of CAND-02; do not begin a new task in this transition.
 
 `SCOPE-01 — Cross-Subject Conversation & Subject Policy` is **DONE / APPROVED** and is governed by `docs/SUBJECT_SCOPE_POLICY.md`.
 
@@ -115,7 +115,7 @@ Also protected:
 
 ## Next recommended action
 
-`CAND-02 — Guided vs Independent Candidate Consistency` is the next approved action: **INSTABILITY REPRODUCED — ROOT CAUSE NOT VERIFIED**. Do not begin CAND-02 implementation in this documentation-only transition.
+Independent GitHub review of `CAND-02 — Guided vs Independent Candidate Consistency` is the next approved action: **REVIEW / IMPLEMENTED + AUTOMATED VERIFIED + REAL-LUNA VERIFIED**. Do not begin a new task in this transition.
 
 Keep `EDU-ERR-01` APPROVED / DEFERRED, REC-25 blocked, LR-D04B deferred, and Vision, Voice, School-Focused mode, archive retrieval, and other frozen/deferred capability tracks out of this transition.
 

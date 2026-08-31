@@ -182,6 +182,31 @@ def test_tutor_instructions_require_calibrated_child_interaction_without_changin
         assert required_concept in instructions
 
 
+def test_candidate_guidance_contrastively_defines_support_for_the_observed_target_response() -> None:
+    """CAND-02: Luna needs support-relative semantics in its one primary Tutor call."""
+
+    instructions = TUTOR_SHARED_INSTRUCTIONS.casefold()
+
+    for required_concept in (
+        "independent_success means the student succeeds on the target response without meaningful task-specific support",
+        "earlier general teaching does not by itself make a later fresh-task success guided",
+        "ordinary task presentation or encouragement is not guidance",
+        "guided_success requires meaningful immediate, task-specific scaffolding",
+        "support for the observed target response",
+        "do not classify based merely on whether the tutor taught earlier",
+        "teachingstrategy alone",
+        "teachingmethod alone",
+        "student confidence, or response length",
+    ):
+        assert required_concept in instructions
+
+    payload = build_tutor_model_payload(question="I solved the new task and can explain why.")
+    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v8"
+    assert "candidate_classifier" not in payload
+    assert "support_score" not in payload
+    assert "support_threshold" not in payload
+
+
 def test_tutor_guidance_avoids_low_information_drills_after_repeated_independent_success() -> None:
     """REP-01: current repeated reasoning must guide Luna without a fixed threshold."""
 
