@@ -2,7 +2,7 @@
 
 ## IMPLEMENTATION_PLAN.md
 
-**Status:** Approved implementation direction; synchronized with accepted Learning Intelligence architecture under `DOC-SYNC-01` pending Product Owner review  
+**Status:** Approved implementation direction; `DOC-SYNC-01` synchronized wording accepted by Product Owner on 2026-08-31  
 **Authority:** Governing execution map for architecture, sequencing, dependencies, decision gates, and implementation boundaries  
 **Audience:** Product owner, ChatGPT, Codex, AI agents, developers, reviewers  
 **Governing references:** `PROJECT_REFERENCE.md`, `LEARNING_PRODUCT_ROADMAP.md`, `LEARNING_INTELLIGENCE_SPEC.md`
@@ -2344,7 +2344,7 @@ project-state/PROJECT_STATE.md
 TASKS.md / current Product Owner-approved bounded task spec
 ```
 
-At the DOC-SYNC-01 review baseline, documentation synchronization is the only active work. If and only if the Product Owner accepts that review, current state may promote `RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification`. This plan does not independently make that promotion.
+`DOC-SYNC-01` is **DONE / ACCEPTED**. `RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification` is the current **NEXT APPROVED TRACK**. Its first stage is **CURRENT REALITY AUDIT ONLY**. This plan does not independently authorize implementation, configuration changes, re-platforming, or deployment redesign beyond the explicitly approved RL-01 stage boundary.
 
 No historical sequence automatically promotes MATH-01, ID-01, EDU-ERR-01, REC-25, LR-D04B, Voice, Vision, Science, Learning Canvas, Artifact Engine, Parent Dashboard expansion, or a deployment redesign.
 
