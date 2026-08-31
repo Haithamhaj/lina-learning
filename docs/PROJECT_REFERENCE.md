@@ -90,9 +90,9 @@ The system should become more useful as Lina uses it, but should never require f
 
 # 3. Product Boundaries
 
-## 3.1 In Scope
+## 3.1 Approved Intended Product Scope
 
-The initial product scope includes:
+The approved intended Lina product scope includes:
 
 - Lina-first web application.
 - Grade 5 as the first active Grade environment.
@@ -129,7 +129,7 @@ The initial product scope includes:
 - Reprocessing and rebuildability.
 - Grade transition through parent/admin activation of the next Grade's books.
 
-### Current capability status
+### Current Capability / Sequencing Status
 
 The list above is intended product scope, **not** a claim that every capability is currently implemented.
 
