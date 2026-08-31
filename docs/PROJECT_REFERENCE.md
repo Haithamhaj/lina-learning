@@ -2,7 +2,7 @@
 
 ## PROJECT_REFERENCE.md
 
-**Status:** Approved project reference — living governing document; DOC-SYNC-01 synchronized content under Product Owner review  
+**Status:** Approved project reference — living governing document; `DOC-SYNC-01` synchronized content accepted by Product Owner on 2026-08-31  
 **Audience:** Product owner, ChatGPT, Codex, AI agents, developers, reviewers  
 **Primary use:** Governing source of truth for product intent, boundaries, architecture, learning behavior, and approved design decisions  
 **Not a replacement for:** `LEARNING_PRODUCT_ROADMAP.md`, `LEARNING_INTELLIGENCE_SPEC.md`, `IMPLEMENTATION_PLAN.md`, implementation prompts, or task files
