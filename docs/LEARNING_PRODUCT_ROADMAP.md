@@ -1,53 +1,58 @@
 # LEARNING_PRODUCT_ROADMAP.md — Lina Personal Learning System
 
 **Status:** Approved repository roadmap and product-evolution reference  
-**Approved direction:** Option A — simplify the critical path while preserving the Learning Intelligence differentiator  
-**Original approval:** 2026-08-23  
-**Current execution state:** Always read from `project-state/PROJECT_STATE.md` and `TASKS.md`; this roadmap does not hardcode the current next task.
+**Approved direction:** Option A — Simplify the critical path, preserve the valuable learning-intelligence architecture  
+**Baseline reviewed:** `67382c332b4cdc0d56f0f2a12774f40eea636dda`
+**Approved:** 2026-08-23  
+**Current execution state:** Read `project-state/PROJECT_STATE.md` and `TASKS.md`; this roadmap does not itself authorize or hardcode the current next executable task.
 
 ---
 
-# 1. Purpose
+## 1. Purpose
 
-This document records **approved product evolution, capability sequencing, dependencies, and validation gates**.
+This document is the central roadmap for **what Lina Learning should build over time, in what sequence, and why**.
 
-It is intentionally separate from the executable task queue.
+It is intentionally separate from the implementation task queue.
 
-The product goal is:
+The product goal is simple:
 
-> A capable Tutor should work as naturally as a normal GPT conversation while Lina Learning adds what general chat does not provide reliably over time: evidence-grounded learner intelligence, relevant personalization, source provenance, optional trusted grounding, child safety, Parent inspectability, and a child-appropriate multimodal/visual experience.
+> A capable Tutor should work as easily as a normal GPT conversation, while Lina Learning adds the value that a normal chat does not provide well: trusted grounding when available, persistent learning history, evidence-based personalization, longitudinal learner intelligence, source provenance, child safety, and a child-appropriate experience.
 
-Basic tutoring must not become harder because curriculum content, semantic extraction, school plans, or exact book material is unavailable.
+The system must not make basic tutoring harder merely because a curriculum source, semantic extraction layer, or school document is unavailable.
 
 ---
 
-# 2. Document Governance
+## 2. Document Governance
+
+Each project document has a distinct responsibility.
 
 | Document | Authority / purpose |
 |---|---|
-| `docs/PROJECT_REFERENCE.md` | Stable approved product truth and durable decisions |
-| `docs/LEARNING_PRODUCT_ROADMAP.md` | **This document:** approved capability evolution, sequencing, and gates |
-| `docs/LEARNING_INTELLIGENCE_SPEC.md` | Learning Intelligence semantics and authority contracts |
-| `docs/IMPLEMENTATION_PLAN.md` | Technical implementation direction for approved work |
-| `project-state/PROJECT_STATE.md` | Current operational truth and current next action |
-| `TASKS.md` | Executable/current task state plus durable task history |
-| `AGENTS.md` | Agent operating rules and protected areas |
-| `project-state/SYSTEM_MAP.html` | Visual architecture + operational-readiness overlay |
+| `docs/PROJECT_REFERENCE.md` | Stable approved product principles, scope, boundaries, durable decisions |
+| `docs/LEARNING_INTELLIGENCE_SPEC.md` | Canonical Learning Intelligence semantics, rubrics, authority, and reprocessing contracts |
+| `docs/LEARNING_PRODUCT_ROADMAP.md` | **This document:** ordered product capabilities, approved product-evolution decisions, dependencies, and validation gates |
+| `TASKS.md` | Only work that has been promoted into executable implementation tasks; durable task history |
+| `docs/IMPLEMENTATION_PLAN.md` | Technical implementation direction for work that has been approved for execution |
+| `project-state/PROJECT_STATE.md` | Short operational snapshot and current next action **now** |
+| `project-state/SYSTEM_MAP.html` | Visual map of current architecture plus readiness overlay |
+| `AGENTS.md` | Rules and source-of-truth map for AI/Codex work inside the repository |
 
 ### Roadmap rule
 
-A capability being approved or present here does **not** authorize implementation.
+A capability being present in this roadmap does **not** authorize implementation.
 
-A roadmap capability becomes executable only when:
+A roadmap item becomes executable only when:
 
-1. dependencies/gates are sufficiently satisfied,
-2. the Product Owner explicitly promotes it,
-3. a bounded implementation task/spec is defined,
-4. current state/task records reflect that promotion.
+1. its dependencies are satisfied,
+2. its validation gate is clear,
+3. the Product Owner approves promotion,
+4. it is added to `TASKS.md` with a concrete implementation scope or explicitly named by the current governing task/state transition.
 
-### Historical sequencing rule
+### Approved supersession rule
 
-Track IDs and old ordering remain useful provenance. A completed historical transition does not remain the current next action forever. `PROJECT_STATE.md` is the current operational authority.
+The decisions in Sections 3, 4, 12, and 13 are approved product decisions. Governing documents have now been reconciled around the accepted Option A and Segment-scoped Review / Session-scoped authority architecture. Historical contradictory text remains provenance only and must not override newer governing truth or `PROJECT_STATE.md`.
+
+This rule exists only to prevent Codex or another AI agent from implementing known-obsolete assumptions. It is not permission to invent additional product changes.
 
 ---
 
@@ -55,418 +60,706 @@ Track IDs and old ordering remain useful provenance. A completed historical tran
 
 ## 3.1 Tutor availability is independent of curriculum availability
 
-The Tutor remains usable when:
+The Tutor must remain usable when:
 
-- no book is uploaded,
-- an exact book cannot be found,
-- processing is incomplete,
+- no school book has been uploaded,
+- the exact school book cannot be found,
+- content processing is incomplete,
 - semantic enrichment fails,
-- retrieval returns no useful result,
+- RAG returns no useful result,
 - no external reference exists.
 
-The model may answer from general educational knowledge.
+The model may answer from its own general educational knowledge.
 
 > **Content improves the answer; it does not authorize the answer.**
 
-## 3.2 Current question drives the interaction
+## 3.2 The current question drives the interaction
 
-The current Student question is authoritative. Retrieval is question-driven, not curriculum-position-driven.
+The current Student question is authoritative.
 
-Lina may revisit an old topic, ask ahead, explore outside school sequence, switch subject, or ask something unrelated to the current book.
+Retrieval is **question-driven**, not curriculum-position-driven.
 
-## 3.3 Current School Focus is not product authority
+The system does not need to determine where Lina currently is in the school curriculum or what the school says she should study now before helping her.
 
-School plans/tables/outlines are references, not learning-path authority.
+Lina may return to an old topic, ask about a future topic, ask outside the current school sequence, revisit something she previously misunderstood, or ask an exploratory question.
 
-> **Relevance first; recency second; current Student intent above both.**
+## 3.3 Current School Focus is not a product authority
+
+`Current School Focus` as a controlling product concept is removed.
+
+School plans, weekly tables, monthly plans, and similar documents may be useful **references**, but they do not determine the Tutor path.
+
+Useful recent conversational/topic continuity remains allowed.
+
+> **Recent context rule: Relevance first; recency second.**
+
+Recent learning context should enter a new interaction only when it is genuinely useful to the current question.
 
 ## 3.4 Grounding is optional and multi-source
 
-When useful, grounding may come from:
+The Tutor may use any useful source available for the current question.
+
+Approved source types include:
 
 1. current Student-captured page/image,
-2. exact uploaded school book/material,
-3. historical captured learning pages,
-4. trusted aligned educational references,
+2. exact uploaded school book or exact school material,
+3. previously captured Student learning pages/homework,
+4. trusted aligned curriculum/educational references,
 5. trusted general educational references,
 6. model general knowledge.
 
-This is grounding priority, not teaching-method priority.
+This is **grounding priority**, not teaching-method priority.
 
-## 3.5 Concept belongs primarily to the interaction
+The Tutor may use a different explanation, example, analogy, or representation if it helps Lina understand better.
 
-Concept/topic identity normally comes from Lina's question, current conversation, current image/page when available, useful retrieved context, and model understanding.
+## 3.5 Concept belongs primarily to the learning interaction
 
-A whole book does not need preclassification into a giant taxonomy before the system can understand what Lina is learning.
+Concept identity should normally be inferred from the interaction using:
 
-## 3.6 Learning Intelligence is the core differentiator
+- Lina's question,
+- the current conversation,
+- the current image/page when available,
+- retrieved context when useful,
+- the model's understanding.
 
-Current accepted path:
+A whole book does not need to be pre-classified into a large educational taxonomy before the system can understand what Lina is learning.
+
+Typical examples:
+
+- Division
+- Decimal place value
+- Multiplication by powers of ten
+- Adding unlike fractions
+- Area of rectangles
+
+A conversation may have one primary concept and related concepts when useful, but this is an interaction-intelligence concern rather than a prerequisite for content ingestion.
+
+## 3.6 Learning Intelligence remains a core differentiator
+
+The retained core learning path is:
 
 ```text
 Raw Interaction
-→ optional Candidate hint
-→ completed Segment
+→ optional Provisional Candidate hints
+→ Completed Segment
 → Segment Learning Review
-→ staged findings
-→ deterministic Session Intelligence Finalization
-→ Session-authorized Event/Evidence
+→ Session-authorized Validated Learning Event / Evidence
 → Current State / Patterns
 → Learner Intelligence Card
-→ relevant later personalization
+→ Relevant later personalization
 ```
 
-Candidate ≠ Evidence. Current State ≠ Pattern. Card ≠ source truth. Current behavior outranks history.
+Candidate ≠ Evidence; Current State ≠ Pattern; and Card ≠ source truth. The
+system preserves the distinction between raw interaction, provisional candidate
+interpretation, Segment semantic review, Session-authorized Evidence, current
+state, historical patterns, and runtime personalization.
 
-## 3.7 Curriculum semantics are optional enrichment
+The Learner Intelligence Card remains a compact runtime projection rather than a new source of truth.
 
-Unit/Lesson/Concept/Objective/Example/Exercise/etc. semantics may improve navigation, analysis, and source organization.
+## 3.7 Semantic curriculum extraction is optional enrichment
 
-They are not required for Tutor availability, basic RAG, interaction concept identification, Evidence, or Learner Intelligence.
+The current curriculum semantic taxonomy may include UNIT, LESSON, CONCEPT, OBJECTIVE, DEFINITION, EXPLANATION, EXAMPLE, EXERCISE, VOCABULARY, FIGURE, TABLE, and FORMULA.
+
+These may be useful for navigation, analysis, source organization, or future curriculum intelligence.
+
+They are **not required** for:
+
+- Tutor availability,
+- basic RAG availability,
+- concept identification from the conversation,
+- Candidate Events,
+- Evidence,
+- Learner Intelligence.
+
+The semantic layer should be retained initially as optional, rebuildable enrichment and evaluated later on demonstrated value.
 
 ---
 
-# 4. Option A — Corrected Critical Path
+# 4. Approved Core Architecture Correction — Option A
 
-## Tutor runtime
+## 4.1 Superseded critical path
+
+```text
+Source / Book
+→ Structural extraction
+→ Mandatory semantic extraction
+→ Semantic-derived index
+→ Content READY
+→ Student allowed to enter Tutor
+```
+
+This created an unnecessary dependency: failure or absence of semantic curriculum processing could prevent a capable Tutor from helping the Student.
+
+## 4.2 Accepted critical path
+
+### Tutor runtime
 
 ```text
 Student question
 → Auth / ownership
 → Safety
-→ optional question-driven retrieval
-+ relevant Learner Intelligence
-→ ONE primary Tutor model call
-→ response + bounded provisional metadata
-→ completed Segment Review in background
-→ Session-authorized intelligence
-→ relevant later personalization
+→ Optional question-driven retrieval
+→ Relevant Learner Intelligence
+→ One primary Tutor model call
+→ Tutor response
+→ optional provisional Candidate hints
+→ closed structurally reviewable Segment review in background
+→ Session-authorized Evidence / State / Patterns
+→ Later personalization
 ```
 
-## Content grounding
+### Content grounding
 
 ```text
 Learning Source
-→ preserve original + provenance
-→ structural extraction / normalization
-→ retrieval-ready representation
-→ hybrid retrieval
+→ Preserve original + provenance
+→ Structural extraction / normalization
+→ Retrieval-ready representation
+→ Existing hybrid retrieval
 
 Optional:
-structural representation
-→ educational semantic enrichment
+Structural representation
+→ Semantic enrichment
 ```
 
-## No source
+### No source available
 
 ```text
 Question
-→ no useful retrieval
+→ Retrieval returns no useful context
 → Tutor continues using model knowledge
 ```
-
-This is a decoupling/simplification, not a replacement of the Learning Intelligence core.
 
 ---
 
 # 5. What Must Be Preserved
 
-Unless implementation evidence proves otherwise, preserve:
+The architecture correction is a **decoupling/simplification**, not a rewrite.
 
-- Modular Monolith,
+Keep unless implementation evidence proves otherwise:
+
+- modular monolith,
 - Clerk role/ownership boundary,
 - child-safety boundary,
 - object-storage abstraction,
 - PostgreSQL/Alembic,
 - pgvector,
-- DB-backed jobs/Worker,
+- DB-backed jobs/worker foundation,
 - Model Gateway,
 - AI execution ledger,
-- one primary Tutor call,
+- one primary Tutor model call,
 - Docling structural representation,
-- source/page provenance,
-- structural-first content handling,
-- PostgreSQL lexical + vector retrieval and deterministic fusion,
-- bounded context,
-- Candidate contract as provisional observation only,
+- page/source provenance,
+- structural hierarchy and reading order,
+- non-blind fixed-token-first content handling,
+- PostgreSQL lexical retrieval,
+- vector retrieval,
+- deterministic RRF/hybrid fusion,
+- context budgets,
+- exact source lineage,
+- Candidate Event contract as provisional observation infrastructure, not mandatory durable Evidence authority,
 - Segment Review + Session authority,
-- Current State / Patterns / Card,
-- rebuildability/versioning.
+- Evidence pipeline,
+- Current State,
+- Patterns,
+- Learner Intelligence Card,
+- rebuildability and versioning.
 
 ---
 
 # 6. Grounding Source Model
 
-The system evolves around a general **Learning Source** concept without creating a parallel RAG stack.
+The retrieval system should evolve toward the general concept of a **Learning Source**, without requiring a parallel RAG stack.
 
 | Source type | Role |
 |---|---|
-| Exact uploaded book | Strong persistent curriculum anchor |
-| Exact school material | Strong exact/near-exact school reference |
-| Current Student-captured page | Highest immediate grounding when relevant |
-| Historical captured page | Optional learning-history reference |
-| Trusted aligned source | Grade/curriculum/topic alignment support |
+| Exact uploaded book | Strongest persistent curriculum anchor |
+| Exact school handout/material | Strong exact/near-exact curriculum reference |
+| Student-captured current page | Highest context for the current turn |
+| Student-captured historical page | Learning-history reference |
+| Trusted aligned web source | Curriculum/grade/topic alignment support |
 | Trusted general educational source | Explanation/example/representation support |
-| School plan/table | Supplementary reference only; never path authority |
+| School plan/table | Supplementary reference only; never learning authority |
+
+The existing content/retrieval infrastructure should remain extensible enough to accept additional source types without creating a second retrieval subsystem.
 
 ---
 
-# 7. Trusted Educational Reference Builder — Approved Future Pilot
+# 7. Trusted Educational Reference Builder
 
-A Subject may later have a bounded Trusted Educational Reference Pack even if exact school material is unavailable.
+## 7.1 Product decision
 
-Useful setup inputs include Grade/Subject and, when known, Country, School, Curriculum, Book, Publisher, and language.
+When a Subject is added or configured, the system may automatically build a **Trusted Educational Reference Pack** even if the exact school book is unavailable.
 
-Source trust tiers should favor official authorities/publishers, established educational institutions, then reputable academic/school sources. Anonymous forums, unknown blogs, SEO farms, unclear-source worksheets, and low-trust scraped material are excluded by default.
+This capability is approved for future implementation and should be tested first as a bounded **Grade 5 Math pilot**.
 
-Alignment classifications:
+It is not required for the current core architecture correction.
 
-- `EXACT_CURRICULUM`
-- `ALIGNED_CURRICULUM`
-- `GENERAL_EDUCATION`
+## 7.2 Inputs available during setup
 
-Aligned/general material must never impersonate exact school material.
+Required:
 
-The future pilot should be kept only if it materially improves correctness, Grade terminology, useful depth, explanation diversity, or representational variety at acceptable cost/latency.
+- Grade
+- Subject
+
+Useful when known:
+
+- Country
+- School
+- Curriculum
+- Book title
+- Publisher
+- language
+- other parent-provided identifying details
+
+The Parent is **not required** to locate the exact book.
+
+If the Parent has the real book, it can be uploaded. If not, the system proceeds normally and may discover aligned references.
+
+## 7.3 Trusted source tiers
+
+### Tier 1 — highest reference authority
+
+- Ministry/curriculum authority
+- official government education sites
+- official publisher material
+- official curriculum repositories
+
+### Tier 2 — established educational institutions
+
+- recognized educational organizations
+- major established learning platforms
+- high-quality curriculum support organizations
+
+### Tier 3 — reputable academic/school sources
+
+- universities
+- schools
+- academic institutions
+- reputable teacher/curriculum resources with clear institutional ownership
+
+### Excluded by default
+
+- anonymous forums
+- unknown blogs
+- SEO-content farms
+- unclear-source worksheets
+- low-trust scraped material
+- sources whose authority cannot be established
+
+Parent approval is not required for each trusted source.
+
+## 7.4 Source alignment classification
+
+### `EXACT_CURRICULUM`
+
+The exact uploaded/verified school book or exact official material.
+
+### `ALIGNED_CURRICULUM`
+
+Trusted material demonstrably covering the same grade/curriculum/topic, but not the exact school source.
+
+### `GENERAL_EDUCATION`
+
+Trusted educational material useful for explanation, examples, or representation but not tied to the exact curriculum.
+
+Do not label an aligned/general source as the exact school book.
+
+## 7.5 Why trusted references matter
+
+Trusted web references are intended to improve:
+
+- terminology alignment,
+- grade-appropriate depth,
+- curriculum proximity,
+- additional examples,
+- alternative explanations,
+- visual/representational diversity,
+- explanation variety when one teaching method does not work,
+- support when the exact book is unavailable,
+- support for topics not represented in the current uploaded material.
+
+The purpose is **not** to make the Tutor dependent on web search.
+
+## 7.6 Reference-pack refresh
+
+Initial reference discovery should be allowed to run automatically when a Subject is configured.
+
+Later, the Parent/Admin may request refresh, re-search, or source metadata updates without forcing a manual approval workflow for every source.
 
 ---
 
 # 8. Student-Captured Learning Sources — Approved Future Behavior
 
-Vision implementation remains frozen until explicitly promoted.
-
-Intended behavior:
+Vision implementation remains frozen until its later gate, but the intended behavior is already approved.
 
 ```text
-Current page/photo
-→ understand immediate question
+Current page
+→ understand the immediate question
+→ highest context for this turn
 → preserve original
-→ use as high-priority current context
-→ optionally persist reliable extracted learning source
+→ extract useful content when reliable
+→ optionally persist as Student-Captured Learning Source
 ```
 
 Rules:
 
-- one page is not a whole book,
-- image identity does not establish learner Evidence,
-- original is preserved,
-- uncertain extraction that can change the answer should trigger clarification,
-- derived interpretation remains separate from source.
+- do not treat one captured page as a full book,
+- do not treat it automatically as official curriculum authority,
+- preserve the original image,
+- persistent extracted content requires sufficient reliability,
+- if ambiguity can change the answer, do not guess,
+- ask Lina to clarify or capture a clearer image,
+- ambiguity that does not affect the answer need not block the conversation.
 
 ---
 
 # 9. Capability Roadmap
 
-Stable IDs are preserved for cross-document provenance. Completed IDs are historical state; they do not remain current execution tasks.
+Stable roadmap IDs are used so decisions can be referenced consistently across ChatGPT, Codex, project documents, and implementation reviews.
+
+When a roadmap item is approved for execution, `TASKS.md` should reference the Roadmap ID and assign the repository's normal TASK/REC execution ID.
+
+## Approved future Parent foundation
+
+**Parent-managed Student Core Profile / child onboarding** is an approved future
+foundation capability, blocked behind the existing Parent / Real Lina gates.
+Parent/Admin will own durable factual child identity, date of birth with
+runtime-derived age, and active Grade linkage. Its compact Tutor Student Core
+Context remains separate from Evidence-derived Learner Intelligence and does
+not authorize broader Parent Dashboard work or alter Track A/B/C/D sequencing.
 
 ## Track A — Core Simplification
 
-**Goal:** Tutor availability as frictionless as normal GPT while preserving grounding, intelligence, provenance, and safety.
+**Goal:** Make Tutor availability as frictionless as normal GPT while preserving grounding, intelligence, provenance, and safety.
 
-Historical IDs `LR-A01`–`LR-A10` are **COMPLETE / ACCEPTED**. Their governing outcomes remain:
+| Roadmap ID | Capability / task | Dependency | Expected output | Gate |
+|---|---|---|---|---|
+| **LR-A01** | Governing decision correction | Option A approval | Permanent decisions reconciled across governing docs before code changes | Docs no longer instruct Codex to preserve old blocking architecture |
+| **LR-A02** | Tutor always available | LR-A01 | Remove Student API/UI book-readiness gate from Tutor availability | Authenticated Student can open Tutor with zero content |
+| **LR-A03** | Decouple index identity from mandatory semantics | LR-A01 | Non-destructive DB/index contract allowing structural-first indexes | Existing semantic index history remains valid |
+| **LR-A04** | Structural-first index builder | LR-A03 | Existing indexing machinery can build source-linked blocks from completed structural representation | Structural source is searchable without semantic run |
+| **LR-A05** | Semantic retrieval behavior becomes advisory | LR-A04 | Null semantic metadata cannot exclude otherwise relevant structural candidates | Example/exercise-style queries still retrieve structural content |
+| **LR-A06** | Source processing lifecycle | LR-A04 | New upload can progress through preserve → structural → retrieval index using existing worker foundation | One real source reaches retrieval-ready without manual semantic scripts |
+| **LR-A07** | Parent content-status decoupling | LR-A03/LR-A04 | Parent sees grounding/index status separately from optional semantic enrichment | Semantic failure does not report Tutor/content as globally unusable |
+| **LR-A08** | Deprecate school-focus authority residue | LR-A01 | Stop producing obsolete `current_school_focus` authority while preserving conversational continuity | No school-position signal controls Tutor/retrieval |
+| **LR-A09** | Simplification acceptance suite | LR-A02–A08 | Automated proof of zero-book Tutor + optional grounding + intelligence behavior | All required acceptance scenarios pass |
+| **LR-A10** | Real Lina calibration resumes | LR-A09 | REC-25 calibration begins only after corrected architecture is proven | Real interactions confirm Tutor usability and context quality |
 
-- zero-book Tutor,
-- structural-first content path,
-- semantic enrichment optional,
-- Current School Focus authority removed,
-- optional grounding and Learning Intelligence preserved,
-- real-use calibration seam preserved.
+**Current status:** LR-A01–LR-A10 are complete/accepted as historical Track A work. Their protected Option A outcomes remain governing; the rows above do not reopen them.
 
-Track A completion does not automatically authorize later tracks.
+### Required acceptance scenarios for LR-A09
+
+1. Zero book → session opens and Tutor answers.
+2. Zero retrieval match → Tutor still answers.
+3. Structural/indexed content → relevant grounding enters Tutor context.
+4. Semantic enrichment failure → Tutor/RAG remain usable.
+5. Relevant Learner Intelligence → enters context.
+6. Irrelevant/stale intelligence → does not enter context.
+7. Conversation continuation can use relevant recent topic context.
+8. No school-plan/current-school-position authority is required.
 
 ## Track B — Grade 5 Math Trusted Reference Pilot
 
-**Status:** **APPROVED FUTURE PILOT / FROZEN until explicit promotion.**
+**Goal:** Prove whether trusted external references improve grounding and explanation diversity before building a large discovery subsystem.
 
-Preserved IDs:
+**Starts only after:** explicit Product Owner promotion; Track A is already complete and early real-use evidence may inform timing.
 
-- `LR-B01` Trusted-source contract
-- `LR-B02` Grade 5 Math discovery pilot
-- `LR-B03` ingestion through existing source/RAG boundary
-- `LR-B04` source-priority/provenance
-- `LR-B05` grounding-value evaluation
-- `LR-B06` refresh/research control
+| Roadmap ID | Capability / task | Dependency | Expected output | Gate |
+|---|---|---|---|---|
+| **LR-B01** | Trusted-source contract | Track A | Source trust tiers, provenance fields, alignment classification, rejection rules | Contract is small and auditable |
+| **LR-B02** | Grade 5 Math discovery pilot | LR-B01 | Bounded search for trusted Grade 5 Math references using known curriculum/publisher metadata when available | Useful trusted sources can be discovered without exact book |
+| **LR-B03** | Reference ingestion through existing source/RAG boundary | LR-B02 | Selected trusted references normalized and indexed without a parallel RAG stack | Existing RetrievalService can use them |
+| **LR-B04** | Grounding-source priority | LR-B03 | Exact/current sources and aligned/general references coexist with explicit provenance/authority | Aligned sources never impersonate exact curriculum |
+| **LR-B05** | Grounding-value evaluation | LR-B04 | Compare Tutor output across model-only, exact-source when available, and trusted-reference grounding | Evidence shows whether references improve usefulness |
+| **LR-B06** | Refresh/research control | LR-B05 | Parent/Admin can trigger later refresh/research without per-source approval | Refresh is bounded and provenance-preserving |
 
-Keep/expand only if measured value over model-only/exact-source baselines is material.
+### LR-B05 evaluation dimensions
+
+Evaluate practical value rather than benchmark theater:
+
+- correctness,
+- closeness to Grade 5 terminology,
+- appropriateness of depth,
+- usefulness of examples,
+- explanation diversity,
+- ability to explain the same concept differently after Lina remains stuck,
+- source relevance,
+- avoidance of unnecessary context,
+- latency/cost impact.
+
+Possible judgment:
+
+- **KEEP** — material value demonstrated.
+- **MODIFY** — useful but source selection/ranking needs correction.
+- **STOP** — little value over the model alone; do not expand the subsystem.
 
 ## Track C — Student-Captured Page Context
 
-**Status:** **APPROVED CORE DIRECTION / FROZEN behind Vision promotion.**
+**Goal:** Let a page Lina is holding become immediate learning context without requiring the full book.
 
-Preserved IDs:
+**Status:** Approved future capability; implementation frozen until Vision gate.
 
-- `LR-C01` current-turn image/page context
-- `LR-C02` captured-source persistence
-- `LR-C03` ambiguity/confidence handling
-- `LR-C04` historical captured-page retrieval
+| Roadmap ID | Capability / task | Dependency | Expected output |
+|---|---|---|---|
+| **LR-C01** | Current-turn image/page context | Vision gate | Page becomes highest-priority context for the immediate question |
+| **LR-C02** | Captured-source persistence | LR-C01 | Original preserved and reliable extraction can become a reusable learning source |
+| **LR-C03** | Ambiguity/confidence handling | LR-C01 | Tutor asks for clarification when uncertain extraction can change the answer |
+| **LR-C04** | Historical captured-page retrieval | LR-C02 | Relevant prior captured pages may support later questions |
 
 ## Track D — Personalization Calibration & Evolution
 
-**Goal:** improve the differentiating value—understanding how Lina learns over time—without creating a second learner-memory subsystem.
+**Goal:** Improve the system's differentiating value: understanding how Lina learns over time.
 
-Historical/current IDs:
+| Roadmap ID | Capability / task | Dependency | Expected output |
+|---|---|---|---|
+| **LR-D00** | Segment Evidence Authority Foundation | **IMPLEMENTED / ACCEPTED** through SEG-EVID-01 + Full-System Acceptance | completed-Segment semantic review, staged Segment findings, Session-scoped deterministic Evidence activation, legacy Session Evidence compatibility, and no change to existing Pattern counters/lifecycle |
+| **LR-D01** | Real Evidence calibration | LR-D00 | Validate completed Segment Review → Session-authorized Evidence on real interactions, including Candidate-confirmed, Candidate-rejected, and raw-Segment-supported events |
+| **LR-D02** | Concept quality calibration | LR-D01 | Confirm interaction-derived concept labels are useful and stable enough for evidence grouping |
+| **LR-D03** | Card relevance calibration | LR-D01 | Confirm relevant personalization helps and irrelevant history stays out |
+| **LR-D04A** | Teaching Method Foundation & Observability | REC-35.1 completed / Product Owner browser acceptance | Separate TeachingStrategy from TeachingMethod; establish a versioned internal method registry; have the same primary Tutor call semantically decide Mode, Strategy, Method, and prior-method relation from the current turn/context; validate and persist the selected-method lineage; and preserve source-grounded method → Student-outcome observability. The seven active compact methods may all be supplied to the call; no keyword selector, extra classifier call, historical method ranking, or new learner-profile subsystem. |
+| **LR-D04B** | Method Outcome Learning | sufficient trustworthy real TeachingMethod outcome Evidence + explicit promotion | Use repeated, contextual method outcomes to calibrate later method eligibility/ranking; include weakening/resolution and verify that personalization improves future learning. |
+| **LR-D05** | Retention/generalization views | sufficient longitudinal evidence | Validate whether existing derived views meaningfully help Parent/Tutor decisions |
 
-- `LR-D00` Segment Evidence Authority Foundation — **completed through accepted SEG-EVID architecture/implementation**.
-- `LR-D01` real Evidence calibration — evidence/real-use dependent.
-- `LR-D02` concept-quality calibration — evidence dependent.
-- `LR-D03` Card relevance calibration — evidence dependent.
-- `LR-D04A` Teaching Method Foundation & Observability — historical accepted foundation work.
-- `LR-D04B` Method Outcome Learning — **deferred / requires sufficient trustworthy real Evidence and explicit promotion**.
-- `LR-D05` retention/generalization views — longitudinal-evidence dependent.
+No new learner-profile subsystem should be introduced unless the current Evidence/State/Pattern/Card path proves insufficient.
 
-Do not create a new learner profile/memory subsystem unless the accepted Evidence/State/Pattern/Card path proves insufficient and Product Owner approves a change.
+## Track E — Later Product Expansion
 
-## Track E — Intended Product Expansion
+These remain **approved product directions but frozen by sequencing** until their relevant gates and explicit promotion:
 
-These are not random nice-to-haves; they remain **approved product direction but frozen by sequencing**:
+- Science production support
+- Voice / STT
+- production Vision / handwriting / drawing
+- Learning Canvas
+- Interactive Artifact Engine
+- broader Parent Evidence/Intelligence UX
+- Grade transition production
+- advanced motion/gamification where it genuinely serves learning
+- later additional subjects/languages
 
-- Science production support,
-- Voice / STT,
-- Vision / handwriting / drawing,
-- original-image annotation / reconstruction,
-- visual and interactive learning artifacts,
+They must not expand the current simplification/operational scope automatically. “Not required for the current proving ground” does not mean “unnecessary to the intended product.”
+
+---
+
+# 10. Ordered Product-Evolution Sequence
+
+The original ordering below remains useful as roadmap history, but current execution is governed by `PROJECT_STATE.md` / `TASKS.md` and later approved transitions:
+
+```text
+1. Correct governing architecture decisions                  [completed]
+2. Make Tutor work with zero book/content                   [completed]
+3. Make structural content directly retrieval-ready         [completed]
+4. Prove existing Hybrid RAG still works                    [completed]
+5. Resume real-use calibration                              [limited Real-Lina use occurred; recurring validation remains]
+6. Run Grade 5 Math Trusted Reference Pilot                 [future / explicit promotion]
+7. Compare real grounding value                             [future]
+8. Improve trusted-source discovery/ranking only if proven  [future]
+9. Open Student-captured page work when Vision is authorized[future]
+10. Expand personalization based on real evidence           [evidence-governed]
+11. Expand subjects/channels/artifacts after their gates    [future]
+```
+
+---
+
+# 11. What Must NOT Be Built During Core Simplification / Operational Verification
+
+Track A and current operational verification do **not** automatically authorize:
+
+- a new RAG framework,
+- a second vector database,
+- a parallel generic-source retrieval subsystem,
+- web-search agent implementation,
+- curriculum planner,
+- curriculum-position tracker,
+- concept graph,
+- new concept-classifier service,
+- multi-agent Tutor orchestration,
+- Vision,
+- Voice,
+- Science expansion,
 - Learning Canvas,
-- broader Parent Intelligence UX,
-- Grade-transition production,
-- later retention/proactive learning,
-- later additional subjects/languages.
+- Artifact Engine,
+- Parent Dashboard expansion.
 
-Real Lina behavior should help decide **which approved capability is promoted first**, not whether the broader product direction exists.
-
----
-
-# 10. Two Product Gates After Limited Real Use
-
-Limited real Lina interaction has already occurred. Therefore the product no longer uses “Has Lina ever tried it?” as a binary gate.
-
-## Gate A — Daily-Use Lina Baseline
-
-Goal: one reliable recurring private Lina experience in which the existing Tutor/intelligence system can operate naturally enough to learn from real use.
-
-Operational verification belongs in the current task/state process, not in this roadmap.
-
-## Gate B — First Product Loop Complete
-
-The first product loop is broader than Student Tutor. It ultimately needs:
-
-- a useful Student learning experience,
-- credible recurring Learning Intelligence / personalization,
-- enough Parent visibility to inspect important state/evidence,
-- useful content/grounding management where it adds value,
-- operational traceability/recovery,
-- AI usage/cost visibility sufficient for product operation.
-
-## Gate C — Intended Product Expansion
-
-After the core loop proves itself, promote approved deferred capabilities deliberately according to real behavior and product need.
-
----
-
-# 11. Product Learning Signals for Capability Promotion
-
-Real use should order approved capabilities with evidence such as:
-
-- repeated desire to show homework/page/work → raise Vision/photo priority;
-- keyboard/text friction → raise Voice/STT priority;
-- repeated spatial/visual learning need → raise bounded Artifact/Canvas priority;
-- natural Science demand → raise Science production priority;
-- Parent inability to understand personalization → raise Parent Evidence/Intelligence UX priority;
-- exact-source/model-only comparison showing real grounding gap → raise Trusted Reference priority.
-
-This is prioritization, not reactive product discovery from zero.
+Track A was a simplification and decoupling effort; later capability promotion remains explicit.
 
 ---
 
 # 12. Validation Gates
 
-## Tutor Independence
+## Gate A — Tutor Independence
 
-Pass when an authenticated Student can learn with zero uploaded curriculum.
+Pass when:
 
-## Structural Grounding
+> An authenticated Student can learn with the Tutor using zero uploaded curriculum content.
 
-Pass when structural content can be indexed/retrieved without mandatory curriculum semantics.
+**Status:** technically satisfied/accepted by completed Track A; preserve as regression behavior.
 
-## Optional Enrichment
+## Gate B — Structural Grounding
 
-Pass when semantic enrichment can succeed/fail without blocking Tutor/basic RAG.
+Pass when:
 
-## Learning Intelligence Traceability
+> A structurally processed source can be indexed and retrieved without mandatory semantic curriculum extraction.
 
-Pass when Segment Review → Session-authorized Evidence → State/Patterns/Card remains auditable, rebuildable, and current-behavior-first.
+**Status:** technically satisfied/accepted by completed Track A; preserve as regression behavior.
 
-## Daily Real-Use Reliability
+## Gate C — Optional Enrichment
 
-Pass only when the current operational track verifies a reliable recurring real-use environment and cross-session loop. Limited Real-Lina interaction does not by itself satisfy this.
+Pass when:
 
-## Deferred Capability Value
+> Semantic enrichment may succeed or fail without blocking Tutor availability or basic RAG.
 
-Promote a frozen capability only after explicit Product Owner decision, informed by real learning/product evidence and the approved broader direction.
+**Status:** technically satisfied/accepted by completed Track A; preserve as regression behavior.
+
+## Gate D — Daily-Use Lina Baseline
+
+Limited Real-Lina use has occurred. This gate is broader and remains open until:
+
+> The existing Tutor/context/intelligence system is verified as a reliable recurring private Lina experience, including the naturally recurring cross-session intelligence path required for useful personalization.
+
+Limited interaction does not by itself establish stable daily or longitudinal validation.
+
+## Gate E — Trusted Reference Value
+
+Pass when:
+
+> The bounded Grade 5 Math reference pilot demonstrates practical improvement in grounding and/or explanation diversity sufficient to justify automating and expanding the capability.
 
 ---
 
-# 13. Superseded Assumptions — Do Not Resurrect
+# 13. Superseded Assumptions
 
-1. A real Grade 5 book must be READY before Lina may use Tutor.
+The following earlier assumptions are superseded and must not be used as active implementation requirements:
+
+1. A real Grade 5 book must be READY before Lina may use the Tutor.
 2. Semantic extraction is mandatory before retrieval indexing.
-3. UNIT/LESSON/EXAMPLE taxonomy is required for basic Tutor operation.
-4. Current School Focus directs the learning path.
-5. Weekly/monthly school plans determine what Lina should study now.
-6. Curriculum-derived Concept rows are required for Learner Intelligence.
-7. Failure of optional semantic enrichment makes learning unavailable.
-8. Candidate metadata is durable Evidence.
+3. UNIT/LESSON/EXAMPLE/etc. classification is required for basic Tutor operation.
+4. Current School Focus should direct the main learning path.
+5. School weekly/monthly plans determine what Lina should study now.
+6. Curriculum-derived Concept rows are required for learner intelligence.
+7. Failure in optional semantic enrichment should make the learning experience unavailable.
+8. Candidate metadata is durable Evidence or personalization authority.
 9. A second normal-turn Candidate/Subject/Topic classifier is required.
-10. A semantic Session LLM summarizer is the current primary learning-review architecture.
-11. Replit or any particular host is product architecture.
+10. A semantic Session LLM summarizer is the current primary Learning Intelligence architecture.
+11. Replit or any particular hosting environment is product architecture.
 
-Historical code/data may remain auditable; these assumptions are not active requirements.
+Historical implementation/data may remain for auditability; superseded product assumptions should not remain active architecture requirements.
 
 ---
 
 # 14. Treatment of Existing Semantic Work
 
-Educational semantic work is:
+The current Semantic Layer should be:
 
-> **DECOUPLED, NOT DELETED.**
+**DECOUPLED, NOT DELETED.**
 
-Protected local Eureka work must not be stashed, reset, cleaned, overwritten, or incidentally refactored.
+Current uncommitted Prompt-v5 / Eureka verifier work should remain parked until explicitly resumed. Protected local Eureka work must not be stashed, reset, cleaned, overwritten, or incidentally refactored by unrelated tracks.
 
-Future value should be judged from evidence: retrieval, navigation, Parent understanding, Tutor ambiguity reduction, cost, and maintenance value.
+After real usage, evaluate semantic enrichment by direct value:
+
+- Does it improve retrieval?
+- Does it improve navigation?
+- Does it help Parent understanding?
+- Does it reduce Tutor ambiguity?
+- Is the cost/latency/maintenance justified?
+
+If not, it may later be deprecated or deleted through a separately approved cleanup task.
 
 ---
 
-# 15. Live Roadmap Status
+# 15. Repository Integration Plan
 
-| Track | Status | Current meaning |
+This section records the **historical integration intent of Track A**. LR-A01–LR-A10 are complete; it is not a current execution instruction.
+
+## `docs/PROJECT_REFERENCE.md`
+
+Track A reconciled durable decisions including:
+
+- Tutor always available,
+- question-driven optional grounding,
+- no Current School Focus authority,
+- interaction-derived concept,
+- semantics optional,
+- multi-source Learning Source model,
+- trusted web reference principle,
+- grounding priority vs teaching-method freedom.
+
+Do not copy the full roadmap.
+
+## `TASKS.md`
+
+Add only future roadmap tasks when the Product Owner promotes them. Historical task text remains provenance.
+
+Each new execution task should include:
+
+- Roadmap ID when applicable,
+- purpose,
+- dependencies,
+- files/areas,
+- expected output,
+- verification,
+- blocked-by-approval/proof status.
+
+Track B/C/D/E future items remain roadmap-only until promoted.
+
+## `docs/IMPLEMENTATION_PLAN.md`
+
+The accepted technical critical paths are:
+
+```text
+source → structural → retrieval index
+                  ↘ optional semantics
+```
+
+and:
+
+```text
+question → safety → optional retrieval + relevant intelligence → Tutor
+```
+
+## `project-state/PROJECT_STATE.md`
+
+Owns the short current operational state and next action. Do not copy the entire roadmap into it.
+
+## `project-state/SYSTEM_MAP.html`
+
+Visually separates:
+
+- Tutor critical path,
+- optional grounding,
+- optional semantic enrichment,
+- implemented learner-intelligence path,
+- operational readiness overlay,
+- future approved-but-frozen capability sources.
+
+## `AGENTS.md`
+
+`docs/LEARNING_PRODUCT_ROADMAP.md` is a governing product-evolution reference. Agents must not implement roadmap items unless explicitly promoted through current state/task governance.
+
+---
+
+# 16. Live Roadmap Status
+
+| Track | Status | Current decision |
 |---|---|---|
-| Track A — Core Simplification | **COMPLETE / ACCEPTED** | Governing corrected critical path remains protected |
-| Track B — Trusted References | **APPROVED FUTURE PILOT / FROZEN** | Do not implement without promotion |
-| Track C — Student-Captured Pages | **APPROVED CORE DIRECTION / FROZEN** | Requires Vision promotion |
-| Track D — Personalization Evolution | **EVIDENCE-GOVERNED** | Core authority implemented; later calibration tracks require real evidence/promotion |
-| Track E — Broader Product Expansion | **APPROVED DIRECTION / FROZEN** | Science, Voice, Vision, Artifacts, Parent expansion, Grade production remain visible but gated |
+| Track A — Core Simplification | **COMPLETE / ACCEPTED** | LR-A01–LR-A10 are complete; its protected architecture remains governing |
+| Track B — Trusted Grade 5 Math References | **APPROVED FUTURE PILOT** | Do not build without explicit promotion |
+| Track C — Student-Captured Pages | **APPROVED FUTURE BEHAVIOR / FROZEN** | Wait for Vision gate and explicit promotion |
+| Track D — Personalization Calibration | **ACTIVE AS PRODUCT DIRECTION / EVIDENCE-GOVERNED** | SEG-EVID authority foundation is implemented/accepted; further calibration tracks depend on trustworthy real evidence and promotion |
+| Track E — Broader Expansion | **APPROVED DIRECTION / FROZEN** | Science, Voice, Vision, Artifacts, Parent expansion, Grade production remain visible but gated |
 
 ---
 
-# 16. Current Execution Rule
+# 17. Current Execution Authority
 
 This roadmap intentionally does **not** name the current next executable task.
 
 Always read:
 
-1. `project-state/PROJECT_STATE.md`
-2. `TASKS.md`
-3. any explicitly named Product Owner-approved current task specification
+1. `project-state/PROJECT_STATE.md`,
+2. `TASKS.md`,
+3. any explicitly named Product Owner-approved bounded task specification,
 
 before starting work.
 
-No roadmap item should be promoted merely because earlier historical sequencing once placed it “next.”
-
----
-
-# 17. Governing Summary
-
-Lina Learning is not being reduced to a Text Math chatbot. Math/Text is the proving ground for the Learning Intelligence core.
-
-The approved long-term direction remains a natural child learning product across Math + Science initially, with Voice, Vision, original-work understanding, visual/interactive representations, Parent inspectability, and later Grade/subject expansion. Those capabilities remain intentionally visible while frozen so early real use can determine sequencing without erasing the product vision.
-
-Current operational next action is deliberately external to this roadmap.
+The former historical sequence `SEG-EVID-00 → CAND-01 → SEG-EVID-01A–F → EDU-ERR-01 → SCOPE-01 → SUBJ-01` is no longer a current execution instruction: SEG-EVID, SCOPE-01, SUBJ-01, and the subsequent Tutor calibration sequence have already been accepted. No roadmap or historical task automatically promotes `MATH-01`, `ID-01`, `EDU-ERR-01`, `REC-25`, `LR-D04B`, Voice, Vision, Science, Learning Canvas, Artifact Engine, Parent Dashboard expansion, or another deployment architecture.
