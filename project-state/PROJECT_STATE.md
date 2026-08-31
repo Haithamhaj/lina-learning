@@ -6,7 +6,9 @@ Move from accepted architecture and completed current-reality audit into the **D
 
 `DOC-SYNC-01 — Product Truth & Governing Documentation Synchronization` is **DONE / ACCEPTED**.
 
-`RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification` has completed its **CURRENT REALITY AUDIT** stage. The audit verified that the current architecture is implemented, while the actual operational environment is not yet aligned as one current revision/runtime: the live historical database/runtime are older than the accepted code, and the Worker is not part of the standard running composition.
+`RL-01A — Accepted Runtime Alignment` is **DONE / ACCEPTED**. The isolated worktree `/Users/haitham/development/lina-learning-ctx03` is aligned to `codex/ctx-03` at `db0a7b05c6a6ec3d9e6b8914200eb6b2f80e37e9`, tracked state is clean, `.acceptance-artifacts/` remains untracked/preserved, and baseline verification passed (`715 passed, 7 skipped`, web typecheck/build, migration head, and `git diff --check`). The original checkout remained untouched.
+
+The RL-01A audit also confirmed the current operational gap: the only live API is still from the old original checkout, Web and Worker are not running as the aligned composition, and DB/Clerk/Model configuration still originates from the old checkout. These are RL-01B concerns, not RL-01A failures.
 
 The Product Owner clarified that the existing historical database is **experimental/test data** and is not the real-use baseline to preserve. Real Lina use will begin from a **fresh database** on the current schema.
 
@@ -15,8 +17,8 @@ The Product Owner approved a launch-first Daily-Use Release 1. The governing lau
 The approved execution sequence is intentionally sequential:
 
 ```text
-RL-01A Accepted Runtime Alignment
-→ RL-01B Fresh DB + Runtime Composition
+RL-01A Accepted Runtime Alignment — DONE / ACCEPTED
+→ RL-01B Fresh DB + Runtime Composition — READY
 → RL-01C Clerk + OpenAI Operational Verification
 → RL-01D Controlled Full Intelligence Loop
 → TASK-027A Student Core Profile
@@ -32,19 +34,19 @@ RL-01A Accepted Runtime Alignment
 → LINA-R1 Clean Real-Use Baseline
 ```
 
-Only **RL-01A** is currently executable. Do not start later tasks early.
+Only **RL-01B** is currently executable. Do not start later tasks early.
 
 ---
 
 ## Current reality
 
-- The accepted remote branch was `codex/ctx-03` at `af7264cd05e1bb9f6e794005802758521c57d509` when the Daily-Use Release plan was approved; subsequent commits on the branch are governing-document updates for this approved transition unless later runtime work is explicitly accepted.
-- The prior local audit observed an isolated worktree at an older local revision and an older live runtime/database. Therefore the first execution task is revision/runtime alignment, not feature work.
+- The aligned isolated worktree is now on `codex/ctx-03` at `db0a7b05c6a6ec3d9e6b8914200eb6b2f80e37e9`, ahead/behind `0/0`, with clean tracked state.
+- Changes from the earlier accepted baseline `af7264cd05e1bb9f6e794005802758521c57d509` to the aligned current HEAD are documentation/governance only; no runtime code, schema, migration, or configuration implementation changed.
 - Full-System Learning Intelligence Acceptance remains **DONE / ACCEPTED**. Canonical authority remains **Segment-Scoped Semantic Review + Session-Scoped deterministic Intelligence Finalization**.
 - One primary Tutor model call per normal Student turn remains protected.
 - Existing DB-backed jobs/Worker, PostgreSQL/pgvector, Clerk integration, Model Gateway/OpenAI route, hybrid retrieval, object-storage abstraction, and Student Tutor path are implemented foundations.
-- The current standard project workflow starts Web + API but does not start the Worker. This is an operational composition gap, not a missing Learning Intelligence subsystem.
-- The historical/test database will not be migrated as Lina's real-use baseline. The real-use baseline will start from a fresh migrated database with no experimental interaction history.
+- The only live Lina API observed during RL-01A is still sourced from the older original checkout. Web is not running, Worker is not running, and current runtime configuration is not yet unified on the aligned worktree.
+- The historical/test database will not be migrated as Lina's real-use baseline. RL-01B must create a fresh migrated database and align Web + API + Worker to the same current revision/configuration.
 - Limited historical Real-Lina interaction remains a verified historical fact, but it will not be treated as the longitudinal production baseline.
 - Current hybrid RAG is already project-owned Docling + PostgreSQL/pgvector lexical/vector retrieval with provenance. It remains the baseline; replacement requires a later measured evaluation, not assumption.
 
@@ -99,11 +101,11 @@ Also protected:
 
 ## Active risks
 
-- **RL-R1 — Accepted Runtime Not Yet Unified — Criticality 5**  
-  Local/current operational execution must first align to the accepted revision and stop using stale runtime components as authority.
-
 - **RL-R2 — Daily Runtime Composition Unverified — Criticality 5**  
-  Fresh PostgreSQL + current Web + API + Worker + Clerk + real Model Gateway route have not yet been proven together as one recurring environment.
+  Fresh PostgreSQL + current Web + API + Worker have not yet been proven together from the aligned worktree/revision.
+
+- **RL-R3 — Real Auth/Model Operations Not Yet Verified on Fresh Runtime — Criticality 5**  
+  Clerk and OpenAI/Model Gateway configuration currently live in the old checkout and are intentionally deferred to RL-01C after RL-01B establishes the clean composition.
 
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**  
   Current Student UI is a proving surface, not yet the approved Daily-Use Lina frontend with Voice/photo affordances and richer visual identity.
@@ -124,21 +126,22 @@ Also protected:
 
 ## Current executable task
 
-### RL-01A — Accepted Runtime Alignment
+### RL-01B — Fresh Real-Use Database & Runtime Composition
 
 **Status:** READY  
 **Authority:** `project-state/DAILY_USE_RELEASE_TASKS.md`  
-**Boundary:** Repository/runtime alignment only. Do not create the fresh real-use DB, start Worker against real data, implement Personal Facts, redesign frontend, add Voice/Vision, deploy, or change RAG in this task.
+**Dependency:** RL-01A **DONE / ACCEPTED**  
+**Boundary:** Create and verify the clean current-schema PostgreSQL/pgvector database and align current Web + API + Worker to one current runtime composition. Do not configure/verify real Clerk or OpenAI yet, run the full intelligence proof, or start feature work.
 
-**Goal:** Align the isolated implementation worktree and runtime reference to the current accepted `codex/ctx-03` revision and produce a verified starting point for RL-01B.
+**Goal:** Establish one clean current local technical baseline that RL-01C can then connect to real auth/model configuration.
 
 ---
 
 ## Next recommended action
 
-Execute **RL-01A only**, verify it, update current task/project state, and return for review before RL-01B is promoted.
+Execute **RL-01B only**, verify it, update current task/project state, and return for review before RL-01C is promoted.
 
-Do not execute RL-01B or any feature track in the same run.
+Do not execute RL-01C or any feature track in the same run.
 
 ---
 
