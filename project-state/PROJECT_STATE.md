@@ -10,7 +10,7 @@ Move from accepted architecture and completed current-reality audit into the **D
 
 The Product Owner clarified that the existing historical database is **experimental/test data** and is not the real-use baseline to preserve. Real Lina use will begin from a **fresh database** on the current schema.
 
-The Product Owner approved a launch-first Daily-Use Release 1. The governing launch addendum is `docs/DAILY_USE_RELEASE_PLAN.md`; the bounded current task overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical task ledger.
+The Product Owner approved a launch-first Daily-Use Release 1. The governing launch addendum is `docs/DAILY_USE_RELEASE_PLAN.md`; approved launch decisions are summarized in `docs/DAILY_USE_RELEASE_DECISIONS.md`; the bounded current task overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical task ledger.
 
 The approved execution sequence is intentionally sequential:
 
@@ -148,6 +148,7 @@ Do not execute RL-01B or any feature track in the same run.
 - `docs/PROJECT_REFERENCE.md`
 - `docs/IMPLEMENTATION_PLAN.md`
 - `docs/DAILY_USE_RELEASE_PLAN.md`
+- `docs/DAILY_USE_RELEASE_DECISIONS.md`
 - `docs/LEARNING_INTELLIGENCE_SPEC.md`
 - `docs/CHILD_SAFETY_POLICY.md`
 - `docs/TECHNOLOGY_REUSE_CATALOG.md`
