@@ -9,19 +9,23 @@
 2. Lina's real longitudinal baseline is **Student-scoped**, not database-scoped: when Lina begins real use, her own Student identity must have zero prior Sessions, Messages, Segments, Personal Facts, Learning Events/Evidence, Current State, Patterns, Decision Views, and other Student-owned learning history.
 3. Test/validation Student identities may be used in the same application database for RL-01C/RL-01D and later verification. Their data must never enter Lina's conversation context, Personal Facts, Learner Intelligence, assets, or authorization scope. Cross-Student isolation is a Criticality-5 launch invariant.
 4. Personal Facts are a separate Student-asserted context layer, distinct from Student Core Profile and Learning Intelligence.
-5. Personal Facts come from what the Student tells the system about herself/her world; Parent claims do not automatically become Student Personal Facts.
-6. Personal Facts may evolve through repeated support, contradiction, invalidation, and supersession with source-message/time lineage.
-7. Personal Facts do not create Learning Evidence, personality/psychology conclusions, intelligence labels, or learning-style labels.
-8. Parent may inspect stored Personal Facts.
-9. Facts × Learning Parent insight analysis is future/data-dependent; no talent/ML architecture is approved now.
-10. Renderer-first is the primary learning-visual strategy: React/SVG, Motion, JSXGraph, React Konva, MathLive as the approved baseline direction.
-11. Image generation is optional/deferred and illustrative; it is not the default teaching renderer.
-12. Student work images preserve the original as raw source. Derived annotation on the original is the default visual feedback path; clean reconstruction is fallback when annotation is insufficient.
-13. Daily-Use Lina frontend improvement is launch scope. The target is playful + intelligent + polished + personal, not preschool/corporate.
-14. Frontend reuse must be selective; ThreeUI/Three.js is a selective visual source/capability, not app architecture.
-15. Initial Voice is Audio → STT → transcript → normal Tutor. No speech-to-speech requirement for Release 1; raw audio is not retained after successful STT under current policy.
-16. Vision/photo input is promoted into the launch sequence after the foundation/frontend gates.
-17. Current native Docling + PostgreSQL/pgvector hybrid RAG remains the launch baseline. Alternative RAG approaches require measured post-launch evaluation.
-18. AI capabilities continue behind Model Gateway; OpenAI is a current operational provider, not permanent product architecture.
-19. Replit may be used as a private daily-use environment after fit/proof; it is not architecture and the old Phase-0 app is not the source baseline.
-20. Daily-Use Release 1 executes one task at a time according to `project-state/DAILY_USE_RELEASE_TASKS.md`.
+5. Personal Facts come from what the Student explicitly tells the system about herself/her ordinary world; Parent claims do not automatically become Student Personal Facts, and repeated topic discussion without an explicit assertion does not become an inferred preference or trait.
+6. Release-1 Personal Facts use a simple **Fact + Observation History** model. A Fact is identified by Student + stable `fact_key` + normalized value. Repeating the same explicit Fact adds another source-linked Observation, increases its support count, and updates first/last-observed history; no confidence percentage is stored.
+7. Different explicit values for the same `fact_key` remain separate historical Facts rather than overwriting each other. The current value for that key is determined at read time from the most recently observed explicit Fact. Older Facts and their counts remain available as history.
+8. Personal Facts describe durable personal context, not agenda/calendar events. Future plans, one-off events, and temporary states such as “I’m going to Jeddah next weekend” or “I’m tired today” remain Conversation Context, not Personal Facts. `TEMPORAL_EVENT` is not part of the Release-1 Personal Facts taxonomy.
+9. Personal Facts do not create Learning Evidence, personality/psychology conclusions, intelligence labels, learning-style labels, inferred talents, or academic judgments. Student Core Profile facts such as authoritative age/Grade do not get duplicated into a competing Personal Facts authority.
+10. Parent may inspect stored Personal Facts and their support/history, but Parent inspection does not make Parent a Personal-Fact source.
+11. Personal Facts retrieval for Release 1 must remain optional, cheap, and non-blocking for Tutor behavior. Do not add a vector-memory platform or index Personal Facts into curriculum RAG. Use Student-scoped PostgreSQL indexes plus deterministic bounded relevance selection; if no clearly relevant Fact matches the current question, inject none.
+12. Personal Facts selection may use simple relevance + recency/count ordering, but current state for a `fact_key` follows the latest explicit Student assertion; historical support count informs strength/history and future recommendation analysis but does not override a newer explicit contrary Fact.
+13. Facts × Learning Parent insight analysis and recommendation engines are future/data-dependent; no talent/ML architecture is approved now.
+14. Renderer-first is the primary learning-visual strategy: React/SVG, Motion, JSXGraph, React Konva, MathLive as the approved baseline direction.
+15. Image generation is optional/deferred and illustrative; it is not the default teaching renderer.
+16. Student work images preserve the original as raw source. Derived annotation on the original is the default visual feedback path; clean reconstruction is fallback when annotation is insufficient.
+17. Daily-Use Lina frontend improvement is launch scope. The target is playful + intelligent + polished + personal, not preschool/corporate.
+18. Frontend reuse must be selective; ThreeUI/Three.js is a selective visual source/capability, not app architecture.
+19. Initial Voice is Audio → STT → transcript → normal Tutor. No speech-to-speech requirement for Release 1; raw audio is not retained after successful STT under current policy.
+20. Vision/photo input is promoted into the launch sequence after the foundation/frontend gates.
+21. Current native Docling + PostgreSQL/pgvector hybrid RAG remains the launch baseline for curriculum/reference retrieval. Personal Facts are a separate authority and must not be mixed into that RAG index by default.
+22. AI capabilities continue behind Model Gateway; OpenAI is a current operational provider, not permanent product architecture.
+23. Replit may be used as a private daily-use environment after fit/proof; it is not architecture and the old Phase-0 app is not the source baseline.
+24. Daily-Use Release 1 executes one task at a time according to `project-state/DAILY_USE_RELEASE_TASKS.md`.
