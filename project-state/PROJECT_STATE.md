@@ -2,74 +2,50 @@
 
 ## Current goal
 
-Move from accepted architecture and completed current-reality audit into the **Daily-Use Lina Release 1** execution sequence approved by the Product Owner on 2026-08-31.
+Execute the Product Owner-approved **Daily-Use Lina Release 1** sequence one task at a time until Lina can begin stable private daily use.
 
-`DOC-SYNC-01 — Product Truth & Governing Documentation Synchronization` is **DONE / ACCEPTED**.
+`DOC-SYNC-01` is **DONE / ACCEPTED**.  
+`RL-01A — Accepted Runtime Alignment` is **DONE / ACCEPTED**.  
+`RL-01B — Fresh Shared Application DB & Runtime Composition` is **DONE / ACCEPTED**.  
+`RL-01C — Clerk + OpenAI Operational Verification` is the **ONLY READY TASK**.
 
-`RL-01A — Accepted Runtime Alignment` is **DONE / ACCEPTED**. The isolated worktree `/Users/haitham/development/lina-learning-ctx03` is aligned to `codex/ctx-03` at `db0a7b05c6a6ec3d9e6b8914200eb6b2f80e37e9`, tracked state is clean, `.acceptance-artifacts/` remains untracked/preserved, and baseline verification passed (`715 passed, 7 skipped`, web typecheck/build, migration head, and `git diff --check`). The original checkout remained untouched.
-
-The RL-01A audit also confirmed the current operational gap: the only live API is still from the old original checkout, Web and Worker are not running as the aligned composition, and DB/Clerk/Model configuration still originates from the old checkout. These are RL-01B concerns, not RL-01A failures.
-
-The Product Owner clarified that the existing historical database is **experimental/test data** and is not the real-use baseline to preserve. Real Lina use will begin from a **fresh database** on the current schema.
-
-The Product Owner approved a launch-first Daily-Use Release 1. The governing launch addendum is `docs/DAILY_USE_RELEASE_PLAN.md`; approved launch decisions are summarized in `docs/DAILY_USE_RELEASE_DECISIONS.md`; the bounded current task overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical task ledger.
-
-The approved execution sequence is intentionally sequential:
-
-```text
-RL-01A Accepted Runtime Alignment — DONE / ACCEPTED
-→ RL-01B Fresh DB + Runtime Composition — READY
-→ RL-01C Clerk + OpenAI Operational Verification
-→ RL-01D Controlled Full Intelligence Loop
-→ TASK-027A Student Core Profile
-→ PF-01 Personal Facts Contract
-→ PF-02 Personal Facts Extraction/Reconciliation
-→ PF-03 Relevant Facts in Tutor Context
-→ FE-01 Lina Visual System & Reuse Decision
-→ FE-02 Daily Student Experience
-→ TASK-032 Voice / STT
-→ TASK-033 Vision / Student Work
-→ TASK-034 Original-Image Annotation
-→ DEPLOY-01 Private Daily Environment
-→ LINA-R1 Clean Real-Use Baseline
-```
-
-Only **RL-01B** is currently executable. Do not start later tasks early.
+Current execution overlay: `project-state/DAILY_USE_RELEASE_TASKS.md`.
+`TASKS.md` remains the preserved historical ledger.
 
 ---
 
 ## Current reality
 
-- The aligned isolated worktree is now on `codex/ctx-03` at `db0a7b05c6a6ec3d9e6b8914200eb6b2f80e37e9`, ahead/behind `0/0`, with clean tracked state.
-- Changes from the earlier accepted baseline `af7264cd05e1bb9f6e794005802758521c57d509` to the aligned current HEAD are documentation/governance only; no runtime code, schema, migration, or configuration implementation changed.
-- Full-System Learning Intelligence Acceptance remains **DONE / ACCEPTED**. Canonical authority remains **Segment-Scoped Semantic Review + Session-Scoped deterministic Intelligence Finalization**.
-- One primary Tutor model call per normal Student turn remains protected.
-- Existing DB-backed jobs/Worker, PostgreSQL/pgvector, Clerk integration, Model Gateway/OpenAI route, hybrid retrieval, object-storage abstraction, and Student Tutor path are implemented foundations.
-- RL-01B execution is **VERIFIED / PENDING PRODUCT OWNER ACCEPTANCE**: a fresh, persistent shared local PostgreSQL/pgvector application database was migrated from zero to `f5a1c2d3e4b6`; no historical database rows were imported.
-- The aligned `codex/ctx-03` API, Worker, and Web are running against that shared database. The stale original-checkout API was stopped. Web uses the existing Clerk public configuration read-only for process startup only; real Clerk/OpenAI verification remains deferred to RL-01C.
-- One synthetic `Sandbox Test Learner` exists with zero learning records. Lina's real Student identity has not been created or used, and no Session, Message, Segment, Event, Evidence, State, Pattern, Decision View, Card, or learner-owned asset history exists for Lina.
-- Limited historical Real-Lina interaction remains a verified historical fact, but it will not be treated as the longitudinal production baseline.
-- Current hybrid RAG is already project-owned Docling + PostgreSQL/pgvector lexical/vector retrieval with provenance. It remains the baseline; replacement requires a later measured evaluation, not assumption.
+- `codex/ctx-03` is the accepted execution branch.
+- RL-01B was committed/pushed at `dc76195bcb9ba7577b5f6dbbf0804f5bff6c43ff`; subsequent commits only promote/record current task governance until new runtime work is accepted.
+- Fresh shared local Daily-Use PostgreSQL 17.8 + pgvector 0.8.1 was created from zero and migrated to Alembic head `f5a1c2d3e4b6`.
+- No historical experimental interaction data was imported.
+- Web, API, and Worker run from the aligned `ctx03` worktree against the same fresh database.
+- Standard Worker command exists: `npm run dev:worker`.
+- Worker job claim/complete/retry and restart smoke verification passed.
+- The stale API from the old original checkout was stopped; the original checkout itself remains protected/unmodified.
+- One synthetic `Sandbox Test Learner` exists with zero learning history. Lina's real Student identity/history has not been created or used.
+- Implemented learning paths are Student-scoped. Cross-Student isolation is a **Criticality-5 launch invariant**.
+- Same database for test/validation Students and Lina is approved; Lina's clean longitudinal baseline is Student-scoped, not database-scoped.
+- Full-System Learning Intelligence Acceptance remains **DONE / ACCEPTED** with Segment Review + deterministic Session Finalization authority.
+- Current hybrid RAG remains native Docling + PostgreSQL/pgvector; no RAG redesign is authorized for launch.
 
 ---
 
 ## Active decisions
 
-1. **Launch-first execution:** finish the smallest reliable private daily-use product so Lina can start using it, then expand from real use.
-2. **Fresh real-use data:** the current historical database is experimental. Real Lina use begins from a clean database on the current schema.
-3. **Personal Facts:** add a separate Personal Facts layer containing durable facts asserted by the Student about herself. It is separate from Student Core Profile, Conversation Context, and Learning Intelligence.
-4. **Personal Facts boundaries:** no personality/psychological diagnosis, no learning conclusions, no transcript-summary memory, and no conversion of Personal Facts into Learning Evidence.
-5. **Fact evolution:** facts are source-linked, temporal, revisable, and may be supported, contradicted, or superseded over time.
-6. **Parent visibility:** Parent may see the stored Personal Facts. Parent-supplied claims do not become the Student's Personal Facts merely because the Parent asserted them.
-7. **Future parent insights:** combining Personal Facts with Learning Intelligence for exploratory Parent insights is intentionally deferred until real data exists. No talent-detection/ML architecture is authorized now.
-8. **Renderer-first visual teaching:** accurate reusable React/SVG/renderer paths are the primary learning-visual strategy. OpenAI image generation is optional/deferred and not the default teaching renderer.
-9. **Student image feedback:** preserve the original Student image as raw source; annotation on the original is the default derived visual response; clean reconstruction is fallback when annotation is insufficient.
-10. **Frontend is launch scope:** Lina's Student UX must become visually engaging, child-appropriate, polished, and coherent before daily use. Reuse candidates must be evaluated selectively rather than stacking many UI libraries.
-11. **Voice:** initial Voice is Audio → STT → transcript → normal Tutor path. No speech-to-speech requirement for Release 1; successful STT does not retain raw audio under current policy.
-12. **Vision:** Student work/photo understanding is promoted into the launch sequence after the core environment and frontend foundations are verified.
-13. **RAG:** keep current hybrid retrieval for launch. Post-launch RAG evaluation may compare current native retrieval with LlamaIndex/Docling and OpenAI retrieval options using a real golden set.
-14. **Provider boundary:** AI capabilities remain behind Model Gateway; application domains do not hardwire OpenAI SDK calls directly.
-15. **Deployment:** Replit remains a candidate private daily-use host, not architecture. Final deployment follows proof of the current composition.
+1. Launch-first: finish the smallest reliable Daily-Use product, then expand from real Lina use.
+2. Use one fresh shared application DB; test data and Lina may coexist only under isolated Student identities.
+3. Lina's real Student identity starts with zero prior learning history.
+4. Personal Facts are a separate Student-asserted context layer, not Learning Intelligence or Parent Core Profile.
+5. Personal Facts never become Learning Evidence by identity and do not contain psychological/personality/learning-style inference.
+6. Renderer-first is the primary teaching-visual strategy; image generation is optional/deferred illustrative output.
+7. Student original images remain raw source; annotation is default derived feedback; clean reconstruction is fallback.
+8. Frontend visual improvement is launch scope.
+9. Initial Voice is Audio → STT → transcript → normal Tutor; raw audio is not retained after successful STT.
+10. Vision/photo input is in the launch sequence after foundation/frontend gates.
+11. AI capabilities remain behind Model Gateway; OpenAI is an operational provider, not permanent architecture.
+12. Replit is a candidate private host after local proof, not product architecture.
 
 ---
 
@@ -86,62 +62,52 @@ Raw learning interaction
 
 Also protected:
 
-- current behavior outranking history;
 - one primary Tutor model call per normal turn;
-- deterministic Session Finalization and no partial Session activation;
-- Candidate metadata remaining provisional;
-- Personal Facts remaining separate from Learner Intelligence and never becoming Learning Evidence by identity;
-- Student Core Profile remaining authoritative Parent/System factual state, distinct from Student-asserted Personal Facts;
-- Safety, conversation context, RAG, Personal Facts, Student Core Profile, and Learner Intelligence remaining separate inputs/authorities;
-- original Student images/work remaining raw source; annotations/reconstructions remain derived;
-- no graph database, second learner-memory system, Redis/Celery, microservice split, or deployment redesign without demonstrated need;
-- current hybrid Retrieval domain remaining replaceable and provenance-preserving;
-- no future Parent Insight conclusion writing back into Personal Facts or Learning Intelligence.
+- current behavior outranks historical personalization;
+- deterministic Session Finalization; no partial activation;
+- Candidate metadata remains provisional;
+- Student Core Profile, Personal Facts, conversation context, Safety, RAG, and Learner Intelligence remain separate authorities;
+- cross-Student isolation across conversation, assets, Personal Facts, Learning Intelligence, and authorization;
+- original Student work remains source; annotations/reconstructions are derived;
+- no Redis/Celery, graph database, second learner-memory system, microservice split, or deployment redesign without demonstrated need.
 
 ---
 
 ## Active risks
 
-- **RL-R3 — Real Auth/Model Operations Not Yet Verified on Fresh Runtime — Criticality 5**  
-  Clerk and OpenAI/Model Gateway configuration currently live in the old checkout and are intentionally deferred to RL-01C after RL-01B establishes the clean composition.
+- **RL-R3 — Real Auth/Model Operations Not Yet Verified — Criticality 5**  
+  Real Clerk browser identity/JWT/JWKS and OpenAI-backed Model Gateway routes have not yet been proven on the fresh aligned runtime.
+
+- **ISO-R1 — Cross-Student Runtime Isolation Under Real Auth — Criticality 5**  
+  Persistence scoping is verified structurally/synthetically; RL-01C must verify authorization/isolation through the real Clerk identity path.
 
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**  
-  Current Student UI is a proving surface, not yet the approved Daily-Use Lina frontend with Voice/photo affordances and richer visual identity.
+  Current Student UI remains a proving surface; the approved polished Lina frontend is later in the launch sequence.
 
-- **PF-R1 — Personal Facts Not Yet Captured — Criticality 4**  
-  The real-use database should ideally begin with Personal Facts support so this durable user-context stream starts from Lina's first clean sessions.
-
-- **VISION-R1 — Durable Student Asset Hosting Required Before Daily Vision — Criticality 4**  
-  Local storage is adequate for controlled verification but daily photographed work requires durable/private storage and restart-safe access.
-
-- **MATH-01 — Structured Math Readability — Criticality 4**  
-  Remains independent. Renderer-first direction does not silently authorize the full Artifact Engine before its scheduled task.
-
-- **ID-01 — Concurrent First-Identity Creation Race — Criticality 3**  
-  Remains investigation-only until reproduced; it must not block unrelated launch work unless the real auth verification reproduces it.
+- **PF-R1 — Personal Facts Not Yet Implemented — Criticality 4**
+- **VISION-R1 — Durable Student Asset Hosting Required Before Daily Vision — Criticality 4**
+- **MATH-01 — Structured Math Readability — Criticality 4 / independent**
+- **ID-01 — Concurrent First-Identity Creation Race — Criticality 3 / investigate only if reproduced**
 
 ---
 
 ## Current executable task
 
-### RL-01B — Fresh Real-Use Database & Runtime Composition
+### RL-01C — Clerk + OpenAI Operational Verification
 
 **Status:** READY  
 **Authority:** `project-state/DAILY_USE_RELEASE_TASKS.md`  
-**Dependency:** RL-01A **DONE / ACCEPTED**  
-**Boundary:** Create and verify the clean current-schema PostgreSQL/pgvector database and align current Web + API + Worker to one current runtime composition. Do not configure/verify real Clerk or OpenAI yet, run the full intelligence proof, or start feature work.
+**Dependency:** RL-01B **DONE / ACCEPTED**
 
-**Goal:** Establish one clean current local technical baseline that RL-01C can then connect to real auth/model configuration.
+**Goal:** Verify real Clerk identity/authorization and real OpenAI-backed Model Gateway routes on the aligned fresh runtime, using a controlled launch-test Student and preserving Lina's own Student history as clean/unstarted.
 
-**Execution state:** VERIFIED / PENDING PRODUCT OWNER ACCEPTANCE. The task source remains `READY` until acceptance; RL-01C remains blocked.
+**Boundary:** Do not execute the full Session→Review→Finalization→Evidence→Card loop; that belongs to RL-01D. Do not start Personal Facts, frontend redesign, Voice, Vision, RAG changes, Artifacts, or deployment.
 
 ---
 
 ## Next recommended action
 
-Review RL-01B verification for acceptance. Do not start RL-01C until the Product Owner promotes it.
-
-Do not execute RL-01C or any feature track in the same run.
+Execute **RL-01C only**, return its report for review, and do not start RL-01D in the same run.
 
 ---
 
