@@ -1,6 +1,6 @@
 # LEARNING_PRODUCT_ROADMAP.md — Lina Personal Learning System
 
-**Status:** Approved repository roadmap and product-evolution reference  
+**Status:** Approved roadmap baseline; `DOC-SYNC-01` synchronized wording pending Product Owner review  
 **Approved direction:** Option A — Simplify the critical path, preserve the valuable learning-intelligence architecture  
 **Baseline reviewed:** `67382c332b4cdc0d56f0f2a12774f40eea636dda`
 **Approved:** 2026-08-23  
