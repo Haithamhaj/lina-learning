@@ -45,8 +45,9 @@ Only **RL-01B** is currently executable. Do not start later tasks early.
 - Full-System Learning Intelligence Acceptance remains **DONE / ACCEPTED**. Canonical authority remains **Segment-Scoped Semantic Review + Session-Scoped deterministic Intelligence Finalization**.
 - One primary Tutor model call per normal Student turn remains protected.
 - Existing DB-backed jobs/Worker, PostgreSQL/pgvector, Clerk integration, Model Gateway/OpenAI route, hybrid retrieval, object-storage abstraction, and Student Tutor path are implemented foundations.
-- The only live Lina API observed during RL-01A is still sourced from the older original checkout. Web is not running, Worker is not running, and current runtime configuration is not yet unified on the aligned worktree.
-- The historical/test database will not be migrated as Lina's real-use baseline. RL-01B must create a fresh migrated database and align Web + API + Worker to the same current revision/configuration.
+- RL-01B execution is **VERIFIED / PENDING PRODUCT OWNER ACCEPTANCE**: a fresh, persistent shared local PostgreSQL/pgvector application database was migrated from zero to `f5a1c2d3e4b6`; no historical database rows were imported.
+- The aligned `codex/ctx-03` API, Worker, and Web are running against that shared database. The stale original-checkout API was stopped. Web uses the existing Clerk public configuration read-only for process startup only; real Clerk/OpenAI verification remains deferred to RL-01C.
+- One synthetic `Sandbox Test Learner` exists with zero learning records. Lina's real Student identity has not been created or used, and no Session, Message, Segment, Event, Evidence, State, Pattern, Decision View, Card, or learner-owned asset history exists for Lina.
 - Limited historical Real-Lina interaction remains a verified historical fact, but it will not be treated as the longitudinal production baseline.
 - Current hybrid RAG is already project-owned Docling + PostgreSQL/pgvector lexical/vector retrieval with provenance. It remains the baseline; replacement requires a later measured evaluation, not assumption.
 
@@ -101,9 +102,6 @@ Also protected:
 
 ## Active risks
 
-- **RL-R2 — Daily Runtime Composition Unverified — Criticality 5**  
-  Fresh PostgreSQL + current Web + API + Worker have not yet been proven together from the aligned worktree/revision.
-
 - **RL-R3 — Real Auth/Model Operations Not Yet Verified on Fresh Runtime — Criticality 5**  
   Clerk and OpenAI/Model Gateway configuration currently live in the old checkout and are intentionally deferred to RL-01C after RL-01B establishes the clean composition.
 
@@ -135,11 +133,13 @@ Also protected:
 
 **Goal:** Establish one clean current local technical baseline that RL-01C can then connect to real auth/model configuration.
 
+**Execution state:** VERIFIED / PENDING PRODUCT OWNER ACCEPTANCE. The task source remains `READY` until acceptance; RL-01C remains blocked.
+
 ---
 
 ## Next recommended action
 
-Execute **RL-01B only**, verify it, update current task/project state, and return for review before RL-01C is promoted.
+Review RL-01B verification for acceptance. Do not start RL-01C until the Product Owner promotes it.
 
 Do not execute RL-01C or any feature track in the same run.
 

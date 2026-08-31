@@ -9,6 +9,7 @@
     "dev": "npm --prefix apps/web run dev",
     "dev:web": "npm --prefix apps/web run dev",
     "dev:api": "python -m uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload",
+    "dev:worker": "uv run --with-requirements apps/api/requirements.txt python -m workers.job_worker",
     "typecheck": "npm --prefix apps/web run typecheck",
     "build": "npm --prefix apps/web run build",
     "test:db:up": "uv run --with-requirements apps/api/requirements.txt --with pytest python scripts/test_postgres.py up",
