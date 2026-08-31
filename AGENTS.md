@@ -14,11 +14,12 @@ Read in this order when relevant:
 4. `docs/CHILD_SAFETY_POLICY.md` — non-overridable child safety and Parent Learning Boundaries.
 5. `docs/IMPLEMENTATION_PLAN.md` — technical implementation direction, sequencing, gates, and deferred architecture.
 6. `docs/DAILY_USE_RELEASE_PLAN.md` — Product Owner-approved launch-first implementation addendum for Daily-Use Lina Release 1.
-7. `docs/TECHNOLOGY_REUSE_CATALOG.md` — approved reuse candidates and mandatory fit checks.
-8. `docs/SUBJECT_SCOPE_POLICY.md` — accepted cross-subject policy when relevant.
-9. `project-state/PROJECT_STATE.md` — **current operational reality and current next action**.
-10. `project-state/DAILY_USE_RELEASE_TASKS.md` — current bounded Daily-Use Release 1 executable-task overlay.
-11. `TASKS.md` — preserved durable historical task ledger.
+7. `docs/DAILY_USE_RELEASE_DECISIONS.md` — compact Product Owner-approved decision register introduced by the Daily-Use transition.
+8. `docs/TECHNOLOGY_REUSE_CATALOG.md` — approved reuse candidates and mandatory fit checks.
+9. `docs/SUBJECT_SCOPE_POLICY.md` — accepted cross-subject policy when relevant.
+10. `project-state/PROJECT_STATE.md` — **current operational reality and current next action**.
+11. `project-state/DAILY_USE_RELEASE_TASKS.md` — current bounded Daily-Use Release 1 executable-task overlay.
+12. `TASKS.md` — preserved durable historical task ledger.
 
 ### Document authority and task coordination
 
@@ -27,6 +28,7 @@ Read in this order when relevant:
 - `LEARNING_PRODUCT_ROADMAP.md` owns approved evolution direction, not current execution.
 - `IMPLEMENTATION_PLAN.md` owns technical implementation direction.
 - `docs/DAILY_USE_RELEASE_PLAN.md` is the approved current launch implementation addendum where historical sequencing is stale.
+- `docs/DAILY_USE_RELEASE_DECISIONS.md` records approved product decisions introduced by this launch transition pending later routine consolidation into the stable reference.
 - `PROJECT_STATE.md` owns current operational truth and next action.
 - `project-state/DAILY_USE_RELEASE_TASKS.md` owns the bounded executable Daily-Use Release 1 task sequence.
 - `TASKS.md` remains the preserved historical task/execution ledger and must not be rewritten merely to mirror the current launch overlay.
@@ -41,7 +43,7 @@ Normally Codex executes only a task explicitly marked `READY` in the current bou
 
 The Product Owner clarified that the existing historical database is **experimental/test data**. It is not a production baseline to preserve or migrate as Lina's longitudinal real-use history. Real Lina use will begin from a fresh current-schema database.
 
-The Product Owner approved a **launch-first Daily-Use Lina Release 1** sequence. The sequence is recorded in `PROJECT_STATE.md`, `docs/DAILY_USE_RELEASE_PLAN.md`, and `project-state/DAILY_USE_RELEASE_TASKS.md`. It deliberately promotes capabilities in order, not simultaneously.
+The Product Owner approved a **launch-first Daily-Use Lina Release 1** sequence. The sequence is recorded in `PROJECT_STATE.md`, `docs/DAILY_USE_RELEASE_PLAN.md`, `docs/DAILY_USE_RELEASE_DECISIONS.md`, and `project-state/DAILY_USE_RELEASE_TASKS.md`. It deliberately promotes capabilities in order, not simultaneously.
 
 **Only the current `READY` task is executable. At this transition, that task is `RL-01A — Accepted Runtime Alignment`.**
 
