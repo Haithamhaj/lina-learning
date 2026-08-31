@@ -39,21 +39,21 @@ Normally Codex executes only a task explicitly marked `READY` in the current bou
 
 `DOC-SYNC-01` is **DONE / ACCEPTED**.
 
-`RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification` completed its **Current Reality Audit** stage. The audit found an operational-composition problem rather than a missing learning architecture: the accepted code contains Web, API, Worker, PostgreSQL/pgvector integration, Clerk, Model Gateway/OpenAI routes, Session lifecycle, Segment Review, deterministic Session Finalization, and downstream Learning Intelligence, but the historical/current operational environment was not aligned as one current revision/runtime and the standard workflow did not launch Worker.
+`RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification` completed its Current Reality Audit and the launch-first transition is now being executed sequentially.
 
-The Product Owner clarified that the existing historical database is **experimental/test data**. It is not a production baseline to preserve or migrate as Lina's longitudinal real-use history. Real Lina use will begin from a fresh current-schema database.
+The Product Owner clarified that the existing historical database is experimental/test data. It is not a production baseline to preserve or migrate as Lina's longitudinal real-use history. Daily-Use Release 1 uses one fresh shared current-schema application database; Lina's longitudinal baseline is Student-scoped, not database-scoped.
 
 The Product Owner approved a **launch-first Daily-Use Lina Release 1** sequence. The sequence is recorded in `PROJECT_STATE.md`, `docs/DAILY_USE_RELEASE_PLAN.md`, `docs/DAILY_USE_RELEASE_DECISIONS.md`, and `project-state/DAILY_USE_RELEASE_TASKS.md`. It deliberately promotes capabilities in order, not simultaneously.
 
-**Only the current `READY` task is executable. At this transition, that task is `RL-01A — Accepted Runtime Alignment`.**
+**Only the task that `PROJECT_STATE.md` and `project-state/DAILY_USE_RELEASE_TASKS.md` jointly mark `READY` is executable. Do not rely on a hardcoded task name in this file.**
 
-Do not start RL-01B, Personal Facts, Frontend redesign, Voice, Vision, deployment, RAG evaluation, Artifacts, Science, Parent Insight analysis, MATH-01, ID-01, EDU-ERR-01, REC-25, or LR-D04B in the same run unless later explicitly promoted.
+Do not start any later Daily-Use task, Personal Facts, Frontend redesign, Voice, Vision, deployment, RAG evaluation, Artifacts, Science, Parent Insight analysis, MATH-01, ID-01, EDU-ERR-01, REC-25, or LR-D04B unless explicitly promoted.
 
 ## Daily-Use Release 1 Sequence
 
 ```text
 RL-01A Accepted Runtime Alignment
-→ RL-01B Fresh DB + Runtime Composition
+→ RL-01B Fresh Shared DB + Runtime Composition
 → RL-01C Clerk + OpenAI Operational Verification
 → RL-01D Controlled Full Intelligence Loop
 → TASK-027A Student Core Profile
@@ -252,6 +252,6 @@ Never print, echo, copy, expose, commit, or hardcode secret values. Do not copy 
 
 ## Current Next Action
 
-Read `project-state/PROJECT_STATE.md` and `project-state/DAILY_USE_RELEASE_TASKS.md`, then execute **RL-01A — Accepted Runtime Alignment only**.
+Read `project-state/PROJECT_STATE.md` and `project-state/DAILY_USE_RELEASE_TASKS.md`, then execute **only the single task marked `READY` there**.
 
-Stop after RL-01A verification/report. Do not execute RL-01B or any feature work in the same run.
+Stop after that task's verification/report. Do not execute or promote the next task in the same run unless the Product Owner explicitly authorizes it.
