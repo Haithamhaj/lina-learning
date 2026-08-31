@@ -9,7 +9,7 @@ Execute the Product Owner-approved **Daily-Use Lina Release 1** sequence one tas
 - `RL-01B — Fresh Shared Application DB & Runtime Composition` — **DONE / ACCEPTED**
 - `RL-01C — Clerk + OpenAI Operational Verification` — **DONE / ACCEPTED**
 - `RL-01D — Controlled Full Intelligence Loop` — **DONE / ACCEPTED**
-- `TASK-027A — Student Core Profile & Tutor Student Context` — **ONLY READY TASK**
+- `TASK-027A — Student Core Profile & Tutor Student Context` — **IN PROGRESS / BLOCKED ON FUTURE GRADEPERIOD WRITE LIFECYCLE**
 
 Current execution overlay: `project-state/DAILY_USE_RELEASE_TASKS.md`.  
 `TASKS.md` remains the preserved historical ledger.
@@ -33,17 +33,15 @@ real Tutor interaction
 → relevant later Tutor personalization
 ```
 
-- The accepted Tutor streaming transaction-lock correction is committed as `3af613484266e2c21d9e91a20d09ef217b05c16e`. It releases request-owned DB locks before the independent SSE stream transaction without removing Student ownership locking, weakening Safety, changing provider timeout, or adding hidden retries.
-- The final controlled learning Session completed three real OpenAI Tutor turns with one primary Tutor call per turn, natural lifecycle closure, completed Segment Review, deterministic Session Finalization, source-linked Events/Evidence/State/Patterns/Decision Views, healthy jobs, and Student isolation.
-- One first Segment Review provider attempt ended with durable `TimeoutError`; the configured automatic Worker retry succeeded. Final Review completed, no unrecoverable job remained, and no partial intelligence activation occurred. This is accepted as a recoverable provider failure, not an RL-01D correctness blocker.
-- Relevant later personalization is verified: a later same-denominator-fractions question selected five compact authoritative Current State/Pattern entries from finalized prior intelligence; no full prior transcript, archived Session, or Personal Facts were injected; the Tutor still used one primary call.
-- Irrelevant-context exclusion is verified: a later separate `7 × 8` Session selected no fraction-specific Learner Intelligence.
-- `RELEVANT PRIOR INTELLIGENCE SELECTION = PASS`.
-- `IRRELEVANT FRACTION INTELLIGENCE EXCLUSION = PASS`.
-- `REAL-AUTH CROSS-STUDENT ISOLATION = VERIFIED` for implemented auth/session paths.
-- Semantic Session LLM calls remain `0`; Session Finalization remains deterministic.
+- The accepted Tutor streaming transaction-lock correction is committed as `3af613484266e2c21d9e91a20d09ef217b05c16e`.
+- Relevant later personalization and irrelevant-context exclusion are verified; semantic Session LLM calls remain `0`; one primary Tutor call remains protected.
 - No Lina real Student identity/history has been created or used. Lina's clean longitudinal baseline remains Student-scoped and unstarted.
-- The next product foundation gap is Student Core Profile: Parent/System-authoritative child identity and school context must enter Tutor context as a separate compact authority before Personal Facts work begins.
+- TASK-027A implementation is present locally for review and has not been committed/pushed. The design correctly reuses `Student` and `GradePeriod`, adds nullable DOB with derived age, preserves Parent/System authority, adds compact Tutor Core Context, and does not mix Personal Facts or Learner Intelligence into Core Profile.
+- TASK-027A review found one Criticality-5 implementation defect in GradePeriod write lifecycle: saving a future GradePeriod currently deactivates the effective current GradePeriod immediately. This creates a gap where Tutor Core Context has no grade until the future period starts.
+- Correct lifecycle direction: scheduling a future GradePeriod must not remove today's effective grade. The current effective period must remain effective through the day before the future period begins; future scheduling must not create overlapping effective periods or arbitrary resolution.
+- Migration `f9b1c2d3e4f5` itself passed review: it only adds nullable `students.date_of_birth DATE`, preserves existing Students, and has no data rewrite.
+- Parent authority, compact Tutor context, DOB-derived age, retrieval caller reuse, and cross-Student Core Profile isolation passed review.
+- PF-01 remains blocked until TASK-027A is corrected and accepted.
 
 ---
 
@@ -57,14 +55,16 @@ real Tutor interaction
 6. Age should be derived from date of birth rather than maintained independently when DOB is available.
 7. Personal Facts are a separate Student-asserted context layer, not Learning Intelligence or Student Core Profile.
 8. Current behavior outranks historical personalization.
-9. Renderer-first is the primary teaching-visual strategy; image generation is optional/deferred illustrative output.
-10. Student original images remain raw source; annotation is default derived feedback; clean reconstruction is fallback.
-11. Frontend visual improvement is launch scope.
-12. Initial Voice is Audio → STT → transcript → normal Tutor; raw audio is not retained after successful STT.
-13. AI capabilities remain behind Model Gateway; OpenAI is an operational provider, not permanent architecture.
-14. Replit is a candidate private host after local proof, not product architecture.
-15. Backend role authority comes from signed Clerk session-token claims; frontend-readable metadata alone is not backend authorization.
-16. Do not reintroduce the accepted Tutor streaming lock, remove ownership locking globally, change provider timeout, or add hidden Tutor retries without a new demonstrated requirement.
+9. A future GradePeriod is a scheduled future school state, not permission to erase the currently effective GradePeriod immediately.
+10. When a future GradePeriod supersedes the current open-ended period, the current period should remain effective through `future.starts_on - 1 day`; effective overlaps must be rejected or resolved explicitly, never selected arbitrarily.
+11. Renderer-first is the primary teaching-visual strategy; image generation is optional/deferred illustrative output.
+12. Student original images remain raw source; annotation is default derived feedback; clean reconstruction is fallback.
+13. Frontend visual improvement is launch scope.
+14. Initial Voice is Audio → STT → transcript → normal Tutor; raw audio is not retained after successful STT.
+15. AI capabilities remain behind Model Gateway; OpenAI is an operational provider, not permanent architecture.
+16. Replit is a candidate private host after local proof, not product architecture.
+17. Backend role authority comes from signed Clerk session-token claims; frontend-readable metadata alone is not backend authorization.
+18. Do not reintroduce the accepted Tutor streaming lock, remove ownership locking globally, change provider timeout, or add hidden Tutor retries without a new demonstrated requirement.
 
 ---
 
@@ -95,8 +95,8 @@ Also protected:
 
 ## Active risks
 
-- **CORE-R1 — Student Core Context Not Yet Implemented — Criticality 4**  
-  Tutor can use Learning Intelligence selectively, but Parent/System-authoritative child identity, DOB-derived age, active Grade, and GradePeriod are not yet a compact governed Tutor input.
+- **CORE-R2 — Future GradePeriod Scheduling Can Blank Current Tutor Grade — Criticality 5**  
+  Current TASK-027A write behavior deactivates today's effective GradePeriod when a future GradePeriod is saved. Until corrected, Tutor Core Context may incorrectly lose `grade_level` before the future period starts.
 
 - **PF-R1 — Personal Facts Not Yet Implemented — Criticality 4**
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**
@@ -112,27 +112,33 @@ Also protected:
 
 ### TASK-027A — Student Core Profile & Tutor Student Context
 
-**Status:** READY  
+**Status:** IN PROGRESS / BLOCKED ON FUTURE GRADEPERIOD WRITE LIFECYCLE  
 **Authority:** `project-state/DAILY_USE_RELEASE_TASKS.md`  
 **Dependency:** RL-01D **DONE / ACCEPTED**
 
-**Goal:** establish a compact Parent/System-authoritative Student Core Profile and inject only the relevant compact Student Core Context into Tutor requests as a separate authority from conversation, Personal Facts, RAG, Safety, and Learner Intelligence.
+**Implemented and review-passed areas:**
+- existing Student identity reused; nullable `date_of_birth` extension only;
+- deterministic DOB-derived age; no stored age;
+- existing GradePeriod read resolver reused and Student-scoped;
+- Parent/System-authorized linked-Student Core Profile boundary;
+- compact Tutor Core Context containing only display name, derived age, and effective grade;
+- raw DOB/IDs/Parent metadata/Personal Facts/Learner Intelligence excluded from Core Context;
+- existing retrieval `grade_level` caller uses effective GradePeriod when available without RAG redesign;
+- one primary Tutor model call preserved;
+- cross-Student Core Profile isolation verified.
 
-Expected core concepts include:
-- child identity/display name under application authority;
-- date of birth when supplied;
-- age derived from DOB rather than independently maintained;
-- active Grade / GradePeriod linkage;
-- bounded Tutor Student Core Context;
-- explicit provenance/authority separation from Student-asserted Personal Facts and learning-derived intelligence.
+**Blocking defect:**
+- creating/saving a future GradePeriod must not deactivate the currently effective period immediately;
+- the correction must preserve current grade until the scheduled transition date and prevent overlapping effective periods;
+- add regression coverage for current Grade 5 + scheduled future Grade 6, including the boundary date.
 
-**Boundary:** Do not implement Personal Facts, frontend redesign, Voice, Vision, RAG changes, deployment, or later tasks in the same run.
+**Boundary:** Do not start PF-01, Personal Facts extraction/reconciliation, frontend redesign, Voice, Vision, RAG redesign, deployment, or later tasks while this blocker remains.
 
 ---
 
 ## Next recommended action
 
-Execute **TASK-027A only**. First audit what Student/Grade/GradePeriod identity structures already exist and reuse them where correct; implement only the missing Core Profile/context boundary. Stop for Product Owner review before promoting `PF-01`.
+Correct only the TASK-027A GradePeriod write lifecycle and add focused regression coverage. Re-run the accepted TASK-027A verification suite, remove process-only Superpowers documents before commit, and return for Product Owner acceptance. Do not start PF-01.
 
 ---
 
