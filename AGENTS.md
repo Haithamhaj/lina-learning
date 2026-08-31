@@ -32,9 +32,9 @@ Different documents own different truth:
 
 The Roadmap records approved product-evolution decisions, sequencing, dependencies, and validation gates. It does not by itself make work executable.
 
-Normally an item must be `READY` in `TASKS.md`. A newer Product Owner-approved task-specific governing spec/current-state transition may explicitly override a stale historical row for one bounded task; that override must be reflected in `PROJECT_STATE.md` and must not be generalized.
+Normally an item must be `READY` in `TASKS.md`. A newer Product Owner-approved task-specific governing spec/current-state transition may explicitly override a stale historical row or absent current row for one bounded task; that override must be reflected in `PROJECT_STATE.md` and must not be generalized.
 
-**Current transition rule:** `DOC-SYNC-01` is **DONE / ACCEPTED**. `RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification` is the **NEXT APPROVED TRACK**. Its first stage is **CURRENT REALITY AUDIT ONLY**. Read the RL-01 record in `TASKS.md` and the current boundary in `project-state/PROJECT_STATE.md` before acting. The audit must stop before implementation/config/deployment change; verified blockers and minimum changes are reviewed before execution.
+**Current transition rule:** `DOC-SYNC-01` is **DONE / ACCEPTED**. `RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification` is the **NEXT APPROVED TRACK**. `project-state/PROJECT_STATE.md` is the explicit Product Owner-approved bounded authority for its first stage: **CURRENT REALITY AUDIT ONLY**. `TASKS.md` remains the preserved historical ledger and does not currently contain a dedicated RL-01 row. This override applies to the RL-01 audit stage only; the audit must stop before implementation/config/deployment change, and verified blockers/minimum changes must be reviewed before any later execution stage.
 
 No existing historical record automatically promotes `MATH-01`, `ID-01`, `EDU-ERR-01`, `REC-25`, `LR-D04B`, Voice, Vision, Science production, Learning Canvas, Artifact Engine, Parent Dashboard expansion, or a deployment redesign.
 
