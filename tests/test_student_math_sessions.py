@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from threading import Event, Thread
+from time import monotonic
 from uuid import UUID
 
 import pytest
@@ -26,6 +28,7 @@ from services.platform.db.models import (
     LearningEvent,
     LearnerIntelligenceCard,
     LearningSession,
+    SafetyAudit,
     Student,
     User,
 )
@@ -163,6 +166,38 @@ class _DeltaThenFailureTutorProvider:
         raise RuntimeError("fixture stream failure")
 
 
+class _ImmediateSuccessfulTutorProvider:
+    """Deterministic one-call provider for the real Tutor streaming route."""
+
+    def __init__(self) -> None:
+        self.called = Event()
+        self.call_count = 0
+
+    def stream(self, route: ModelRoute, payload: dict[str, object]):
+        del route
+        self.call_count += 1
+        self.called.set()
+        text = "Keep the denominator and add the numerators."
+        yield StreamDelta(text)
+        yield StreamComplete(ModelResult(
+            output={
+                "text": text,
+                "suggested_actions": [],
+                "guided_check": None,
+                "teaching_mode": None,
+                "teaching_strategy": None,
+                "teaching_method_id": None,
+                "prior_method_relation": None,
+                "candidate_metadata": None,
+                "provisional_broad_subject": None,
+                "segment_relation": None,
+                "structured_segment_state": None,
+            },
+            input_tokens=4,
+            output_tokens=3,
+        ))
+
+
 class _CandidateMetadataTutorProvider:
     """One primary-call fixture that attempts to turn a clicked action into an attempt Candidate."""
 
@@ -220,6 +255,22 @@ def _delta_then_failure_runtime(session: Session) -> TutorRuntime:
             providers={"fixture-stream": _DeltaThenFailureTutorProvider()},
         ),
     )
+
+
+def _successful_streaming_runtime(provider: _ImmediateSuccessfulTutorProvider):
+    def create(session: Session) -> TutorRuntime:
+        return TutorRuntime(
+            session,
+            context_builder=TutorContextBuilder(session, retrieval_service=RetrievalService(session)),
+            safety_policy=SafetyPolicyService(session),
+            gateway=ModelGateway(
+                session,
+                routes={ModelTask.TUTOR: ModelRoute("fixture-stream", "fixture-success-model")},
+                providers={"fixture-stream": provider},
+            ),
+        )
+
+    return create
 
 
 class _CommittedTurnFixtureRuntime:
@@ -551,6 +602,70 @@ def test_terminal_turn_is_emitted_only_after_its_suggested_action_source_is_comm
 
     assert "event: turn" in terminal
     assert resolved_source_message_id == source_message_id
+
+
+def test_streaming_route_releases_request_student_lock_before_safety_audit_and_model_call(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Catches the request-owned Student lock blocking the stream-owned SafetyAudit FK insert."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-one")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    from apps.api.routes import student as student_routes
+
+    provider = _ImmediateSuccessfulTutorProvider()
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    principal = AuthenticatedPrincipal(subject="student-one", role=UserRole.STUDENT, email="student-one@example.test")
+    request_session = postgres_session_factory()
+    response = student_routes.stream_math_tutor_turn(
+        session_id=session_id,
+        request=student_routes.StudentMessageRequest(content="How do I add 3/4 and 1/4?"),
+        principal=principal,
+        session=request_session,
+    )
+    chunks: list[str] = []
+    thread_errors: list[BaseException] = []
+
+    async def drain() -> None:
+        iterator = response.body_iterator
+        try:
+            async for chunk in iterator:
+                chunks.append(chunk.decode() if isinstance(chunk, bytes) else str(chunk))
+        except BaseException as error:
+            thread_errors.append(error)
+        finally:
+            await iterator.aclose()
+
+    thread = Thread(target=lambda: asyncio.run(drain()))
+    started = monotonic()
+    thread.start()
+    try:
+        assert provider.called.wait(timeout=0.5), "the stream must reach SafetyAudit and the one primary provider call without waiting for the request transaction"
+    finally:
+        request_session.commit()
+        request_session.close()
+        thread.join(timeout=5)
+
+    assert not thread.is_alive()
+    assert thread_errors == []
+    assert monotonic() - started < 0.5
+    assert provider.call_count == 1
+    assert "event: turn" in "".join(chunks)
+    with postgres_session_factory() as session:
+        messages = session.query(LearningMessage).filter_by(session_id=session_id).order_by(
+            LearningMessage.created_at, LearningMessage.id
+        ).all()
+        assert [message.role for message in messages] == ["student", "tutor"]
+        assert session.query(SafetyAudit).filter_by(student_id=student.id).count() == 1
+        execution = session.query(AIExecution).filter_by(learning_session_id=session_id, task="tutor").one()
+        assert execution.success is True
+        assert execution.provider == "fixture-stream"
 
 
 def test_a_session_recovers_with_a_successful_turn_after_a_failed_stream(

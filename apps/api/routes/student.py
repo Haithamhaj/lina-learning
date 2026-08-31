@@ -183,8 +183,19 @@ def stream_math_tutor_turn(
         )
         if selected_action is None:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Suggested action is no longer available.")
-    bind = session.get_bind()
     student_id = student.id
+    selected_action_kind = selected_action.action.kind.value if selected_action is not None else None
+    selected_action_source_tutor_message_id = (
+        selected_action.source_tutor_message_id if selected_action is not None else None
+    )
+    guided_check_id = selected_guided_check.guided_check.id if selected_guided_check is not None else None
+    guided_check_source_tutor_message_id = (
+        selected_guided_check.source_tutor_message_id if selected_guided_check is not None else None
+    )
+    bind = session.get_bind()
+    # The generator owns a separate transaction. Finish all authenticated
+    # request-side work before it persists SafetyAudit rows for this Student.
+    session.commit()
 
     def events() -> Iterator[str]:
         stream_session = Session(bind)
@@ -201,14 +212,10 @@ def stream_math_tutor_turn(
             turn_stream = runtime.stream_turn(
                 learning_session=owned_session,
                 question=content,
-                suggested_action_kind=selected_action.action.kind if selected_action is not None else None,
-                suggested_action_source_tutor_message_id=(
-                    selected_action.source_tutor_message_id if selected_action is not None else None
-                ),
-                guided_check_id=selected_guided_check.guided_check.id if selected_guided_check is not None else None,
-                guided_check_source_tutor_message_id=(
-                    selected_guided_check.source_tutor_message_id if selected_guided_check is not None else None
-                ),
+                suggested_action_kind=selected_action_kind,
+                suggested_action_source_tutor_message_id=selected_action_source_tutor_message_id,
+                guided_check_id=guided_check_id,
+                guided_check_source_tutor_message_id=guided_check_source_tutor_message_id,
             )
             for event in turn_stream:
                 if isinstance(event, TutorTextDelta):
