@@ -13,10 +13,12 @@ Read in this order when relevant:
 3. `docs/LEARNING_INTELLIGENCE_SPEC.md` — canonical Learning Intelligence semantics and authority.
 4. `docs/CHILD_SAFETY_POLICY.md` — non-overridable child safety and Parent Learning Boundaries.
 5. `docs/IMPLEMENTATION_PLAN.md` — technical implementation direction, sequencing, gates, and deferred architecture.
-6. `docs/TECHNOLOGY_REUSE_CATALOG.md` — approved reuse candidates and mandatory fit checks.
-7. `docs/SUBJECT_SCOPE_POLICY.md` — accepted cross-subject policy when relevant.
-8. `project-state/PROJECT_STATE.md` — **current operational reality and current next action**.
-9. `TASKS.md` — durable historical/executable task ledger.
+6. `docs/DAILY_USE_RELEASE_PLAN.md` — Product Owner-approved launch-first implementation addendum for Daily-Use Lina Release 1.
+7. `docs/TECHNOLOGY_REUSE_CATALOG.md` — approved reuse candidates and mandatory fit checks.
+8. `docs/SUBJECT_SCOPE_POLICY.md` — accepted cross-subject policy when relevant.
+9. `project-state/PROJECT_STATE.md` — **current operational reality and current next action**.
+10. `project-state/DAILY_USE_RELEASE_TASKS.md` — current bounded Daily-Use Release 1 executable-task overlay.
+11. `TASKS.md` — preserved durable historical task ledger.
 
 ### Document authority and task coordination
 
@@ -24,10 +26,12 @@ Read in this order when relevant:
 - `LEARNING_INTELLIGENCE_SPEC.md` owns Learning Intelligence semantics.
 - `LEARNING_PRODUCT_ROADMAP.md` owns approved evolution direction, not current execution.
 - `IMPLEMENTATION_PLAN.md` owns technical implementation direction.
+- `docs/DAILY_USE_RELEASE_PLAN.md` is the approved current launch implementation addendum where historical sequencing is stale.
 - `PROJECT_STATE.md` owns current operational truth and next action.
-- `TASKS.md` owns durable task history and current task records.
+- `project-state/DAILY_USE_RELEASE_TASKS.md` owns the bounded executable Daily-Use Release 1 task sequence.
+- `TASKS.md` remains the preserved historical task/execution ledger and must not be rewritten merely to mirror the current launch overlay.
 
-Normally Codex executes only a task explicitly marked `READY`. A newer Product Owner-approved bounded transition recorded in `PROJECT_STATE.md` may override stale historical sequencing for that bounded task and must not be generalized.
+Normally Codex executes only a task explicitly marked `READY` in the current bounded task source. A newer Product Owner-approved bounded transition recorded in `PROJECT_STATE.md` may override stale historical sequencing for that bounded task and must not be generalized.
 
 ## Current Product Owner Transition — Daily-Use Lina Release 1
 
@@ -37,15 +41,13 @@ Normally Codex executes only a task explicitly marked `READY`. A newer Product O
 
 The Product Owner clarified that the existing historical database is **experimental/test data**. It is not a production baseline to preserve or migrate as Lina's longitudinal real-use history. Real Lina use will begin from a fresh current-schema database.
 
-The Product Owner approved a **launch-first Daily-Use Lina Release 1** sequence. The sequence is recorded in `PROJECT_STATE.md` and the launch overlay in `TASKS.md`. It deliberately promotes capabilities in order, not simultaneously.
+The Product Owner approved a **launch-first Daily-Use Lina Release 1** sequence. The sequence is recorded in `PROJECT_STATE.md`, `docs/DAILY_USE_RELEASE_PLAN.md`, and `project-state/DAILY_USE_RELEASE_TASKS.md`. It deliberately promotes capabilities in order, not simultaneously.
 
 **Only the current `READY` task is executable. At this transition, that task is `RL-01A — Accepted Runtime Alignment`.**
 
-Do not start RL-01B, Personal Facts, Frontend redesign, Voice, Vision, deployment, RAG evaluation, Artifacts, Science, Parent Insight analysis, MATH-01, ID-01, EDU-ERR-01, REC-25, or LR-D04B in the same run unless they are later explicitly promoted.
+Do not start RL-01B, Personal Facts, Frontend redesign, Voice, Vision, deployment, RAG evaluation, Artifacts, Science, Parent Insight analysis, MATH-01, ID-01, EDU-ERR-01, REC-25, or LR-D04B in the same run unless later explicitly promoted.
 
 ## Daily-Use Release 1 Sequence
-
-The approved order is:
 
 ```text
 RL-01A Accepted Runtime Alignment
@@ -146,7 +148,7 @@ Parent facts in Core Profile must not be transformed into learning conclusions.
 
 ## Multimodal / Visual Decisions
 
-The following are approved for the Daily-Use Release sequence but remain blocked until their task is promoted:
+The following are approved for the Daily-Use Release sequence but remain blocked until their task is promoted.
 
 ### Voice
 
@@ -192,7 +194,7 @@ Target Student experience:
 
 Reuse candidates include shadcn/ui, assistant-ui fit assessment, Motion/Motion Primitives, ThreeUI/Three.js selective use, Magic UI, React Bits, 21st.dev, Aceternity UI, and Cult UI. Do not stack them indiscriminately. FE-01 must classify relevant candidates as `ADOPT / PARTIAL ADOPT / VISUAL REFERENCE / REJECT` and establish one coherent design system.
 
-ThreeUI/Three.js may be used selectively for high-value visual moments/background/3D experiences when performance and readability remain acceptable; they do not become the application architecture.
+ThreeUI/Three.js may be used selectively for high-value visual moments/background/3D experiences when performance and readability remain acceptable; they do not become application architecture.
 
 ## Retrieval / RAG Rules
 
@@ -227,7 +229,7 @@ A task is not complete because code exists. Before claiming completion:
 2. run relevant unit/contract/integration tests;
 3. verify protected invariants remain intact;
 4. inspect changed-path runtime/log behavior when applicable;
-5. update `TASKS.md` status safely;
+5. update the current bounded task overlay and/or historical `TASKS.md` only when appropriate;
 6. update `project-state/PROJECT_STATE.md` if current reality/next action changes;
 7. distinguish code review, automated execution, real-model verification, browser verification, limited historical Real-Lina use, stable daily Real-Lina use, and longitudinal validation;
 8. stop at the task boundary and return for Product Owner review before promoting the next task.
@@ -248,6 +250,6 @@ Never print, echo, copy, expose, commit, or hardcode secret values. Do not copy 
 
 ## Current Next Action
 
-Read `project-state/PROJECT_STATE.md` and execute **RL-01A — Accepted Runtime Alignment only**.
+Read `project-state/PROJECT_STATE.md` and `project-state/DAILY_USE_RELEASE_TASKS.md`, then execute **RL-01A — Accepted Runtime Alignment only**.
 
 Stop after RL-01A verification/report. Do not execute RL-01B or any feature work in the same run.
