@@ -34,7 +34,7 @@ The Roadmap records approved product-evolution decisions, sequencing, dependenci
 
 Normally an item must be `READY` in `TASKS.md`. A newer Product Owner-approved task-specific governing spec/current-state transition may explicitly override a stale historical row for one bounded task; that override must be reflected in `PROJECT_STATE.md` and must not be generalized.
 
-**Current transition rule:** do not hardcode a historical next task here. `SCOPE-01`, `SUBJ-01`, `DEC-01`, `DEC-02`, `REP-01`, `LANG-01`, `CAND-03`, and `CAND-02` are accepted at the current baseline. Read the current action from `project-state/PROJECT_STATE.md` and `TASKS.md` / the current Product Owner-approved bounded task spec. During `DOC-SYNC-01`, documentation synchronization is the only approved active work. If the Product Owner later accepts it, Project State may promote `RL-01`; do not infer that promotion before acceptance.
+**Current transition rule:** `DOC-SYNC-01` is **DONE / ACCEPTED**. `RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification` is the **NEXT APPROVED TRACK**. Its first stage is **CURRENT REALITY AUDIT ONLY**. Read the RL-01 record in `TASKS.md` and the current boundary in `project-state/PROJECT_STATE.md` before acting. The audit must stop before implementation/config/deployment change; verified blockers and minimum changes are reviewed before execution.
 
 No existing historical record automatically promotes `MATH-01`, `ID-01`, `EDU-ERR-01`, `REC-25`, `LR-D04B`, Voice, Vision, Science production, Learning Canvas, Artifact Engine, Parent Dashboard expansion, or a deployment redesign.
 
@@ -54,6 +54,7 @@ If governing documents conflict outside an explicit approved override, stop and 
 - Do not implement future phases merely because their interfaces are easy to scaffold.
 - The current production proving ground is Math-first. Math + Science, Voice, Vision, handwriting/drawing Evidence, visual/interactive artifacts, broader Parent UX, and Grade production remain approved product direction but frozen until explicitly promoted.
 - Replit configuration is an environment convenience, not product architecture.
+- **RL-01 is not a deployment redesign project.** During its audit stage, inspect existing runtime/configuration/process wiring first; classify implemented-but-inactive behavior accurately; do not create a subsystem for a configuration or process-startup gap.
 
 ## Protected Architectural Areas
 
