@@ -8,9 +8,11 @@ Move from accepted architecture and completed current-reality audit into the **D
 
 `RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification` has completed its **CURRENT REALITY AUDIT** stage. The audit verified that the current architecture is implemented, while the actual operational environment is not yet aligned as one current revision/runtime: the live historical database/runtime are older than the accepted code, and the Worker is not part of the standard running composition.
 
-The Product Owner has also clarified that the existing historical database is **experimental/test data** and is not the real-use baseline to preserve. Real Lina use will begin from a **fresh database** on the current schema.
+The Product Owner clarified that the existing historical database is **experimental/test data** and is not the real-use baseline to preserve. Real Lina use will begin from a **fresh database** on the current schema.
 
-The approved execution sequence is launch-first and intentionally sequential:
+The Product Owner approved a launch-first Daily-Use Release 1. The governing launch addendum is `docs/DAILY_USE_RELEASE_PLAN.md`; the bounded current task overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical task ledger.
+
+The approved execution sequence is intentionally sequential:
 
 ```text
 RL-01A Accepted Runtime Alignment
@@ -28,7 +30,6 @@ RL-01A Accepted Runtime Alignment
 → TASK-034 Original-Image Annotation
 → DEPLOY-01 Private Daily Environment
 → LINA-R1 Clean Real-Use Baseline
-→ post-launch RAG evaluation / artifacts / later parent insight exploration
 ```
 
 Only **RL-01A** is currently executable. Do not start later tasks early.
@@ -37,7 +38,7 @@ Only **RL-01A** is currently executable. Do not start later tasks early.
 
 ## Current reality
 
-- The accepted remote branch is `codex/ctx-03` at `af7264cd05e1bb9f6e794005802758521c57d509` at the time this release plan was approved.
+- The accepted remote branch was `codex/ctx-03` at `af7264cd05e1bb9f6e794005802758521c57d509` when the Daily-Use Release plan was approved; subsequent commits on the branch are governing-document updates for this approved transition unless later runtime work is explicitly accepted.
 - The prior local audit observed an isolated worktree at an older local revision and an older live runtime/database. Therefore the first execution task is revision/runtime alignment, not feature work.
 - Full-System Learning Intelligence Acceptance remains **DONE / ACCEPTED**. Canonical authority remains **Segment-Scoped Semantic Review + Session-Scoped deterministic Intelligence Finalization**.
 - One primary Tutor model call per normal Student turn remains protected.
@@ -126,26 +127,16 @@ Also protected:
 ### RL-01A — Accepted Runtime Alignment
 
 **Status:** READY  
-**Boundary:** Repository/runtime alignment only. Do not create the fresh production baseline DB, start Worker against real data, implement Personal Facts, redesign frontend, add Voice/Vision, deploy, or change RAG in this task.
+**Authority:** `project-state/DAILY_USE_RELEASE_TASKS.md`  
+**Boundary:** Repository/runtime alignment only. Do not create the fresh real-use DB, start Worker against real data, implement Personal Facts, redesign frontend, add Voice/Vision, deploy, or change RAG in this task.
 
 **Goal:** Align the isolated implementation worktree and runtime reference to the current accepted `codex/ctx-03` revision and produce a verified starting point for RL-01B.
-
-**Required outcome:**
-
-- fetch/resolve the accepted remote branch/HEAD;
-- fast-forward/safely align the isolated worktree without touching protected dirty files in the original checkout;
-- verify tracked worktree state;
-- identify which existing runtime/process/config references are stale versus current;
-- confirm no unexpected runtime/code divergence was introduced by the documentation-only acceptance commits;
-- run the appropriate baseline verification for the aligned revision;
-- report the exact resulting HEAD and any blocker to RL-01B;
-- stop.
 
 ---
 
 ## Next recommended action
 
-Execute **RL-01A only**, verify it, update task/project state, and return for review before RL-01B is promoted.
+Execute **RL-01A only**, verify it, update current task/project state, and return for review before RL-01B is promoted.
 
 Do not execute RL-01B or any feature track in the same run.
 
@@ -156,8 +147,10 @@ Do not execute RL-01B or any feature track in the same run.
 - `AGENTS.md`
 - `docs/PROJECT_REFERENCE.md`
 - `docs/IMPLEMENTATION_PLAN.md`
+- `docs/DAILY_USE_RELEASE_PLAN.md`
 - `docs/LEARNING_INTELLIGENCE_SPEC.md`
 - `docs/CHILD_SAFETY_POLICY.md`
 - `docs/TECHNOLOGY_REUSE_CATALOG.md`
+- `project-state/DAILY_USE_RELEASE_TASKS.md`
 - `TASKS.md`
 - `project-state/SYSTEM_MAP.html`
