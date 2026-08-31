@@ -2,11 +2,22 @@
 
 ## Current goal
 
-`DOC-SYNC-01 — Product Truth & Governing Documentation Synchronization` is the **CURRENT APPROVED DOCUMENTATION TRACK / REVIEW IN PROGRESS**.
+`DOC-SYNC-01 — Product Truth & Governing Documentation Synchronization` is **DONE / ACCEPTED** following Product Owner approval on 2026-08-31 and the final review-only governance/scope audit.
 
-Its purpose is to synchronize stable product truth, current operational truth, Learning Intelligence status, and agent-facing document authority before `RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification` proceeds.
+`RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification` is the **NEXT APPROVED TRACK**.
 
-`DOC-SYNC-01` changes documentation only. It does not authorize runtime, deployment, Tutor, Intelligence, Voice, Vision, Science, Artifact, Parent, MATH-01, or ID-01 implementation work.
+The first RL-01 stage is **CURRENT REALITY AUDIT ONLY**:
+
+```text
+CURRENT REALITY
+→ GAP
+→ ROOT CAUSE
+→ MINIMAL OPERATIONAL CHANGE
+→ VERIFICATION
+→ ACCEPTANCE
+```
+
+Do not implement, re-platform, or redesign deployment before that audit identifies a verified blocker and the minimum required change.
 
 ---
 
@@ -19,13 +30,13 @@ Its purpose is to synchronize stable product truth, current operational truth, L
 - Candidate metadata remains provisional. Candidate ≠ Evidence. Raw interaction remains source authority.
 - Current demonstrated behavior outranks historical personalization.
 - `SCOPE-01`, `SUBJ-01`, `DEC-01`, `DEC-02`, `REP-01`, `LANG-01`, `CAND-03`, and `CAND-02` are accepted. Do not reopen them without a newly reproduced defect from real use.
-- **Limited Real-Lina use has occurred.** Lina herself participated in part of a real Tutor interaction; the persisted interaction was then continued and used in subsequent testing/calibration.
+- **Limited Real-Lina use has occurred.** Lina herself participated in part of a real persisted Tutor interaction; that interaction was then continued and used in subsequent testing/calibration.
 - Limited Real-Lina interaction does **not** prove stable daily use, a complete recurring Lina `Session → Review → Evidence → Card → later Tutor` loop, or longitudinal real-use personalization across multiple natural sessions. Those remain unverified.
 - Voice/STT, Vision/photo input, handwriting/drawing evidence, visual/interactive learning artifacts, Science production, broader Parent Intelligence UX, and Grade-transition production remain **approved product directions but sequenced/frozen for implementation** until explicitly promoted.
 - Curriculum/book availability is optional grounding. The current Student question remains authoritative; no book or semantic extraction is required for Tutor availability.
-- The repository contains a complete Worker entrypoint and DB-backed job system, but the current standard `.replit` Project workflow starts Web + API only. This is an operational-wiring issue, not a missing Worker feature.
-- A single reliable daily-use environment combining Web, API, Worker, persistent DB, Clerk identity, and a real Model Gateway route has not yet been verified end-to-end. That is the purpose of upcoming `RL-01` after documentation acceptance.
-- `MATH-01 — Structured Math Readability` remains **OPEN / CONFIRMED / Criticality 4** and is independent of `DOC-SYNC-01`.
+- The repository contains a complete Worker entrypoint and DB-backed job system, but the current standard `.replit` Project workflow starts Web + API only. Treat that as an audit finding to verify against the actual chosen/current environment, not permission for deployment redesign.
+- A single reliable daily-use environment combining Web, API, Worker, persistent DB, Clerk identity, and a real Model Gateway route has not yet been verified end-to-end. RL-01 exists to establish that operational reality and prove the recurring intelligence chain with minimum change.
+- `MATH-01 — Structured Math Readability` remains **OPEN / CONFIRMED / Criticality 4** and is independent of RL-01.
 - `ID-01 — Concurrent First-Identity Creation Race` remains **OPEN / INVESTIGATION REQUIRED / Criticality 3**; root cause must be reproduced before any fix.
 - `EDU-ERR-01` remains approved/deferred; `REC-25` remains blocked; `LR-D04B` remains future/evidence-dependent. None is automatically promoted.
 
@@ -42,6 +53,7 @@ Its purpose is to synchronize stable product truth, current operational truth, L
 7. **Deployment boundary:** Replit may be a convenient environment, but it is not product architecture. Deployment target is an operational choice.
 8. **Approved deferred breadth:** Math + Science, multimodal input, visual/interactive representations, and Parent inspectability remain intentional product direction even when not required for the current proving ground.
 9. **Real-use verification:** limited Lina interaction is historical fact; stable daily/longitudinal Lina use is a separate verification horizon.
+10. **RL-01 boundary:** RL-01 is operational verification/stabilization of the existing system, not a deployment redesign project.
 
 ---
 
@@ -66,14 +78,12 @@ Also protected:
 - Safety, conversation context, optional school/RAG context, Student Core Profile, and Learner Intelligence remaining separate authorities;
 - original books/student work remaining distinct from AI-derived interpretations/artifacts;
 - no second learner-memory/counter system;
-- no resurrection of Current School Focus authority, mandatory curriculum semantics, or semantic Session summarization.
+- no resurrection of Current School Focus authority, mandatory curriculum semantics, or semantic Session summarization;
+- no host/provider choice becoming permanent product architecture without an explicit decision.
 
 ---
 
 ## Active risks
-
-- **DOC-R1 — Governing Documentation Drift — Criticality 4**  
-  Stale Phase-0, pre-SEG-EVID, or obsolete execution wording can cause Codex/AI agents to recreate superseded architecture. `DOC-SYNC-01` is closing this risk in bounded scope.
 
 - **RL-R1 — Integrated Real-Use Operational Loop Unverified — Criticality 5**  
   Existing Web, API, Worker, persistent DB, Clerk identity, and real model route have not yet been verified together as one reliable recurring Lina environment.
@@ -91,11 +101,13 @@ Also protected:
 
 ## Next recommended action
 
-1. Complete and independently review `DOC-SYNC-01` against the approved Canonical Truth Matrix and Document Authority Map.
-2. **Stop for Product Owner acceptance.** Do not mark the documentation track accepted from authoring alone.
-3. If accepted, close `DOC-SYNC-01` and make `RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification` the next executable track.
+Run **RL-01 Current Reality Audit** only.
 
-Do not promote MATH-01, ID-01, EDU-ERR-01, REC-25, LR-D04B, Voice, Vision, Science, Learning Canvas, Artifact Engine, Parent Dashboard expansion, or another deployment architecture during this documentation review.
+The audit must determine the actual current Web/API/Model Gateway/Auth/DB/Worker/Session Lifecycle/Segment Review/Session Finalization/downstream-intelligence/next-session-personalization/storage/runtime-environment state, classify each link, identify only true Gate-A blockers, and propose the minimum change set.
+
+**Stop after the audit.** Do not make implementation/config/deployment changes during the audit. If a genuine Product/Deployment decision remains after technical inspection, surface one blocking question to the Product Owner.
+
+Do not promote MATH-01, ID-01, EDU-ERR-01, REC-25, LR-D04B, Voice, Vision, Science, Learning Canvas, Artifact Engine, Parent Dashboard expansion, or another deployment architecture during RL-01 Current Reality Audit.
 
 ---
 
