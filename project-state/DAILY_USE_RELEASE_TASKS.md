@@ -13,8 +13,8 @@
 RL-01A Accepted Runtime Alignment — DONE / ACCEPTED
 → RL-01B Fresh Shared DB + Runtime Composition — DONE / ACCEPTED
 → RL-01C Clerk + OpenAI Operational Verification — DONE / ACCEPTED
-→ RL-01D Controlled Full Intelligence Loop — READY
-→ TASK-027A Student Core Profile — BLOCKED
+→ RL-01D Controlled Full Intelligence Loop — DONE / ACCEPTED
+→ TASK-027A Student Core Profile — READY
 → PF-01 Personal Facts Contract — BLOCKED
 → PF-02 Personal Facts Extraction/Reconciliation — BLOCKED
 → PF-03 Relevant Facts in Tutor Context — BLOCKED
@@ -59,74 +59,68 @@ Post-launch work is not a Release-1 blocker: measured RAG evaluation, selected r
 **Dependencies:** RL-01B accepted
 
 **Accepted result:**
-- real OpenAI Tutor route verified through Model Gateway using `gpt-5.6-luna`;
-- real Segment Review transport verified through Model Gateway using `gpt-5.6-luna` without durable intelligence activation;
-- real embedding route verified using `text-embedding-3-small` with 1536 dimensions;
-- AI execution ledger recorded provider/model/task, success, latency, and usage lineage;
-- real Clerk browser sign-in verified for launch-test Student and Parent identities;
-- Clerk session-token customization now carries signed role authority from user public metadata;
-- backend `/api/v1/auth/me` verifies Parent as `PARENT_ADMIN` and Student as `STUDENT`;
-- launch-test Parent application User created as `PARENT_ADMIN`, with explicit Parent→Sandbox Test Student relationship;
-- Parent real-auth matrix passed: `/auth/me` 200 `PARENT_ADMIN`; Parent shell 200; Student shell 403; linked Student summary 200; unrelated Student summary 404;
-- Student real-auth matrix passed: `/auth/me` 200 `STUDENT`; Student shell 200; Parent shell 403; spoofed `student_id` did not grant another Student identity/session; foreign Session GET/POST both 404;
+- real OpenAI Tutor, Segment Review transport, and embedding routes verified through Model Gateway;
+- AI execution lineage/usage ledger verified;
+- real Clerk Student/Parent browser auth and signed backend role authority verified;
+- explicit Parent→Sandbox Test Student relationship established;
+- linked Parent access, unrelated Student denial, Student→Parent denial, and client-supplied identity override denial verified;
 - **REAL-AUTH CROSS-STUDENT ISOLATION = VERIFIED** for implemented auth/session paths;
-- browser-supplied Student/session identifiers do not override server-owned Clerk-subject → Student ownership;
-- no Lina real identity/history was used, and no code/schema/dependency change was needed for Clerk role authority.
-
-**Boundary retained:** future Personal Facts isolation is not claimed until PF tasks implement that domain.
+- no Lina real identity/history used.
 
 ---
 
 ## RL-01D — Controlled Full Intelligence Loop
 
-**Status:** READY  
-**Dependencies:** RL-01C accepted  
-**Purpose:** Prove on a controlled launch-test Student the complete accepted path:
+**Status:** DONE / ACCEPTED  
+**Dependencies:** RL-01C accepted
 
-```text
-real Tutor
-→ Segment persistence/closure
-→ Worker Segment Learning Review
-→ deterministic Session Finalization
-→ Event / Evidence
-→ Current State / Patterns / Decision Views
-→ Learner Intelligence Card
-→ later Tutor receives relevant intelligence
-```
-
-**Expected output:**
-- one controlled learning Session using real Tutor/OpenAI on the launch-test Student;
-- Session/Segment lifecycle advances through normal application/Worker behavior without manual DB mutation;
-- required Segment Review runs and validates;
-- deterministic Session Finalization activates one coherent durable intelligence generation;
-- Events/Evidence remain source-linked;
-- Current State/Patterns/Decision Views/Card update only from Session-authorized intelligence;
-- a later launch-test Student Session receives relevant Card/intelligence context;
-- an unrelated later question does not receive stale irrelevant intelligence;
-- one primary Tutor call per normal turn remains intact;
-- controlled validation data remains clearly separate from Lina's future real longitudinal baseline.
-
-**Verification:**
-- no manual DB updates used to force lifecycle/intelligence progression;
-- no extra semantic Session LLM call after Segment Reviews;
-- no stuck unrecoverable jobs;
-- Session Finalization remains deterministic and no partial activation occurs;
-- source→Segment Review→Event/Evidence→State/Pattern/Card lineage is inspectable;
-- relevant later personalization is observable without full transcript injection;
-- cross-Student isolation remains intact.
-
-**Explicit exclusions:** TASK-027A, Personal Facts, frontend redesign, Voice, Vision, annotation, RAG changes, Learning Artifacts, Replit deployment, MATH-01, Science, Parent Insight analysis.
-
-**Stop condition:** Stop after RL-01D verification/report. Do not start TASK-027A in the same run.
+**Accepted result:**
+- real multi-turn Tutor interaction completed with exactly one primary Tutor model call per normal turn;
+- FastAPI/SSE request/stream transaction-lock defect was identified, minimally corrected, regression-tested, and committed as `3af613484266e2c21d9e91a20d09ef217b05c16e`;
+- natural Session/Segment closure, real Segment Learning Review, and deterministic Session Intelligence Finalization completed without manual DB mutation;
+- semantic Session LLM calls remained `0`;
+- source-linked Events, Evidence, Current State, Patterns, and Decision Views materialized from the finalized Session;
+- one first Segment Review provider attempt ended in a durable `TimeoutError`, then the configured automatic Worker retry succeeded; final Review completed with no unrecoverable job and no partial intelligence activation;
+- recoverable provider failure is accepted as operational behavior, not a correctness failure;
+- a later same-denominator-fractions Session selected five compact relevant Current State/Pattern intelligence entries from prior finalized learning; no full prior transcript, archived Session, or Personal Facts were injected;
+- a separate later `7 × 8` Session selected no fraction-specific Learner Intelligence;
+- `RELEVANT PRIOR INTELLIGENCE SELECTION = PASS`;
+- `IRRELEVANT FRACTION INTELLIGENCE EXCLUSION = PASS`;
+- cross-Student scoping remained intact and no Lina real identity/history was used.
 
 ---
 
 # User Knowledge Foundation
 
 ## TASK-027A — Student Core Profile & Tutor Student Context
-**Status:** BLOCKED  
+
+**Status:** READY  
 **Dependencies:** RL-01D accepted  
-**Purpose:** Parent/System-authoritative child identity, DOB-derived age, active Grade/GradePeriod, compact Student Core Context. Separate from Personal Facts and Learning Intelligence.
+**Purpose:** Establish Parent/System-authoritative Student identity/context and provide a compact governed Student Core Context to the Tutor, separate from Personal Facts and Learner Intelligence.
+
+**Expected output:**
+- audit and reuse existing Student / Grade / GradePeriod structures rather than creating a second identity/profile model unnecessarily;
+- define the canonical Parent/System-authoritative Student Core Profile boundary;
+- support child identity/display name and date of birth when supplied;
+- derive age from date of birth rather than independently maintaining age;
+- resolve active Grade / GradePeriod from application-owned records;
+- build a compact Student Core Context for normal Tutor requests;
+- keep Student Core Context separate from Conversation Context, Safety, RAG, Personal Facts, and Learner Intelligence;
+- preserve one primary Tutor model call per normal turn;
+- preserve cross-Student isolation and source/authority boundaries.
+
+**Verification:**
+- existing Student/Grade structures are reused where fit;
+- DOB-derived age behavior is deterministic and date-boundary tested;
+- active Grade/GradePeriod selection is deterministic and Student-scoped;
+- Tutor payload/context contains only bounded Student Core fields and no unrelated Parent/internal metadata;
+- Student Core Context is distinguishable from Personal Facts and learning-derived intelligence;
+- current Tutor, auth, Session, Safety, Retrieval, and Learning Intelligence tests remain green;
+- no second learner-memory/profile authority is introduced.
+
+**Explicit exclusions:** Personal Facts implementation (`PF-01+`), frontend redesign, Voice, Vision, annotation, RAG redesign, Artifacts, deployment, Science expansion, Parent Insights, and unrelated deferred tasks.
+
+**Stop condition:** Stop after TASK-027A verification/report. Do not start `PF-01` in the same run.
 
 ## PF-01 — Personal Facts Contract
 **Status:** BLOCKED  
