@@ -190,9 +190,15 @@ OpenAI or other image generation is **optional/deferred/illustrative**, not the 
 
 Frontend improvement is part of the approved launch sequence, but begins only when FE-01 is promoted.
 
+Before Daily Student App or Public Landing frontend work, read
+docs/FRONTEND_SKILL_PACK.md; it provides task-facing frontend guidance but does
+not override product, safety, architecture, or project-state authorities.
+
 Target Student experience:
 
-> playful + intelligent + polished + personal, suitable for approximately age 10; not preschool and not a corporate chatbot.
+> warm + intelligent + personal + visually engaging, designed for learners roughly
+> 10–18. Lina is the first private daily-use Student, not the only design target.
+> Not preschool, cartoonish, corporate, or visually noisy.
 
 Reuse candidates include shadcn/ui, assistant-ui fit assessment, Motion/Motion Primitives, ThreeUI/Three.js selective use, Magic UI, React Bits, 21st.dev, Aceternity UI, and Cult UI. Do not stack them indiscriminately. FE-01 must classify relevant candidates as `ADOPT / PARTIAL ADOPT / VISUAL REFERENCE / REJECT` and establish one coherent design system.
 
