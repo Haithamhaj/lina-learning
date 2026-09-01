@@ -18,7 +18,7 @@ RL-01A Accepted Runtime Alignment — DONE / ACCEPTED
 → PF-01 Personal Facts Contract — DONE / ACCEPTED
 → PF-02 Personal Facts Extraction/Reconciliation — DONE / ACCEPTED
 → PF-02A Existing-Fact-Aware Personal Facts Extraction — DONE / ACCEPTED
-→ PF-03 Relevant Facts in Tutor Context — IN IMPLEMENTATION / NOT ACCEPTED
+→ PF-03 Relevant Facts in Tutor Context — ACCEPTED / COMPLETED
 → FE-01 Lina Visual System & Reuse Decision — BLOCKED
 → FE-02 Daily Student Experience — BLOCKED
 → TASK-032 Voice / STT — BLOCKED
@@ -269,9 +269,11 @@ PF-01 does **not** implement:
 
 ## PF-03 — Relevant Personal Facts in Tutor Context
 
-**Status:** IN IMPLEMENTATION / NOT ACCEPTED
+**Status:** ACCEPTED / COMPLETED
 **Dependencies:** PF-02A accepted
 **Purpose:** Read-only injection of the full compact current Personal Memory Card as a separate optional Tutor context block beside Conversation Context, Student Core Context, Learner Intelligence, optional curriculum RAG, and Safety. The Tutor decides semantic usefulness inside the existing primary call; there is no pre-Tutor lexical/key matching, retrieval, PF model call, embedding call, or vector-memory platform.
+
+**Acceptance:** Product Owner accepted commit `6436b358ff42425fd729af316cb9525e6511f534`; PF-03 `7 passed`, protected regression `182 passed`, and diff/show checks passed. Pushed to `origin/codex/ctx-03`. No FE-01 work was performed.
 
 ---
 

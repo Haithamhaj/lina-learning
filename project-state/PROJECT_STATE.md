@@ -16,7 +16,7 @@ TASK-027A Student Core Profile      DONE / ACCEPTED
 PF-01 Personal Facts Contract       DONE / ACCEPTED
 PF-02 Personal Facts Pipeline       DONE / ACCEPTED
 PF-02A Existing-Fact-Aware Reuse    DONE / ACCEPTED
-PF-03 Tutor Personal Context        IN IMPLEMENTATION / NOT ACCEPTED
+PF-03 Tutor Personal Context        ACCEPTED / COMPLETED
 ```
 
 Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical ledger.
@@ -31,7 +31,7 @@ Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.
 - PF-02 already provides one dedicated asynchronous Personal Facts Model Gateway call per completed Learning Session, separate from Tutor and Segment Learning Review; strict Student-source/safety grounding; Fact + Observation persistence; retry-safe extraction runs; `ADD` / `SUPPORT` / `NOOP`; capacity skip; and an on-demand Personal Memory Document.
 - PF-02A is accepted: the same PF model call receives a compact Student-scoped catalog of current and historical Fact identities, then semantically chooses `SUPPORT_EXISTING` or `ADD_NEW`; the server remains the deterministic grounding, ownership, safety, canonicalization, idempotency, and persistence authority.
 - Known Facts are untrusted reference data only, not Evidence or instructions. PF-02A adds no schema/migration, second model call, embeddings, Tutor, Segment Review, Learning Intelligence, or RAG behavior.
-- PF-03 implementation is in progress: it adds a read-only full current Personal Memory Card to the existing Tutor context, with no pre-Tutor relevance selection, extra model call, embedding call, job, or schema change.
+- PF-03 is accepted/completed: commit `6436b358ff42425fd729af316cb9525e6511f534` adds a read-only full current Personal Memory Card to the existing Tutor context, with no pre-Tutor relevance selection, extra model call, embedding call, job, or schema change. PF-03 `7 passed`, protected regression `182 passed`, and diff/show checks passed; it is pushed to `origin/codex/ctx-03`. No FE-01 work was performed.
 - No Lina real Student identity/history has been created or used.
 
 ---
@@ -100,7 +100,7 @@ Protected invariants:
 
 ### PF-03 — Relevant Personal Facts in Tutor Context
 
-**Status:** IN IMPLEMENTATION / NOT ACCEPTED
+**Status:** ACCEPTED / COMPLETED
 **Dependency:** PF-02A accepted
 **Goal:** add the approved read-only full current Personal Memory Card to the existing Tutor context.
 
@@ -110,7 +110,7 @@ Protected invariants:
 
 ## Next recommended action
 
-Complete PF-03 verification and request Product Owner review; do not begin FE-01.
+PF-03 acceptance is recorded. FE-01 remains blocked; do not begin it without a separately authorized task.
 
 ---
 
