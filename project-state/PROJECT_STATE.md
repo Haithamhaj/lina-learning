@@ -17,6 +17,7 @@ PF-01 Personal Facts Contract       DONE / ACCEPTED
 PF-02 Personal Facts Pipeline       DONE / ACCEPTED
 PF-02A Existing-Fact-Aware Reuse    DONE / ACCEPTED
 PF-03 Tutor Personal Context        ACCEPTED / COMPLETED
+FE-01 Visual System + Reuse Record  IN REVIEW / DOCUMENTATION ONLY
 ```
 
 Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical ledger.
@@ -33,6 +34,14 @@ Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.
 - Known Facts are untrusted reference data only, not Evidence or instructions. PF-02A adds no schema/migration, second model call, embeddings, Tutor, Segment Review, Learning Intelligence, or RAG behavior.
 - PF-03 is accepted/completed: commit `6436b358ff42425fd729af316cb9525e6511f534` adds a read-only full current Personal Memory Card to the existing Tutor context, with no pre-Tutor relevance selection, extra model call, embedding call, job, or schema change. PF-03 `7 passed`, protected regression `182 passed`, and diff/show checks passed; it is pushed to `origin/codex/ctx-03`. No FE-01 work was performed.
 - No Lina real Student identity/history has been created or used.
+- FE-01 has a documentation-only proposed decision record at
+  `docs/FE-01_VISUAL_SYSTEM_LIBRARY_DECISION.md`. It directs FE-02 to evolve
+  the local shell into Learning Chat + Adaptive Learning Workspace,
+  conditionally evaluates assistant-ui presentation primitives while rejecting
+  it as a runtime replacement, treats ThreeUI/Spline as visual reference only,
+  and leaves a future isolated/lazy 3D Workspace-module path without adopting
+  Three.js as app architecture. No UI code, dependency, or Tutor/Personal
+  Facts behavior changed.
 
 ---
 
@@ -98,19 +107,23 @@ Protected invariants:
 
 ## Current executable task
 
-### PF-03 — Relevant Personal Facts in Tutor Context
+### FE-01 — Visual System + Library Capability + Reuse Decision Record
 
-**Status:** ACCEPTED / COMPLETED
-**Dependency:** PF-02A accepted
-**Goal:** add the approved read-only full current Personal Memory Card to the existing Tutor context.
+**Status:** IN REVIEW / DOCUMENTATION ONLY
+**Dependency:** PF-03 accepted
+**Goal:** establish the code-grounded visual-system, library-capability, and
+reuse record that constrains FE-02 without implementing UI.
 
-**Boundary:** retain one primary Tutor call; no lexical/key matching, no Personal Facts in curriculum RAG, no vector-memory platform, no PF model/embedding calls, and no changes to Personal Facts authority or extraction.
+**Boundary:** preserve the local Student session/SSE lifecycle, shadcn/Tailwind
+baseline, safety, Tutor, Personal Facts/PF-03, and all backend authorities. No
+UI code, dependencies, Voice, Vision, attachments, artifacts, or FE-02 work.
 
 ---
 
 ## Next recommended action
 
-PF-03 acceptance is recorded. FE-01 remains blocked; do not begin it without a separately authorized task.
+Review and accept the FE-01 documentation record. Only then update FE-01 to
+accepted and promote FE-02 separately; do not begin FE-02 in this task.
 
 ---
 
@@ -118,6 +131,7 @@ PF-03 acceptance is recorded. FE-01 remains blocked; do not begin it without a s
 
 - `AGENTS.md`
 - `docs/PERSONAL_FACTS_SPEC.md`
+- `docs/FE-01_VISUAL_SYSTEM_LIBRARY_DECISION.md`
 - `docs/DAILY_USE_RELEASE_DECISIONS.md`
 - `project-state/DAILY_USE_RELEASE_TASKS.md`
 - `docs/CHILD_SAFETY_POLICY.md`

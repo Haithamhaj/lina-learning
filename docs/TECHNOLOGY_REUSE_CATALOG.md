@@ -69,7 +69,7 @@ For every `EVALUATE BEFORE CUSTOM BUILD` item, the implementing task should reco
 
 ## 4.1 assistant-ui
 
-**Status:** EVALUATE BEFORE CUSTOM BUILD — preferred first candidate  
+**Status:** EVALUATE FOR CHAT UI PRIMITIVES; REJECT AS RUNTIME REPLACEMENT — FE-01 decision record
 **Area:** Student Tutor conversation UI  
 **Use for:** Thread/message primitives, composer, attachments, persistence adapters, custom backend runtime integration, future speech/feedback hooks.
 
@@ -79,7 +79,16 @@ For every `EVALUATE BEFORE CUSTOM BUILD` item, the implementing task should reco
 - Has explicit runtime/adapters for attachments and persistence.
 - Could reduce custom work for message/thread/composer behavior while FastAPI remains the authority for Tutor runtime, safety, context, and AI execution.
 
-### Fit check required before custom chat UI
+### FE-01 decision and any future fit check
+
+`docs/FE-01_VISUAL_SYSTEM_LIBRARY_DECISION.md` rejects assistant-ui as a
+runtime/backend/session replacement: the current local shell owns the accepted
+Student-session and FastAPI/SSE lifecycle, and no custom-runtime proof shows a
+replacement would preserve those boundaries. It permits a bounded evaluation
+of presentation primitives/patterns only, provided the existing client state
+machine remains authoritative. This is not a permanent project-wide ban.
+
+### Required proof before any later adoption
 
 Validate that it can support:
 
@@ -106,7 +115,7 @@ https://www.assistant-ui.com/docs/guides/attachments
 
 These sources are **not** permission to make the interface visually noisy. The target is:
 
-> **playful + intelligent + colorful + personal**, suitable for approximately age 10 — not preschool, not corporate dashboard, and not motion for motion's sake.
+> **warm + intelligent + personal + visually engaging**, suitable for learners roughly 10–18. Lina is the first private daily-use Student, not the only design target. The interface is not preschool, cartoonish, corporate, or visually noisy; motion must serve a purpose.
 
 The Student UI should be able to feature Lina's photo/avatar prominently if the Parent chooses, with large clear cards, warm illustration/shape language, simple navigation, and meaningful motion.
 
@@ -198,7 +207,7 @@ Do not add it solely because a similar component already exists in the approved 
 
 ### Important constraint
 
-Many available templates target preschool/daycare audiences. Lina's interface should feel appropriate for a roughly 10-year-old child, so Codex must **borrow visual principles, not preschool styling**.
+Many available templates target preschool/daycare audiences. Lina's interface should serve learners roughly 10–18, so Codex must **borrow visual principles, not preschool styling**.
 
 **Official reference:** https://webflow.com/templates/search/kids-education
 
@@ -225,6 +234,10 @@ Inline Artifact or Learning Canvas
 ```
 
 The AI should describe **what educational representation is needed**. Reusable renderers should determine **how it is rendered** whenever possible.
+
+### FE-02 scope boundary
+
+FE-02 may use native React/SVG only for simple, safe, non-blocking visual seams, Workspace layout structure, and lightweight visual explanations. Motion, JSXGraph, React Konva, and MathLive remain catalog-approved candidates for later scoped capability tasks; they are not FE-02 dependencies or implementation targets unless separately approved. FE-02 must not start an Artifact Engine, graphing runtime, canvas runtime, MathLive integration, generated HTML/JavaScript renderer, video runtime, attachment pipeline, or 3D runtime.
 
 ## 7.1 Native React + SVG
 
@@ -390,7 +403,7 @@ Use LlamaIndex only if the spike demonstrates lower total complexity without wea
 | Area | Candidate | Status | Codex instruction |
 |---|---|---|---|
 | Base UI | shadcn/ui | **ADOPT BASELINE** | Use as the functional React UI base and customize. |
-| Student chat | assistant-ui | **EVALUATE BEFORE CUSTOM BUILD** | Spike custom-runtime fit before hand-building full thread/composer plumbing. |
+| Student chat | assistant-ui | **EVALUATE PRIMITIVES / REJECT RUNTIME REPLACEMENT** | Keep the local state machine. Evaluate only presentation primitives behind a passing FastAPI/SSE compatibility proof. |
 | Child motion | Motion Primitives | **RECOMMENDED SOURCE** | Reuse selectively for meaningful interaction polish. |
 | Playful accents | Magic UI | **RECOMMENDED SOURCE** | Use sparingly for child-friendly delight/feedback. |
 | Animated components | React Bits | **RECOMMENDED SOURCE** | Inspect before custom effects; avoid distracting components. |
@@ -437,7 +450,7 @@ Do not:
 - adopt LlamaIndex or another RAG framework before comparing it with the simpler native Docling/pgvector path,
 - let assistant-ui or any frontend library own Tutor reasoning, safety, session truth, or Learning Intelligence,
 - generate arbitrary HTML/JavaScript for routine learning visuals when a typed renderer already fits,
-- select the most visually impressive component when a simpler one is clearer for a 10-year-old learner.
+- select the most visually impressive component when a simpler one is clearer for learners roughly 10–18.
 
 ---
 
