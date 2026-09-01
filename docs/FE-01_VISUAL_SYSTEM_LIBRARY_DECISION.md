@@ -1,9 +1,11 @@
 # FE-01 — Visual System, Library Capability, and Reuse Decision Record
 
-**Status:** Proposed documentation-only decision record — Product Owner review required before FE-01 is accepted.
+**Status:** ACCEPTED / COMPLETED — documentation-only decision record.
 **Scope:** FE-01 only. No UI implementation, dependency, API, Tutor, Personal Facts, schema, or migration change is authorized by this record.
 **Depends on:** PF-03 accepted.
-**Leads to:** FE-02 — Daily Student Experience, after FE-01 acceptance.
+**Accepted documentation commit:** `8601ed5f485ff29fdb467db7abfb8f7ad44711b0`.
+**Acceptance/state commit:** `ecfc715c19069294e46f746a433acb8f715725be`.
+**Leads to:** FE-02 — Daily Student Experience, only after separate explicit authorization.
 
 ---
 
@@ -295,4 +297,4 @@ FE-02 should evolve the local Student web surface into the Learning Chat + Adapt
 - [x] Does not alter PF-03 behavior or any protected backend authority.
 - [x] Does not touch the dirty `main` worktree or `.acceptance-artifacts/`.
 
-**Product Owner acceptance remains required before FE-01 becomes accepted and FE-02 may be promoted.**
+**FE-01 acceptance is recorded. FE-02 remains BLOCKED / NOT STARTED until separately authorized.**
