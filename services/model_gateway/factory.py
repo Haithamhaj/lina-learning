@@ -156,6 +156,42 @@ def create_segment_evidence_gateway(
     )
 
 
+def create_personal_facts_gateway(
+    session: Session,
+    *,
+    local_provider: ModelProvider | None = None,
+    settings: Settings | None = None,
+    openai_provider: ModelProvider | None = None,
+) -> ModelGateway:
+    """Route independent Personal Facts extraction through the Model Gateway."""
+
+    configured = settings or get_settings()
+    model_name = configured.personal_facts_model_name or configured.model_name
+    if configured.model_provider == "openai":
+        provider = openai_provider
+        if provider is None:
+            if configured.model_api_key is None:
+                raise ValueError("MODEL_API_KEY is required for the OpenAI Personal Facts route.")
+            provider = OpenAIResponsesProvider(
+                api_key=configured.model_api_key.get_secret_value(),
+                base_url=configured.model_base_url,
+            )
+        return ModelGateway(
+            session,
+            routes={ModelTask.PERSONAL_FACTS: ModelRoute("openai", model_name)},
+            providers={"openai": provider},
+        )
+
+    safe_empty_provider = local_provider or StaticModelProvider(
+        ModelResult(output={"version": "personal-facts-extraction-v1", "candidates": []})
+    )
+    return ModelGateway(
+        session,
+        routes={ModelTask.PERSONAL_FACTS: ModelRoute("local-demo", model_name)},
+        providers={"local-demo": safe_empty_provider},
+    )
+
+
 def create_embedding_gateway(session: Session, *, local_provider: ModelProvider | None = None, settings: Settings | None = None, openai_provider: ModelProvider | None = None) -> ModelGateway:
     """Route embeddings through the same provider-neutral gateway."""
     configured = settings or get_settings()

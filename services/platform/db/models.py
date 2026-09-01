@@ -16,6 +16,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     SmallInteger,
@@ -51,6 +52,7 @@ class ModelTask(str, Enum):
     SEGMENT_EVIDENCE = "segment_evidence"
     CURRICULUM_SEMANTICS = "curriculum_semantics"
     EMBEDDING = "embedding"
+    PERSONAL_FACTS = "personal_facts"
 
 
 class Job(Base):
@@ -648,6 +650,103 @@ class LearningMessage(Base):
         PostgreSQLUUID(as_uuid=True), ForeignKey("ai_executions.id", ondelete="SET NULL")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class PersonalFact(Base):
+    """A source-grounded, student-scoped Personal Facts assertion value.
+
+    Contrary values are retained as separate rows.  The current projection is
+    intentionally derived at read time, never written back over history.
+    """
+
+    __tablename__ = "personal_facts"
+    __table_args__ = (
+        UniqueConstraint("student_id", "category", "fact_key", "value", name="uq_personal_facts_identity"),
+        UniqueConstraint("id", "student_id", name="uq_personal_facts_id_student"),
+        CheckConstraint("support_count >= 0", name="ck_personal_facts_support_count_nonnegative"),
+        Index("ix_personal_facts_student_key_latest", "student_id", "fact_key", "last_observed_at", "id"),
+        Index("ix_personal_facts_student_category", "student_id", "category"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False
+    )
+    category: Mapped[str] = mapped_column(String(32), nullable=False)
+    fact_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    value: Mapped[str] = mapped_column(String(256), nullable=False)
+    display_statement: Mapped[str] = mapped_column(Text, nullable=False)
+    support_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    first_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class PersonalFactObservation(Base):
+    """One immutable Student-message observation supporting a Personal Fact."""
+
+    __tablename__ = "personal_fact_observations"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["personal_fact_id", "student_id"],
+            ["personal_facts.id", "personal_facts.student_id"],
+            ondelete="CASCADE",
+            name="fk_personal_fact_observations_fact_student",
+        ),
+        UniqueConstraint("personal_fact_id", "source_message_id", name="uq_personal_fact_observation_source"),
+        Index("ix_personal_fact_observations_fact_observed", "personal_fact_id", "observed_at", "id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    personal_fact_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    student_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False
+    )
+    source_message_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("learning_messages.id", ondelete="RESTRICT"), nullable=False
+    )
+    source_session_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("learning_sessions.id", ondelete="RESTRICT"), nullable=False
+    )
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    normalized_assertion: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class PersonalFactExtractionRun(Base):
+    """Durable session marker that prevents a completed extraction from rerunning."""
+
+    __tablename__ = "personal_fact_extraction_runs"
+    __table_args__ = (
+        UniqueConstraint("student_id", "session_id", name="uq_personal_fact_extraction_runs_student_session"),
+        UniqueConstraint("job_id", name="uq_personal_fact_extraction_runs_job"),
+        CheckConstraint(
+            "status IN ('PENDING', 'RUNNING', 'COMPLETED', 'SKIPPED_CAPACITY')",
+            name="ck_personal_fact_extraction_runs_status",
+        ),
+        Index("ix_personal_fact_extraction_runs_student_status", "student_id", "status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False
+    )
+    session_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("learning_sessions.id", ondelete="CASCADE"), nullable=False
+    )
+    job_id: Mapped[UUID] = mapped_column(
+        # This is immutable queue lineage, deliberately not an FK: queue tests
+        # and routine queue maintenance may clear jobs independently of the
+        # completed extraction audit record.
+        PostgreSQLUUID(as_uuid=True), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="PENDING", server_default="PENDING")
+    ai_execution_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("ai_executions.id", ondelete="SET NULL")
+    )
+    schema_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    failure_metadata: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
 
 
 class LearningExchangeEmbedding(Base):

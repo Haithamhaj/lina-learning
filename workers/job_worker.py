@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session, sessionmaker
 
-from services.model_gateway.factory import create_segment_evidence_gateway
+from services.model_gateway.factory import create_personal_facts_gateway, create_segment_evidence_gateway
 from services.platform.db.connection import get_engine
 from services.platform.db.models import Job, JobStatus
 from services.platform.jobs import claim_next_job, complete_job, fail_job
@@ -24,6 +24,7 @@ from services.tutor.session_lifecycle import (
 )
 from workers.content_handlers import register_content_handlers
 from workers.intelligence_handlers import register_intelligence_handlers
+from workers.personal_facts_handlers import register_personal_facts_handlers
 
 JobHandler: TypeAlias = Callable[[Job], Mapping[str, object] | None]
 _logger = logging.getLogger(__name__)
@@ -156,6 +157,11 @@ def main() -> None:
         registry,
         session_factory=session_factory,
         segment_evidence_gateway_factory=create_segment_evidence_gateway,
+    )
+    register_personal_facts_handlers(
+        registry,
+        session_factory=session_factory,
+        gateway_factory=create_personal_facts_gateway,
     )
     worker_id = f"{socket.gethostname()}-{os.getpid()}-{uuid4().hex[:8]}"
     _logger.info("Starting jobs worker %s", worker_id)

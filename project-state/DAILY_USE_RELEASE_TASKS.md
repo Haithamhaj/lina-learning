@@ -16,8 +16,8 @@ RL-01A Accepted Runtime Alignment — DONE / ACCEPTED
 → RL-01D Controlled Full Intelligence Loop — DONE / ACCEPTED
 → TASK-027A Student Core Profile — DONE / ACCEPTED
 → PF-01 Personal Facts Contract — DONE / ACCEPTED
-→ PF-02 Personal Facts Extraction/Reconciliation — READY
-→ PF-03 Relevant Facts in Tutor Context — BLOCKED
+→ PF-02 Personal Facts Extraction/Reconciliation — DONE / ACCEPTED
+→ PF-03 Relevant Facts in Tutor Context — ONLY READY TASK
 → FE-01 Lina Visual System & Reuse Decision — BLOCKED
 → FE-02 Daily Student Experience — BLOCKED
 → TASK-032 Voice / STT — BLOCKED
@@ -257,15 +257,17 @@ PF-01 does **not** implement:
 
 ## PF-02 — Personal Facts Extraction & Reconciliation
 
-**Status:** READY
+**Status:** DONE / ACCEPTED
 **Dependencies:** PF-01 accepted  
 **Purpose:** One dedicated asynchronous Personal Facts Model Gateway call per completed Learning Session, separate from Tutor teaching and Segment Learning Review. Candidates must cite Student-authored source messages; deterministic reconciliation performs only `ADD` / `SUPPORT` / `NOOP`, with no second reconciliation model call. Refresh the derived Personal Memory Document deterministically after reconciliation. This path does not write Learning Events, Evidence, Current State, or Patterns.
+
+**Accepted result:** additive migration `a1d2e3f4b5c6`; dedicated `PERSONAL_FACTS_EXTRACTION` job/handler through the existing Worker and `ModelTask.PERSONAL_FACTS`; strict Student-source/safety validation; canonical fact-key/value validation; deterministic `ADD` / `SUPPORT` / `NOOP`; Fact plus Observation persistence; retry-safe extraction runs; capacity-skip semantics; and an on-demand latest-fact document projection. There is no Tutor, Segment Review, or RAG coupling. Fresh-migration full Python verification: `770 passed, 7 skipped`. The Daily-Use DB remains at this head with its pre-existing Student/Session/Message rows preserved. No PF-03 behavior is included.
 
 ---
 
 ## PF-03 — Relevant Personal Facts in Tutor Context
 
-**Status:** BLOCKED  
+**Status:** ONLY READY TASK
 **Dependencies:** PF-02 accepted  
 **Purpose:** Cheap deterministic relevance-bounded Personal Facts as a separate optional Tutor input beside Conversation Context, Student Core Context, Learner Intelligence, optional curriculum RAG, and Safety. Use PostgreSQL indexes/simple relevance first; no vector-memory platform unless later measured need justifies it. Preserve one primary Tutor call.
 

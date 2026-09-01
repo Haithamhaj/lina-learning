@@ -11,7 +11,8 @@ Execute the Product Owner-approved **Daily-Use Lina Release 1** sequence one tas
 - `RL-01D — Controlled Full Intelligence Loop` — **DONE / ACCEPTED**
 - `TASK-027A — Student Core Profile & Tutor Student Context` — **DONE / ACCEPTED**
 - `PF-01 — Personal Facts Contract` — **DONE / ACCEPTED**
-- `PF-02 — Personal Facts Extraction/Reconciliation` — **ONLY READY TASK**
+- `PF-02 — Personal Facts Extraction/Reconciliation` — **DONE / ACCEPTED**
+- `PF-03 — Relevant Personal Facts in Tutor Context` — **ONLY READY TASK**
 
 Current execution overlay: `project-state/DAILY_USE_RELEASE_TASKS.md`.  
 `TASKS.md` remains the preserved historical ledger.
@@ -26,10 +27,11 @@ Current execution overlay: `project-state/DAILY_USE_RELEASE_TASKS.md`.
 - `TASK-027A` is accepted and committed as `57a763bbd538157c6503c10f64d0010a91dc2c46`.
 - Student Core Profile now reuses the existing Student/GradePeriod foundation, adds nullable `Student.date_of_birth`, derives age deterministically rather than storing it, exposes a linked-Parent Core Profile boundary, and injects only compact `display_name`, `age_years`, and effective `grade_level` into Tutor context.
 - GradePeriod lifecycle is accepted: a scheduled future Grade does not blank today's Grade; the current effective period remains valid through the day before the transition, and conflicting active overlaps are rejected rather than arbitrarily selected.
-- Daily-Use Alembic head is `f9b1c2d3e4f5`.
+- The repository and Daily-Use Alembic head is `a1d2e3f4b5c6`; the additive migration was verified in place while preserving the existing 10 Students, 13 Sessions, and 22 Messages. PF tables remain empty pending real completed-Session extraction.
 - Student Core Profile remains Parent/System-authoritative and separate from Student-asserted Personal Facts and learning-derived Learner Intelligence.
-- `PF-01` is accepted as `docs/PERSONAL_FACTS_SPEC.md`: durable explicit Student Fact + source-linked Observation history/count, latest-explicit-current read semantics, retained historical contrary values, and one derived Personal Memory Document per Student. Personal Facts remain unimplemented.
-- `PF-02` is the only ready task: one dedicated asynchronous Model Gateway call per completed Learning Session, separate from Tutor teaching and Segment Learning Review; Student-source grounding; deterministic `ADD` / `SUPPORT` / `NOOP`; and deterministic Personal Memory Document refresh. It must never write Learning Events, Evidence, Current State, or Patterns.
+- `PF-01` is accepted as `docs/PERSONAL_FACTS_SPEC.md`: durable explicit Student Fact + source-linked Observation history/count, latest-explicit-current read semantics, retained historical contrary values, and one derived Personal Memory Document per Student.
+- `PF-02` is accepted: one dedicated asynchronous Model Gateway call per completed Learning Session, separate from Tutor teaching and Segment Learning Review; strict Student-source/safety validation; deterministic `ADD` / `SUPPORT` / `NOOP`; and an on-demand deterministic Personal Memory Document. It does not write Learning Events, Evidence, Current State, or Patterns. Fresh-migration verification: `770 passed, 7 skipped`.
+- `PF-03` is the only ready task; no PF-03 implementation is included in this closure.
 - The generic `Haithamhaj/personalization` repo and the earlier Customer Intelligence Card were reviewed for reusable ideas. We reuse the principles of facts, evidence/counts, recency, and separate memory/card projections; we do not import its event-sourcing, Redis/BullMQ, graph, vector-memory, replay, or multi-tenant architecture into Lina Release 1.
 - No Lina real Student identity/history has been created or used. Lina's clean longitudinal baseline remains Student-scoped and unstarted.
 
@@ -105,21 +107,20 @@ Protected invariants:
 
 ## Current executable task
 
-### PF-02 — Personal Facts Extraction/Reconciliation
+### PF-03 — Relevant Personal Facts in Tutor Context
 
-**Status:** READY
+**Status:** ONLY READY TASK
 **Authority:** `project-state/DAILY_USE_RELEASE_TASKS.md`  
-**Dependency:** PF-01 **DONE / ACCEPTED**
+**Dependency:** PF-02 **DONE / ACCEPTED**
 
-**Goal:** implement the accepted `docs/PERSONAL_FACTS_SPEC.md` contract only: dedicated asynchronous completed-Session Personal Facts extraction, Student-source grounding, deterministic `ADD` / `SUPPORT` / `NOOP`, and deterministic Personal Memory Document refresh. Keep it separate from Tutor and Segment Review, with no second reconciliation model call.
+**Boundary:** PF-03 requires separately confirmed scope and an explicit execution instruction. This PF-02 closure does not authorize PF-03 implementation.
 
-**Boundary:** Do not start PF-03, Tutor-context injection, vector retrieval, Parent Insights, or unrelated product work in this task.
 
 ---
 
 ## Next recommended action
 
-Execute PF-02 against the accepted Personal Facts contract, preserving the protected separation from Tutor and Learning Intelligence.
+Execute PF-03 only under a separate explicit task instruction; do not treat this PF-02 closure as authorization to start it.
 
 ---
 

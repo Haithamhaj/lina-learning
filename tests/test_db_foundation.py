@@ -62,8 +62,11 @@ def test_foundation_models_match_expected_tables() -> None:
         "learner_patterns",
         "pattern_evidence",
         "learner_intelligence_cards",
-        "decision_views",
-    }
+            "decision_views",
+            "personal_facts",
+            "personal_fact_observations",
+            "personal_fact_extraction_runs",
+        }
     assert User.__tablename__ == "users"
     assert Student.__tablename__ == "students"
     assert ParentStudentRelationship.__tablename__ == "parent_student_relationships"

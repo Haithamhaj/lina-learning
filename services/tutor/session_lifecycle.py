@@ -13,7 +13,7 @@ from services.intelligence.segment_reviews import (
     SEGMENT_REVIEW_POLICY_VERSION,
 )
 from services.platform.config import Settings, get_settings
-from services.platform.db.models import Job, LearningSegment, LearningSession, SegmentLearningReview
+from services.platform.db.models import Job, LearningMessage, LearningSegment, LearningSession, SegmentLearningReview
 from services.tutor.exchanges import clear_session_exchange_embeddings
 from services.tutor.segment_lifecycle import (
     is_segment_structurally_reviewable,
@@ -25,6 +25,7 @@ LEGACY_SESSION_EVIDENCE_PIPELINE = "legacy-session-evidence-v1"
 SESSION_FINALIZATION_PIPELINE = "segment-finalization-v1"
 SESSION_CONSOLIDATION_JOB = "SESSION_CONSOLIDATION"
 SESSION_INTELLIGENCE_FINALIZE_JOB = "SESSION_INTELLIGENCE_FINALIZE"
+PERSONAL_FACTS_EXTRACTION_JOB = "PERSONAL_FACTS_EXTRACTION"
 
 
 @dataclass(frozen=True)
@@ -78,6 +79,26 @@ def close_session_if_eligible(
     learning_session.status = "CLOSED"
     learning_session.closed_at = now
     clear_session_exchange_embeddings(session, learning_session=learning_session)
+    # This queue is independent of Segment Review and Session Finalization. It
+    # exists only when there is raw Student source material worth examining.
+    has_student_message = session.scalar(
+        select(LearningMessage.id)
+        .where(
+            LearningMessage.session_id == learning_session.id,
+            LearningMessage.role == "student",
+        )
+        .limit(1)
+    )
+    if has_student_message is not None:
+        enqueue_job(
+            session,
+            job_type=PERSONAL_FACTS_EXTRACTION_JOB,
+            payload={
+                "student_id": str(learning_session.student_id),
+                "session_id": str(learning_session.id),
+            },
+            idempotency_key=f"personal-facts-extraction:{learning_session.id}",
+        )
     if learning_session.intelligence_pipeline == LEGACY_SESSION_EVIDENCE_PIPELINE:
         enqueue_job(
             session,

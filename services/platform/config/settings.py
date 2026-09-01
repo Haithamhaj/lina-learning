@@ -125,6 +125,10 @@ class Settings(BaseSettings):
     # SEG-EVID-01C implementation calibration: deterministic serialized
     # Segment Review request characters, never a silent raw-history truncation.
     segment_review_context_capacity: int = Field(default=64000, gt=0)
+    # PF-02 uses a separate complete-session request guard. It is measured in
+    # deterministic serialized characters and deliberately never truncates.
+    personal_facts_context_capacity: int = Field(default=64000, gt=0)
+    personal_facts_model_name: str | None = None
     embedding_model_name: str = "text-embedding-3-small"
     embedding_dimensions: int = Field(default=1536, ge=1)
 
