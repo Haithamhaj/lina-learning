@@ -123,18 +123,40 @@ but no FE-02 assistant-ui evaluation or adoption is pending.
 
 React, Tailwind, and shadcn/ui are the default available primitives for the greenfield fallback. ThreeUI/Spline remain visual references only. Three.js/React Three Fiber, attachments, image/PDF handling, generated images, video, Artifact Engine, MathLive, JSXGraph, and Konva remain later scoped capabilities, not FE-02 implementation targets.
 
-### FE-CHAT-UI-01 component-first fit-check plan
+### FE-CHAT-UI-01 completed component-first fit check
 
-Evaluate shadcn chat/message components, Vercel AI Elements, 21st.dev chat
-patterns, and VLLNT or comparable shadcn-style sources as presentation-pattern
-sources only. Record ADOPT PATTERN, PARTIAL ADOPT PATTERN, REJECT, or UX
-REFERENCE ONLY for each source.
+| Source | FE-02 decision | Consequence |
+| --- | --- | --- |
+| Existing local React/Tailwind/shadcn primitives | ADOPT PATTERN | Use as the project-owned functional base. |
+| Official shadcn Message/Bubble/Marker/MessageScroller patterns | PARTIAL ADOPT PATTERN | Borrow presentation and transcript-scrolling patterns without adding a package. |
+| Vercel AI Elements | UX REFERENCE ONLY | Do not adopt its AI SDK/useChat-oriented integration. |
+| VLLNT UI | UX REFERENCE ONLY | Borrow visual ideas only; do not adopt its external registry/runtime assumptions. |
+| 21st.dev Agent Elements | REJECT | Its AI SDK-shaped message/status model is out of bounds. |
+| shadcn.io AI registry | UX REFERENCE ONLY | Use only as a visual benchmark pending any later provenance review. |
 
-Reject any candidate that requires Vercel AI SDK/useChat ownership, transport,
-session/persistence ownership, backend/SSE changes, provider coupling, or
-runtime-bound chat state. The retained local implementation path is
-project-owned React/Tailwind/shadcn presentation, project-owned SSE controller,
-and project-owned message/composer/Workspace seam.
+FE-02 can proceed without a chat UI-library installation. It must use
+project-owned React/Tailwind/shadcn components, a project-owned SSE controller,
+and project-owned message/composer/Workspace rendering. It must not use AI
+SDK/useChat, transport ownership, session/persistence ownership, backend/SSE
+changes, provider coupling, or runtime-bound chat state. The controller retains
+terminal turn, rollback, safety/error, lifecycle privacy, suggested actions,
+guided checks, and direction-aware rendering.
+
+### FE-02 approved visual-reference translation
+
+Official shadcn chat composition is the primary component reference for message
+rows, bubbles, status markers, transcript/scroller behavior, and restrained
+thinking status. AI Elements is hierarchy-only reference for conversation
+spacing, message-container anatomy, content-region hierarchy, and composer
+grouping. This is not a dependency or adoption decision: do not copy AI SDK
+wiring, `useChat`, `UIMessage`, transport, backend routes, runtime/session/
+persistence ownership, provider coupling, or state-machine assumptions.
+
+The concrete visual brief and required screenshot acceptance checklist live in
+`docs/FE-02_GREENFIELD_SURFACE_PLAN.md` section 3.2; the Skill Pack enforces
+their use. No visual reference permits a permanent empty Workspace, fake
+capability, unsupported composer affordance, or a change to project-owned
+stream/session authority.
 
 **Official references:**  
 https://www.assistant-ui.com/docs/runtimes/custom/overview  

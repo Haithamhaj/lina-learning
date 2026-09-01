@@ -72,6 +72,15 @@ deferred unless separately approved.
 - Motion, JSXGraph, React Konva, MathLive, video players, upload interfaces,
   generated-image presentation, and artifact renderers require their own
   approved capability task. They are not FE-02 dependencies or implied work.
+- FE-CHAT-UI-01 is complete: use existing local React/Tailwind/shadcn primitives
+  and borrow official shadcn chat presentation patterns only. AI Elements,
+  VLLNT, and shadcn.io are UX references; 21st.dev Agent Elements is rejected.
+  Cite the catalog for the full decision table.
+- Apply the approved visual-reference translation in the FE-02 Greenfield plan:
+  shadcn chat composition is the primary component reference and AI Elements is
+  hierarchy-only. Do not copy AI SDK/useChat, `UIMessage`, transport, backend,
+  runtime/session/persistence, provider, or state-machine assumptions. The
+  plan's screenshot checklist is a required FE-02 review gate.
 
 ### FE-02 contracts and gates
 
@@ -278,6 +287,10 @@ checks, or a Chat-to-Workspace handoff.
   privacy-safe trace behavior.
 - Verify loading, error, retry, action/check, keyboard, and Arabic/English/
   mixed-direction behavior for the changed interaction.
+- Review the approved first-screen visual brief and its screenshot checklist:
+  centered readable desktop chat, calm mobile chat, distinct stable identity
+  rows, the approved empty/thinking/error states, no unsupported composer
+  controls, and no empty Workspace.
 - Run npm run typecheck, npm run build, and git diff --check.
 
 ### Daily Student App application

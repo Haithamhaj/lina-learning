@@ -62,10 +62,13 @@ The existing /student page and StudentMathSession are protected experimental/leg
 FE-02 remains BLOCKED / NOT STARTED. The assistant-ui presentation-primitives
 fit check is complete with REJECT for FE-02: runtime-bound behavior or an
 adapter/state bridge is not safe as presentation-only use in this slice. The
-next pre-code gates are Product Owner approval of the first-screen visual brief,
-FE-CHAT-UI-01 component-first fit check, and explicit FE-02 implementation
-authorization. This clarification supersedes only the earlier FE-02
-implementation-path assumption. No dependency or runtime change is authorized.
+next pre-code gates are Product Owner approval of the first-screen visual brief
+and explicit FE-02 implementation authorization. FE-CHAT-UI-01 is complete:
+local React/Tailwind/shadcn patterns are adopted, official shadcn chat patterns
+are partially adopted, AI Elements/VLLNT/shadcn.io are UX references, and
+21st.dev Agent Elements is rejected. This clarification supersedes only the
+earlier FE-02 implementation-path assumption. No dependency or runtime change
+is authorized.
 
 1. Student Core Profile = Parent/System-authoritative context.
 2. Personal Facts = explicit safe durable Student-asserted context.

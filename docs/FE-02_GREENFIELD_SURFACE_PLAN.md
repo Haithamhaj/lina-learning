@@ -49,34 +49,46 @@ Chat with one welcoming sentence that invites a question, attempt, or
 explanation request. It should sound capable and personal, not childish:
 “What would you like to work through today?”
 
-On desktop, the page uses a centered readable chat column with a comfortable
-reading measure, generous vertical rhythm, and quiet outer margins. The header
-is visually secondary to the conversation. There is no navigation/sidebar in
-FE-02; navigation is deferred until a later approved need proves it improves
-daily learning. No Workspace panel appears unless real, separately approved
-Workspace content exists.
+On desktop, the page uses a centered, 640–760px chat column with a comfortable
+reading measure, generous vertical rhythm, and quiet outer margins. Keep
+16–24px between turns, 6–10px inside grouped message areas, and 12–16px of
+bubble padding. The header is visually secondary to the conversation. There is
+no navigation/sidebar in FE-02; navigation is deferred until a later approved
+need proves it improves daily learning. No Workspace panel appears unless real,
+separately approved Workspace content exists.
 
 Tutor messages sit to the reading-start side in a soft mint/ink surface with a
 small Tutor label and restrained avatar/mark. Lina messages sit opposite in a
-lavender surface, also with a clear label. Bubbles are rounded but not toy-like;
-they use high-contrast body text, short line lengths, and enough spacing to
-make a multi-step explanation easy to scan. All learner-visible text, actions,
-checks, and the composer use dir="auto" or equivalent direction-aware behavior.
+lavender surface, also with a clear label. Identity placement stays consistent
+enough to distinguish Tutor and Lina immediately; only dynamic text direction,
+not the message-row structure, follows the message language. Bubbles are
+rounded but not toy-like; they use high-contrast approximately 16px-equivalent
+body text, short line lengths, and enough spacing to make a multi-step
+explanation easy to scan. All learner-visible text, actions, checks, and the
+composer use dir="auto" or equivalent direction-aware behavior. The follow-up
+region appears only on the latest terminal Tutor turn when the server supplies
+suggested actions or a guided check; it has no unsupported toolbar, branch
+picker, model control, feedback control, or attachment preview.
 
-The fixed bottom composer is a broad, softly bordered rounded field with a
-visible text label for assistive technology, a clear send action, and enough
-padding for comfortable typing. It has no paperclip, image, microphone, or
-disabled attachment affordance in FE-02: showing one would imply unsupported
-capability. Keyboard focus is obvious but quiet.
+The fixed/sticky bottom composer stays inside the learning surface. It is a
+broad, softly bordered rounded field with a visible label for assistive
+technology, a clear send action, and generous padding for comfortable typing.
+It is constrained to the desktop chat column and full width within safe margins
+on mobile. It has no paperclip, image, microphone, or disabled attachment
+affordance in FE-02: showing one would imply unsupported capability. Keyboard
+focus is obvious but quiet.
 
-The empty state is a small invitation plus one or two server-compatible example
-prompts only if they are already approved product copy; it does not imitate
-suggested attachments or generated media. While a turn streams, the provisional
-Tutor bubble shows a restrained “Tutor is thinking…” indicator, then grows with
-delta text. Only terminal turn content becomes the final message with actions
-or a guided check. An error or incomplete stream removes the provisional Tutor
-bubble, retains Lina’s submitted message, explains that the response did not
-finish, and offers a clear retry without exposing infrastructure details.
+The empty state is the short capable welcome, “What would you like to work
+through today?” Example prompts may appear only when separately approved as
+product copy; do not invent them. It does not imitate suggested attachments,
+generated media, a course dashboard, streaks, or a marketing illustration wall.
+While a turn streams, the provisional Tutor bubble starts with a restrained
+“Tutor is thinking…” indicator, then grows with delta text. Only terminal turn
+content becomes the final message with actions or a guided check. An error or
+incomplete stream removes the provisional Tutor bubble, retains Lina’s
+submitted message, explains that the response did not finish, and offers a
+clear retry without exposing infrastructure details. Lifecycle trace remains
+content-free.
 
 On mobile, the header becomes even quieter, the chat fills the viewport, bubbles
 remain readable with safe side margins, and the composer remains reachable above
@@ -93,7 +105,42 @@ corporate, dashboard-heavy, or visually noisy.
 
 No permanent empty Workspace or fake Workspace capability appears in the real
 route. A controlled Workspace fixture is allowed only in tests or a clearly
-non-product preview.
+non-product preview. Motion is purposeful only and never turns the learning
+surface into dense dashboard-card stacking or visual noise.
+
+### 3.2 Approved visual-reference translation and screenshot gate
+
+The FE-02 visual reference is approved for implementation guidance, not a
+component/runtime adoption. Use official shadcn compositional chat patterns as
+the primary component reference: message rows, distinct bubbles, status
+markers, transcript/scroller behavior, and restrained thinking status. Use AI
+Elements only as a UX-hierarchy reference for conversation spacing, message
+container anatomy, the content region, and composer grouping.
+
+Do not copy AI SDK wiring, `useChat`, `UIMessage`, transport, backend routes,
+runtime/session/persistence ownership, provider coupling, or state-machine
+assumptions. FE-02 remains project-owned React/Tailwind/shadcn presentation with
+a project-owned SSE controller and the named contracts in section 6.
+
+The implementation review must include screenshots or equivalent rendered
+evidence for this checklist:
+
+- Desktop: centered 640–760px chat column, quiet header, clear Tutor/Lina
+  identity, readable high-contrast bubbles, and no dashboard/card wall.
+- Empty chat: the approved capable welcome only; no invented examples, empty
+  Workspace, fake artifact, streak, attachment affordance, or marketing wall.
+- Streaming: one restrained provisional Tutor bubble that receives `delta`
+  content and has no premature follow-up controls.
+- Terminal/error: suggested actions or guided checks only after terminal `turn`;
+  incomplete/error state removes the provisional bubble, keeps Lina's message,
+  and exposes a clear retry.
+- Mobile: safe margins, readable bubbles, reachable full-width composer, no
+  sidebar/navigation, and no Workspace until real approved content exists.
+- Direction/accessibility: visible focus, accessible composer label and send
+  action, stable Tutor/Lina row placement, and `dir="auto"` (or equivalent) for
+  Arabic, English, and mixed dynamic content.
+- Tone: warm, intelligent, personal, and visually engaging; no preschool,
+  cartoon, corporate, noisy, or unsupported-control treatment.
 
 ## 4. Route strategy
 
@@ -154,15 +201,20 @@ The check passes only if presentation-only use can preserve, without backend/API
 
 ThreeUI/Spline remain visual references. Three.js/React Three Fiber remain later isolated lazy-loaded Workspace candidates, never the app architecture, default chat layer, or always-on WebGL.
 
-### FE-CHAT-UI-01 planned component-first fit check
+### FE-CHAT-UI-01 completed component-first fit check
 
-Evaluate shadcn chat/message components, Vercel AI Elements, 21st.dev chat
-patterns, and VLLNT or comparable shadcn-style sources as presentation patterns
-only. Reject any source requiring AI SDK/useChat, transport ownership,
-session/persistence ownership, backend/SSE changes, provider coupling, or
-runtime-bound chat state. The comparison must identify reusable bubble, scroller,
-composer, action-chip, empty/thinking, and Workspace-handoff patterns, plus the
-project-owned code still required for FE-02-STREAM-01 through FE-02-DATA-01.
+The accepted decisions are: existing local React/Tailwind/shadcn primitives,
+ADOPT PATTERN; official shadcn Message/Bubble/Marker/MessageScroller patterns,
+PARTIAL ADOPT PATTERN; Vercel AI Elements, VLLNT UI, and shadcn.io AI registry,
+UX REFERENCE ONLY; and 21st.dev Agent Elements, REJECT.
+
+FE-02 needs no chat UI-library installation. It uses project-owned
+React/Tailwind/shadcn components and a project-owned SSE controller. It may
+borrow official shadcn presentation patterns, but must not use AI SDK/useChat,
+transport/session/persistence ownership, backend/SSE changes, provider
+coupling, or runtime-bound chat state. Project-owned code retains message and
+composer rendering, action chips, guided checks, direction-aware content,
+safety/error states, terminal turn, rollback, and lifecycle privacy trace.
 
 ## 8. Expected later file set
 

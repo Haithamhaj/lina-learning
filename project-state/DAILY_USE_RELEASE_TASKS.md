@@ -311,9 +311,15 @@ as presentation-only use for this slice; it cannot own runtime, backend,
 transport, session, safety, or stream lifecycle. The local path remains a new
 React/Tailwind/shadcn surface with a project-owned SSE controller.
 
+**Completed FE-CHAT-UI-01:** Existing local React/Tailwind/shadcn primitives
+are ADOPT PATTERN; official shadcn chat patterns are PARTIAL ADOPT PATTERN; AI
+Elements, VLLNT, and shadcn.io are UX REFERENCE ONLY; 21st.dev Agent Elements
+is REJECT. FE-02 needs no chat-library installation and retains project-owned
+SSE/controller/message/composer/action/guided-check/direction/error/rollback/
+lifecycle behavior.
+
 **Next pre-code gates:** Product Owner approval of the first-screen visual
-brief; FE-CHAT-UI-01 component-first fit check; and explicit FE-02
-implementation authorization.
+brief and explicit FE-02 implementation authorization.
 
 **Deferred by this task:** Three.js/React Three Fiber, attachments, image/PDF handling, generated images, video, Artifact Engine, MathLive, JSXGraph, Konva, and all backend/API/SSE schema changes remain out of scope unless separately approved.
 
