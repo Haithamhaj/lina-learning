@@ -4,20 +4,26 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+import logging
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from services.intelligence.card import CardBudget, build_learner_intelligence_card
 from services.intelligence.selection import RelevantIntelligence
 from services.model_gateway.factory import create_embedding_gateway
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
+from services.personal_facts.memory_document import format_current_personal_memory_card
 from services.platform.core_profile import StudentCoreContext, student_core_context
 from services.platform.db.models import LearningExchangeEmbedding, LearningMessage, LearningSession, ModelTask
 from services.retrieval.service import CurrentFocus, QueryEmbedding, RetrievedBlock, RetrievalService
 from services.tutor.exchanges import SEMANTIC_RECALL_MIN_COSINE_SIMILARITY, ConversationExchangeContext, complete_exchanges_for_segment, immediate_exchange_for_current_turn, persist_exchange_embedding, serialize_exchange
 from services.tutor.segments import latest_segment_for_session, latest_valid_structured_segment_state
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -52,6 +58,7 @@ class TutorContextDebug:
     older_continuity_message_ids: tuple[UUID, ...] = ()
     recent_exchange_message_ids: tuple[UUID, ...] = ()
     semantic_recall_exchange_message_ids: tuple[UUID, ...] = ()
+    personal_memory_status: str = "PERSONAL_MEMORY_NOT_AVAILABLE"
 
 
 @dataclass(frozen=True)
@@ -65,6 +72,7 @@ class TutorContext:
     intelligence: tuple[RelevantIntelligence, ...]
     debug: TutorContextDebug
     student_core_context: StudentCoreContext = StudentCoreContext(None, None, None)
+    personal_memory: str | None = None
     immediate_exchange: ConversationExchangeContext | None = None
     recent_exchanges: tuple[ConversationExchangeContext, ...] = ()
     semantic_recall_exchanges: tuple[ConversationExchangeContext, ...] = ()
@@ -80,6 +88,7 @@ class TutorContext:
             + sum(len(message.content) for message in self.session_messages)
             + sum(len(block.text) for block in self.retrieval)
             + sum(len(item.text) for item in self.intelligence)
+            + len(self.personal_memory or "")
         )
 
 
@@ -190,6 +199,9 @@ class TutorContextBuilder:
             )
             for entry in card.entries
         )
+        personal_memory, personal_memory_status = self._personal_memory(
+            learning_session=learning_session,
+        )
         return TutorContext(
             question=question,
             subject=learning_session.subject,
@@ -205,6 +217,7 @@ class TutorContextBuilder:
             retrieval=retrieval,
             intelligence=intelligence,
             student_core_context=core_context,
+            personal_memory=personal_memory,
             debug=TutorContextDebug(
                 focus=effective_focus,
                 session_message_ids=(),
@@ -218,8 +231,34 @@ class TutorContextBuilder:
                 older_continuity_message_ids=tuple(message_id for exchange in (*recent_exchanges, *semantic_recall) for message_id in exchange.message_ids),
                 recent_exchange_message_ids=tuple(message_id for exchange in recent_exchanges for message_id in exchange.message_ids),
                 semantic_recall_exchange_message_ids=tuple(message_id for exchange in semantic_recall for message_id in exchange.message_ids),
+                personal_memory_status=personal_memory_status,
             ),
         )
+
+    def _personal_memory(
+        self,
+        *,
+        learning_session: LearningSession,
+    ) -> tuple[str | None, str]:
+        """Fail open only for an operational read failure in optional PF context."""
+
+        try:
+            with self._session.begin_nested():
+                card = format_current_personal_memory_card(
+                    self._session,
+                    student_id=learning_session.student_id,
+                )
+        except OperationalError:
+            logger.warning(
+                "Personal Memory was omitted after an operational read failure.",
+                extra={
+                    "personal_memory_status": "PERSONAL_MEMORY_OMITTED_ERROR",
+                    "student_id": str(learning_session.student_id),
+                    "learning_session_id": str(learning_session.id),
+                },
+            )
+            return None, "PERSONAL_MEMORY_OMITTED_ERROR"
+        return card, "PERSONAL_MEMORY_INCLUDED" if card else "PERSONAL_MEMORY_NOT_AVAILABLE"
 
     def _card_budget(self) -> CardBudget:
         """Keep the existing Tutor allocation while using the centralized Card policy."""

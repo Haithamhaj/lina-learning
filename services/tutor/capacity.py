@@ -128,6 +128,18 @@ def apply_context_capacity_guardrail(
 def _drop_next_optional_unit(context: TutorContext) -> tuple[TutorContext, DroppedContextUnit | None]:
     """Apply CTX-03D's deterministic layer order without changing upstream relevance."""
 
+    if context.personal_memory is not None:
+        return (
+            replace(
+                context,
+                personal_memory=None,
+                debug=replace(
+                    context.debug,
+                    personal_memory_status="PERSONAL_MEMORY_OMITTED_CAPACITY",
+                ),
+            ),
+            DroppedContextUnit("PERSONAL_MEMORY", reason="PERSONAL_MEMORY_OMITTED_CAPACITY"),
+        )
     if context.semantic_recall_exchanges:
         exchange = _lowest_priority_semantic_exchange(context)
         return (
@@ -199,7 +211,12 @@ def _context_metadata(context: TutorContext) -> dict[str, object]:
         ],
         "curriculum_refs": [block.source_ref for block in context.retrieval],
         "intelligence_source_ids": [str(item.source_id) for item in context.intelligence],
+        "personal_memory": {
+            "included": context.personal_memory is not None,
+            "status": context.debug.personal_memory_status,
+        },
         "counts": {
+            "personal_memory_included": int(context.personal_memory is not None),
             "recent_raw_exchanges": len(context.recent_exchanges),
             "semantic_recall_exchanges": len(context.semantic_recall_exchanges),
             "curriculum_blocks": len(context.retrieval),
@@ -213,6 +230,9 @@ def _with_final_context_debug(context: TutorContext) -> TutorContext:
 
     recent_message_ids = _raw_exchange_ids(context.recent_exchanges)
     semantic_message_ids = _raw_exchange_ids(context.semantic_recall_exchanges)
+    personal_memory_status = context.debug.personal_memory_status
+    if context.personal_memory is None and personal_memory_status == "PERSONAL_MEMORY_INCLUDED":
+        personal_memory_status = "PERSONAL_MEMORY_OMITTED_CAPACITY"
     return replace(
         context,
         debug=replace(
@@ -222,6 +242,7 @@ def _with_final_context_debug(context: TutorContext) -> TutorContext:
             semantic_recall_exchange_message_ids=semantic_message_ids,
             retrieval_source_refs=tuple(block.source_ref for block in context.retrieval),
             intelligence_source_ids=tuple(item.source_id for item in context.intelligence),
+            personal_memory_status=personal_memory_status,
         ),
     )
 

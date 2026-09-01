@@ -44,3 +44,22 @@ def build_personal_memory_document(session: Session, *, student_id: UUID) -> dic
     document: dict[str, object] = {group: groups[group] for group in _GROUPS.values() if groups[group]}
     document["historical_fact_count"] = len(facts)
     return document
+
+
+def format_current_personal_memory_card(session: Session, *, student_id: UUID) -> str | None:
+    """Render the full compact current projection for the optional Tutor context."""
+
+    document = build_personal_memory_document(session, student_id=student_id)
+    sections: list[str] = []
+    for group in _GROUPS.values():
+        entries = document.get(group)
+        if not isinstance(entries, list) or not entries:
+            continue
+        statements = [
+            entry.get("display_statement")
+            for entry in entries
+            if isinstance(entry, dict) and isinstance(entry.get("display_statement"), str)
+        ]
+        if statements:
+            sections.append(f"{group}:\n" + "\n".join(f"- {statement}" for statement in statements))
+    return "\n\n".join(sections) or None

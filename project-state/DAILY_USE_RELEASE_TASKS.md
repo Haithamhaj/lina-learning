@@ -18,7 +18,7 @@ RL-01A Accepted Runtime Alignment — DONE / ACCEPTED
 → PF-01 Personal Facts Contract — DONE / ACCEPTED
 → PF-02 Personal Facts Extraction/Reconciliation — DONE / ACCEPTED
 → PF-02A Existing-Fact-Aware Personal Facts Extraction — DONE / ACCEPTED
-→ PF-03 Relevant Facts in Tutor Context — ONLY READY TASK
+→ PF-03 Relevant Facts in Tutor Context — IN IMPLEMENTATION / NOT ACCEPTED
 → FE-01 Lina Visual System & Reuse Decision — BLOCKED
 → FE-02 Daily Student Experience — BLOCKED
 → TASK-032 Voice / STT — BLOCKED
@@ -269,9 +269,9 @@ PF-01 does **not** implement:
 
 ## PF-03 — Relevant Personal Facts in Tutor Context
 
-**Status:** ONLY READY TASK
+**Status:** IN IMPLEMENTATION / NOT ACCEPTED
 **Dependencies:** PF-02A accepted
-**Purpose:** A new bounded design decision for optional Personal Facts Tutor context beside Conversation Context, Student Core Context, Learner Intelligence, optional curriculum RAG, and Safety. The prior lexical/key-matching direction is superseded and must not be implemented without separate approval. Preserve one primary Tutor call and do not add a vector-memory platform by default.
+**Purpose:** Read-only injection of the full compact current Personal Memory Card as a separate optional Tutor context block beside Conversation Context, Student Core Context, Learner Intelligence, optional curriculum RAG, and Safety. The Tutor decides semantic usefulness inside the existing primary call; there is no pre-Tutor lexical/key matching, retrieval, PF model call, embedding call, or vector-memory platform.
 
 ---
 

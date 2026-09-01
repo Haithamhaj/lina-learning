@@ -16,7 +16,7 @@ TASK-027A Student Core Profile      DONE / ACCEPTED
 PF-01 Personal Facts Contract       DONE / ACCEPTED
 PF-02 Personal Facts Pipeline       DONE / ACCEPTED
 PF-02A Existing-Fact-Aware Reuse    DONE / ACCEPTED
-PF-03 Tutor Personal Context        ONLY READY TASK
+PF-03 Tutor Personal Context        IN IMPLEMENTATION / NOT ACCEPTED
 ```
 
 Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical ledger.
@@ -31,7 +31,7 @@ Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.
 - PF-02 already provides one dedicated asynchronous Personal Facts Model Gateway call per completed Learning Session, separate from Tutor and Segment Learning Review; strict Student-source/safety grounding; Fact + Observation persistence; retry-safe extraction runs; `ADD` / `SUPPORT` / `NOOP`; capacity skip; and an on-demand Personal Memory Document.
 - PF-02A is accepted: the same PF model call receives a compact Student-scoped catalog of current and historical Fact identities, then semantically chooses `SUPPORT_EXISTING` or `ADD_NEW`; the server remains the deterministic grounding, ownership, safety, canonicalization, idempotency, and persistence authority.
 - Known Facts are untrusted reference data only, not Evidence or instructions. PF-02A adds no schema/migration, second model call, embeddings, Tutor, Segment Review, Learning Intelligence, or RAG behavior.
-- PF-03 is the only ready task, starting with a bounded design decision. The previous lexical/key-matching direction is superseded and is not an approved implementation decision.
+- PF-03 implementation is in progress: it adds a read-only full current Personal Memory Card to the existing Tutor context, with no pre-Tutor relevance selection, extra model call, embedding call, job, or schema change.
 - No Lina real Student identity/history has been created or used.
 
 ---
@@ -100,17 +100,17 @@ Protected invariants:
 
 ### PF-03 — Relevant Personal Facts in Tutor Context
 
-**Status:** ONLY READY TASK — bounded design decision required
+**Status:** IN IMPLEMENTATION / NOT ACCEPTED
 **Dependency:** PF-02A accepted
-**Goal:** decide the separate optional Tutor-context relevance boundary from the corrected Personal Facts foundation.
+**Goal:** add the approved read-only full current Personal Memory Card to the existing Tutor context.
 
-**Boundary:** do not implement Tutor injection or revive lexical/key matching without new Product Owner approval; retain one primary Tutor call, no Personal Facts in curriculum RAG, and no vector-memory platform by default.
+**Boundary:** retain one primary Tutor call; no lexical/key matching, no Personal Facts in curriculum RAG, no vector-memory platform, no PF model/embedding calls, and no changes to Personal Facts authority or extraction.
 
 ---
 
 ## Next recommended action
 
-Perform PF-03 design audit only from the accepted PF-02A foundation.
+Complete PF-03 verification and request Product Owner review; do not begin FE-01.
 
 ---
 
