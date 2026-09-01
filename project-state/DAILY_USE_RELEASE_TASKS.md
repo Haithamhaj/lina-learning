@@ -305,7 +305,15 @@ remains BLOCKED / NOT STARTED until explicitly authorized.
 
 **2026-09-02 Product Owner scope clarification:** The existing /student page and StudentMathSession are protected experimental/legacy functional shell and behavioral regression-harness assets. FE-02 is no longer an evolution of that UI. The Daily Student App must be a separate greenfield surface at /student/daily, reusing accepted backend/session/SSE/Tutor/Safety/PF-03 contracts rather than the existing UI implementation. Do not import, wrap, extract from, restyle, modify, or route through the legacy Student components.
 
-**Pre-code gate:** Complete a serious, no-commit assistant-ui presentation-primitives fit check before FE-02 code starts. It may evaluate presentation-only use against the preserved FastAPI/SSE and server-owned session contract; it cannot authorize a runtime/backend/session/safety/stream-lifecycle replacement or a dependency addition. If it fails, use a new local React/Tailwind/shadcn surface, not the legacy UI.
+**Completed fit check:** assistant-ui presentation primitives are REJECTED for
+FE-02. Its runtime-bound behavior or required adapter/state bridge is not safe
+as presentation-only use for this slice; it cannot own runtime, backend,
+transport, session, safety, or stream lifecycle. The local path remains a new
+React/Tailwind/shadcn surface with a project-owned SSE controller.
+
+**Next pre-code gates:** Product Owner approval of the first-screen visual
+brief; FE-CHAT-UI-01 component-first fit check; and explicit FE-02
+implementation authorization.
 
 **Deferred by this task:** Three.js/React Three Fiber, attachments, image/PDF handling, generated images, video, Artifact Engine, MathLive, JSXGraph, Konva, and all backend/API/SSE schema changes remain out of scope unless separately approved.
 

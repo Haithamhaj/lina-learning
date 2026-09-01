@@ -40,8 +40,9 @@ Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.
   10–18, with Lina as the first private daily-use Student. It established the
   Learning Chat + Adaptive Learning Workspace direction; the 2026-09-02 Product
   Owner Greenfield Clarification supersedes its earlier implementation-path
-  assumption. It conditionally evaluates assistant-ui presentation primitives
-  while rejecting runtime replacement, treats ThreeUI/Spline as
+  assumption. The assistant-ui presentation-primitives fit check is complete:
+  REJECT for FE-02 because it is runtime-bound or needs an adapter/state bridge
+  that is unsafe for this presentation-only slice. ThreeUI/Spline remain
   visual reference only, and leaves a future isolated/lazy 3D Workspace-module
   path without adopting Three.js as app architecture. No UI code, dependencies,
   tests, runtime behavior, or PF-03 behavior changed. The protected /student
@@ -58,7 +59,13 @@ Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.
 
 The existing /student page and StudentMathSession are protected experimental/legacy functional shell and behavioral-regression-harness assets. FE-02 must build the separate greenfield Daily Student App at /student/daily, reusing backend/session/SSE/Tutor/Safety/PF-03 contracts but not the existing UI implementation. It must not import, wrap, extract from, restyle, modify, or route through the legacy Student components.
 
-FE-02 remains BLOCKED / NOT STARTED pending the required no-commit assistant-ui presentation-primitives fit check and explicit implementation authorization. This clarification supersedes only the earlier FE-02 implementation-path assumption. No dependency or runtime change is authorized.
+FE-02 remains BLOCKED / NOT STARTED. The assistant-ui presentation-primitives
+fit check is complete with REJECT for FE-02: runtime-bound behavior or an
+adapter/state bridge is not safe as presentation-only use in this slice. The
+next pre-code gates are Product Owner approval of the first-screen visual brief,
+FE-CHAT-UI-01 component-first fit check, and explicit FE-02 implementation
+authorization. This clarification supersedes only the earlier FE-02
+implementation-path assumption. No dependency or runtime change is authorized.
 
 1. Student Core Profile = Parent/System-authoritative context.
 2. Personal Facts = explicit safe durable Student-asserted context.

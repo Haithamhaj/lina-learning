@@ -2,7 +2,11 @@
 
 **Status:** Approved implementation reference  
 **Purpose:** Reuse proven libraries, components, templates, and framework integrations before building substantial UI, chat, retrieval, or learning-artifact infrastructure from scratch.  
-**Authority:** This catalog does not override `PROJECT_REFERENCE.md`, `LEARNING_INTELLIGENCE_SPEC.md`, `CHILD_SAFETY_POLICY.md`, or `IMPLEMENTATION_PLAN.md`. It constrains implementation choices by requiring an explicit reuse check where applicable.
+**Authority:** This is the exhaustive library and reuse decision reference. It
+does not override `PROJECT_REFERENCE.md`, `LEARNING_INTELLIGENCE_SPEC.md`,
+`CHILD_SAFETY_POLICY.md`, or `IMPLEMENTATION_PLAN.md`. The Frontend Skill Pack
+is the task-facing enforcement/checklist layer and must cite this catalog
+rather than duplicate or contradict library status.
 
 ---
 
@@ -69,7 +73,7 @@ For every `EVALUATE BEFORE CUSTOM BUILD` item, the implementing task should reco
 
 ## 4.1 assistant-ui
 
-**Status:** EVALUATE FOR CHAT UI PRIMITIVES; REJECT AS RUNTIME REPLACEMENT — FE-01 decision record
+**Status:** REJECT FOR FE-02; REJECT AS RUNTIME/BACKEND/SESSION/SAFETY/STREAM ARCHITECTURE
 **Area:** Student Tutor conversation UI  
 **Use for:** Thread/message primitives, composer, attachments, persistence adapters, custom backend runtime integration, future speech/feedback hooks.
 
@@ -79,18 +83,19 @@ For every `EVALUATE BEFORE CUSTOM BUILD` item, the implementing task should reco
 - Has explicit runtime/adapters for attachments and persistence.
 - Could reduce custom work for message/thread/composer behavior while FastAPI remains the authority for Tutor runtime, safety, context, and AI execution.
 
-### FE-01 decision and any future fit check
+### Completed FE-02 decision and later reconsideration
 
-`docs/FE-01_VISUAL_SYSTEM_LIBRARY_DECISION.md` rejects assistant-ui as a
-runtime/backend/session replacement: the current local shell owns the accepted
-Student-session and FastAPI/SSE lifecycle, and no custom-runtime proof shows a
-replacement would preserve those boundaries. It permits a bounded evaluation
-of presentation primitives/patterns only, provided the existing client state
-machine remains authoritative. This is not a permanent project-wide ban.
+The completed FE-02 presentation-primitives fit check is REJECT: assistant-ui
+is runtime-bound or requires an adapter/state bridge, neither of which is safe
+as presentation-only use while preserving the accepted FastAPI/SSE,
+server-owned session, terminal-turn, rollback, safety/error, and lifecycle
+privacy contracts. It remains rejected as runtime, backend, session, safety,
+or stream architecture.
 
-### Required proof before any later adoption
+### Later reconsideration only
 
-Validate that it can support:
+Only a separately approved later task with a concrete presentation gap may
+reconsider assistant-ui. It must prove:
 
 - FastAPI/SSE or an adapter around the approved streaming contract,
 - server-owned session/thread persistence,
@@ -101,17 +106,35 @@ Validate that it can support:
 - easy child-specific visual customization,
 - no hidden conflict with Candidate Event metadata or observability.
 
-### Adoption rule
+### FE-02 rule
 
-Use it if it reduces chat plumbing **without owning Tutor logic**. Reject or partially adopt if fitting it to the approved runtime requires more complexity than a local custom shell.
+Do not use assistant-ui in FE-02. Use the local greenfield React/Tailwind/shadcn
+surface and project-owned SSE controller. A later task may reach a different
+decision only after the proof above and explicit Product Owner approval.
 
 ### Product Owner FE-02 Greenfield clarification — 2026-09-02
 
 The current /student page and StudentMathSession are protected experimental/legacy functional shell and behavioral-regression-harness assets. They are evidence for the accepted backend/session/SSE behavior, not a UI implementation base. The new Daily Student App will be a separate greenfield surface at /student/daily and must reuse those backend-facing contracts without importing, wrapping, extracting from, restyling, or modifying the legacy Student UI.
 
-This makes assistant-ui a serious presentation-primitives candidate for a no-commit fit check before FE-02 code begins. The proof must show direct compatibility with the existing FastAPI/SSE protocol, server-owned session authority, terminal-turn and incomplete-stream behavior, safety/error states, lifecycle privacy trace, custom message states, and Arabic/English directionality—without backend/schema changes or a competing runtime lifecycle. It remains rejected as full chat runtime, backend, session, safety, or streaming architecture. A successful fit check can support only a later PARTIAL ADOPT decision and still needs explicit approval before any dependency is added.
+The completed FE-02 fit check rejected assistant-ui presentation primitives:
+its runtime-bound behavior or required adapter/state bridge is not safe as
+presentation-only use. The general later-reconsideration rule above remains,
+but no FE-02 assistant-ui evaluation or adoption is pending.
 
 React, Tailwind, and shadcn/ui are the default available primitives for the greenfield fallback. ThreeUI/Spline remain visual references only. Three.js/React Three Fiber, attachments, image/PDF handling, generated images, video, Artifact Engine, MathLive, JSXGraph, and Konva remain later scoped capabilities, not FE-02 implementation targets.
+
+### FE-CHAT-UI-01 component-first fit-check plan
+
+Evaluate shadcn chat/message components, Vercel AI Elements, 21st.dev chat
+patterns, and VLLNT or comparable shadcn-style sources as presentation-pattern
+sources only. Record ADOPT PATTERN, PARTIAL ADOPT PATTERN, REJECT, or UX
+REFERENCE ONLY for each source.
+
+Reject any candidate that requires Vercel AI SDK/useChat ownership, transport,
+session/persistence ownership, backend/SSE changes, provider coupling, or
+runtime-bound chat state. The retained local implementation path is
+project-owned React/Tailwind/shadcn presentation, project-owned SSE controller,
+and project-owned message/composer/Workspace seam.
 
 **Official references:**  
 https://www.assistant-ui.com/docs/runtimes/custom/overview  
@@ -411,7 +434,7 @@ Use LlamaIndex only if the spike demonstrates lower total complexity without wea
 | Area | Candidate | Status | Codex instruction |
 |---|---|---|---|
 | Base UI | shadcn/ui | **ADOPT BASELINE** | Use as the functional React UI base and customize. |
-| Student chat | assistant-ui | **EVALUATE PRIMITIVES / REJECT RUNTIME REPLACEMENT** | Keep the local state machine. Evaluate only presentation primitives behind a passing FastAPI/SSE compatibility proof. |
+| Student chat | assistant-ui | **REJECT FOR FE-02** | Use the local greenfield state/controller; reconsider only in a later approved task with a concrete presentation gap. |
 | Child motion | Motion Primitives | **RECOMMENDED SOURCE** | Reuse selectively for meaningful interaction polish. |
 | Playful accents | Magic UI | **RECOMMENDED SOURCE** | Use sparingly for child-friendly delight/feedback. |
 | Animated components | React Bits | **RECOMMENDED SOURCE** | Inspect before custom effects; avoid distracting components. |

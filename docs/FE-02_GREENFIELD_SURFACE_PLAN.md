@@ -1,6 +1,8 @@
 # FE-02 — Greenfield Daily Student App Surface Plan
 
-**Status:** Product Owner-approved scope clarification; implementation blocked pending an assistant-ui presentation-primitives fit check and explicit implementation authorization.
+**Status:** Product Owner-approved scope clarification; implementation blocked
+pending Product Owner approval of the first-screen visual brief and explicit
+implementation authorization.
 **Date:** 2026-09-02
 **Recommended route:** /student/daily
 **Product surface:** Learning Chat + Adaptive Learning Workspace
@@ -31,6 +33,68 @@ Learning Chat is the conversational guidance layer: Tutor and Student identity, 
 - **Workspace-ready:** A future approved source may place Chat and Workspace side-by-side on desktop. FE-02 creates the conditional seam only; it must not render a permanent empty panel or fake artifact.
 - **Mobile:** Chat remains primary. Future workspace content can use a stacked or explicit Chat/Workspace state without hiding the stream or producing competing focus targets.
 
+## 3.1 First-screen visual brief — Product Owner approval gate
+
+This one-page brief is the required visual decision for the first 30 seconds of
+the real /student/daily route. FE-02 implementation must not start until the
+Product Owner approves it.
+
+### First 30 seconds
+
+Lina enters a calm daily learning room, not a dashboard. A compact header says
+Lina Learning and gives a small, warm Tutor identity cue; it does not show a
+sidebar, course catalogue, streaks, files, settings, attachment controls, or
+Workspace preview in this slice. The initial screen is a full-width Learning
+Chat with one welcoming sentence that invites a question, attempt, or
+explanation request. It should sound capable and personal, not childish:
+“What would you like to work through today?”
+
+On desktop, the page uses a centered readable chat column with a comfortable
+reading measure, generous vertical rhythm, and quiet outer margins. The header
+is visually secondary to the conversation. There is no navigation/sidebar in
+FE-02; navigation is deferred until a later approved need proves it improves
+daily learning. No Workspace panel appears unless real, separately approved
+Workspace content exists.
+
+Tutor messages sit to the reading-start side in a soft mint/ink surface with a
+small Tutor label and restrained avatar/mark. Lina messages sit opposite in a
+lavender surface, also with a clear label. Bubbles are rounded but not toy-like;
+they use high-contrast body text, short line lengths, and enough spacing to
+make a multi-step explanation easy to scan. All learner-visible text, actions,
+checks, and the composer use dir="auto" or equivalent direction-aware behavior.
+
+The fixed bottom composer is a broad, softly bordered rounded field with a
+visible text label for assistive technology, a clear send action, and enough
+padding for comfortable typing. It has no paperclip, image, microphone, or
+disabled attachment affordance in FE-02: showing one would imply unsupported
+capability. Keyboard focus is obvious but quiet.
+
+The empty state is a small invitation plus one or two server-compatible example
+prompts only if they are already approved product copy; it does not imitate
+suggested attachments or generated media. While a turn streams, the provisional
+Tutor bubble shows a restrained “Tutor is thinking…” indicator, then grows with
+delta text. Only terminal turn content becomes the final message with actions
+or a guided check. An error or incomplete stream removes the provisional Tutor
+bubble, retains Lina’s submitted message, explains that the response did not
+finish, and offers a clear retry without exposing infrastructure details.
+
+On mobile, the header becomes even quieter, the chat fills the viewport, bubbles
+remain readable with safe side margins, and the composer remains reachable above
+the browser edge. A later approved Workspace may become a deliberate Chat /
+Workspace stacked or tabbed mode; it is invisible now. The visual tone is warm,
+intelligent, personal, and visually engaging—not preschool, cartoonish,
+corporate, dashboard-heavy, or visually noisy.
+
+### Visible now versus deferred
+
+| Visible in FE-02 | Structurally prepared but invisible | Deferred |
+| --- | --- | --- |
+| Header, chat-only layout, Tutor/Lina bubbles, composer, empty/thinking/error/safety states, suggested actions and guided checks from terminal turns. | Conditional Workspace boundary and responsive placement rule. | Attachments, images/PDFs, generated images, video, 3D, Artifact Engine, MathLive, JSXGraph, Konva, and navigation/sidebar. |
+
+No permanent empty Workspace or fake Workspace capability appears in the real
+route. A controlled Workspace fixture is allowed only in tests or a clearly
+non-product preview.
+
 ## 4. Route strategy
 
 | Route | Role | Decision |
@@ -55,9 +119,23 @@ These are planning boundaries, not authorization to create files.
 
 The flow stays server-authoritative: authenticated Daily Student App request, existing Tutor endpoint and FastAPI/SSE protocol, existing terminal/lifecycle behavior, then new-route presentation. FE-02 must not add a Tutor payload field, session protocol, safety outcome, or persistence path.
 
-## 6. assistant-ui fit-check gate
+## 6. Named FE-02 contracts
 
-Before code is authorized, run a serious no-commit assistant-ui presentation-primitives fit check. This plan adds no dependency; passing the check does not automatically authorize installation.
+| Contract | Requirement | Verification focus |
+| --- | --- | --- |
+| FE-02-UI-01 | /student/daily must not import, wrap, extract from, restyle, modify, or route through /student or StudentMathSession. | Protected-file diff and daily-route import review. |
+| FE-02-STREAM-01 | Preserve authenticated FastAPI/SSE, provisional delta, terminal turn, and incomplete-stream rollback. | Stream request, terminal-turn, and rollback contracts. |
+| FE-02-DATA-01 | Lifecycle and frontend observability retain no Personal Facts, Tutor content, or learner content. | Privacy-trace regression tests and storage inspection. |
+| FE-02-WORKSPACE-01 | The real route has no permanent empty Workspace or fake capability; fixtures are test/non-product only. | Chat-only route and controlled-fixture review. |
+| FE-02-I18N-01 | Learner-visible messages, actions, checks, and composer input use dir="auto" or equivalent. | Arabic, English, and mixed-direction review. |
+| FE-02-SSE-01 | Do not invent SSE events, payload fields, client-owned session truth, or competing state machines. | Endpoint/event schema and controller review. |
+
+## 7. Library fit-check record
+
+assistant-ui is REJECTED for FE-02 after the no-commit presentation-primitives
+fit check. Its complete Thread is runtime-bound; its alternatives require state
+or transport adaptation that would duplicate protected lifecycle responsibility.
+This plan adds no dependency.
 
 The check passes only if presentation-only use can preserve, without backend/API/SSE/Tutor/Safety/PF-03/session changes:
 
@@ -70,13 +148,23 @@ The check passes only if presentation-only use can preserve, without backend/API
 
 | Option | Decision |
 | --- | --- |
-| assistant-ui presentation primitives | PARTIAL ADOPT only after proof passes and Product Owner approves a dependency. |
+| assistant-ui presentation primitives | REJECT for FE-02; reconsider only in a separately approved later task. |
 | New local React/Tailwind/shadcn surface | Default fallback if proof fails or creates coupling; build presentation locally for /student/daily. |
 | assistant-ui runtime/backend/session architecture | REJECT. |
 
 ThreeUI/Spline remain visual references. Three.js/React Three Fiber remain later isolated lazy-loaded Workspace candidates, never the app architecture, default chat layer, or always-on WebGL.
 
-## 7. Expected later file set
+### FE-CHAT-UI-01 planned component-first fit check
+
+Evaluate shadcn chat/message components, Vercel AI Elements, 21st.dev chat
+patterns, and VLLNT or comparable shadcn-style sources as presentation patterns
+only. Reject any source requiring AI SDK/useChat, transport ownership,
+session/persistence ownership, backend/SSE changes, provider coupling, or
+runtime-bound chat state. The comparison must identify reusable bubble, scroller,
+composer, action-chip, empty/thinking, and Workspace-handoff patterns, plus the
+project-owned code still required for FE-02-STREAM-01 through FE-02-DATA-01.
+
+## 8. Expected later file set
 
 ### Create after implementation authorization
 
@@ -103,7 +191,7 @@ ThreeUI/Spline remain visual references. Three.js/React Three Fiber remain later
 - Package manifests and lockfiles until a separately approved library decision.
 - .acceptance-artifacts.
 
-## 8. Slice after authorization
+## 9. Slice after authorization
 
 Implement:
 
@@ -124,7 +212,7 @@ Defer:
 
 - Attachments, image/PDF handling, generated images, arbitrary HTML/JS rendering, video, 3D, Artifact Engine, MathLive, JSXGraph, Konva, assistant-ui dependency adoption, Three.js/React Three Fiber dependency adoption, and backend/API/SSE schema changes.
 
-## 9. Acceptance criteria
+## 10. Acceptance criteria
 
 1. /student and StudentMathSession are untouched by the FE-02 change set.
 2. /student/daily is a separate greenfield route that does not import, wrap, extract from, or route through legacy Student components.
@@ -135,8 +223,9 @@ Defer:
 7. Arabic/English/mixed-direction behavior and keyboard/accessibility basics are reviewed.
 8. No deferred capability, dependency, or Landing work is included.
 9. The assistant-ui gate result is recorded before adoption or equivalent custom chat infrastructure is complete.
+10. The Product Owner has approved the first-screen visual brief and the implementation satisfies FE-02-UI-01 through FE-02-SSE-01.
 
-## 10. Required verification after implementation
+## 11. Required verification after implementation
 
 1. Existing Student page contract tests.
 2. Existing terminal-turn stream tests.
@@ -152,7 +241,7 @@ Defer:
 
 If a test cannot run, report the exact blocker and keep FE-02 unaccepted. New route tests never replace the legacy /student regression harness.
 
-## 11. Risks and guardrails
+## 12. Risks and guardrails
 
 | Risk | Guardrail |
 | --- | --- |

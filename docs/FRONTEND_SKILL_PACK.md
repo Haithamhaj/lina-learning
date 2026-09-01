@@ -1,10 +1,19 @@
 # Frontend Skill Pack — Lina Personal Learning System
 
-**Status:** Draft for FE-SKILL-02 review; not implementation authorization.
+**Status:** Approved project frontend playbook, updated for FE-02 greenfield
+scope, assistant-ui rejection, named contracts, and the first-screen visual
+brief gate; not implementation authorization.
 **Purpose:** Versioned, project-usable frontend execution guidance before Daily
 Student App or Public Landing work.
 **Authority:** This playbook applies current product and reuse decisions. It does
 not override product, safety, architecture, or project-state authorities.
+
+### Reuse authority split
+
+docs/TECHNOLOGY_REUSE_CATALOG.md is the exhaustive library and reuse decision
+reference. This Skill Pack is the task-facing enforcement and completion-checklist
+layer: it cites the catalog decision for a candidate and must not duplicate,
+silently revise, or contradict that decision.
 
 ## 1. Activation and shared direction
 
@@ -41,14 +50,21 @@ For FE-02, the current /student UI and StudentMathSession are protected experime
 
 Frontend work for that route may reuse approved backend, authenticated session, FastAPI/SSE, Tutor, Safety, and PF-03 contracts. It must not import, wrap, extract from, restyle, modify, or route through StudentMathSession or the current /student page. This clarification supersedes only earlier playbook phrasing that could be read as evolving or reorganizing the local Student shell.
 
-Before FE-02 code begins, perform a serious no-commit assistant-ui presentation-primitives fit check. assistant-ui remains prohibited as a runtime, backend, session, safety, or stream-lifecycle replacement. React, Tailwind, and shadcn/ui remain available baseline primitives for the greenfield surface. ThreeUI/Spline remain visual references; Three.js/React Three Fiber, attachments, image/PDF handling, generated images, video, Artifact Engine, MathLive, JSXGraph, and Konva remain deferred unless separately approved.
+assistant-ui is rejected for FE-02 after its no-commit presentation-primitives
+fit check: it remains prohibited as a runtime, backend, session, safety, or
+stream-lifecycle replacement. React, Tailwind, and shadcn/ui remain available
+baseline primitives for the greenfield surface. Consult the catalog for the
+component-source fit-check decisions before use. ThreeUI/Spline remain visual
+references; Three.js/React Three Fiber, attachments, image/PDF handling,
+generated images, video, Artifact Engine, MathLive, JSXGraph, and Konva remain
+deferred unless separately approved.
 
 ### Shared library boundary
 
-- assistant-ui may be evaluated only in a separately approved, no-commit fit
-  check for presentation primitives. It must not replace the local runtime,
-  FastAPI/SSE protocol, backend, session authority, safety behavior, or
-  lifecycle trace.
+- assistant-ui is REJECTED for FE-02. It may be reconsidered only in a later,
+  separately approved task with a concrete presentation gap; it must never
+  replace runtime, FastAPI/SSE protocol, backend, session authority, safety
+  behavior, or lifecycle trace.
 - ThreeUI and Spline are visual references only.
 - Three.js or React Three Fiber are later candidates only for isolated,
   lazy-loaded Learning Workspace modules with a specific learning need. They
@@ -56,6 +72,14 @@ Before FE-02 code begins, perform a serious no-commit assistant-ui presentation-
 - Motion, JSXGraph, React Konva, MathLive, video players, upload interfaces,
   generated-image presentation, and artifact renderers require their own
   approved capability task. They are not FE-02 dependencies or implied work.
+
+### FE-02 contracts and gates
+
+Before FE-02 code, read the named contracts and first-screen visual brief in
+docs/FE-02_GREENFIELD_SURFACE_PLAN.md. They are mandatory task checks:
+FE-02-UI-01, FE-02-STREAM-01, FE-02-DATA-01, FE-02-WORKSPACE-01,
+FE-02-I18N-01, and FE-02-SSE-01. Implementation is blocked until the Product
+Owner approves the concrete first-screen visual brief.
 
 ## 2. adaptive-learning-product-frontend
 
@@ -237,9 +261,8 @@ checks, or a Chat-to-Workspace handoff.
 - A new route-local custom SSE reader and local React state that preserve the
   existing backend/session/SSE contract, plus neutral shadcn/Tailwind
   presentation components. Do not reuse the local Student shell.
-- A separately approved no-commit assistant-ui fit check limited to
-  presentation primitives, only if the existing state and stream contracts stay
-  authoritative and proof covers custom actions/checks and rollback.
+- No assistant-ui use in FE-02. A later separately approved task may revisit it
+  only for a concrete presentation gap without changing the catalog decision.
 
 ### Prohibited libraries and patterns
 
@@ -275,9 +298,9 @@ product flow supplies the real server contract.
 
 > **Prompt:** “Install assistant-ui now; it will handle streaming and make
 > attachments easy later.”
-> **Response:** Stop. The current SSE/session/safety contract is authoritative.
-> A presentation-only fit check is separate work; future attachments do not
-> authorize a runtime replacement.
+> **Response:** Stop. The completed FE-02 fit check rejected assistant-ui:
+> its runtime-bound/adapted state would threaten the current SSE/session/safety
+> contract. Future attachments do not authorize a runtime replacement.
 
 ## 5. frontend-verification-safety
 
