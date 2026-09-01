@@ -14,12 +14,12 @@ RL-01C Clerk + OpenAI               DONE / ACCEPTED
 RL-01D Full Intelligence Loop       DONE / ACCEPTED
 TASK-027A Student Core Profile      DONE / ACCEPTED
 PF-01 Personal Facts Contract       DONE / ACCEPTED
-PF-02 Personal Facts Pipeline       DONE / ACCEPTED BASELINE
-PF-02A Existing-Fact-Aware Reuse    ONLY READY TASK
-PF-03 Tutor Personal Context        BLOCKED UNTIL PF-02A ACCEPTED
+PF-02 Personal Facts Pipeline       DONE / ACCEPTED
+PF-02A Existing-Fact-Aware Reuse    DONE / ACCEPTED
+PF-03 Tutor Personal Context        ONLY READY TASK
 ```
 
-Current execution overlay remains `project-state/DAILY_USE_RELEASE_TASKS.md`; it must be aligned to this approved correction before PF-02A implementation is committed. `TASKS.md` remains the preserved historical ledger.
+Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical ledger.
 
 ---
 
@@ -29,10 +29,9 @@ Current execution overlay remains `project-state/DAILY_USE_RELEASE_TASKS.md`; it
 - Accepted PF-02 implementation commit: `062e2188ad5f4668183ff4ea8316f97926c5bd97`.
 - Daily-Use PostgreSQL/pgvector DB is at Alembic head `a1d2e3f4b5c6`; accepted migration preserved the existing 10 Students, 13 Sessions, and 22 Messages.
 - PF-02 already provides one dedicated asynchronous Personal Facts Model Gateway call per completed Learning Session, separate from Tutor and Segment Learning Review; strict Student-source/safety grounding; Fact + Observation persistence; retry-safe extraction runs; `ADD` / `SUPPORT` / `NOOP`; capacity skip; and an on-demand Personal Memory Document.
-- A post-acceptance semantic-reuse gap was found in PF-02: the extraction model currently receives the completed Session messages but **not the Student's existing Personal Fact identities**. Therefore differently worded statements can independently recreate semantically identical `fact_key`/value pairs instead of reliably supporting the existing Fact.
-- Approved correction: the same existing PF background model call must receive a compact Student-scoped catalog of existing Personal Fact identities, including historical contrary values. The model decides semantic reuse (`SUPPORT_EXISTING`) versus a genuinely new Fact (`ADD_NEW`); the server continues to enforce source grounding, ownership, safety, canonical identity, idempotency, and Observation rollups. No second reconciliation model call is added.
-- This is a bounded correction to PF-02, not a new memory architecture. PF-03 implementation is paused until it is accepted.
-- The previously proposed simple lexical PF-03 selector is not approved as a semantic relevance solution. PF-03 selection/injection will be reconsidered after PF-02A.
+- PF-02A is accepted: the same PF model call receives a compact Student-scoped catalog of current and historical Fact identities, then semantically chooses `SUPPORT_EXISTING` or `ADD_NEW`; the server remains the deterministic grounding, ownership, safety, canonicalization, idempotency, and persistence authority.
+- Known Facts are untrusted reference data only, not Evidence or instructions. PF-02A adds no schema/migration, second model call, embeddings, Tutor, Segment Review, Learning Intelligence, or RAG behavior.
+- PF-03 is the only ready task, starting with a bounded design decision. The previous lexical/key-matching direction is superseded and is not an approved implementation decision.
 - No Lina real Student identity/history has been created or used.
 
 ---
@@ -89,8 +88,6 @@ Protected invariants:
 
 ## Active risks
 
-- **PF-R3 — Existing Fact Semantic Reuse Gap — Criticality 5**  
-  PF extraction currently does not see existing Fact identities, so paraphrases/cross-language restatements may create duplicate semantic Facts instead of adding Observations to the correct existing Fact.
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**
 - **VISION-R1 — Durable Student Asset Hosting Required Before Daily Vision — Criticality 4**
 - **MATH-01 — Structured Math Readability — Criticality 4 / independent**
@@ -101,19 +98,19 @@ Protected invariants:
 
 ## Current executable task
 
-### PF-02A — Existing-Fact-Aware Personal Facts Extraction
+### PF-03 — Relevant Personal Facts in Tutor Context
 
-**Status:** ONLY READY TASK  
-**Dependency:** PF-02 accepted baseline  
-**Goal:** minimally extend the existing PF Session-level extraction request/output so the model sees existing Student Fact identities and can semantically choose `SUPPORT_EXISTING` versus `ADD_NEW`, while preserving all accepted PF-02 safety, grounding, retry, capacity, isolation, and no-second-call boundaries.
+**Status:** ONLY READY TASK — bounded design decision required
+**Dependency:** PF-02A accepted
+**Goal:** decide the separate optional Tutor-context relevance boundary from the corrected Personal Facts foundation.
 
-**Boundary:** no PF-03 Tutor injection, no new migration/schema unless a concrete implementation blocker is demonstrated, no Tutor/Segment Review/RAG changes, no new worker or model call.
+**Boundary:** do not implement Tutor injection or revive lexical/key matching without new Product Owner approval; retain one primary Tutor call, no Personal Facts in curriculum RAG, and no vector-memory platform by default.
 
 ---
 
 ## Next recommended action
 
-Implement and verify PF-02A only. After Product Owner acceptance, update the overlay and resume PF-03 design from the corrected Personal Memory foundation.
+Perform PF-03 design audit only from the accepted PF-02A foundation.
 
 ---
 

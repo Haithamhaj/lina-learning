@@ -183,7 +183,7 @@ def create_personal_facts_gateway(
         )
 
     safe_empty_provider = local_provider or StaticModelProvider(
-        ModelResult(output={"version": "personal-facts-extraction-v1", "candidates": []})
+        ModelResult(output={"version": "personal-facts-extraction-v2", "candidates": []})
     )
     return ModelGateway(
         session,

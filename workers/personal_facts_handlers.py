@@ -22,7 +22,7 @@ from services.personal_facts.extraction import (
 )
 from services.personal_facts.reconciliation import reconcile_candidates
 from services.platform.config import Settings, get_settings
-from services.platform.db.models import Job, LearningMessage, LearningSession, ModelTask, PersonalFactExtractionRun
+from services.platform.db.models import Job, LearningMessage, LearningSession, ModelTask, PersonalFact, PersonalFactExtractionRun
 
 if TYPE_CHECKING:
     from workers.job_worker import JobHandlerRegistry
@@ -85,6 +85,11 @@ def register_personal_facts_handlers(
                 .where(LearningMessage.session_id == session_id)
                 .order_by(LearningMessage.created_at, LearningMessage.id)
             ))
+            known_facts = list(session.scalars(
+                select(PersonalFact)
+                .where(PersonalFact.student_id == student_id)
+                .order_by(PersonalFact.category, PersonalFact.fact_key, PersonalFact.value, PersonalFact.id)
+            ))
             if not any(message.role == "student" for message in messages):
                 run.status = "COMPLETED"
                 run.completed_at = datetime.now(UTC)
@@ -92,9 +97,13 @@ def register_personal_facts_handlers(
                 session.commit()
                 return {"session_id": str(session_id), "outcome": "NO_STUDENT_MESSAGES", "candidate_count": 0}
 
-            request = extraction_request(messages, learning_session=learning_session)
-            # Capacity is the fully serialized Student source payload, not a
-            # token estimate and never an invitation to truncate or chunk it.
+            request = extraction_request(
+                messages,
+                learning_session=learning_session,
+                known_facts=known_facts,
+            )
+            # Capacity is the fully serialized known-Fact plus Student-source
+            # payload, never an invitation to truncate or chunk either side.
             if len(str(request["input"])) > configured.personal_facts_context_capacity:
                 run.status = "SKIPPED_CAPACITY"
                 run.completed_at = datetime.now(UTC)
@@ -123,6 +132,7 @@ def register_personal_facts_handlers(
                     student_id=student_id,
                     learning_session=learning_session,
                     envelope=envelope,
+                    known_facts=known_facts,
                 )
                 reconciliation = reconcile_candidates(
                     session,

@@ -8,7 +8,12 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from services.personal_facts.extraction import PersonalFactCandidate, normalize_assertion
+from services.personal_facts.extraction import (
+    AddNewPersonalFactCandidate,
+    PersonalFactsExtractionCandidate,
+    SupportExistingFactCandidate,
+    normalize_assertion,
+)
 from services.platform.db.models import LearningMessage, LearningSession, PersonalFact, PersonalFactObservation
 
 
@@ -17,7 +22,7 @@ def reconcile_candidates(
     *,
     student_id: UUID,
     learning_session: LearningSession,
-    candidates: list[PersonalFactCandidate],
+    candidates: list[PersonalFactsExtractionCandidate],
 ) -> dict[str, int]:
     """Append source observations; never overwrite a contrary historical value."""
 
@@ -32,22 +37,14 @@ def reconcile_candidates(
         )
     }
     for candidate in candidates:
-        fact = session.execute(
-            select(PersonalFact)
-            .where(
-                PersonalFact.student_id == student_id,
-                PersonalFact.category == candidate.category,
-                PersonalFact.fact_key == candidate.fact_key,
-                PersonalFact.value == candidate.value,
-            )
-            .with_for_update()
-        ).scalar_one_or_none()
+        fact = _existing_fact(session, student_id=student_id, candidate=candidate)
         new_fact = fact is None
         for assertion in candidate.supporting_assertions:
             source = sources.get(assertion.source_message_id)
             if source is None:
                 continue
             if fact is None:
+                assert isinstance(candidate, AddNewPersonalFactCandidate)
                 fact = PersonalFact(
                     student_id=student_id,
                     category=candidate.category,
@@ -83,6 +80,26 @@ def reconcile_candidates(
             new_fact = False
     session.flush()
     return dict(results)
+
+
+def _existing_fact(
+    session: Session,
+    *,
+    student_id: UUID,
+    candidate: PersonalFactsExtractionCandidate,
+) -> PersonalFact | None:
+    """Resolve a validated known ID or the exact ADD_NEW identity under a row lock."""
+
+    statement = select(PersonalFact).where(PersonalFact.student_id == student_id)
+    if isinstance(candidate, SupportExistingFactCandidate):
+        statement = statement.where(PersonalFact.id == candidate.existing_fact_id)
+    else:
+        statement = statement.where(
+            PersonalFact.category == candidate.category,
+            PersonalFact.fact_key == candidate.fact_key,
+            PersonalFact.value == candidate.value,
+        )
+    return session.execute(statement.with_for_update()).scalar_one_or_none()
 
 
 def _rebuild_rollup(session: Session, fact: PersonalFact) -> None:

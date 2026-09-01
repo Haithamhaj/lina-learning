@@ -17,6 +17,7 @@ RL-01A Accepted Runtime Alignment — DONE / ACCEPTED
 → TASK-027A Student Core Profile — DONE / ACCEPTED
 → PF-01 Personal Facts Contract — DONE / ACCEPTED
 → PF-02 Personal Facts Extraction/Reconciliation — DONE / ACCEPTED
+→ PF-02A Existing-Fact-Aware Personal Facts Extraction — DONE / ACCEPTED
 → PF-03 Relevant Facts in Tutor Context — ONLY READY TASK
 → FE-01 Lina Visual System & Reuse Decision — BLOCKED
 → FE-02 Daily Student Experience — BLOCKED
@@ -198,22 +199,13 @@ Personal Facts never become Learning Evidence merely because they exist.
 - Student A Facts can never be selected/reconciled/displayed for Student B;
 - Fact counts/current state remain reconstructable from source-linked observations/history.
 
-### Release-1 retrieval direction for PF-03
+### PF-03 direction — SUPERSEDED / REQUIRES NEW PF-03 DESIGN
 
 Personal Facts are optional Tutor assistance, not a teaching dependency.
 
 Do **not** add a vector-memory platform and do **not** mix Personal Facts into curriculum RAG.
 
-Preferred PF-03 direction:
-- Student-scoped PostgreSQL indexes;
-- derive/select the current Fact per `fact_key` by latest explicit observation;
-- deterministic cheap lexical/key relevance against the current question;
-- bounded small result set/character budget;
-- recency and count may order already-relevant candidates;
-- if no clearly relevant Personal Fact exists, inject none;
-- no extra normal-turn model call.
-
-Vector/embedding retrieval may be reconsidered only if real Personal Fact volume or measured recall needs later justify it.
+The previous deterministic lexical/key-matching direction is superseded and is **not** an approved semantic-relevance implementation decision. PF-03 requires a new bounded design decision before implementation. Retain the protected constraints: Student scoping, latest-explicit current-state semantics, bounded optional context, no extra normal-turn model call, and no vector-memory platform by default.
 
 ### PF-02 handoff direction
 
@@ -265,11 +257,21 @@ PF-01 does **not** implement:
 
 ---
 
+## PF-02A — Existing-Fact-Aware Personal Facts Extraction
+
+**Status:** DONE / ACCEPTED
+**Dependencies:** PF-02 accepted
+**Purpose:** Extend the existing single completed-Session Personal Facts model request with a compact, Student-scoped catalog of all known Fact identities, including historical contrary values. The same call chooses `SUPPORT_EXISTING` for a supplied Fact ID or `ADD_NEW` for a genuinely new canonical identity; server validation and deterministic Observation reconciliation remain authoritative. No new model call, schema, Worker architecture, Tutor, Segment Review, Learning Intelligence, or RAG behavior is added.
+
+**Accepted result:** the existing PF model call receives all target-Student Fact identities, including historical contrary values, and semantically chooses `SUPPORT_EXISTING` versus `ADD_NEW`. The server deterministically validates grounding, ownership, safety, canonical structure, and idempotent persistence. Known Facts are untrusted reference data only; there is no extra model call, embedding/vector matching, schema/migration change, or cross-Student leakage.
+
+---
+
 ## PF-03 — Relevant Personal Facts in Tutor Context
 
 **Status:** ONLY READY TASK
-**Dependencies:** PF-02 accepted  
-**Purpose:** Cheap deterministic relevance-bounded Personal Facts as a separate optional Tutor input beside Conversation Context, Student Core Context, Learner Intelligence, optional curriculum RAG, and Safety. Use PostgreSQL indexes/simple relevance first; no vector-memory platform unless later measured need justifies it. Preserve one primary Tutor call.
+**Dependencies:** PF-02A accepted
+**Purpose:** A new bounded design decision for optional Personal Facts Tutor context beside Conversation Context, Student Core Context, Learner Intelligence, optional curriculum RAG, and Safety. The prior lexical/key-matching direction is superseded and must not be implemented without separate approval. Preserve one primary Tutor call and do not add a vector-memory platform by default.
 
 ---
 
