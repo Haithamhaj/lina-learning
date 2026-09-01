@@ -19,7 +19,7 @@ RL-01A Accepted Runtime Alignment — DONE / ACCEPTED
 → PF-02 Personal Facts Extraction/Reconciliation — DONE / ACCEPTED
 → PF-02A Existing-Fact-Aware Personal Facts Extraction — DONE / ACCEPTED
 → PF-03 Relevant Facts in Tutor Context — ACCEPTED / COMPLETED
-→ FE-01 Visual System + Library Capability + Reuse Decision Record — IN REVIEW / DOCUMENTATION ONLY
+→ FE-01 Visual System + Library Capability + Reuse Decision Record — ACCEPTED / COMPLETED
 → FE-02 Daily Student Experience — BLOCKED
 → TASK-032 Voice / STT — BLOCKED
 → TASK-033 Vision / Student Work — BLOCKED
@@ -280,7 +280,7 @@ PF-01 does **not** implement:
 # Lina Frontend — Daily-Use Launch UX
 
 ## FE-01 — Visual System + Library Capability + Reuse Decision Record
-**Status:** IN REVIEW / DOCUMENTATION ONLY
+**Status:** ACCEPTED / COMPLETED — DOCUMENTATION ONLY
 **Dependencies:** PF-03 accepted
 
 **Scope:** Code-grounded documentation only. Define Learning Chat + Adaptive
@@ -292,10 +292,12 @@ or deployment implementation is in scope.
 
 **Decision record:** `docs/FE-01_VISUAL_SYSTEM_LIBRARY_DECISION.md`.
 
-**Acceptance:** Product Owner review must confirm the visual direction,
-candidate decisions, FE-02 capability map, shadcn/Tailwind baseline, and
-architecture boundaries. FE-01 does not become accepted, and FE-02 does not
-become eligible, until that review is recorded.
+**Acceptance:** Product Owner accepted documentation commit
+`8601ed5f485ff29fdb467db7abfb8f7ad44711b0`. Scope: Visual System + Library
+Capability + Learning Chat + Adaptive Learning Workspace for learners roughly
+10–18, with Lina as the first private daily-use Student. This task changed no
+UI code, dependencies, tests, runtime behavior, or PF-03 behavior. FE-02
+remains BLOCKED / NOT STARTED until explicitly authorized.
 
 ## FE-02 — Daily Student Experience
 **Status:** BLOCKED  

@@ -17,7 +17,7 @@ PF-01 Personal Facts Contract       DONE / ACCEPTED
 PF-02 Personal Facts Pipeline       DONE / ACCEPTED
 PF-02A Existing-Fact-Aware Reuse    DONE / ACCEPTED
 PF-03 Tutor Personal Context        ACCEPTED / COMPLETED
-FE-01 Visual System + Reuse Record  IN REVIEW / DOCUMENTATION ONLY
+FE-01 Visual System + Reuse Record  ACCEPTED / COMPLETED
 ```
 
 Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical ledger.
@@ -34,14 +34,16 @@ Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.
 - Known Facts are untrusted reference data only, not Evidence or instructions. PF-02A adds no schema/migration, second model call, embeddings, Tutor, Segment Review, Learning Intelligence, or RAG behavior.
 - PF-03 is accepted/completed: commit `6436b358ff42425fd729af316cb9525e6511f534` adds a read-only full current Personal Memory Card to the existing Tutor context, with no pre-Tutor relevance selection, extra model call, embedding call, job, or schema change. PF-03 `7 passed`, protected regression `182 passed`, and diff/show checks passed; it is pushed to `origin/codex/ctx-03`. No FE-01 work was performed.
 - No Lina real Student identity/history has been created or used.
-- FE-01 has a documentation-only proposed decision record at
-  `docs/FE-01_VISUAL_SYSTEM_LIBRARY_DECISION.md`. It directs FE-02 to evolve
-  the local shell into Learning Chat + Adaptive Learning Workspace,
-  conditionally evaluates assistant-ui presentation primitives while rejecting
-  it as a runtime replacement, treats ThreeUI/Spline as visual reference only,
-  and leaves a future isolated/lazy 3D Workspace-module path without adopting
-  Three.js as app architecture. No UI code, dependency, or Tutor/Personal
-  Facts behavior changed.
+- FE-01 is ACCEPTED / COMPLETED as documentation-only work at
+  `8601ed5f485ff29fdb467db7abfb8f7ad44711b0`: Visual System + Library
+  Capability + Learning Chat + Adaptive Learning Workspace for learners roughly
+  10–18, with Lina as the first private daily-use Student. It directs FE-02 to
+  evolve the local shell, conditionally evaluates assistant-ui presentation
+  primitives while rejecting runtime replacement, treats ThreeUI/Spline as
+  visual reference only, and leaves a future isolated/lazy 3D Workspace-module
+  path without adopting Three.js as app architecture. No UI code, dependencies,
+  tests, runtime behavior, or PF-03 behavior changed. FE-02 is BLOCKED / NOT
+  STARTED until explicitly authorized.
 
 ---
 
@@ -105,14 +107,20 @@ Protected invariants:
 
 ---
 
-## Current executable task
+## Latest completed task
 
 ### FE-01 — Visual System + Library Capability + Reuse Decision Record
 
-**Status:** IN REVIEW / DOCUMENTATION ONLY
+**Status:** ACCEPTED / COMPLETED — DOCUMENTATION ONLY
 **Dependency:** PF-03 accepted
-**Goal:** establish the code-grounded visual-system, library-capability, and
-reuse record that constrains FE-02 without implementing UI.
+**Goal:** establish the code-grounded Visual System + Library Capability +
+Learning Chat + Adaptive Learning Workspace record that constrains FE-02
+without implementing UI.
+
+**Acceptance:** Documentation commit
+`8601ed5f485ff29fdb467db7abfb8f7ad44711b0` accepted for learners roughly
+10–18, with Lina as the first private daily-use Student. No UI code,
+dependencies, tests, runtime behavior, or PF-03 behavior changed.
 
 **Boundary:** preserve the local Student session/SSE lifecycle, shadcn/Tailwind
 baseline, safety, Tutor, Personal Facts/PF-03, and all backend authorities. No
@@ -122,8 +130,8 @@ UI code, dependencies, Voice, Vision, attachments, artifacts, or FE-02 work.
 
 ## Next recommended action
 
-Review and accept the FE-01 documentation record. Only then update FE-01 to
-accepted and promote FE-02 separately; do not begin FE-02 in this task.
+FE-01 acceptance is recorded. FE-02 remains BLOCKED / NOT STARTED and must not
+begin without separate explicit authorization.
 
 ---
 
