@@ -10,7 +10,8 @@ Execute the Product Owner-approved **Daily-Use Lina Release 1** sequence one tas
 - `RL-01C — Clerk + OpenAI Operational Verification` — **DONE / ACCEPTED**
 - `RL-01D — Controlled Full Intelligence Loop` — **DONE / ACCEPTED**
 - `TASK-027A — Student Core Profile & Tutor Student Context` — **DONE / ACCEPTED**
-- `PF-01 — Personal Facts Contract` — **ONLY READY TASK / CONTRACT REVISION IN REVIEW**
+- `PF-01 — Personal Facts Contract` — **DONE / ACCEPTED**
+- `PF-02 — Personal Facts Extraction/Reconciliation` — **ONLY READY TASK**
 
 Current execution overlay: `project-state/DAILY_USE_RELEASE_TASKS.md`.  
 `TASKS.md` remains the preserved historical ledger.
@@ -27,7 +28,8 @@ Current execution overlay: `project-state/DAILY_USE_RELEASE_TASKS.md`.
 - GradePeriod lifecycle is accepted: a scheduled future Grade does not blank today's Grade; the current effective period remains valid through the day before the transition, and conflicting active overlaps are rejected rather than arbitrarily selected.
 - Daily-Use Alembic head is `f9b1c2d3e4f5`.
 - Student Core Profile remains Parent/System-authoritative and separate from Student-asserted Personal Facts and learning-derived Learner Intelligence.
-- Personal Facts are **not implemented yet**. `PF-01` is currently being revised to the Product Owner-approved simple memory model: durable explicit Student Fact + source-linked Observation history/count. Extraction/reconciliation begins in `PF-02`; Tutor-context use begins in `PF-03`.
+- `PF-01` is accepted as `docs/PERSONAL_FACTS_SPEC.md`: durable explicit Student Fact + source-linked Observation history/count, latest-explicit-current read semantics, retained historical contrary values, and one derived Personal Memory Document per Student. Personal Facts remain unimplemented.
+- `PF-02` is the only ready task: one dedicated asynchronous Model Gateway call per completed Learning Session, separate from Tutor teaching and Segment Learning Review; Student-source grounding; deterministic `ADD` / `SUPPORT` / `NOOP`; and deterministic Personal Memory Document refresh. It must never write Learning Events, Evidence, Current State, or Patterns.
 - The generic `Haithamhaj/personalization` repo and the earlier Customer Intelligence Card were reviewed for reusable ideas. We reuse the principles of facts, evidence/counts, recency, and separate memory/card projections; we do not import its event-sourcing, Redis/BullMQ, graph, vector-memory, replay, or multi-tenant architecture into Lina Release 1.
 - No Lina real Student identity/history has been created or used. Lina's clean longitudinal baseline remains Student-scoped and unstarted.
 
@@ -54,6 +56,7 @@ Current execution overlay: `project-state/DAILY_USE_RELEASE_TASKS.md`.
 17. Initial Voice is Audio → STT → transcript → normal Tutor; raw audio is not retained after successful STT.
 18. AI capabilities remain behind Model Gateway; OpenAI is an operational provider, not permanent architecture.
 19. Replit is a candidate private host after local proof, not product architecture.
+20. Personal Facts extraction is not Tutor output, Segment Review output, or a semantic Session Learning Intelligence summarizer. It is an independent asynchronous Session-level task; its failure does not block Learning Intelligence, and Learning Intelligence failure does not block it.
 
 ---
 
@@ -83,6 +86,7 @@ Protected invariants:
 - Personal Facts never become Learning Evidence merely because they exist.
 - Personal Facts store explicit factual assertions/context, not personality or psychological interpretation.
 - Personal Facts retrieval must not become a second RAG/memory platform by default.
+- Personal Facts extraction must remain separate from Tutor and Segment Review semantics.
 - no second learner-memory system;
 - cross-Student isolation across conversation, assets, Personal Facts, Learning Intelligence, and authorization;
 - no Redis/Celery, graph database, microservice split, or generic memory framework without demonstrated need.
@@ -90,9 +94,6 @@ Protected invariants:
 ---
 
 ## Active risks
-
-- **PF-R2 — Personal Facts Contract Revision Not Yet Accepted — Criticality 5**  
-  The simplified Fact + Observation model is Product Owner-approved in direction, but PF-01 still needs one clean final contract proposal before PF-02 implementation can begin.
 
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**
 - **VISION-R1 — Durable Student Asset Hosting Required Before Daily Vision — Criticality 4**
@@ -104,33 +105,21 @@ Protected invariants:
 
 ## Current executable task
 
-### PF-01 — Personal Facts Contract
+### PF-02 — Personal Facts Extraction/Reconciliation
 
-**Status:** READY / REVISE CONTRACT ONLY  
+**Status:** READY
 **Authority:** `project-state/DAILY_USE_RELEASE_TASKS.md`  
-**Dependency:** TASK-027A **DONE / ACCEPTED**
+**Dependency:** PF-01 **DONE / ACCEPTED**
 
-**Goal:** finalize the simple durable Student-scoped contract for explicit safe factual context the Student tells the system about herself/her ordinary world, without implementing extraction or Tutor use yet.
+**Goal:** implement the accepted `docs/PERSONAL_FACTS_SPEC.md` contract only: dedicated asynchronous completed-Session Personal Facts extraction, Student-source grounding, deterministic `ADD` / `SUPPORT` / `NOOP`, and deterministic Personal Memory Document refresh. Keep it separate from Tutor and Segment Review, with no second reconciliation model call.
 
-Required contract areas now are:
-- durable explicit Fact vs conversation-only vs prohibited/sensitive statement;
-- controlled category + stable `fact_key` + normalized value representation;
-- source-linked Observation history;
-- support count + first/last observed timestamps;
-- different values for one `fact_key` preserved as history, with latest explicit Fact determining current state at read time;
-- no future/agenda event storage;
-- Parent inspection;
-- strict separation from Core Profile, Safety, curriculum RAG, Conversation Context, and Learner Intelligence;
-- cross-Student isolation;
-- cheap optional PF-03 retrieval direction using PostgreSQL indexes and deterministic bounded relevance rather than vector Personal Facts retrieval.
-
-**Boundary:** PF-01 does **not** implement database models/migration, model extraction, Worker reconciliation, Tutor-context selection, Parent Insights, frontend memory UI, or a second memory platform. Do not start `PF-02` in the same run.
+**Boundary:** Do not start PF-03, Tutor-context injection, vector retrieval, Parent Insights, or unrelated product work in this task.
 
 ---
 
 ## Next recommended action
 
-Have Codex revise the PF-01 contract proposal to the approved simplified model and remove the supersession/invalidation/temporal-event complexity. Review that final contract once, then either accept PF-01 and promote PF-02 or correct only any remaining concrete contract gap.
+Execute PF-02 against the accepted Personal Facts contract, preserving the protected separation from Tutor and Learning Intelligence.
 
 ---
 

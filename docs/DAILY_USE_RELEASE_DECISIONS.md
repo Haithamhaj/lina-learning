@@ -29,3 +29,4 @@
 22. AI capabilities continue behind Model Gateway; OpenAI is a current operational provider, not permanent product architecture.
 23. Replit may be used as a private daily-use environment after fit/proof; it is not architecture and the old Phase-0 app is not the source baseline.
 24. Daily-Use Release 1 executes one task at a time according to `project-state/DAILY_USE_RELEASE_TASKS.md`.
+25. Personal Facts extraction is separate from both Tutor teaching and Segment Learning Review. PF-02 uses one dedicated asynchronous Model Gateway call per completed Learning Session, grounded in Student-authored source messages, followed by deterministic `ADD` / `SUPPORT` / `NOOP` reconciliation and Personal Memory Document refresh. It is not a semantic Session Learning Intelligence summarizer and does not write Learning Events, Evidence, State, or Patterns.

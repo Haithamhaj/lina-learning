@@ -15,8 +15,8 @@ RL-01A Accepted Runtime Alignment — DONE / ACCEPTED
 → RL-01C Clerk + OpenAI Operational Verification — DONE / ACCEPTED
 → RL-01D Controlled Full Intelligence Loop — DONE / ACCEPTED
 → TASK-027A Student Core Profile — DONE / ACCEPTED
-→ PF-01 Personal Facts Contract — READY
-→ PF-02 Personal Facts Extraction/Reconciliation — BLOCKED
+→ PF-01 Personal Facts Contract — DONE / ACCEPTED
+→ PF-02 Personal Facts Extraction/Reconciliation — READY
 → PF-03 Relevant Facts in Tutor Context — BLOCKED
 → FE-01 Lina Visual System & Reuse Decision — BLOCKED
 → FE-02 Daily Student Experience — BLOCKED
@@ -80,10 +80,10 @@ Post-launch work is not a Release-1 blocker: measured RAG evaluation, selected r
 
 ## PF-01 — Personal Facts Contract
 
-**Status:** READY  
+**Status:** DONE / ACCEPTED
 **Dependencies:** TASK-027A accepted
 
-**Purpose:** Define the simple, durable Student-scoped contract for explicit factual context the Student tells the system about herself/her ordinary world. PF-01 is the semantic/data boundary for personal memory, not extraction or Tutor use yet.
+**Accepted contract:** `docs/PERSONAL_FACTS_SPEC.md`.
 
 ### Approved source authority
 
@@ -251,15 +251,15 @@ PF-01 does **not** implement:
 - graph/Graphiti or generic memory frameworks;
 - PF-02 or PF-03.
 
-**Stop condition:** Stop after the revised Personal Facts contract/design is produced for Product Owner review. Do not start PF-02.
+**Completion:** Product Owner accepted the concise Release-1 Fact + Observation History contract, including latest-explicit-current read semantics, child privacy exclusions, a derived Personal Memory Document, and the separate PF-02 Session-level extraction boundary.
 
 ---
 
 ## PF-02 — Personal Facts Extraction & Reconciliation
 
-**Status:** BLOCKED  
+**Status:** READY
 **Dependencies:** PF-01 accepted  
-**Purpose:** Async Worker + Model Gateway extraction of explicit safe Personal Facts, normalized to `fact_key` + value, then simple Student-scoped reconciliation using `ADD / SUPPORT / NOOP`; a different explicit value for the same key is added as a new historical Fact rather than overwriting older history. No extra normal Tutor-turn call.
+**Purpose:** One dedicated asynchronous Personal Facts Model Gateway call per completed Learning Session, separate from Tutor teaching and Segment Learning Review. Candidates must cite Student-authored source messages; deterministic reconciliation performs only `ADD` / `SUPPORT` / `NOOP`, with no second reconciliation model call. Refresh the derived Personal Memory Document deterministically after reconciliation. This path does not write Learning Events, Evidence, Current State, or Patterns.
 
 ---
 
