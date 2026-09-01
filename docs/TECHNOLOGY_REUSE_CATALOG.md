@@ -105,6 +105,14 @@ Validate that it can support:
 
 Use it if it reduces chat plumbing **without owning Tutor logic**. Reject or partially adopt if fitting it to the approved runtime requires more complexity than a local custom shell.
 
+### Product Owner FE-02 Greenfield clarification — 2026-09-02
+
+The current /student page and StudentMathSession are protected experimental/legacy functional shell and behavioral-regression-harness assets. They are evidence for the accepted backend/session/SSE behavior, not a UI implementation base. The new Daily Student App will be a separate greenfield surface at /student/daily and must reuse those backend-facing contracts without importing, wrapping, extracting from, restyling, or modifying the legacy Student UI.
+
+This makes assistant-ui a serious presentation-primitives candidate for a no-commit fit check before FE-02 code begins. The proof must show direct compatibility with the existing FastAPI/SSE protocol, server-owned session authority, terminal-turn and incomplete-stream behavior, safety/error states, lifecycle privacy trace, custom message states, and Arabic/English directionality—without backend/schema changes or a competing runtime lifecycle. It remains rejected as full chat runtime, backend, session, safety, or streaming architecture. A successful fit check can support only a later PARTIAL ADOPT decision and still needs explicit approval before any dependency is added.
+
+React, Tailwind, and shadcn/ui are the default available primitives for the greenfield fallback. ThreeUI/Spline remain visual references only. Three.js/React Three Fiber, attachments, image/PDF handling, generated images, video, Artifact Engine, MathLive, JSXGraph, and Konva remain later scoped capabilities, not FE-02 implementation targets.
+
 **Official references:**  
 https://www.assistant-ui.com/docs/runtimes/custom/overview  
 https://www.assistant-ui.com/docs/guides/attachments
@@ -237,7 +245,7 @@ The AI should describe **what educational representation is needed**. Reusable r
 
 ### FE-02 scope boundary
 
-FE-02 may use native React/SVG only for simple, safe, non-blocking visual seams, Workspace layout structure, and lightweight visual explanations. Motion, JSXGraph, React Konva, and MathLive remain catalog-approved candidates for later scoped capability tasks; they are not FE-02 dependencies or implementation targets unless separately approved. FE-02 must not start an Artifact Engine, graphing runtime, canvas runtime, MathLive integration, generated HTML/JavaScript renderer, video runtime, attachment pipeline, or 3D runtime.
+FE-02 may use native React/SVG only for simple, safe, non-blocking visual seams, Workspace layout structure, and lightweight visual explanations. Motion, JSXGraph, React Konva, and MathLive are catalog-approved candidates for later scoped learning-artifact tasks, not FE-02 greenfield-shell dependencies or implementation targets unless separately approved. FE-02 must not start an Artifact Engine, graphing runtime, canvas runtime, MathLive integration, generated HTML/JavaScript renderer, video runtime, attachment pipeline, or 3D runtime.
 
 ## 7.1 Native React + SVG
 

@@ -303,6 +303,12 @@ remains BLOCKED / NOT STARTED until explicitly authorized.
 **Status:** BLOCKED  
 **Dependencies:** FE-01 accepted
 
+**2026-09-02 Product Owner scope clarification:** The existing /student page and StudentMathSession are protected experimental/legacy functional shell and behavioral regression-harness assets. FE-02 is no longer an evolution of that UI. The Daily Student App must be a separate greenfield surface at /student/daily, reusing accepted backend/session/SSE/Tutor/Safety/PF-03 contracts rather than the existing UI implementation. Do not import, wrap, extract from, restyle, modify, or route through the legacy Student components.
+
+**Pre-code gate:** Complete a serious, no-commit assistant-ui presentation-primitives fit check before FE-02 code starts. It may evaluate presentation-only use against the preserved FastAPI/SSE and server-owned session contract; it cannot authorize a runtime/backend/session/safety/stream-lifecycle replacement or a dependency addition. If it fails, use a new local React/Tailwind/shadcn surface, not the legacy UI.
+
+**Deferred by this task:** Three.js/React Three Fiber, attachments, image/PDF handling, generated images, video, Artifact Engine, MathLive, JSXGraph, Konva, and all backend/API/SSE schema changes remain out of scope unless separately approved.
+
 ---
 
 # Multimodal Launch Capabilities

@@ -35,6 +35,14 @@ dependency, or authorize work outside the approved task scope.
 - Existing stream, safety, session, and Tutor behavior are protected
   implementation contracts, not visual implementation details.
 
+### Product Owner FE-02 Greenfield Scope Clarification — 2026-09-02
+
+For FE-02, the current /student UI and StudentMathSession are protected experimental/legacy functional shell and behavioral-regression-harness assets. They are reference evidence, not implementation material. The real Daily Student App must be built as a separate greenfield surface at /student/daily.
+
+Frontend work for that route may reuse approved backend, authenticated session, FastAPI/SSE, Tutor, Safety, and PF-03 contracts. It must not import, wrap, extract from, restyle, modify, or route through StudentMathSession or the current /student page. This clarification supersedes only earlier playbook phrasing that could be read as evolving or reorganizing the local Student shell.
+
+Before FE-02 code begins, perform a serious no-commit assistant-ui presentation-primitives fit check. assistant-ui remains prohibited as a runtime, backend, session, safety, or stream-lifecycle replacement. React, Tailwind, and shadcn/ui remain available baseline primitives for the greenfield surface. ThreeUI/Spline remain visual references; Three.js/React Three Fiber, attachments, image/PDF handling, generated images, video, Artifact Engine, MathLive, JSXGraph, and Konva remain deferred unless separately approved.
+
 ### Shared library boundary
 
 - assistant-ui may be evaluated only in a separately approved, no-commit fit
@@ -79,8 +87,9 @@ seam. Use it for Landing work only to preserve the separation between surfaces.
 
 ### Allowed libraries and patterns
 
-- Existing local React, Tailwind, shadcn/ui primitives, and the local Student
-  shell.
+- Existing neutral React, Tailwind, and shadcn/ui primitives, plus approved
+  backend/session/SSE contract utilities. The local Student shell is reference
+  evidence and a regression harness, not implementation material.
 - Native React/SVG only for simple, safe, non-blocking visual seams, layout
   structure, and lightweight visual explanations within an approved task.
 - Local composition with an optional Workspace slot or equivalent typed
@@ -225,8 +234,9 @@ checks, or a Chat-to-Workspace handoff.
 
 ### Allowed libraries and patterns
 
-- The existing local Student shell, custom SSE reader, local React state, and
-  shadcn/Tailwind presentation components.
+- A new route-local custom SSE reader and local React state that preserve the
+  existing backend/session/SSE contract, plus neutral shadcn/Tailwind
+  presentation components. Do not reuse the local Student shell.
 - A separately approved no-commit assistant-ui fit check limited to
   presentation primitives, only if the existing state and stream contracts stay
   authoritative and proof covers custom actions/checks and rollback.
@@ -249,9 +259,11 @@ checks, or a Chat-to-Workspace handoff.
 
 ### Daily Student App application
 
-FE-02 may reorganize proven presentation into a Learning Chat component and
-optional Workspace handoff, but must preserve the current client/server contract
-and keep Chat usable when Workspace is absent or unsupported.
+FE-02 builds the separate greenfield /student/daily presentation into a
+Learning Chat component and optional Workspace handoff. It reuses the
+backend/session/SSE contract and neutral utilities only; /student and
+StudentMathSession remain reference evidence and regression harnesses. Chat
+must remain usable when Workspace is absent or unsupported.
 
 ### Public Landing application
 

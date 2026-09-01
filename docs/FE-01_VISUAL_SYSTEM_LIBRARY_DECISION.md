@@ -17,6 +17,18 @@ FE-02 must evolve the existing local shell into this Chat + Workspace compositio
 
 No decision below authorizes a package installation. A later task may reconsider a rejected or deferred library only with a concrete capability gap, a bounded fit check, and Product Owner approval.
 
+## 1.1 Product Owner FE-02 Scope Clarification — 2026-09-02
+
+This is the current FE-02 implementation-path authority. It supersedes only the earlier implication that FE-02 would evolve, reuse, or reorganize the existing Student UI implementation. It does not change FE-01 visual-system, library, safety, session, or deferred-capability decisions.
+
+The existing Student UI at /student and StudentMathSession are protected experimental/legacy functional shell and behavioral-regression-harness assets. FE-02 must not import, wrap, extract from, restyle, modify, or route through StudentMathSession. The real Daily Student App will instead be a separate greenfield surface at /student/daily.
+
+The new surface reuses accepted backend, authenticated session, FastAPI/SSE, Tutor, Safety, and PF-03 contracts, rather than the existing UI implementation. It remains Learning Chat + Adaptive Learning Workspace for learners roughly 10–18, with Lina as the first private daily-use Student. The visual direction remains warm, intelligent, personal, and visually engaging—never preschool, cartoonish, corporate, or visually noisy.
+
+React, Tailwind, and shadcn/ui remain available baseline primitives. Before FE-02 code begins, assistant-ui needs a serious presentation-primitives fit check for the greenfield surface; it remains rejected as a runtime, backend, session, safety, or streaming-lifecycle replacement. ThreeUI and Spline remain visual references only. Three.js/React Three Fiber, attachments, image/PDF handling, generated images, video, Artifact Engine, MathLive, JSXGraph, and Konva remain deferred unless separately approved.
+
+Where this record uses terms such as evolve the local shell, reuse the local shell, or local-shell layout composition in connection with FE-02, read those phrases as superseded by this section. The legacy UI remains valid evidence for protected behavior and regression coverage, not a component source for the new product surface.
+
 ---
 
 ## 2. Evidence inspected
@@ -73,9 +85,9 @@ The four labels below are task-scoped decisions: **ADOPT**, **PARTIAL ADOPT**, *
 
 - **Rationale / supported capability:** It already satisfies the project-owned auth, session, streaming, rollback, action, guided-check, responsive, and direction-aware contracts. It provides a real visual starting point rather than a blank replacement.
 - **Risks / integration constraints:** Styling and component extraction must not disturb the local stream lifecycle, server endpoints, `dir="auto"`, or privacy-safe tracing.
-- **Allowed use:** Reuse its proven client/session/SSE behavior while reorganizing the Student surface into Learning Chat + Adaptive Learning Workspace.
-- **Prohibited use:** Replacing the API/session/stream protocol or treating visual polish as permission to change Tutor, safety, PF-03, or evidence behavior.
-- **FE-02 implication:** Evolve the page into the Chat + Workspace model; do not stop at cosmetic chat refinement. Preserve its existing contract tests while adding focused Workspace-layout coverage.
+- **Allowed use:** Treat it as behavioral-contract evidence and regression-harness evidence for the backend/session/SSE/Tutor/Safety/PF-03 path.
+- **Prohibited use:** Importing, wrapping, extracting from, restyling, modifying, or routing through StudentMathSession or the current /student page; replacing the API/session/stream protocol; or treating visual polish as permission to change Tutor, safety, PF-03, or evidence behavior.
+- **FE-02 implication:** Build the separate greenfield /student/daily Chat + Workspace surface. Preserve the existing legacy contract tests and add focused daily-route coverage; all older evolve/reuse/reorganize-local-shell wording is superseded for FE-02 implementation.
 
 ### 4.2 shadcn/ui and Tailwind — ADOPT
 
@@ -91,7 +103,7 @@ The four labels below are task-scoped decisions: **ADOPT**, **PARTIAL ADOPT**, *
 - **Risks / integration constraints:** A full runtime adoption could duplicate or obscure client state, invent persistence assumptions, couple to provider-oriented behavior, or regress the accepted SSE lifecycle. A primitives-only evaluation must render the existing `delta`/terminal `turn`/error states and custom action/check parts without owning state authority.
 - **Allowed use:** In a separately approved, no-commit fit check, evaluate presentation primitives/patterns against the existing client state and FastAPI/SSE contract. Adopt only the pieces that reduce local message/composer layout work while keeping the current state machine authoritative.
 - **Prohibited use:** Replacing FastAPI, Clerk, server-owned session/persistence, Tutor execution, SafetyDecision behavior, lifecycle tracing, or custom message semantics; installing it speculatively; or treating future attachments as permission to change the current backend.
-- **FE-02 implication:** The default safe alternative is the existing Student shell + shadcn/Tailwind + custom SSE chat surface. It requires locally maintained message grouping, composer, streamed/provisional state, error rollback, custom actions/checks, and a Workspace handoff; that creates more UI-maintenance responsibility than a proven chat library, but avoids unproven adapter and authority-regression risk.
+- **FE-02 implication:** The default safe alternative is a new greenfield React/Tailwind/shadcn surface plus a route-local custom SSE client using the accepted backend contract. It requires locally maintained message grouping, composer, streamed/provisional state, error rollback, custom actions/checks, and a Workspace handoff; that creates more UI-maintenance responsibility than a proven chat library, but avoids unproven adapter and authority-regression risk.
 
 ### 4.4 ThreeUI / Spline — VISUAL REFERENCE
 
@@ -271,7 +283,7 @@ This is a required architectural direction, not authorization to implement uploa
 
 ## 8. FE-02 implementation guardrails and verification
 
-FE-02 should evolve the local Student web surface into the Learning Chat + Adaptive Learning Workspace composition and add only focused frontend tests required by its approved plan. It may create the layout and typed presentation seams, but must not implement a deferred Workspace capability merely because the region exists. Before acceptance, verify at minimum:
+FE-02 should build the separate greenfield /student/daily Learning Chat + Adaptive Learning Workspace composition and add only focused frontend tests required by its approved plan. It may create the layout and typed presentation seams, but must not implement a deferred Workspace capability merely because the region exists. The existing /student route and StudentMathSession remain behavioral-contract evidence and regression harnesses, not UI implementation material. Before acceptance, verify at minimum:
 
 1. Existing Student page contract: authenticated `/v1/student/math/session`, no `/v1/demo`, server-owned stream endpoint, and no Tutor-readiness block.
 2. Stream protocol: terminal `turn` releases UI before EOF; incomplete/error streams remove only the provisional Tutor message.

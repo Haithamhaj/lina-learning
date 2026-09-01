@@ -37,17 +37,28 @@ Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.
 - FE-01 is ACCEPTED / COMPLETED as documentation-only work at
   `8601ed5f485ff29fdb467db7abfb8f7ad44711b0`: Visual System + Library
   Capability + Learning Chat + Adaptive Learning Workspace for learners roughly
-  10–18, with Lina as the first private daily-use Student. It directs FE-02 to
-  evolve the local shell, conditionally evaluates assistant-ui presentation
-  primitives while rejecting runtime replacement, treats ThreeUI/Spline as
+  10–18, with Lina as the first private daily-use Student. It established the
+  Learning Chat + Adaptive Learning Workspace direction; the 2026-09-02 Product
+  Owner Greenfield Clarification supersedes its earlier implementation-path
+  assumption. It conditionally evaluates assistant-ui presentation primitives
+  while rejecting runtime replacement, treats ThreeUI/Spline as
   visual reference only, and leaves a future isolated/lazy 3D Workspace-module
   path without adopting Three.js as app architecture. No UI code, dependencies,
-  tests, runtime behavior, or PF-03 behavior changed. FE-02 is BLOCKED / NOT
-  STARTED until explicitly authorized.
+  tests, runtime behavior, or PF-03 behavior changed. The protected /student
+  and StudentMathSession remain legacy functional/behavioral-regression assets;
+  FE-02 is BLOCKED / NOT STARTED until explicitly authorized to build greenfield
+  /student/daily from backend/session/SSE/Tutor/Safety/PF-03 contracts, not the
+  existing UI implementation.
 
 ---
 
 ## Active decisions
+
+### FE-02 Product Owner Greenfield Clarification — 2026-09-02
+
+The existing /student page and StudentMathSession are protected experimental/legacy functional shell and behavioral-regression-harness assets. FE-02 must build the separate greenfield Daily Student App at /student/daily, reusing backend/session/SSE/Tutor/Safety/PF-03 contracts but not the existing UI implementation. It must not import, wrap, extract from, restyle, modify, or route through the legacy Student components.
+
+FE-02 remains BLOCKED / NOT STARTED pending the required no-commit assistant-ui presentation-primitives fit check and explicit implementation authorization. This clarification supersedes only the earlier FE-02 implementation-path assumption. No dependency or runtime change is authorized.
 
 1. Student Core Profile = Parent/System-authoritative context.
 2. Personal Facts = explicit safe durable Student-asserted context.
