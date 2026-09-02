@@ -1,11 +1,17 @@
 # FE-02 — Greenfield Daily Student App Surface Plan
 
-**Status:** Product Owner-approved scope clarification; implementation blocked
-pending Product Owner approval of the first-screen visual brief and explicit
-implementation authorization.
+**Status:** Historical FE-02 prototype/surface guidance. Its protected legacy
+boundary and visual evidence remain useful, but its chat-only implementation
+path is superseded for current execution by `docs/STUDIO_IMPLEMENTATION_PLAN.md`
+and `project-state/DAILY_USE_RELEASE_TASKS.md`.
 **Date:** 2026-09-02
 **Recommended route:** /student/daily
 **Product surface:** Learning Chat + Adaptive Learning Workspace
+
+**Current-use note:** Do not treat this document's conditional/display-only
+Workspace wording, local UI state, or FE-02 task status as Studio architecture.
+The approved production Workspace is durable, event-backed, and separately
+transported; its next task remains prototype preservation only.
 
 ## 1. Product Owner scope clarification
 

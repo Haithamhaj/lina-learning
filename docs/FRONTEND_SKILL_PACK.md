@@ -402,6 +402,9 @@ claim Daily App runtime validation.
 4. This playbook for task-facing frontend execution guardrails.
 5. The changed component and its existing tests/contracts before implementation.
 
-**Current boundary:** FE-02 remains blocked/not started until separately
-authorized. This playbook creates no UI, dependency, backend, or runtime
-authorization.
+**Current boundary:** This playbook's FE-02 status is historical presentation
+guidance. Current Studio execution is governed by
+`docs/STUDIO_IMPLEMENTATION_PLAN.md` and
+`project-state/DAILY_USE_RELEASE_TASKS.md`; `FE-02-PRESERVE-01` is the next
+task after governance acceptance. This playbook creates no UI, dependency,
+backend, or runtime authorization.

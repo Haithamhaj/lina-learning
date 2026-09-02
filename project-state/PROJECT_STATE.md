@@ -22,6 +22,23 @@ FE-01 Visual System + Reuse Record  ACCEPTED / COMPLETED
 
 Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical ledger.
 
+### Studio governance status — 2026-09-02
+
+`STUDIO-GOV-01` is `DONE / ACCEPTED`; repository verification and governing
+promotion are complete. The approved target is documented in
+`docs/STUDIO_IMPLEMENTATION_PLAN.md`: application-owned, subject-agnostic
+Studio Core; semantic Event Log plus Materialized Current Snapshot; one
+Student-facing Tutor; persistent Workspace; dedicated resumable Studio feed;
+and deterministic subject capabilities before optional `CUSTOM_COMPOSE`
+specialist work.
+
+The uncommitted FE-02 `/student/daily` prototype remains preserved, unaccepted,
+and outside this governance diff. It is not Studio truth: no Tutor-prose
+parsing, local browser state, polling, or display-only Canvas is accepted as
+production architecture. `FE-02-PRESERVE-01` is the only ready task. Math
+correction and all runtime/schema/protocol, renderer, and integration tasks
+remain blocked.
+
 ---
 
 ## Current reality
@@ -46,20 +63,21 @@ Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.
   visual reference only, and leaves a future isolated/lazy 3D Workspace-module
   path without adopting Three.js as app architecture. No UI code, dependencies,
   tests, runtime behavior, or PF-03 behavior changed. The protected /student
-  and StudentMathSession remain legacy functional/behavioral-regression assets;
-  FE-02 is BLOCKED / NOT STARTED until explicitly authorized to build greenfield
-  /student/daily from backend/session/SSE/Tutor/Safety/PF-03 contracts, not the
-  existing UI implementation.
+  and StudentMathSession remain legacy functional/behavioral-regression assets.
+  The earlier `FE-02 is BLOCKED / NOT STARTED` status is preserved here as
+  FE-01 historical context; it is superseded for current execution by the
+  approved Studio track and its protected prototype boundary.
 
 ---
 
 ## Active decisions
 
-### FE-02 Product Owner Greenfield Clarification — 2026-09-02
+### FE-02 Product Owner Greenfield Clarification — historical prototype boundary
 
 The existing /student page and StudentMathSession are protected experimental/legacy functional shell and behavioral-regression-harness assets. FE-02 must build the separate greenfield Daily Student App at /student/daily, reusing backend/session/SSE/Tutor/Safety/PF-03 contracts but not the existing UI implementation. It must not import, wrap, extract from, restyle, modify, or route through the legacy Student components.
 
-FE-02 remains BLOCKED / NOT STARTED. The assistant-ui presentation-primitives
+The historical FE-02 implementation task remains superseded by the approved
+Studio execution track. The assistant-ui presentation-primitives
 fit check is complete with REJECT for FE-02: runtime-bound behavior or an
 adapter/state bridge is not safe as presentation-only use in this slice. The
 next pre-code gates are Product Owner approval of the first-screen visual brief
@@ -120,6 +138,7 @@ Protected invariants:
 
 ## Active risks
 
+- **STUDIO-R1 — Approved Studio architecture is not yet implemented; preserve the FE-02 prototype without accepting browser-local/prose-derived state — Criticality 4**
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**
 - **VISION-R1 — Durable Student Asset Hosting Required Before Daily Vision — Criticality 4**
 - **MATH-01 — Structured Math Readability — Criticality 4 / independent**
@@ -151,8 +170,8 @@ UI code, dependencies, Voice, Vision, attachments, artifacts, or FE-02 work.
 
 ## Next recommended action
 
-FE-01 acceptance is recorded. FE-02 remains BLOCKED / NOT STARTED and must not
-begin without separate explicit authorization.
+`FE-02-PRESERVE-01` is the only ready task. Do not begin it, the Math research
+correction, or any Studio runtime/schema/frontend work in this closure task.
 
 ---
 
@@ -161,6 +180,7 @@ begin without separate explicit authorization.
 - `AGENTS.md`
 - `docs/PERSONAL_FACTS_SPEC.md`
 - `docs/FE-01_VISUAL_SYSTEM_LIBRARY_DECISION.md`
+- `docs/STUDIO_IMPLEMENTATION_PLAN.md`
 - `docs/DAILY_USE_RELEASE_DECISIONS.md`
 - `project-state/DAILY_USE_RELEASE_TASKS.md`
 - `docs/CHILD_SAFETY_POLICY.md`

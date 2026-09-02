@@ -7,6 +7,51 @@
 
 ---
 
+# Learning Studio — Approved Execution Track
+
+**Authority:** `docs/STUDIO_IMPLEMENTATION_PLAN.md` is the approved detailed
+direction. This track controls Studio readiness and supersedes only earlier
+FE-02/display-only Canvas execution assumptions. It does not rewrite the
+preserved Daily-Use history below.
+
+```text
+STUDIO-GOV-01 — DONE / ACCEPTED
+→ FE-02-PRESERVE-01 — ONLY READY TASK
+→ CURR-RENDER-MATH-01A — BLOCKED behind prototype preservation
+→ STUDIO-STATE-01 — BLOCKED
+→ STUDIO-SUBJECT-01 — BLOCKED
+→ STUDIO-PROTOCOL-01 — BLOCKED
+→ STUDIO-RUNTIME-01 — BLOCKED
+→ STUDIO-RUNTIME-02 — BLOCKED
+→ STUDIO-RUNTIME-03 — BLOCKED
+→ STUDIO-ACT-MATH-01 — BLOCKED
+→ STUDIO-ACT-SCI-01 — BLOCKED
+→ STUDIO-ACT-EN-01 — BLOCKED
+→ STUDIO-ACT-AR-01 — BLOCKED
+→ FE-02-STUDIO-01 — BLOCKED
+→ independently reviewed Grade 5 renderer tasks — BLOCKED
+→ STUDIO-ACCEPT-01 — BLOCKED
+→ optional STUDIO-SPECIALIST-01 / STUDIO-REUSE-01 — BLOCKED
+→ production deployment gate — BLOCKED
+```
+
+## STUDIO-GOV-01 — Verify and Promote Approved Studio Direction
+
+**Status:** DONE / ACCEPTED
+**Scope:** governance documentation only; no runtime, schema, API, renderer,
+dependency, or frontend behavior change.
+
+## FE-02-PRESERVE-01 — Preserve Prototype Shell
+
+**Status:** ONLY READY TASK
+**Purpose:** create a recoverable isolated prototype artifact without accepting
+the FE-02 browser implementation as production Studio architecture.
+
+All later Studio tasks remain blocked until their direct predecessors are
+accepted. `CURR-RENDER-MATH-01A` remains blocked behind prototype preservation.
+
+---
+
 # Approved Sequence
 
 ```text
@@ -296,8 +341,9 @@ or deployment implementation is in scope.
 `8601ed5f485ff29fdb467db7abfb8f7ad44711b0`. Scope: Visual System + Library
 Capability + Learning Chat + Adaptive Learning Workspace for learners roughly
 10–18, with Lina as the first private daily-use Student. This task changed no
-UI code, dependencies, tests, runtime behavior, or PF-03 behavior. FE-02
-remains BLOCKED / NOT STARTED until explicitly authorized.
+UI code, dependencies, tests, runtime behavior, or PF-03 behavior. Its
+`FE-02 remains BLOCKED / NOT STARTED` statement is historical; current Studio
+readiness is governed by the Studio track at the top of this file.
 
 ## FE-02 — Daily Student Experience
 **Status:** BLOCKED  

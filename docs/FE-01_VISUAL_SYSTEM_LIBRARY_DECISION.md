@@ -309,4 +309,8 @@ FE-02 should build the separate greenfield /student/daily Learning Chat + Adapti
 - [x] Does not alter PF-03 behavior or any protected backend authority.
 - [x] Does not touch the dirty `main` worktree or `.acceptance-artifacts/`.
 
-**FE-01 acceptance is recorded. FE-02 remains BLOCKED / NOT STARTED until separately authorized.**
+**FE-01 acceptance is recorded.** The `FE-02 remains BLOCKED / NOT STARTED`
+statement records the then-current presentation slice. Current Studio readiness
+is governed by `docs/STUDIO_IMPLEMENTATION_PLAN.md` and
+`project-state/DAILY_USE_RELEASE_TASKS.md`; the uncommitted FE-02 shell remains
+a protected, unaccepted prototype.

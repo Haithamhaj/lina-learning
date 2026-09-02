@@ -26,6 +26,12 @@ Before building a substantial subsystem from scratch, inspect the approved candi
 
 Do **not** adopt an entire platform merely because one useful component exists inside it.
 
+For Learning Studio, no catalog entry is an installation mandate. React/DOM/SVG
+remains the baseline; an external renderer, activity, protocol, or package is
+adopted only after a named capability demonstrates fit, authority/rights and
+operational cost are acceptable, and the task records an ADOPT, PARTIAL ADOPT,
+or REJECT decision. See `docs/STUDIO_IMPLEMENTATION_PLAN.md`.
+
 A custom implementation is preferred when a reusable option creates more coupling, hides critical behavior, conflicts with FastAPI/Next.js boundaries, weakens traceability, or makes the product harder to modify.
 
 ---

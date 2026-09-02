@@ -2298,6 +2298,31 @@ Need benchmark scenarios covering:
 
 The selected production Tutor model should be evidence-driven, not selected only by model reputation.
 
+## Learning Studio — Approved Product and Authority Direction
+
+The Learning Studio is a production-intent, application-owned,
+subject-agnostic Workspace for Chat and active Canvas learning. Its detailed,
+dependency-ordered plan is `docs/STUDIO_IMPLEMENTATION_PLAN.md`.
+
+- Tutor remains the sole Student-facing teaching authority. Studio Core owns
+  authorization, durable state/history, deterministic routing, and renderer
+  eligibility; browser state is only optimistic projection.
+- Durable Studio truth is a semantic Event Log plus a rebuildable Materialized
+  Current Snapshot. Tutor observes current state plus unseen meaningful events
+  under a post-success committed watermark; existing Tutor SSE remains Chat
+  authority and Studio uses a dedicated resumable feed when implemented.
+- Subject-specific renderer/activity schemas, validators, locale guidance, and
+  fallbacks sit behind a small Subject Capability boundary. Canvas Specialist
+  is optional and only proposes a typed `CUSTOM_COMPOSE` scene; it has no
+  direct persistence, Safety, Evidence, or Tutor authority.
+- Canvas interaction, validator output, Vision interpretation, annotation, and
+  reconstruction are not Learning Evidence directly. Original Student media
+  remains immutable source authority and derived outputs retain lineage.
+
+This direction is implementation-gated: it does not accept the uncommitted
+FE-02 prototype, install a dependency, or authorize Studio runtime work before
+the current task overlay promotes it.
+
 ## 26.3 Evidence Rubric Quality
 
 Exact evidence states, definitions, and pattern rules are intentionally moved to `LEARNING_INTELLIGENCE_SPEC.md`.

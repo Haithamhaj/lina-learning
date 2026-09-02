@@ -13,13 +13,14 @@ Read in this order when relevant:
 3. `docs/LEARNING_INTELLIGENCE_SPEC.md` — canonical Learning Intelligence semantics and authority.
 4. `docs/CHILD_SAFETY_POLICY.md` — non-overridable child safety and Parent Learning Boundaries.
 5. `docs/IMPLEMENTATION_PLAN.md` — technical implementation direction, sequencing, gates, and deferred architecture.
-6. `docs/DAILY_USE_RELEASE_PLAN.md` — Product Owner-approved launch-first implementation addendum for Daily-Use Lina Release 1.
-7. `docs/DAILY_USE_RELEASE_DECISIONS.md` — compact Product Owner-approved decision register introduced by the Daily-Use transition.
-8. `docs/TECHNOLOGY_REUSE_CATALOG.md` — approved reuse candidates and mandatory fit checks.
-9. `docs/SUBJECT_SCOPE_POLICY.md` — accepted cross-subject policy when relevant.
-10. `project-state/PROJECT_STATE.md` — **current operational reality and current next action**.
-11. `project-state/DAILY_USE_RELEASE_TASKS.md` — current bounded Daily-Use Release 1 executable-task overlay.
-12. `TASKS.md` — preserved durable historical task ledger.
+6. `docs/STUDIO_IMPLEMENTATION_PLAN.md` — approved Learning Studio subsystem direction, protected contracts, and task order.
+7. `docs/DAILY_USE_RELEASE_PLAN.md` — Product Owner-approved launch-first implementation addendum for Daily-Use Lina Release 1.
+8. `docs/DAILY_USE_RELEASE_DECISIONS.md` — compact Product Owner-approved decision register introduced by the Daily-Use transition.
+9. `docs/TECHNOLOGY_REUSE_CATALOG.md` — approved reuse candidates and mandatory fit checks.
+10. `docs/SUBJECT_SCOPE_POLICY.md` — accepted cross-subject policy when relevant.
+11. `project-state/PROJECT_STATE.md` — **current operational reality and current next action**.
+12. `project-state/DAILY_USE_RELEASE_TASKS.md` — current bounded Daily-Use Release 1 executable-task overlay.
+13. `TASKS.md` — preserved durable historical task ledger.
 
 ### Document authority and task coordination
 
@@ -27,6 +28,7 @@ Read in this order when relevant:
 - `LEARNING_INTELLIGENCE_SPEC.md` owns Learning Intelligence semantics.
 - `LEARNING_PRODUCT_ROADMAP.md` owns approved evolution direction, not current execution.
 - `IMPLEMENTATION_PLAN.md` owns technical implementation direction.
+- `STUDIO_IMPLEMENTATION_PLAN.md` owns approved Learning Studio subsystem sequencing and contracts; it does not itself make a later Studio task executable.
 - `docs/DAILY_USE_RELEASE_PLAN.md` is the approved current launch implementation addendum where historical sequencing is stale.
 - `docs/DAILY_USE_RELEASE_DECISIONS.md` records approved product decisions introduced by this launch transition pending later routine consolidation into the stable reference.
 - `PROJECT_STATE.md` owns current operational truth and next action.
@@ -261,3 +263,21 @@ Never print, echo, copy, expose, commit, or hardcode secret values. Do not copy 
 Read `project-state/PROJECT_STATE.md` and `project-state/DAILY_USE_RELEASE_TASKS.md`, then execute **only the single task marked `READY` there**.
 
 Stop after that task's verification/report. Do not execute or promote the next task in the same run unless the Product Owner explicitly authorizes it.
+
+## Learning Studio — Approved Direction, Still Gated
+
+Read `docs/STUDIO_IMPLEMENTATION_PLAN.md` for the approved production-intent
+Learning Studio direction. Preserve these boundaries: Studio Core is
+application-owned and subject-agnostic; Canvas/Workspace is a first-class
+Student input/output surface but browser state is never durable authority;
+durable truth is a semantic Event Log plus rebuildable Materialized Current
+Snapshot; Tutor remains the sole Student-facing teaching authority; existing
+Tutor SSE remains Chat authority while production Studio uses its own
+authenticated resumable feed; deterministic known activities and validators do
+not create Evidence directly; and an optional `CUSTOM_COMPOSE` Canvas
+Specialist is proposal-only with no direct persistence, Safety, Evidence, or
+Tutor authority. Original Student media remains source authority.
+
+The uncommitted FE-02 `/student/daily` prototype is protected evidence, not
+accepted product architecture. Execute only the Studio task explicitly marked
+ready after its predecessor is accepted.

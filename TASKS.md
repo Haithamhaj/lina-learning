@@ -14,6 +14,25 @@
 
 ---
 
+# Learning Studio Governance Provenance — 2026-09-02
+
+**Authority:** `docs/STUDIO_IMPLEMENTATION_PLAN.md` and the current Studio
+overlay in `project-state/DAILY_USE_RELEASE_TASKS.md`. This compact entry
+preserves task provenance; the overlay owns current readiness.
+
+## STUDIO-GOV-01 — Verify and Promote Approved Studio Direction
+**Status:** DONE / ACCEPTED — governance promotion completed.
+**Boundary:** documentation only. No Studio runtime/schema/API/frontend,
+dependencies, or FE-02 prototype acceptance.
+
+## FE-02-PRESERVE-01 — Preserve Prototype Shell
+**Status:** ONLY READY TASK.
+
+All Studio runtime, protocol, subject, renderer, and integration work remains
+blocked behind the approved dependency track.
+
+---
+
 # Phase 0 — Repository & Runtime Foundation
 
 ## TASK-001 — Repository foundation

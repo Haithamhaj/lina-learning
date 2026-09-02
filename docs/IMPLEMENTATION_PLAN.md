@@ -1169,6 +1169,23 @@ Track only educationally meaningful interactions.
 
 Do not turn every click or mouse movement into learner evidence.
 
+### Learning Studio implementation direction
+
+`docs/STUDIO_IMPLEMENTATION_PLAN.md` is the approved production-intent
+subsystem plan for Learning Studio. It refines this artifact direction without
+replacing protected Learning Intelligence, Safety, Tutor, Content, or Model
+Gateway authority. Studio uses application-owned semantic events plus a
+materialized current snapshot, a subject-agnostic Core, deterministic
+known-activity routing, and a separate resumable Studio feed while existing
+Tutor SSE remains Chat authority. Tutor expresses educational need and remains
+the sole Student-facing teaching authority; Studio Core selects eligibility.
+Optional Canvas Specialist work is `CUSTOM_COMPOSE`-only and proposal-only.
+Canvas interactions and validator results may enter the existing source-linked
+interaction path but never create Evidence directly.
+
+The detailed plan's task gates control execution. It supersedes older
+display-only or prose-derived Canvas assumptions only where they conflict.
+
 ---
 
 # 17. Session Intelligence Architecture
@@ -2017,6 +2034,11 @@ Explicit promotion based on product sequencing/real-use evidence and stable inte
 # 28. Phase 6 — Interactive Learning Artifacts
 
 **Status:** Approved product direction / implementation frozen until explicit promotion.
+
+For the approved production-intent Studio architecture and dependency order, use
+`docs/STUDIO_IMPLEMENTATION_PLAN.md`. It supersedes conflicting display-only
+or message-derived Canvas assumptions; no Studio runtime, schema, or protocol
+exists yet, and each Studio task remains independently gated.
 
 ### Goal
 
