@@ -30,6 +30,43 @@ Shared Studio State implementation.
 5. A Student can continue in Chat without restating completed Canvas work.
 6. Failure of specialist, renderer, or connection never blocks safe Chat.
 
++
+
+## Tutor complete Canvas observability (non-negotiable)
+
+Every meaningful Canvas event and committed Canvas state change is captured in
+application-owned Studio history and remains available to Tutor. Prompt size is
+an efficiency constraint, not a reason to discard learner-relevant history.
+
+The runtime projection is:
+
+1. Full semantic history is durably reconstructable by the application.
+2. Each Tutor turn receives the current Studio/scene snapshot.
+3. Each Tutor turn receives every meaningful event since its last acknowledged
+   observation watermark.
+4. Tutor can invoke an application-owned full-history query service/tool when a
+   current snapshot plus event delta is insufficient.
+5. Pointermove, hover, viewport, and transient browser noise are not semantic
+   Studio events. A committed stroke, object transformation, answer submission,
+   or activity-state transition is semantic state.
+6. The history query boundary enforces the same Student/session/Segment
+   authorization, redaction, and content policy as the normal Tutor context.
+
+Candidate fields, deliberately not approved schema names:
+
+| Conceptual field | Meaning |
+| --- | --- |
+| tutor_observed_sequence_watermark | Last semantic Studio sequence acknowledged by a completed Tutor context |
+| scene_sequence_watermark | Latest semantic sequence represented in a materialized scene/snapshot |
+| events_since_watermark | Ordered complete semantic events after Tutor acknowledgement, subject to transport projection |
+| full-history query boundary | Application-owned tool/service for authorized older event reconstruction |
+
+A Tutor does not need the full event log replayed in every prompt. It must,
+however, be able to learn every meaningful event through current snapshot plus
+events since watermark and to retrieve older history when the teaching task
+requires it.
+
+
 ## Assumptions
 
 - Studio state is application-owned and scoped to one Student and active
@@ -75,10 +112,16 @@ StudioEvent
 
 StudioSnapshot
   snapshot_id, schema_version, learning_session_id, segment_id
-  sequence_watermark, active_goal_ref, active_teaching_turn_id
+  sequence_watermark, scene_sequence_watermark
+  tutor_observed_sequence_watermark, events_since_watermark projection
+  active_goal_ref, active_teaching_turn_id
   active_scene_id, scene_version, teaching_step, bounded_scene_summary
   pending_jobs[], tutor_stream_status, canvas_generation_status
   last_meaningful_student_operation_ref, updated_at
+
+TutorHistoryQueryBoundary
+  authorized Studio-history service/tool, Student/session/Segment scope
+  requested sequence range or causal reference, policy/redaction applied
 ```
 
 The snapshot must not copy Personal Memory, Candidate metadata, raw Safety

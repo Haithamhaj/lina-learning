@@ -1,0 +1,18 @@
+# STUDIO-ORCH-01 — Research Review Response
+
+**Status:** Research-only and non-authoritative. This records the correction
+pass against the published baseline 4a7b296db9a05fc219b05bd67330e36398eaa3f2.
+It does not start Synthesis or authorize implementation.
+
+| Review issue | Report affected | Correction made | Evidence/source | Remaining status |
+| --- | --- | --- | --- | --- |
+| Gateway described too narrowly | 02 Agent Orchestration | Corrected “Tutor-only” implication: current ModelTask/factories cover Tutor, Session Evidence, Segment Evidence, Curriculum Semantics, Embedding, and Personal Facts; Canvas is the missing task | services/platform/db/models.py:47-55; services/model_gateway/factory.py:25-205; services/model_gateway/gateway.py:121-234 | Canvas route/provider capability policy remains Synthesis/proof work |
+| Tutor must know complete Canvas history | 04 Shared Studio State Protocol | Added non-negotiable full semantic history, snapshot plus events since acknowledgement watermark, and authorized older-history query boundary | Corrected protocol section; project authority/safety boundaries | Exact schema, retention and transport remain unapproved |
+| Agent analysis lacked detailed calls/state/latency | 02 Agent Orchestration | Added simple/complex A-E sequences, timing classes, tools, context duplication, authority, cancellation, timeout, stale rejection, safety, trace and cost analysis | Current Gateway/Tutor code; official Agents SDK models/tools/multi-agent docs | Topology remains a hypothesis pending Synthesis |
+| Agent Builder platform question missing | 02 Agent Orchestration | Recorded official sunset date and code-based Agents SDK path; analyzed hosted multi-agent beta limitations | OpenAI AgentKit update; official Agents SDK model guide | No Agents SDK adoption decision |
+| Canvas execution was materially incomplete | 03 Canvas Execution | Rebuilt report with 13-option execution matrix, escalation hypothesis, and five learning timelines | Project renderer/artifact rules; official A2UI/tldraw/renderer docs | First proof case and renderer selection unresolved |
+| A2UI maturity stale | 03 Canvas Execution; 05 External Reuse | Corrected to official v0.9.1 Current Production, v1.0 Candidate, React/web core, messages/catalog/data/actions/validation and three adoption choices | Official A2UI renderer guide/repository | Actual adoption requires proof spike |
+| AG-UI research collapsed protocol and CopilotKit | 05 External Reuse | Separated AG-UI protocol from CopilotKit; recorded MIT, active SDK/integration state, snapshots/deltas/custom/tool/lifecycle/bidirectional concepts and demo status | Official AG-UI docs/events/integrations; open-ag-ui-canvas repository | Full versus partial/custom protocol choice unresolved |
+| OpenMAIC source wrong | 05 External Reuse | Replaced with THU-MAIC/OpenMAIC; recorded v1.0.0, MIT relicense history, package/pattern boundaries, iframe hardening and package decisions | Official THU-MAIC/OpenMAIC releases/changelog | Catalog-required package evaluation still needed |
+| tldraw license/maturity incomplete | 05 External Reuse | Corrected SDK license and production-key requirement; separated MIT starter code from SDK; evaluated foundation/future/reference/reject choices | Official tldraw license and v4 release docs | Freeform value/a11y/mobile/lock-in proof unresolved |
+| Open questions repeated clarified permissions | 06 Open Questions | Reclassified as eligibility, threshold, first-use-case, state/persistence and package-adoption questions | Product Owner clarification in correction brief | Synthesis must resolve choices before tasks |

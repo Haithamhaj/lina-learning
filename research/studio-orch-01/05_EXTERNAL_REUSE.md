@@ -1,134 +1,205 @@
-# STUDIO-ORCH-01 — External Reuse Landscape
+# STUDIO-ORCH-01 — External Reuse Landscape (Corrected)
 
-**Status:** Research only. Package versions, maturity, and licenses are
-time-sensitive; sources below were consulted on 2026-09-02. No dependency is
-approved or installed by this report.
+**Status:** Research only. Releases, licenses, and maturity are time-sensitive.
+All sources were reviewed 2026-09-02. No package is approved or installed.
 
 ## Facts
 
-Lina has a FastAPI, server-owned session and SSE contract, a project-owned web
-controller, privacy/safety boundaries, and a protected one-primary-Tutor-call
-baseline. Reuse must fit those boundaries rather than replace them.
+Lina owns its FastAPI session/auth/SSE path, Safety/Parent Boundary policy,
+Model Gateway routes, persistence, and content-minimizing lifecycle trace.
+External tools may inform a constrained adapter but cannot become the source of
+truth for Tutor, Student, or Studio state.
 
-The technology catalog already requires an OpenMAIC evaluation before a generic
-custom Artifact DSL/renderer layer. It also says to evaluate `assistant-ui`
-before hand-building broad chat plumbing; that question was previously decided
-for the protected FE-02 surface, whose project-owned SSE controller remains the
-baseline here.
+The prior study had three material factual weaknesses: it pointed OpenMAIC to
+the wrong repository, understated current A2UI maturity, and treated AG-UI too
+generically. This correction uses THU-MAIC/OpenMAIC; current A2UI material
+describing v0.9.1 Current Production plus a v1.0 Candidate; and AG-UI's official
+event/state protocol and Canvas demo separately from CopilotKit.
 
 ## Assumptions
 
-“Compatible” means a package can be constrained behind Lina-owned contracts; it
-does not mean its default persistence, auth, telemetry, transport, or agent
-state is acceptable. An external protocol may be useful as a reference without
-being adopted as a runtime dependency.
+Compatibility means that Lina can put a candidate behind app-owned contracts.
+It does not grant the package ownership of persistence, authorization,
+telemetry, tool execution, learner history, or visible Tutor response. Exact
+versions, transitive dependencies, vulnerabilities, terms, and data retention
+must be rechecked at any later adoption gate.
 
 ## Risks
 
-- Frameworks with their own session, messages, tool loop, or telemetry can
-  silently displace server authority and privacy boundaries.
-- A vendor-specific GenUI stream can force the frontend to rely on fields that
-  FastAPI/SSE does not own.
-- Latest release claims become stale quickly; final evaluation needs a
-  lockfile-level version, license, security, and bundle review.
+- A framework's default message/session/trace model can create split authority.
+- A Canvas demo can prove a pattern but not child safety, learning quality, or
+  operational production readiness.
+- External declarative UI can still generate inappropriate catalog/action use
+  unless Lina validates it.
+- Broad platforms bring uploads, media, agent runtime, and product assumptions
+  outside the first Studio need.
 
 ## Contradictions
 
-Several candidates assume a TypeScript/Node agent server or their own runtime,
-while Lina's authoritative runtime is Python/FastAPI. Some can model rich UI
-messages but Lina deliberately does not use their message/transport ownership.
-The right near-term posture is reference or constrained adapter, not wholesale
-platform adoption.
+A2UI and AG-UI offer reusable protocols while Lina deliberately owns its
+current FastAPI/SSE transport and model lifecycle. OpenMAIC supplies useful
+packages but a full classroom product architecture. tldraw offers a rich board
+but product licensing and freeform state needs. These are reasons to separate
+reference, proof spike, and package adoption decisions.
 
 ## Options
 
-| Candidate | Maturity / provider / framework / transport | Security and contract fit | Decision label |
+## Corrected external assessment matrix
+
+| Candidate / current official evidence | Capabilities relevant to Studio | Integration/security compatibility | Decision |
 | --- | --- | --- | --- |
-| OpenAI Agents SDK | OpenAI-maintained Python SDK; agent-as-tool, handoff, tracing/testing; provider abstraction | Can be wrapped, but tracing/session semantics need redaction and it overlaps coordination | **LATER EVALUATION** |
-| AG-UI / CopilotKit | AG-UI lifecycle/state-sync protocol over HTTP/SSE, WebSocket, webhooks; CopilotKit is client/runtime on top | Protocol concepts fit bidirectional state; CopilotKit owns too much frontend/runtime | **AG-UI: LATER EVALUATION; CopilotKit: REJECT CURRENT** |
-| Google A2UI | Google declarative agent-to-UI JSON, public-preview direction, host renderer model | Useful schema/reference; preview maturity and React fit need proof | **LATER EVALUATION** |
-| tldraw Agent Starter Kit | React/Vite whiteboard starter and agent canvas example; SDK licensing/production key considerations | Interaction reference only; mutable board state and weight do not fit first Canvas | **REFERENCE ONLY** |
-| OpenMAIC packages | Open-source artifact/renderer/DSL family; broader platform exceeds package need | Catalog-mandated evaluation; assess specific packages, not platform architecture | **PARTIAL ADOPT EVALUATION** |
-| Vercel AI SDK / GenUI | TypeScript/Node SDK, AI UI/message and stream patterns, Vercel ecosystem | Conflicts with no-AI-SDK and FastAPI/SSE ownership; source of ideas only | **REJECT CURRENT / REFERENCE** |
-| MCP Apps | Tool-provided iframe Apps with host bridge/MCP auth model | Better for third-party tool surfaces than core Student Canvas | **LATER EVALUATION** |
-+
-### Source, maturity, and compatibility notes
+| **A2UI**: official renderer guide calls v0.9.1 Current Production and v1.0 Candidate; stable React/web-core path, JSONL/progressive rendering, component catalogs, data model updates, client actions, validation/recovery | Declarative Canvas cards/forms/widgets from specialist or deterministic plan; messages → Lina-owned catalog → React → action → Studio event | Transport-agnostic; require strict catalog/message/action validation, no arbitrary components/functions; React/runtime dependency decision needed | **PROOF SPIKE** for actual adoption; **PARTIAL ADOPT** of schema ideas |
+| **AG-UI**: MIT protocol/repo with active 2026 maintenance; official docs list Python and TypeScript SDKs plus broad integrations | Agent run/lifecycle/tool events, STATE_SNAPSHOT, STATE_DELTA using JSON Patch, CUSTOM events, bidirectional state sync; compatible conceptually with SSE | FastAPI can speak its event semantics, but adopting full protocol would change current stream/state contracts; application remains authorization/persistence owner | **PARTIAL ADOPT** semantics; full adoption is **PROOF SPIKE** |
+| **open-ag-ui-canvas** official demo | Python FastAPI backend, Next.js/React frontend, interactive Research/Planner/Haiku canvas | Demonstrates pattern only; includes CopilotKit, LangGraph, CrewAI/Mastra stack and must not be treated as production evidence | **REFERENCE** |
+| **AG-UI + A2UI integration** official docs | AG-UI = agent/user run-event-state transport; A2UI = declarative generated surface | Pairing can be: Canvas specialist → A2UI → Lina catalog/React Canvas → Student action → Studio event; each layer still needs source/version/safety validation | **PROOF SPIKE** only |
+| **OpenAI Agents SDK**: code orchestration, agents-as-tools, handoffs, providers/models, tracing; hosted multi-agent beta | Bounded Canvas specialist runner or workflow testing patterns | Python fit, but tracing/session/provider defaults must be adapted; hosted beta has state/privacy limitations | **REFERENCE**; specialist wrapper **PROOF SPIKE** |
+| **THU-MAIC/OpenMAIC v1.0.0** released 2026-08-27; MIT relicensing began v0.3.0 | Package family for DSL, renderer, importer, generation, storage; interactive/PBL contracts; runtime/session/outbox patterns; sandbox hardening | Full product has uploads/media/classroom/agent features out of scope. Package contracts could be adapted only after catalog-required evaluation | Per-package below |
+| **tldraw** Agent Starter Kit/action architecture | Shape/action history, structured context, streamed agent actions, custom action schemas, provider/model flexibility | Strong freeform reference; SDK is source-available under tldraw license, production requires key; board state/a11y/mobile/product lock-in are material | **REFERENCE**; future freeform **PROOF SPIKE** |
+| **Vercel AI SDK** | Typed tool UI parts; serializable AI state versus UI state; progressive tool-result rendering | AI SDK UI is Vercel's current path; RSC is experimental. It conflicts with Lina's FastAPI/SSE and no-AI-SDK product constraints | **REJECT** as owner; **REFERENCE** patterns |
+| **MCP Apps** | Isolated third-party tool UI in sandboxed app surface | Useful future third-party tool boundary; poor fit for first-party core Canvas where Studio state/interaction is intrinsic | **REFERENCE** / later evaluation |
 
-| Candidate | Public release/update signal observed | License / provider / framework | Transport and security relevance | Lina compatibility conclusion |
-| --- | --- | --- | --- | --- |
-| OpenAI Agents SDK | Official docs accessed 2026-09-02; repository release chronology requires re-check at adoption | OpenAI; Python; MIT repository license | SDK tracing and sessions need explicit content-minimizing configuration; tool/provider differences affect structured output and streaming | Adapter/reference only until a bounded specialist need proves it |
-| AG-UI | Official docs accessed 2026-09-02; public protocol is active, exact version must be pinned later | Open protocol; TypeScript ecosystem; MIT repository license | HTTP POST/SSE, WebSocket, and webhook lifecycle/state events map conceptually to Studio; auth and event ownership remain application concerns | Protocol reference / later evaluation |
-| CopilotKit | Repository/release metadata accessed 2026-09-02; active client-runtime product | CopilotKit; React/Angular integrations; MIT repository license | Brings client-side co-pilot, state, and tool conventions that overlap Lina's controller and session authority | Reject current |
-| Google A2UI | Public-preview material accessed 2026-09-02; React renderer direction remains evolving | Google/open project; declarative JSON host renderers; Apache-2.0 repository license | Host validates/renderers own UI; schema could inform a bounded future spec, but maturity and server fit are unproved | Later evaluation |
-| tldraw Agent Starter Kit | Starter-kit documentation accessed 2026-09-02; product-quality whiteboard reference | tldraw; React/Vite; starter source MIT, SDK production licensing/key terms must be reviewed | Mutable canvas and agent integration require custom state, permission, and accessibility controls | Reference only |
-| OpenMAIC | Repository/release notes accessed 2026-09-02; 0.x-to-1.0 evolution is recent | OpenMAIC family; package-specific JavaScript/TypeScript; repository license/release terms must be pinned per package | Renderer/DSL pieces may fit typed artifacts; broad platform risks uploads/agent/runtime overlap | Partial-adopt evaluation mandated by catalog |
-| Vercel AI SDK / GenUI | Official docs accessed 2026-09-02; actively evolving SDK | Vercel; TypeScript/Node; Apache-2.0 repository license | UIMessage/transport/runtime conventions conflict with the project-owned FastAPI/SSE contract | Reject current; design reference only |
-| MCP Apps | Official Apps/spec documentation accessed 2026-09-02; ecosystem protocol, not a first-party Canvas framework | MCP community; host/tool iframe Apps; licensing varies by component | iframe/AppBridge/MCP auth are useful for isolated third-party tools, but introduce cross-context permissions and message validation | Later evaluation, not core Studio |
+## A2UI correction and choices
 
-These are research snapshots, not security clearance. Exact versions, licenses,
-release dates, transitive dependencies, vulnerabilities, data retention, and
-provider terms must be re-verified immediately before any adoption proposal.
+A2UI should not be described as merely public-preview v0.8. Current official
+renderer material states v0.9.1 Current Production and v1.0 Candidate. It
+supports message processing, custom catalogs, data-model updates, progressive
+rendering, client actions, and structured validation failure/recovery. Its
+transport is not tied to a single agent provider.
 
+| Choice | Architecture | Benefits | Risks / decision |
+| --- | --- | --- | --- |
+| A. Actual A2UI adoption | Canvas specialist emits A2UI messages; Lina registers catalog; React Canvas renders; Student action becomes a validated Studio event | Mature message/state/action vocabulary and progressive UI machinery | New dependency/version surface and catalog governance; **PROOF SPIKE** |
+| B. Small Lina Artifact/Scene spec inspired by A2UI | Application owns a minimal typed scene/action schema and renderer catalog | Keeps session/SSE/state authority local and small | Lina builds processor/validation; **PARTIAL ADOPT** ideas |
+| C. A2UI reference only | Reuse catalog, progressive update, action and recovery concepts | Zero runtime dependency | More custom code; **REFERENCE** |
+
+## AG-UI correction and choices
+
+AG-UI is MIT-licensed, active in 2026, and explicitly describes an event-based,
+transport-agnostic agent-to-user protocol. Its state primitives include
+STATE_SNAPSHOT and STATE_DELTA (RFC 6902 JSON Patch); it also includes lifecycle,
+text, tool-call, CUSTOM, and bidirectional interaction concepts. It has Python
+and TypeScript SDK paths, and its documentation explicitly lists A2UI as a
+generative-UI integration.
+
+The official open-ag-ui-canvas repository is a **demo**, not production proof:
+it has a Python FastAPI agent backend and a Next.js/React frontend for
+interactive canvases, but also includes framework/runtime choices Lina has not
+approved. Its useful evidence is the separation of an interactive Canvas from
+an agent run, not its entire stack.
+
+| Choice | Benefits | Risks / decision |
+| --- | --- | --- |
+| A. Full AG-UI adoption | Standardizes event/state/tool lifecycle across agent frontends | Replaces/expands current SSE semantics; migration and state ownership risk; **PROOF SPIKE** |
+| B. Partial event/state semantics | Reuse snapshot, delta, custom-event and causal-run vocabulary | Lina must maintain transport/reducer; **PARTIAL ADOPT** |
+| C. Custom Lina protocol informed by AG-UI | Exact safety, privacy, session and Canvas requirements | More design/implementation work; **leading research baseline** |
+| D. Reject | No protocol influence | Avoids scope | Loses useful mature vocabulary; not recommended |
+
+## OpenMAIC correction and package boundaries
+
+The official project is [THU-MAIC/OpenMAIC](https://github.com/THU-MAIC/OpenMAIC),
+not the prior cited repository. Its v1.0.0 release is dated 2026-08-27. The
+v0.3.0 release records the relicense from AGPL-3.0 to MIT and removed
+allow-same-origin from interactive iframe sandboxing. Its release/changelog
+material describes package-level DSL, renderer, importer, generation, and
+storage boundaries; interactive/PBL content contracts; scene/action generation;
+provider-neutral injected model calls; runtime/session event and outbox patterns.
+
+| Package/pattern | Boundary and Lina integration assumption | Decision |
+| --- | --- | --- |
+| @openmaic/dsl | Typed stage/scene/interactive/PBL contracts; evaluate whether a small subset maps to Lina ArtifactIntent/ScenePlan without importing classroom semantics | **PROOF SPIKE** |
+| @openmaic/renderer | Renderer contract/playback canvas; inspect accessibility, bundle and custom-catalog fit before any reuse | **PROOF SPIKE** |
+| @openmaic/importer | Course/material import concerns, not a first Studio Canvas requirement | **REJECT CURRENT** |
+| @openmaic/generation | Provider-injected outline/scene pipeline; useful separation pattern, but its prompts/course generation are not Lina Tutor semantics | **REFERENCE** |
+| @openmaic/storage | Pluggable document/runtime/asset persistence; Lina already has PostgreSQL/session authority | **REJECT CURRENT** |
+| interactive/PBL contracts | Useful typed-widget/action concepts; translate every action to Lina Studio event and keep learning authority local | **PARTIAL ADOPT** |
+| runtime/outbox/state patterns | Useful ideas for cancel/resume/replay and source lineage | **REFERENCE** |
+| iframe hardening | Security pattern: avoid allow-same-origin and validate boundaries | **ADOPT** as an evaluation requirement, not a package |
+| full OpenMAIC classroom/product | Course workbench, materials/media/uploads, agents and classroom lifecycle | **REJECT** |
+
+## tldraw correction and choices
+
+Official tldraw material documents Agent Starter Kit concepts such as eyes,
+actions, modes and managers; screenshot plus structured-shape context; streamed
+actions; custom action schemas; provider/model flexibility; and action/session
+history patterns. These are valuable architectural references for a future
+freeform Canvas.
+
+The tldraw SDK is **source-available under the tldraw license**, not MIT or
+Apache. Production requires a valid trial, commercial, or hobby license key.
+Some starter/example code is MIT, but that does not make the SDK MIT. It offers
+accessibility improvements, but Lina would still need learning-task keyboard,
+RTL, mobile, session-authority, and event-filtering proof.
+
+| Choice | Assessment | Decision |
+| --- | --- | --- |
+| A. Main Lina Canvas foundation | Rich, mature freeform board but high bundle/licensing/lock-in and broad state/a11y/mobile needs | **REJECT CURRENT** |
+| B. Future freeform Canvas | Potential fit when real learner use requires freeform spatial work | **PROOF SPIKE** |
+| C. Reuse action/event architecture | Shape snapshots, custom actions, structured context and streamed action patterns | **PARTIAL ADOPT** concepts |
+| D. Reject all influence | Avoids dependency | Loses useful architectural lessons | **REJECT** |
+
+## Vercel and MCP Apps
+
+Vercel AI SDK remains rejected as Lina's chat/session/runtime owner. Useful
+patterns are typed tool UI parts, serializable AI state versus UI state, and
+progressive tool-result rendering. AI SDK RSC remains experimental; Vercel
+presents AI SDK UI as its recommended current path. Neither overrides the
+project-owned FastAPI/SSE boundary.
+
+MCP Apps remain a possible later boundary for a third-party isolated tool UI,
+not core first-party Studio Canvas. Core Canvas requires direct app ownership of
+state, authorization, and learning interaction; an iframe/AppBridge/MCP layer
+would add permissions and message-validation complexity without solving that
+need.
+
+## External sources reviewed
+
+- [A2UI renderer development](https://github.com/a2ui-project/a2ui/blob/main/docs/public/guides/renderer-development.md)
+- [AG-UI overview](https://docs.ag-ui.com/) and [events](https://docs.ag-ui.com/concepts/events)
+- [AG-UI integrations](https://docs.ag-ui.com/integrations)
+- [open-ag-ui-canvas demo](https://github.com/ag-ui-protocol/open-ag-ui-canvas)
+- [OpenAI Agents SDK models](https://openai.github.io/openai-agents-python/models/)
+- [THU-MAIC/OpenMAIC releases](https://github.com/THU-MAIC/OpenMAIC/releases) and [changelog](https://github.com/THU-MAIC/OpenMAIC/blob/main/CHANGELOG.md)
+- [tldraw license](https://tldraw.dev/community/license) and [v4 release](https://tldraw.dev/releases/v4.0.0)
+- [Vercel AI SDK introduction](https://ai-sdk.dev/docs/introduction)
+- [MCP Apps documentation](https://apps.modelcontextprotocol.io/)
 
 ## Recommendations
 
-### 1. Preserve the Lina-owned protocol
+### 1. Use A2UI and AG-UI as bounded evidence, not platform defaults
 
-- **Recommendation:** Treat all external options as reference material or
-  adapters behind a Lina-owned shared Studio protocol.
-- **Reason:** Safety, parent policy, session truth, durable source lineage, and
-  privacy trace cannot be delegated to a UI/agent framework.
-- **Expected impact:** Reuse remains reversible and testable.
-- **Mandatory / Optional:** Mandatory.
+- **Recommendation:** Evaluate a minimal Lina Scene spec informed by A2UI and
+  AG-UI event semantics before adopting either runtime/protocol wholesale.
+- **Reason:** Their current maturity warrants proof, while Lina's ownership
+  boundaries remain non-negotiable.
+- **Expected impact:** Concrete comparison against a source-bound local baseline.
+- **Mandatory / Optional:** Mandatory evaluation before adoption.
 - **Priority:** P0.
-- **Direct view:** No external runtime should become the source of truth.
-- **Risk of ignoring:** Framework capture and unsafe split-brain state.
+- **Direct view:** Do not conflate AG-UI, A2UI, and CopilotKit decisions.
+- **Risk of ignoring:** A demo stack or protocol becomes accidental authority.
 - **Confidence:** High.
+### 2. Complete the OpenMAIC package-level evaluation
 
-### 2. Evaluate OpenMAIC at package level
-
-- **Recommendation:** Fulfil the catalog's OpenMAIC evaluation before any
-  generic Artifact DSL/renderer infrastructure decision.
-- **Reason:** It is the project-approved reuse gate for this exact problem.
-- **Expected impact:** Evidence-based adopt/partial-adopt/reject decision.
+- **Recommendation:** Evaluate DSL and renderer packages against Lina's exact
+  ArtifactIntent/ScenePlan/Studio-event needs; reject the full platform.
+- **Reason:** This is the catalog-required reuse gate and the corrected source
+  exposes meaningful package boundaries.
+- **Expected impact:** Evidence-based adopt/partial/reject record.
 - **Mandatory / Optional:** Mandatory evaluation; adoption optional.
 - **Priority:** P0.
-- **Direct view:** Evaluate renderer/DSL packages only; do not adopt its broad
-  platform by default.
-- **Risk of ignoring:** Violates explicit reuse-first architecture rule.
+- **Direct view:** Keep imports, storage, generation and classroom product out
+  of the first Studio scope.
+- **Risk of ignoring:** Violates reuse-first policy or imports excess platform.
 - **Confidence:** High.
 
-### 3. Keep external agent and GenUI runtimes out of the first proof
+### 3. Keep tldraw freeform work future-scoped
 
-- **Recommendation:** Do not add Agents SDK, CopilotKit, AI SDK, tldraw, or MCP
-  Apps to the first Studio proof spike.
-- **Reason:** The essential unanswered questions are state authority and
-  educational usefulness, not framework availability.
-- **Expected impact:** Cleaner evidence on whether specialist planning earns its
-  cost.
-- **Mandatory / Optional:** Recommended guardrail.
+- **Recommendation:** Reuse tldraw action/history ideas now; defer SDK adoption
+  until freeform learner value, licensing, a11y/mobile and product-lock-in proof.
+- **Reason:** The first Canvas needs structured learning actions, not a general
+  whiteboard.
+- **Expected impact:** Avoids an expensive premature foundation choice.
+- **Mandatory / Optional:** Mandatory current boundary.
 - **Priority:** P1.
-- **Direct view:** Use their patterns as design references, not dependencies.
-- **Risk of ignoring:** The experiment may prove a library integration instead
-  of a learning architecture.
+- **Direct view:** Starter-kit MIT code does not license the SDK.
+- **Risk of ignoring:** Licensing and opaque freeform state become product debt.
 - **Confidence:** High.
-
-## Official sources consulted
-
-- OpenAI Agents SDK: [multi-agent patterns](https://openai.github.io/openai-agents-python/multi_agent/), [models](https://openai.github.io/openai-agents-python/models/), [tracing](https://openai.github.io/openai-agents-python/tracing/), and [testing](https://openai.github.io/openai-agents-python/testing/).
-- AG-UI: [official overview](https://docs.ag-ui.com/). CopilotKit:
-  [official repository](https://github.com/CopilotKit/CopilotKit).
-- Google A2UI: [official repository](https://github.com/google/A2UI) and
-  [announcement](https://developers.googleblog.com/en/introducing-a2ui-an-open-project-for-agent-driven-interfaces/).
-- tldraw: [Agent Starter Kit](https://www.tldraw.dev/examples/ai/agent-starter-kit)
-  and [SDK licensing](https://www.tldraw.dev/docs/real-world-licenses).
-- OpenMAIC: [official repository](https://github.com/anthropics/openmaic).
-- Vercel: [AI SDK](https://ai-sdk.dev/docs/introduction) and
-  [Generative UI](https://ai-sdk.dev/docs/ai-sdk-ui/generative-user-interfaces).
-- MCP Apps: [official Apps documentation](https://apps.modelcontextprotocol.io/)
-  and [MCP specification](https://modelcontextprotocol.io/specification/2025-06-18).
-
-The sources establish current public direction, not an approval, exact
-version-pin, or complete security assessment. Each later adoption needs a
-specific provider/framework/transport, license, vulnerability, bundle,
-accessibility, and privacy review.

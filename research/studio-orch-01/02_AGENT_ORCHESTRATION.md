@@ -5,11 +5,18 @@ model call is approved by this report.
 
 ## Facts
 
-Lina's `ModelGateway` is provider-neutral at the call boundary: a route selects
-provider/model and normalized providers execute or stream while recording usage,
-latency, success/failure, and identifier-only lineage. It is not an agent
-coordinator, shared-state store, workflow engine, or event bus. Current
-configuration exposes only the Tutor route; `ModelTask` has no Canvas task.
+Lina's ModelGateway is provider-neutral at the application-task boundary: a
+route selects provider/model and normalized providers execute or stream while
+recording usage, latency, success/failure, and identifier-only lineage. It is
+not an agent coordinator, shared-state store, workflow engine, or event bus.
+
+The Gateway is not Tutor-only. ModelTask currently names Tutor, Session
+Evidence, Segment Evidence, Curriculum Semantics, Embedding, and Personal Facts
+(services/platform/db/models.py:47-55); task-specific factories configure those
+routes (services/model_gateway/factory.py:25-205). There is no ModelTask.CANVAS
+or Studio-specialist route. A Canvas task could extend the existing
+provider-neutral pattern, but separate provider settings, capability validation,
+privacy/retention review, and fallback behavior would still be required.
 
 The current normal Tutor path is exactly one streaming model invocation. Its
 strict output envelope already includes visible text, suggested actions, guided
@@ -94,6 +101,123 @@ Routine turns use the existing Tutor plus deterministic renderer. For an
 explicit, eligible complex visual task, Tutor streams immediately while a
 Canvas specialist produces an allowlisted typed plan/patch asynchronously. The
 application accepts it only if its source turn and scene revision are current.
+
++
+
+### Detailed simple and complex turn sequences
+
+**Timing classes:** Immediate = existing stream can release a first chat token;
+post-turn = terminal Tutor state is committed before Canvas appears; asynchronous
+= independently tracked Canvas work may finish later. “Rich-ready” means a
+validated interactive/visual Canvas state, not a provisional model draft.
+
+#### A. Single Teaching Agent
+
+**Simple:** Student request → application authorization and Safety/Parent policy
+→ Tutor T (existing Tutor provider/model, learner/curriculum context + current
+Studio snapshot + events since Tutor watermark) streams one response → terminal
+turn commits → application renders a deterministic typed view. Calls: one,
+sequential. First chat token: immediate. First Canvas: post-turn. Rich-ready:
+only where an existing typed renderer can render immediately after commit.
+
+**Complex:** Identical one-call flow. Tutor may request an allowlisted renderer
+through a constrained Canvas-request tool, but no Canvas model runs. T receives
+the same bounded context; there is no duplicated model context. The app is final
+state authority, rejects invalid/stale render requests, and cancels transient
+render work on a new Student turn. No specialist timeout exists; unsupported
+content falls back to text plus an honest Canvas state. Safety is server-owned;
+tracing contains operation identifiers, not content. Cost/implementation: low.
+
+#### B. Tutor Manager plus Canvas Specialist as Tool
+
+**Simple:** Same as A; manager T retains the final student-facing response.
+Calls: one, sequential; immediate chat and post-turn deterministic Canvas.
+
+**Complex:** Student request → policy → T receives teaching context, snapshot,
+and Canvas inspection/update tools → T asks Canvas C as a tool or emits a
+deferred Canvas request → C (candidate Canvas route/provider/model) receives
+only fixed learning objective, source turn, allowed catalog, scene snapshot,
+base version, and relevant events → typed ScenePlan returns → application
+validates and commits. Blocking agent-as-tool execution is sequential and may
+delay chat; deferred application scheduling allows immediate chat and
+asynchronous rich-ready Canvas. T and C duplicate only selected objective/scene,
+not a full transcript. T owns the answer; application resolves conflicts,
+cancels C on a new Student turn, rejects stale source/version output, and uses a
+specialist deadline after which chat and last valid scene remain. Safety gates
+requests and commits; tracing is redacted. Cost/implementation: medium.
+
+#### C. Teaching Manager plus Tutor and Canvas Specialists
+
+**Simple:** Student request → policy → teaching manager M plans → Tutor T
+receives M plan plus learner/curriculum/Studio projection and streams. Calls:
+two, sequential. First chat token: delayed. First Canvas: post-turn. M and T
+duplicate teaching context and introduce a second semantic teaching layer.
+
+**Complex:** M fixes objective and may dispatch T and C in parallel. T streams
+the chat answer; C receives an immutable scene snapshot/catalog and produces a
+plan. Calls: three or more. Rich-ready: asynchronous after manager/application
+join. The application, rather than M, commits only version-valid outcomes,
+cancels all children on a new Student turn, rejects late results, and allows T's
+safe terminal answer to stand on specialist timeout. Safety and persistence stay
+server-owned; each model trace must be separately redacted. Cost/implementation:
+high. No current evidence justifies this option.
+
+#### D. Peer Tutor and Canvas plus Coordinator
+
+**Simple:** Same one-call T path as A, controlled by an application coordinator.
+Calls: one. First chat: immediate; deterministic Canvas: post-turn.
+
+**Complex:** Coordinator captures active source turn and scene revision V, then
+runs T and C in parallel. T receives learner/curriculum context, snapshot and
+events since watermark; C receives source objective, V, allowed catalog, scene
+slice and semantic action history. Calls: two, parallel. First chat: immediate;
+first Canvas can be post-turn; rich-ready: asynchronous. There is purposeful
+duplication of the objective and scene slice only. The application orders
+semantic events, accepts a plan only for V and the active source turn, cancels C
+on a new Student turn, and discards late output. Specialist timeout retains the
+last valid scene. Safety/Parent policy and content-minimized tracing remain
+application-owned. Cost/implementation: medium-high/high.
+
+#### E. Hybrid Fast/Deep
+
+**Simple:** Same as A. T has teaching/conversation tools and constrained
+Canvas-inspect/request tools; a deterministic renderer responds to the terminal
+turn. Calls: one, sequential. First chat immediate; first Canvas post-turn;
+rich-ready within the typed repertoire.
+
+**Complex:** An application-owned eligibility rule permits C. T starts the
+existing stream while C is scheduled in parallel or after a stable terminal
+objective. C has scene/renderer/declarative-artifact planning tools but cannot
+change the objective. Calls: two when eligible, parallel or deferred. Chat token
+is immediate; deterministic Canvas is post-turn; specialist rich-ready is
+asynchronous. T and C receive deliberately narrow projections. Tutor remains
+the final visible teaching authority. The app resolves conflicts, records
+cancellation, rejects stale plans by source turn and scene revision, applies a
+specialist timeout, and cancels/supersedes C if a new Student turn arrives.
+Safety and trace redaction are server-owned. Cost/implementation: medium to
+medium-high.
+
+### OpenAI Agents SDK patterns and their Lina boundary
+
+- **Agents as tools:** appropriate pattern to evaluate if Tutor must retain the
+  student-facing conversation while a Canvas specialist returns a bounded plan.
+  It does not grant the specialist state-write authority.
+- **Handoffs:** transfer active-agent ownership; weak fit for normal Canvas
+  because Canvas should not become the student-facing Tutor.
+- **Code orchestration:** an application may schedule independent calls in
+  parallel, choose models/providers per agent, and own joins/cancellation. This
+  best matches Lina's need for causal state control.
+- **Per-agent/provider models:** technically supported by the SDK, but Lina
+  still needs its own ModelTask route, capability profile, cost/latency,
+  Arabic/English quality, and retention evaluation.
+- **Tracing/redaction:** SDK tracing is useful only behind a content-minimizing
+  configuration and project-owned operational policy.
+- **Hosted multi-agent beta:** service-created subagents are separate from
+  local handoffs/agents-as-tools. Official docs identify beta schemas,
+  unavailable approval interruptions, nested orchestration cost, and inability
+  to restore an in-flight response in another process/event loop. It is
+  reference-only for Lina, not recommended merely because Agent Builder sunsets.
+
 
 ## Multi-provider / multi-model analysis
 

@@ -1,110 +1,121 @@
-# STUDIO-ORCH-01 — Open Questions Register
+# STUDIO-ORCH-01 — Open Questions Register (Reclassified)
 
-**Status:** Research only. This register intentionally records unresolved
-questions; it makes no architecture decision and authorizes no implementation.
+**Status:** Research only. This is a decision/proof agenda, not an architecture
+decision or implementation authorization.
 
 ## Facts
 
-The existing Tutor response contract can supply terminal text, suggested
-actions, guided checks, and structured segment state, but it has no Canvas scene
-or patch contract. The project simultaneously protects the normal
-one-primary-Tutor-call baseline and requires expandable visual learning
-artifacts. Those facts make explicit Product Owner and evidence gates necessary.
+The Product Owner has clarified that Canvas-specialist calls may be evaluated
+and later approved when quality justifies latency/cost; separate Tutor and
+Canvas models/providers are allowed in principle; Canvas is first-class Student
+input; Tutor requires complete meaningful Canvas observability; structured
+practice/quiz interaction may occur on Canvas; and Studio is learning-first,
+not pressure Exam Mode.
+
+Those are no longer binary permission questions. The unresolved work is to
+define the bounded eligibility, state, persistence, evaluation, and adoption
+contracts that preserve those decisions.
 
 ## Assumptions
 
-No current uncommitted Studio shell visual validates learning value, provider
-capability, Canvas safety, or multi-agent benefit.
+No current Studio-shell visual proves learning value, provider quality, Canvas
+safety, or multi-agent benefit. No external framework/package is approved by
+this register.
 
 ## Risks
 
-Prematurely resolving an open question in UI code could turn a presentational
-experiment into a hidden durable protocol, second Tutor, or new safety surface.
+If questions below are silently resolved in UI or prototype code, Lina can
+accidentally acquire an unversioned Studio protocol, hidden agent authority, or
+unreconstructable learner history.
 
 ## Contradictions
 
-The main tension is not whether a Workspace is desirable; it is how much
-semantic authority, latency, and persistence it may have while remaining one
-coherent Tutor-guided experience.
+The system must keep complete meaningful Canvas history available to Tutor while
+not replaying the complete history in every model prompt. It must permit
+specialist quality where warranted while protecting routine first-token latency
+and the existing normal Tutor path.
 
 ## Options
 
-The Synthesis may recommend a bounded proof, a design/protocol spike, a
-provider evaluation, or retaining the one-call deterministic-renderer baseline.
-None is selected here.
+Synthesis may recommend a bounded proof, a state/protocol design spike, a
+package evaluation, or retention of deterministic renderer baseline. It may not
+treat the permission clarifications as approval for a specific runtime.
 
 ## Blocking before Synthesis
 
-1. What exact learner outcome makes a Canvas update valuable rather than visual
-   decoration, and how will the proof measure it?
-2. Which authoritative representation should a future Canvas consume first:
-   terminal Tutor text/actions/check, `structured_segment_state`, or a new
-   versioned Studio projection?
-3. Can the current single Tutor output semantically plan the first bounded
-   renderer set, or is a specialist call demonstrably required?
-4. What is the maximum acceptable added first-use and turn latency/cost for a
-   Canvas specialist, and how will timeout/fallback behave?
-5. What is the Product Owner's allowed first subject/use-case set for visual
-   artifacts (for example, algebra steps versus geometry interaction)?
+1. **First proof use case:** which exact learning task, learner outcome, and
+   comparison measure establish Canvas value? Candidate examples are make-ten,
+   fraction comparison, Canvas-first geometry, or structured practice.
+2. **Specialist eligibility rule:** what observable conditions make a visual
+   request complex enough for a Canvas model rather than typed renderer?
+3. **Latency/cost envelope:** what added first-token, Canvas-ready, rich-ready,
+   and per-turn cost thresholds are acceptable for the proof?
+4. **State/event contract:** what minimal event families, scene snapshot,
+   source-turn lineage, version/idempotency/cancellation rules, and
+   observation-watermark behavior are needed?
+5. **Persistence depth:** what is durable versus derived; how long is semantic
+   Studio history retained; how does the full-history query boundary authorize
+   and redact older events?
 
 ## Nonblocking
 
-1. Which visual primitives form the first renderer registry and design system?
-2. How should narrow-screen Studio presentation prioritize Canvas versus chat
-   without changing the desktop-first product model?
-3. What fixtures best represent Arabic, English, and mixed-direction learning
-   content for Canvas accessibility verification?
-4. What read-only learner navigation/history should a later Canvas expose?
+1. Which first renderer visual primitives, tokens, and interaction affordances
+   form the Studio design system?
+2. What narrow-screen representation preserves a desktop-first Studio without
+   treating mobile as the primary constraint?
+3. Which Arabic/English/mixed-direction fixture set verifies each renderer?
+4. Which operational dashboards are needed for job latency, stale rejection,
+   renderer failure, and content-free lifecycle tracing?
+5. What read-only history/navigation can be safely shown to learners later?
 
 ## Requires Product Owner Decision
 
-1. Whether a future Studio is permitted to add any model call beyond the
-   protected primary Tutor call, and under which learner-value thresholds.
-2. Whether the first scoped proof may persist Canvas scene lineage/events or
-   stays entirely derived and ephemeral.
-3. Whether OpenMAIC package evaluation is limited to renderer/DSL pieces and
-   which candidate packages are in scope.
-4. Whether specialist providers may differ from the normal Tutor provider, and
-   the data-residency/privacy budget if they do.
-5. What parent/investor-facing claims are prohibited until real learner use and
-   safety/accessibility evidence exist.
+1. The first proof use case and success criterion.
+2. The initial specialist eligibility, time, and cost thresholds.
+3. The initial persistence/retention boundary for semantic Studio events and
+   snapshots.
+4. Whether the first protocol proof may expose a dedicated Studio feed, use a
+   small terminal extension, or remain server-internal/read-model only.
+5. Whether to promote a specific package evaluation (A2UI, AG-UI, OpenMAIC DSL
+   or renderer, tldraw) after Synthesis.
 
 ## Requires Proof Spike
 
-1. A source-bound, typed renderer can improve a concrete learning task without
-   inventing Tutor content.
-2. A Canvas state/patch protocol remains correct across delta, terminal turn,
-   reload, cancellation, specialist failure, and a new student question.
-3. Keyboard, focus, screen-reader, and Arabic/English/mixed direction remain
-   usable for each first renderer.
-4. A specialist canvas plan materially improves quality enough to justify its
-   latency/cost versus deterministic renderers.
-5. Privacy tracing can record lifecycle metadata without raw learner content or
-   exposing hidden model reasoning.
+1. The application can reconstruct full meaningful history while Tutor receives
+   current snapshot plus all events since its observation watermark and can query
+   older history when needed.
+2. A typed renderer improves a concrete learner task without inventing Tutor
+   content or creating learning evidence from visual clicks.
+3. A specialist ScenePlan, if eligible, improves that same task enough to earn
+   latency/cost against the typed control.
+4. Source-turn/revision/idempotency/cancel rules survive delta, terminal,
+   reload, specialist failure, and a new Student turn.
+5. Keyboard/focus/screen-reader and Arabic/English/mixed direction remain usable
+   in the first Canvas renderer and structured practice.
 
 ## Requires Real-Use Evidence
 
-1. Learners actually use the Workspace to understand, not merely admire, a
-   visual explanation.
-2. Tutor/Canvas coordination reduces confusion or increases observable guided
-   success without increasing dependence.
-3. Parents understand Canvas scope and do not mistake visual state for stable
-   assessment, Evidence, or a safety decision.
-4. The Studio remains calm and comprehensible for the intended age range across
-   realistic devices and connectivity.
+1. Learners use the Canvas to understand or act, not only to admire a visual.
+2. Tutor/Canvas coordination reduces confusion or improves observable guided
+   success without increasing learner dependence.
+3. Parents understand that Studio state is not stable assessment, Evidence, or
+   Safety authority.
+4. The experience remains calm, comprehensible, and robust on realistic devices,
+   networks, and learner language patterns.
 
 ## Recommendations
 
-### Maintain the register through Synthesis
+### Maintain a threshold-based synthesis agenda
 
-- **Recommendation:** Use this register as the decision agenda for a separate
-  Synthesis; close an item only with a cited Product Owner decision or proof.
-- **Reason:** It prevents an attractive Studio mockup from silently deciding
-  model topology, persistence, or learner authority.
-- **Expected impact:** A traceable, bounded next architecture step.
+- **Recommendation:** Use this register to make the Synthesis choose thresholds,
+  a proof use case, and a bounded contract rather than reconsidering already
+  clarified permission principles.
+- **Reason:** It converts broad approval into testable architecture decisions.
+- **Expected impact:** A small, measurable next step without accidental runtime
+  expansion.
 - **Mandatory / Optional:** Mandatory process guardrail.
 - **Priority:** P0.
-- **Direct view:** Do not convert this list into implementation tickets before
-  the Synthesis and explicit promotion into `TASKS.md`.
-- **Risk of ignoring:** Architecture will drift through UI changes.
+- **Direct view:** Do not promote any item to implementation before Synthesis
+  and explicit task promotion.
+- **Risk of ignoring:** Permission becomes mistaken for architecture approval.
 - **Confidence:** High.
