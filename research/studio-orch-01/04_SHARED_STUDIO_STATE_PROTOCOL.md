@@ -30,7 +30,6 @@ Shared Studio State implementation.
 5. A Student can continue in Chat without restating completed Canvas work.
 6. Failure of specialist, renderer, or connection never blocks safe Chat.
 
-+
 
 ## Tutor complete Canvas observability (non-negotiable)
 

@@ -2,4 +2,4 @@
 
 | Study ID | Title | Status | Date | Folder | Decision status |
 | --- | --- | --- | --- | --- | --- |
-| STUDIO-ORCH-01 | Learning Studio orchestration architecture study | Published research | 2026-09-02 | `research/studio-orch-01/` | Non-authoritative; synthesis and Product Owner decisions pending |
+| STUDIO-ORCH-01 | Learning Studio orchestration architecture study | Synthesis published | 2026-09-02 | `research/studio-orch-01/` | Product Owner decision pending; non-authoritative until promoted |

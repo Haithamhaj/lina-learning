@@ -45,6 +45,13 @@ Sources accessed 2026-09-02:
 - https://learn.microsoft.com/en-us/semantic-kernel/frameworks/agent/agent-architecture
 - https://langchain-ai.github.io/langgraph/tutorials/multi_agent/multi-agent-collaboration/
 
+OpenAI announced on 2026-06-03 that it is winding down Agent Builder and that
+Agent Builder will no longer be available on the OpenAI Platform after
+2026-11-30. Its stated code-based continuation path for software
+implementations is the OpenAI Agents SDK. Source:
+https://openai.com/index/introducing-agentkit/ (accessed 2026-09-02). Agent
+Builder is therefore not a Lina architecture dependency.
+
 ## Assumptions
 
 - A Canvas specialist proposes declarative visual/interaction operations. It is
@@ -102,7 +109,6 @@ explicit, eligible complex visual task, Tutor streams immediately while a
 Canvas specialist produces an allowlisted typed plan/patch asynchronously. The
 application accepts it only if its source turn and scene revision are current.
 
-+
 
 ### Detailed simple and complex turn sequences
 
