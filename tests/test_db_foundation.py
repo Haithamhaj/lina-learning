@@ -66,6 +66,13 @@ def test_foundation_models_match_expected_tables() -> None:
             "personal_facts",
             "personal_fact_observations",
             "personal_fact_extraction_runs",
+            "studio_runtimes",
+            "studio_scenes",
+            "studio_events",
+            "studio_snapshots",
+            "studio_student_interactions",
+            "studio_tutor_observations",
+            "studio_canvas_specialist_runs",
         }
     assert User.__tablename__ == "users"
     assert Student.__tablename__ == "students"

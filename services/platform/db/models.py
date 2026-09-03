@@ -532,7 +532,10 @@ class LearningSession(Base):
     """Raw-session envelope; downstream intelligence remains derived."""
 
     __tablename__ = "learning_sessions"
-    __table_args__ = (Index("ix_learning_sessions_student_status", "student_id", "status"),)
+    __table_args__ = (
+        UniqueConstraint("id", "student_id", name="uq_learning_sessions_id_student"),
+        Index("ix_learning_sessions_student_status", "student_id", "status"),
+    )
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     subject: Mapped[str] = mapped_column(String(32), nullable=False, default="MATH", server_default="MATH")
@@ -553,6 +556,7 @@ class LearningSegment(Base):
 
     __tablename__ = "learning_segments"
     __table_args__ = (
+        UniqueConstraint("id", "session_id", name="uq_learning_segments_id_session"),
         UniqueConstraint("session_id", "sequence", name="uq_learning_segments_session_sequence"),
         CheckConstraint(
             "(closed_at IS NULL AND closure_reason IS NULL) OR "
@@ -627,6 +631,7 @@ class SegmentLearningReview(Base):
 class LearningMessage(Base):
     __tablename__ = "learning_messages"
     __table_args__ = (
+        UniqueConstraint("id", "session_id", name="uq_learning_messages_id_session"),
         Index("ix_learning_messages_session_created", "session_id", "created_at"),
         Index(
             "ix_learning_messages_session_segment_created_id",
@@ -1234,3 +1239,448 @@ class GradePeriod(Base):
         nullable=False,
         server_default=func.now(),
     )
+
+
+class StudioRuntime(Base):
+    """One durable, Student-scoped Studio state stream for a LearningSession."""
+
+    __tablename__ = "studio_runtimes"
+    __table_args__ = (
+        UniqueConstraint("learning_session_id", name="uq_studio_runtimes_learning_session"),
+        UniqueConstraint("id", "student_id", name="uq_studio_runtimes_id_student"),
+        UniqueConstraint(
+            "id",
+            "student_id",
+            "learning_session_id",
+            name="uq_studio_runtimes_id_student_session",
+        ),
+        ForeignKeyConstraint(
+            ["learning_session_id", "student_id"],
+            ["learning_sessions.id", "learning_sessions.student_id"],
+            ondelete="CASCADE",
+            name="fk_studio_runtimes_session_student",
+        ),
+        ForeignKeyConstraint(
+            ["active_segment_id", "learning_session_id"],
+            ["learning_segments.id", "learning_segments.session_id"],
+            ondelete="RESTRICT",
+            name="fk_studio_runtimes_active_segment_session",
+        ),
+        CheckConstraint(
+            "status IN ('OPEN', 'CLOSED', 'ARCHIVED')",
+            name="ck_studio_runtimes_status",
+        ),
+        CheckConstraint(
+            "latest_event_sequence >= 0",
+            name="ck_studio_runtimes_latest_event_sequence_nonnegative",
+        ),
+        CheckConstraint(
+            "last_tutor_observation_sequence >= 0",
+            name="ck_studio_runtimes_tutor_watermark_nonnegative",
+        ),
+        CheckConstraint(
+            "last_tutor_observation_sequence <= latest_event_sequence",
+            name="ck_studio_runtimes_tutor_watermark_bounded",
+        ),
+        Index("ix_studio_runtimes_student_status", "student_id", "status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False
+    )
+    learning_session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    active_segment_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="OPEN", server_default="OPEN")
+    latest_event_sequence: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    last_tutor_observation_sequence: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class StudioScene(Base):
+    """Accepted, subject-agnostic activity/artifact instance within one Studio runtime."""
+
+    __tablename__ = "studio_scenes"
+    __table_args__ = (
+        UniqueConstraint("id", "studio_runtime_id", "student_id", name="uq_studio_scenes_id_runtime_student"),
+        ForeignKeyConstraint(
+            ["studio_runtime_id", "student_id", "learning_session_id"],
+            [
+                "studio_runtimes.id",
+                "studio_runtimes.student_id",
+                "studio_runtimes.learning_session_id",
+            ],
+            ondelete="CASCADE",
+            name="fk_studio_scenes_runtime_session_student",
+        ),
+        ForeignKeyConstraint(
+            ["source_segment_id", "learning_session_id"],
+            ["learning_segments.id", "learning_segments.session_id"],
+            ondelete="RESTRICT",
+            name="fk_studio_scenes_source_segment_session",
+        ),
+        ForeignKeyConstraint(
+            ["source_message_id", "learning_session_id"],
+            ["learning_messages.id", "learning_messages.session_id"],
+            ondelete="RESTRICT",
+            name="fk_studio_scenes_source_message_session",
+        ),
+        CheckConstraint(
+            "status IN ('ACCEPTED', 'ACTIVE', 'SUPERSEDED', 'ARCHIVED')",
+            name="ck_studio_scenes_status",
+        ),
+        CheckConstraint("scene_version >= 0", name="ck_studio_scenes_version_nonnegative"),
+        CheckConstraint("direction IN ('ltr', 'rtl', 'auto')", name="ck_studio_scenes_direction"),
+        Index("uq_studio_scenes_runtime_active", "studio_runtime_id", unique=True, postgresql_where=text("status = 'ACTIVE'")),
+        Index("ix_studio_scenes_runtime_status", "studio_runtime_id", "status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    studio_runtime_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    learning_session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    source_segment_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    source_message_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    subject_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    concept_keys: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    activity_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    artifact_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    renderer_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    renderer_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    activity_contract_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload_schema_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    scene_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="ACCEPTED", server_default="ACCEPTED")
+    seed_payload: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    accessibility_payload: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    locale: Mapped[str] = mapped_column(String(16), nullable=False, default="en", server_default="en")
+    direction: Mapped[str] = mapped_column(String(8), nullable=False, default="auto", server_default="auto")
+    source_asset_refs: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class StudioEvent(Base):
+    """Immutable semantic Studio history; never a Learning Intelligence event."""
+
+    __tablename__ = "studio_events"
+    __table_args__ = (
+        UniqueConstraint("studio_runtime_id", "sequence", name="uq_studio_events_runtime_sequence"),
+        UniqueConstraint("id", "studio_runtime_id", "student_id", name="uq_studio_events_id_runtime_student"),
+        ForeignKeyConstraint(
+            ["studio_runtime_id", "student_id", "learning_session_id"],
+            [
+                "studio_runtimes.id",
+                "studio_runtimes.student_id",
+                "studio_runtimes.learning_session_id",
+            ],
+            ondelete="CASCADE",
+            name="fk_studio_events_runtime_session_student",
+        ),
+        ForeignKeyConstraint(
+            ["segment_id", "learning_session_id"],
+            ["learning_segments.id", "learning_segments.session_id"],
+            ondelete="RESTRICT",
+            name="fk_studio_events_segment_session",
+        ),
+        ForeignKeyConstraint(
+            ["source_message_id", "learning_session_id"],
+            ["learning_messages.id", "learning_messages.session_id"],
+            ondelete="RESTRICT",
+            name="fk_studio_events_source_message_session",
+        ),
+        ForeignKeyConstraint(
+            ["causal_event_id", "studio_runtime_id", "student_id"],
+            ["studio_events.id", "studio_events.studio_runtime_id", "studio_events.student_id"],
+            ondelete="RESTRICT",
+            name="fk_studio_events_causal_runtime_student",
+        ),
+        ForeignKeyConstraint(
+            ["scene_id", "studio_runtime_id", "student_id"],
+            ["studio_scenes.id", "studio_scenes.studio_runtime_id", "studio_scenes.student_id"],
+            ondelete="RESTRICT",
+            name="fk_studio_events_scene_runtime_student",
+        ),
+        CheckConstraint("sequence > 0", name="ck_studio_events_sequence_positive"),
+        CheckConstraint(
+            "actor IN ('STUDENT', 'TUTOR', 'SYSTEM', 'CANVAS_SPECIALIST')",
+            name="ck_studio_events_actor",
+        ),
+        CheckConstraint(
+            "(scene_id IS NULL AND base_scene_version IS NULL AND resulting_scene_version IS NULL) OR "
+            "(scene_id IS NOT NULL AND base_scene_version >= 0 AND resulting_scene_version = base_scene_version + 1)",
+            name="ck_studio_events_scene_versions",
+        ),
+        CheckConstraint(
+            "result_status IN ('ACCEPTED')",
+            name="ck_studio_events_result_status",
+        ),
+        Index(
+            "uq_studio_events_runtime_idempotency_key",
+            "studio_runtime_id",
+            "idempotency_key",
+            unique=True,
+            postgresql_where=text("idempotency_key IS NOT NULL"),
+        ),
+        Index("ix_studio_events_runtime_sequence", "studio_runtime_id", "sequence"),
+        Index("ix_studio_events_scene_sequence", "scene_id", "sequence"),
+        Index("ix_studio_events_runtime_since_tutor_watermark", "studio_runtime_id", "sequence"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    studio_runtime_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    learning_session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    segment_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    scene_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=True)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    actor: Mapped[str] = mapped_column(String(32), nullable=False)
+    event_kind: Mapped[str] = mapped_column(String(128), nullable=False)
+    event_schema_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    subject_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    activity_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    source_message_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    base_scene_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    resulting_scene_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    idempotency_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    command_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    causal_event_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    payload_schema_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    result_status: Mapped[str] = mapped_column(String(32), nullable=False, default="ACCEPTED", server_default="ACCEPTED")
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    persisted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    def to_reducer_event(self):
+        """Convert this immutable row into the pure reducer input without DB access."""
+
+        from services.studio.reducer import ReducerEvent
+
+        return ReducerEvent(
+            id=self.id,
+            sequence=self.sequence,
+            event_kind=self.event_kind,
+            event_schema_version=self.event_schema_version,
+            actor=self.actor,
+            scene_id=self.scene_id,
+            base_scene_version=self.base_scene_version,
+            resulting_scene_version=self.resulting_scene_version,
+            subject_key=self.subject_key,
+            activity_key=self.activity_key,
+            payload=self.payload,
+        )
+
+
+class StudioSnapshot(Base):
+    """One current materialized projection for a Studio runtime."""
+
+    __tablename__ = "studio_snapshots"
+    __table_args__ = (
+        UniqueConstraint("studio_runtime_id", name="uq_studio_snapshots_runtime"),
+        ForeignKeyConstraint(
+            ["studio_runtime_id", "student_id"],
+            ["studio_runtimes.id", "studio_runtimes.student_id"],
+            ondelete="CASCADE",
+            name="fk_studio_snapshots_runtime_student",
+        ),
+        ForeignKeyConstraint(
+            ["current_scene_id", "studio_runtime_id", "student_id"],
+            ["studio_scenes.id", "studio_scenes.studio_runtime_id", "studio_scenes.student_id"],
+            ondelete="RESTRICT",
+            name="fk_studio_snapshots_scene_runtime_student",
+        ),
+        ForeignKeyConstraint(
+            ["last_meaningful_student_event_id", "studio_runtime_id", "student_id"],
+            ["studio_events.id", "studio_events.studio_runtime_id", "studio_events.student_id"],
+            ondelete="RESTRICT",
+            name="fk_studio_snapshots_student_event_runtime_student",
+        ),
+        CheckConstraint("latest_event_sequence >= 0", name="ck_studio_snapshots_latest_sequence_nonnegative"),
+        CheckConstraint(
+            "current_scene_version IS NULL OR current_scene_version >= 0",
+            name="ck_studio_snapshots_current_scene_version_nonnegative",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    studio_runtime_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    snapshot_schema_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    latest_event_sequence: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    current_scene_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=True)
+    current_scene_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    active_subject_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    active_activity_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    active_step_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    last_meaningful_student_event_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=True)
+    state_payload: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class StudioStudentInteraction(Base):
+    """Dormant hand-off record from one Studio event to a future Tutor attempt."""
+
+    __tablename__ = "studio_student_interactions"
+    __table_args__ = (
+        UniqueConstraint("source_event_id", name="uq_studio_student_interactions_source_event"),
+        UniqueConstraint("id", "studio_runtime_id", "student_id", name="uq_studio_interactions_id_runtime_student"),
+        ForeignKeyConstraint(
+            ["studio_runtime_id", "student_id", "learning_session_id"],
+            [
+                "studio_runtimes.id",
+                "studio_runtimes.student_id",
+                "studio_runtimes.learning_session_id",
+            ],
+            ondelete="CASCADE",
+            name="fk_studio_interactions_runtime_session_student",
+        ),
+        ForeignKeyConstraint(
+            ["source_event_id", "studio_runtime_id", "student_id"],
+            ["studio_events.id", "studio_events.studio_runtime_id", "studio_events.student_id"],
+            ondelete="CASCADE",
+            name="fk_studio_interactions_event_runtime_student",
+        ),
+        CheckConstraint(
+            "status IN ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED', 'SUPERSEDED')",
+            name="ck_studio_interactions_status",
+        ),
+        Index("ix_studio_interactions_pending", "studio_runtime_id", "status", "created_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    studio_runtime_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    learning_session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    source_event_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    interaction_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="PENDING", server_default="PENDING")
+    context_payload: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    tutor_message_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("learning_messages.id", ondelete="SET NULL")
+    )
+    ai_execution_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("ai_executions.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class StudioTutorObservation(Base):
+    """Audit seam for an exact Studio event range selected for future Tutor reasoning."""
+
+    __tablename__ = "studio_tutor_observations"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["studio_runtime_id", "student_id"],
+            ["studio_runtimes.id", "studio_runtimes.student_id"],
+            ondelete="CASCADE",
+            name="fk_studio_observations_runtime_student",
+        ),
+        ForeignKeyConstraint(
+            ["student_interaction_id", "studio_runtime_id", "student_id"],
+            ["studio_student_interactions.id", "studio_student_interactions.studio_runtime_id", "studio_student_interactions.student_id"],
+            ondelete="RESTRICT",
+            name="fk_studio_observations_interaction_runtime_student",
+        ),
+        CheckConstraint(
+            "status IN ('SELECTED', 'COMMITTED', 'FAILED', 'CANCELLED', 'SUPERSEDED')",
+            name="ck_studio_observations_status",
+        ),
+        CheckConstraint(
+            "from_event_sequence > 0 AND through_event_sequence >= from_event_sequence",
+            name="ck_studio_observations_sequence_range",
+        ),
+        Index("ix_studio_observations_runtime_created", "studio_runtime_id", "created_at"),
+        Index("ix_studio_observations_execution_runtime", "ai_execution_id", "studio_runtime_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    studio_runtime_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    from_event_sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    through_event_sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="SELECTED", server_default="SELECTED")
+    student_interaction_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=True)
+    ai_execution_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("ai_executions.id", ondelete="SET NULL")
+    )
+    failure_metadata: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class StudioCanvasSpecialistRun(Base):
+    """Dormant operational record for a later Canvas Specialist execution path."""
+
+    __tablename__ = "studio_canvas_specialist_runs"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["studio_runtime_id", "student_id", "learning_session_id"],
+            [
+                "studio_runtimes.id",
+                "studio_runtimes.student_id",
+                "studio_runtimes.learning_session_id",
+            ],
+            ondelete="CASCADE",
+            name="fk_studio_specialist_runs_runtime_session_student",
+        ),
+        ForeignKeyConstraint(
+            ["source_message_id", "learning_session_id"],
+            ["learning_messages.id", "learning_messages.session_id"],
+            ondelete="RESTRICT",
+            name="fk_studio_specialist_runs_source_message_session",
+        ),
+        ForeignKeyConstraint(
+            ["scene_id", "studio_runtime_id", "student_id"],
+            ["studio_scenes.id", "studio_scenes.studio_runtime_id", "studio_scenes.student_id"],
+            ondelete="RESTRICT",
+            name="fk_studio_specialist_runs_scene_runtime_student",
+        ),
+        CheckConstraint(
+            "status IN ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED', 'SUPERSEDED', 'REJECTED')",
+            name="ck_studio_specialist_runs_status",
+        ),
+        CheckConstraint("base_scene_version >= 0", name="ck_studio_specialist_runs_base_scene_version"),
+        CheckConstraint(
+            "accepted_scene_version IS NULL OR accepted_scene_version >= 0",
+            name="ck_studio_specialist_runs_accepted_scene_version",
+        ),
+        Index("ix_studio_specialist_runs_runtime_status", "studio_runtime_id", "status", "created_at"),
+        Index("ix_studio_specialist_runs_runtime_source_message", "studio_runtime_id", "source_message_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    studio_runtime_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    learning_session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    source_message_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    scene_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=True)
+    base_scene_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    subject_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    capability_profile_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="PENDING", server_default="PENDING")
+    job_id: Mapped[UUID | None] = mapped_column(
+        # Operational queue identity is retained even if routine job retention
+        # removes its row; this must not couple Studio history to queue cleanup.
+        PostgreSQLUUID(as_uuid=True)
+    )
+    ai_execution_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("ai_executions.id", ondelete="SET NULL")
+    )
+    output_schema_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    accepted_scene_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    failure_metadata: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

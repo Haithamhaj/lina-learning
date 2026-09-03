@@ -39,10 +39,12 @@ The FE-02 `/student/daily` prototype is preserved remotely on
 `prototype/FE-02_PROTOTYPE_MANIFEST.md`. It remains non-authoritative,
 non-production architecture: no Tutor-prose parsing, local browser state,
 polling, or display-only Canvas is Studio truth. The `codex/ctx-03` tracked
-tree remains clean and no production Studio runtime, schema, or protocol exists.
-`STUDIO-STATE-01` is the only ready task. `CURR-RENDER-MATH-01A` is deferred
-until the Grade 5 Math renderer batch and does not block Studio Core or bounded
-foundation work; all other Studio tasks remain blocked.
+tree contains an accepted production Studio state foundation only: no
+Studio protocol, Tutor runtime/context, subject capability, renderer, frontend,
+or specialist execution behavior exists. `STUDIO-STATE-01` is `DONE /
+ACCEPTED`; `STUDIO-SUBJECT-01` is the only ready task; all later Studio tasks
+are blocked. `CURR-RENDER-MATH-01A` remains deferred until the Grade 5 Math
+renderer batch and does not block Studio Core.
 
 ---
 
@@ -50,7 +52,9 @@ foundation work; all other Studio tasks remain blocked.
 
 - Execution branch: `codex/ctx-03`.
 - Accepted PF-02 implementation commit: `062e2188ad5f4668183ff4ea8316f97926c5bd97`.
-- Daily-Use PostgreSQL/pgvector DB is at Alembic head `a1d2e3f4b5c6`; accepted migration preserved the existing 10 Students, 13 Sessions, and 22 Messages.
+- Daily-Use PostgreSQL 17.8 / pgvector 0.8.1 is at Alembic head
+  `b6e4c2a9d7f1`. Its pre-existing 39 application-table counts were unchanged
+  by the additive Studio migration; all seven new Studio tables are empty.
 - PF-02 already provides one dedicated asynchronous Personal Facts Model Gateway call per completed Learning Session, separate from Tutor and Segment Learning Review; strict Student-source/safety grounding; Fact + Observation persistence; retry-safe extraction runs; `ADD` / `SUPPORT` / `NOOP`; capacity skip; and an on-demand Personal Memory Document.
 - PF-02A is accepted: the same PF model call receives a compact Student-scoped catalog of current and historical Fact identities, then semantically chooses `SUPPORT_EXISTING` or `ADD_NEW`; the server remains the deterministic grounding, ownership, safety, canonicalization, idempotency, and persistence authority.
 - Known Facts are untrusted reference data only, not Evidence or instructions. PF-02A adds no schema/migration, second model call, embeddings, Tutor, Segment Review, Learning Intelligence, or RAG behavior.
@@ -143,7 +147,7 @@ Protected invariants:
 
 ## Active risks
 
-- **STUDIO-R1 — Approved Studio architecture is not yet implemented; preserve the FE-02 prototype without accepting browser-local/prose-derived state — Criticality 4**
+- **STUDIO-R1 — Studio state foundation is accepted; protocol, Tutor integration, subject capabilities, and frontend remain blocked — Criticality 4**
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**
 - **VISION-R1 — Durable Student Asset Hosting Required Before Daily Vision — Criticality 4**
 - **MATH-01 — Structured Math Readability — Criticality 4 / independent**
@@ -152,7 +156,26 @@ Protected invariants:
 
 ---
 
-## Latest completed task
+## Prior accepted context
+
+### STUDIO-STATE-01 — Durable Production Studio State Foundation
+
+**Status:** DONE / ACCEPTED
+
+**Result:** additive Studio Runtime, Scene, semantic Event, Snapshot,
+StudentInteraction, Tutor Studio Observation, and dormant Canvas Specialist Run
+persistence; pure versioned core reducer; PostgreSQL-locked atomic append;
+idempotency, stale Scene-version, cross-Student, capacity, replay, rollback,
+and concurrency contracts. Daily-Use migration is applied at
+`b6e4c2a9d7f1` with unchanged pre-existing counts and zero Studio rows.
+
+**Boundary:** no routes/SSE, frontend, Tutor runtime/context, Model Gateway,
+ModelTask, worker/job creation, subject profile, renderer, Learning Intelligence,
+or Personal Facts behavior changed.
+
+---
+
+## Latest accepted task
 
 ### FE-01 — Visual System + Library Capability + Reuse Decision Record
 
@@ -175,9 +198,9 @@ UI code, dependencies, Voice, Vision, attachments, artifacts, or FE-02 work.
 
 ## Next recommended action
 
-`STUDIO-STATE-01` is the only ready task. It was not started in this closure
-task; do not begin the Math research correction or any other Studio
-runtime/schema/frontend work.
+`STUDIO-SUBJECT-01` is the only ready task. It was not started in this closure;
+all later Studio tasks remain blocked. Do not begin protocol/runtime/frontend
+work or the Math renderer correction.
 
 ---
 

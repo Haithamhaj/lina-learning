@@ -17,8 +17,8 @@ preserved Daily-Use history below.
 ```text
 STUDIO-GOV-01 — DONE / ACCEPTED
 → FE-02-PRESERVE-01 — DONE / ACCEPTED
-→ STUDIO-STATE-01 — ONLY READY TASK
-→ STUDIO-SUBJECT-01 — BLOCKED
+→ STUDIO-STATE-01 — DONE / ACCEPTED
+→ STUDIO-SUBJECT-01 — ONLY READY TASK
 → STUDIO-PROTOCOL-01 — BLOCKED
 → STUDIO-RUNTIME-01 — BLOCKED
 → STUDIO-RUNTIME-02 — BLOCKED
@@ -58,11 +58,16 @@ non-production.
 
 ## STUDIO-STATE-01 — Durable Studio State
 
-**Status:** ONLY READY TASK
+**Status:** DONE / ACCEPTED
 **Dependencies:** accepted `STUDIO-GOV-01` and `FE-02-PRESERVE-01` only.
 
-All later Studio tasks remain blocked until their direct predecessors are
-accepted. `CURR-RENDER-MATH-01A` is **BLOCKED UNTIL THE GRADE 5 MATH RENDERER
+**Accepted result:** durable Runtime, Scene, semantic Event Log, Materialized
+Snapshot, and persistence seams are at Alembic head `b6e4c2a9d7f1`; focused
+Studio PostgreSQL verification and the accepted full isolated suite passed.
+
+`STUDIO-SUBJECT-01` is the only ready task. All later Studio tasks remain
+blocked.
+`CURR-RENDER-MATH-01A` is **BLOCKED UNTIL THE GRADE 5 MATH RENDERER
 IMPLEMENTATION GATE**: it does not block Studio state, protocol, runtime,
 cross-subject foundation activities, or FE-02 Studio integration.
 

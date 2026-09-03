@@ -30,8 +30,16 @@ dependencies, or FE-02 prototype acceptance.
 `prototype/fe-02-studio-shell-2026-09-02` at
 `8648371480b0aac116af2a49e2d3d7493d26360f`.
 
-`STUDIO-STATE-01` is promoted as the only ready task. `CURR-RENDER-MATH-01A`
-is the pre-Grade-5-renderer correction gate, not a Studio Core dependency.
+## STUDIO-STATE-01 — Durable Studio State Foundation
+**Status:** DONE / ACCEPTED
+**Accepted migration:** `b6e4c2a9d7f1`.
+**Accepted result:** durable Runtime, Scene, semantic Event Log, Materialized
+Snapshot, and persistence seams; focused Studio PostgreSQL verification and the
+accepted full isolated suite passed. `STUDIO-SUBJECT-01` is promoted next as the
+only ready task.
+
+`CURR-RENDER-MATH-01A` is the pre-Grade-5-renderer correction gate, not a
+Studio Core dependency.
 
 ---
 
