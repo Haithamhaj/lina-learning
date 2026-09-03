@@ -42,6 +42,9 @@ from services.studio.reducer import (
     reduce_snapshot,
     registered_reducer,
 )
+from services.studio.subjects import production_subject_registry
+from services.studio.subjects.contracts import ActivityActionContract, ValidationResult
+from services.studio.subjects.registry import SubjectCapabilityError, SubjectCapabilityRegistry
 
 
 MAX_EVENT_PAYLOAD_BYTES = 8_192
@@ -50,6 +53,7 @@ MAX_ACCESSIBILITY_PAYLOAD_BYTES = 8_192
 MAX_SNAPSHOT_PAYLOAD_BYTES = 16_384
 MAX_FAILURE_METADATA_BYTES = 4_096
 MAX_INTERACTION_PAYLOAD_BYTES = 4_096
+MAX_SUBJECT_EVENT_ENVELOPE_BYTES = 9_216
 
 
 class StudioStateError(ValueError):
@@ -75,8 +79,9 @@ class StudioRuntimeClosed(StudioStateError):
 class StudioStateService:
     """Application service that locks one runtime before allocating its event sequence."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, *, subject_registry: SubjectCapabilityRegistry | None = None) -> None:
         self.session = session
+        self.subject_registry = subject_registry or production_subject_registry()
 
     def get_or_create_runtime(self, *, student_id: UUID, learning_session_id: UUID) -> StudioRuntime:
         """Return the sole runtime for a Student-owned LearningSession."""
@@ -132,6 +137,7 @@ class StudioStateService:
                 source_segment_id=command.source_segment_id,
                 source_message_id=command.source_message_id,
                 subject_key=command.subject_key,
+                subject_profile_version=command.subject_profile_version,
                 concept_keys=list(command.concept_keys),
                 activity_key=command.activity_key,
                 artifact_type=command.artifact_type,
@@ -170,6 +176,7 @@ class StudioStateService:
                     source_message_id=scene.source_message_id,
                     source_segment_id=scene.source_segment_id,
                     idempotency_key=f"scene-accept:{scene.id}",
+                    action_key=None,
                 ),
             )
             return scene
@@ -207,14 +214,23 @@ class StudioStateService:
             scene = self.session.get(StudioScene, existing.scene_id) if existing.scene_id else None
             return AppendStudioEventResult(existing, snapshot, scene, interaction, replayed=True)
 
-        # Validate reducer availability before assigning a sequence or mutating any row.
-        registered_reducer(command.event_kind, command.event_schema_version)
         self._validate_source_lineage(
             runtime,
             source_segment_id=command.source_segment_id,
             source_message_id=command.source_message_id,
         )
         scene = self._scene_for_command(runtime, command)
+        action, validation = self._validate_event_capability(command, scene)
+        durable_event_kind = command.event_kind if action is None else action.event_kind
+        durable_event_schema_version = command.event_schema_version if action is None else action.event_schema_version
+        if durable_event_kind is None or durable_event_schema_version is None:
+            raise StudioStateError("Studio events require a resolved durable event contract.")
+        event_payload = self._event_payload(command.payload, validation, subject_action=action is not None)
+        self._validate_json_capacity(
+            event_payload,
+            MAX_SUBJECT_EVENT_ENVELOPE_BYTES if action is not None else MAX_EVENT_PAYLOAD_BYTES,
+            "Subject event validation envelope" if action is not None else "Event payload",
+        )
         if command.causal_event_id is not None:
             causal = self.session.execute(
                 select(StudioEvent).where(
@@ -237,10 +253,11 @@ class StudioStateService:
             scene_id=None if scene is None else scene.id,
             sequence=next_sequence,
             actor=command.actor.value,
-            event_kind=command.event_kind,
-            event_schema_version=command.event_schema_version,
-            subject_key=command.subject_key if command.subject_key is not None else (scene.subject_key if scene else None),
-            activity_key=command.activity_key if command.activity_key is not None else (scene.activity_key if scene else None),
+            event_kind=durable_event_kind,
+            action_key=None if action is None else action.action_key,
+            event_schema_version=durable_event_schema_version,
+            subject_key=scene.subject_key if scene is not None else command.subject_key,
+            activity_key=scene.activity_key if scene is not None else command.activity_key,
             source_message_id=command.source_message_id,
             base_scene_version=command.base_scene_version,
             resulting_scene_version=resulting_scene_version,
@@ -248,14 +265,18 @@ class StudioStateService:
             command_fingerprint=fingerprint,
             causal_event_id=command.causal_event_id,
             payload_schema_version=command.payload_schema_version,
-            payload=dict(command.payload),
+            payload=event_payload,
             result_status=self._result_status_value(command.result_status),
             occurred_at=command.occurred_at or datetime.now(UTC),
         )
         snapshot = self._snapshot_locked(runtime)
-        projection = reduce_snapshot(self.snapshot_projection(snapshot), event.to_reducer_event())
+        projection = reduce_snapshot(
+            self.snapshot_projection(snapshot),
+            self._reducer_event(event, scene),
+            subject_registry=self.subject_registry,
+        )
         self._validate_json_capacity(projection["state_payload"], MAX_SNAPSHOT_PAYLOAD_BYTES, "Snapshot payload")
-        self._apply_scene_lifecycle(scene, command)
+        self._apply_scene_lifecycle(scene, command, durable_event_kind)
         if scene is not None:
             scene.scene_version = resulting_scene_version  # type: ignore[assignment]
             scene.updated_at = datetime.now(UTC)
@@ -265,13 +286,17 @@ class StudioStateService:
         self.session.add(event)
         self.session.flush()
         interaction = None
-        if command.create_student_interaction:
+        if (
+            action is not None
+            and action.interaction_policy.value == "TUTOR_TRIGGERING"
+            and command.actor.value == "STUDENT"
+        ):
             interaction = StudioStudentInteraction(
                 studio_runtime_id=runtime.id,
                 student_id=runtime.student_id,
                 learning_session_id=runtime.learning_session_id,
                 source_event_id=event.id,
-                interaction_kind=command.interaction_kind or "tutor-follow-up",
+                interaction_kind=action.interaction_kind,
                 context_payload={},
             )
             self.session.add(interaction)
@@ -289,7 +314,12 @@ class StudioStateService:
             .order_by(StudioEvent.sequence)
         ).scalars()
         for event in events:
-            projection = reduce_snapshot(projection, event.to_reducer_event())
+            scene = self.session.get(StudioScene, event.scene_id) if event.scene_id is not None else None
+            projection = reduce_snapshot(
+                projection,
+                self._reducer_event(event, scene),
+                subject_registry=self.subject_registry,
+            )
         return projection
 
     def snapshot_projection(self, snapshot: StudioSnapshot) -> SnapshotProjection:
@@ -469,8 +499,6 @@ class StudioStateService:
         if command.scene_id is None:
             if command.base_scene_version is not None:
                 raise StaleSceneVersion("A Scene version was supplied without a Scene.")
-            if command.create_student_interaction:
-                raise StudioStateError("Tutor-triggering interactions require a source Scene event.")
             return None
         scene = self.session.execute(
             select(StudioScene).where(
@@ -485,14 +513,91 @@ class StudioStateService:
             raise StaleSceneVersion("Studio Scene version is stale.")
         return scene
 
-    def _apply_scene_lifecycle(self, scene: StudioScene | None, command: AppendStudioEventCommand) -> None:
+    def _validate_event_capability(
+        self,
+        command: AppendStudioEventCommand,
+        scene: StudioScene | None,
+    ) -> tuple[ActivityActionContract | None, ValidationResult | None]:
+        """Resolve a core lifecycle reducer or a fully typed subject action before mutation."""
+
+        if command.event_kind is not None:
+            if not command.event_kind.startswith("studio."):
+                raise StudioStateError("Subject activity events must resolve their durable event kind from action_key.")
+            if command.event_schema_version is None:
+                raise StudioStateError("Core lifecycle events require an event schema version.")
+            if command.action_key is not None:
+                raise StudioStateError("Core lifecycle events cannot carry an Activity action key.")
+            registered_reducer(command.event_kind, command.event_schema_version)
+            return None, None
+        if scene is None:
+            raise StudioStateError("Subject activity events require an active Scene contract and action key.")
+        if command.action_key is None:
+            raise StudioStateError("Subject activity events require an explicit action key.")
+        if command.event_schema_version is not None:
+            raise StudioStateError("Subject activity event schema is owned by the resolved Action contract.")
+        if command.subject_key is not None and command.subject_key != scene.subject_key:
+            raise StudioStateError("Subject event subject must match the active Scene subject.")
+        if command.activity_key is not None and command.activity_key != scene.activity_key:
+            raise StudioStateError("Subject event activity must match the active Scene activity.")
+        try:
+            return self.subject_registry.validate_subject_event(
+                subject_key=scene.subject_key,
+                subject_profile_version=scene.subject_profile_version,
+                activity_key=scene.activity_key,
+                activity_version=scene.activity_contract_version,
+                action_key=command.action_key,
+                payload_schema_version=command.payload_schema_version,
+                payload=command.payload,
+            )
+        except SubjectCapabilityError as error:
+            raise StudioStateError(str(error)) from error
+
+    @staticmethod
+    def _reducer_event(event: StudioEvent, scene: StudioScene | None):
+        payload = event.payload
+        if "action" in payload and isinstance(payload["action"], dict):
+            event_payload = dict(payload["action"])
+        else:
+            event_payload = payload
+        reducer_event = event.to_reducer_event(
+            activity_contract_version=None if scene is None else scene.activity_contract_version,
+            subject_profile_version=None if scene is None else scene.subject_profile_version,
+        )
+        return reducer_event.__class__(**{**reducer_event.__dict__, "payload": event_payload})
+
+    @staticmethod
+    def _event_payload(
+        payload: Mapping[str, object],
+        validation: ValidationResult | None,
+        *,
+        subject_action: bool,
+    ) -> dict[str, object]:
+        if not subject_action:
+            return dict(payload)
+        envelope: dict[str, object] = {
+            "action": dict(payload),
+        }
+        if validation is not None:
+            envelope["validation"] = {
+                "status": validation.status.value,
+                "feedback_code": validation.feedback_code,
+                "next_action_keys": list(validation.next_action_keys),
+            }
+        return envelope
+
+    def _apply_scene_lifecycle(
+        self,
+        scene: StudioScene | None,
+        command: AppendStudioEventCommand,
+        durable_event_kind: str,
+    ) -> None:
         if scene is None:
             return
-        if command.event_kind == "studio.scene.accepted":
+        if durable_event_kind == "studio.scene.accepted":
             if scene.status != "ACCEPTED" or command.base_scene_version != 0:
                 raise StudioStateError("Only a new accepted Scene may receive the accepted lifecycle event.")
             return
-        if command.event_kind == "studio.scene.activated":
+        if durable_event_kind == "studio.scene.activated":
             if scene.status != "ACCEPTED":
                 raise StudioStateError("Only an accepted Scene may become active.")
             active = self.session.execute(
@@ -506,7 +611,7 @@ class StudioStateService:
                 raise ValueError("A Studio runtime already has an active Scene.")
             scene.status = "ACTIVE"
             return
-        if command.event_kind == "studio.scene.status_changed":
+        if durable_event_kind == "studio.scene.status_changed":
             status = command.payload.get("status")
             if not isinstance(status, str):
                 raise StudioStateError("Scene status change requires a valid status.")
@@ -552,10 +657,29 @@ class StudioStateService:
             raise ValueError("Scene source asset references must be bounded non-empty strings.")
         self._validate_json_capacity(command.seed_payload, MAX_SCENE_PAYLOAD_BYTES, "Scene payload")
         self._validate_json_capacity(command.accessibility_payload, MAX_ACCESSIBILITY_PAYLOAD_BYTES, "Accessibility payload")
+        try:
+            self.subject_registry.validate_scene(
+                subject_key=command.subject_key,
+                subject_profile_version=command.subject_profile_version,
+                activity_key=command.activity_key,
+                activity_version=command.activity_contract_version,
+                renderer_key=command.renderer_key,
+                renderer_version=command.renderer_version,
+                payload_schema_version=command.payload_schema_version,
+                seed_payload=command.seed_payload,
+                locale=command.locale,
+                direction=command.direction,
+            )
+        except SubjectCapabilityError as error:
+            raise StudioStateError(str(error)) from error
 
     def _validate_append_command(self, command: AppendStudioEventCommand) -> None:
-        self._bounded_text(command.event_kind, "Event kind", 128)
-        self._bounded_text(command.event_schema_version, "Event schema version", 64)
+        if command.event_kind is not None:
+            self._bounded_text(command.event_kind, "Event kind", 128)
+        if command.event_schema_version is not None:
+            self._bounded_text(command.event_schema_version, "Event schema version", 64)
+        if command.action_key is not None:
+            self._bounded_text(command.action_key, "Event action key", 128)
         self._bounded_text(command.payload_schema_version, "Event payload schema version", 64)
         self._bounded_text(command.idempotency_key, "Event idempotency key", 255)
         self._result_status_value(command.result_status)
@@ -563,14 +687,9 @@ class StudioStateService:
             self._bounded_text(command.subject_key, "Event subject key", 64)
         if command.activity_key is not None:
             self._bounded_text(command.activity_key, "Event activity key", 128)
-        if command.create_student_interaction and command.interaction_kind is None:
-            raise ValueError("Tutor-triggering Studio events require an interaction kind.")
-        if command.interaction_kind is not None:
-            self._bounded_text(command.interaction_kind, "Interaction kind", 64)
         self._validate_json_capacity(command.payload, MAX_EVENT_PAYLOAD_BYTES, "Event payload")
         if command.event_kind == "studio.recorded":
-            if command.payload or command.subject_key is not None or command.activity_key is not None:
-                raise StudioStateError("Recorded events must not carry activity state before STUDIO-SUBJECT-01.")
+            raise StudioStateError("studio.recorded is not an accepted callable Studio event contract.")
         if command.event_kind == "studio.runtime.initialized" and command.payload:
             raise StudioStateError("Runtime initialization must not carry activity state.")
 
@@ -650,6 +769,7 @@ class StudioStateService:
             "student_id": str(command.student_id),
             "learning_session_id": str(command.learning_session_id),
             "event_kind": command.event_kind,
+            "action_key": command.action_key,
             "event_schema_version": command.event_schema_version,
             "actor": command.actor.value,
             "payload_schema_version": command.payload_schema_version,
@@ -662,8 +782,6 @@ class StudioStateService:
             "source_message_id": None if command.source_message_id is None else str(command.source_message_id),
             "source_segment_id": None if command.source_segment_id is None else str(command.source_segment_id),
             "causal_event_id": None if command.causal_event_id is None else str(command.causal_event_id),
-            "create_student_interaction": command.create_student_interaction,
-            "interaction_kind": command.interaction_kind,
         }
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()

@@ -1351,6 +1351,7 @@ class StudioScene(Base):
     source_segment_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True))
     source_message_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True))
     subject_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    subject_profile_version: Mapped[str] = mapped_column(String(64), nullable=False)
     concept_keys: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
     activity_key: Mapped[str] = mapped_column(String(128), nullable=False)
     artifact_type: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -1446,6 +1447,7 @@ class StudioEvent(Base):
     sequence: Mapped[int] = mapped_column(Integer, nullable=False)
     actor: Mapped[str] = mapped_column(String(32), nullable=False)
     event_kind: Mapped[str] = mapped_column(String(128), nullable=False)
+    action_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
     event_schema_version: Mapped[str] = mapped_column(String(64), nullable=False)
     subject_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     activity_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
@@ -1461,7 +1463,12 @@ class StudioEvent(Base):
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     persisted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
-    def to_reducer_event(self):
+    def to_reducer_event(
+        self,
+        *,
+        activity_contract_version: str | None = None,
+        subject_profile_version: str | None = None,
+    ):
         """Convert this immutable row into the pure reducer input without DB access."""
 
         from services.studio.reducer import ReducerEvent
@@ -1470,6 +1477,7 @@ class StudioEvent(Base):
             id=self.id,
             sequence=self.sequence,
             event_kind=self.event_kind,
+            action_key=self.action_key,
             event_schema_version=self.event_schema_version,
             actor=self.actor,
             scene_id=self.scene_id,
@@ -1478,6 +1486,9 @@ class StudioEvent(Base):
             subject_key=self.subject_key,
             activity_key=self.activity_key,
             payload=self.payload,
+            activity_contract_version=activity_contract_version,
+            subject_profile_version=subject_profile_version,
+            payload_schema_version=self.payload_schema_version,
         )
 
 

@@ -47,12 +47,90 @@ from services.studio.service import (
     StudioStateError,
     UnknownStudioEvent,
 )
+from services.studio.subjects.contracts import (
+    AccessibilityContract,
+    ActivityActionContract,
+    ActivityContract,
+    InteractionPolicy,
+    PayloadValidatorContract,
+    ReducerContract,
+    RendererContract,
+    SubjectCapabilityProfile,
+    ReducedMotionPolicy,
+    SemanticValidationPolicy,
+    ValidationResult,
+    ValidationStatus,
+    ValidatorContract,
+)
+from services.studio.subjects.registry import SubjectCapabilityRegistry
+from services.studio.subjects import production_subject_registry
 
 
 pytestmark = pytest.mark.skipif(
     not os.getenv("DATABASE_URL"),
     reason="PostgreSQL DATABASE_URL is required for Studio state contracts",
 )
+
+
+def _fixture_payload(payload: dict[str, object]) -> None:
+    if (set(payload) == {"value"} and isinstance(payload["value"], int)) or (
+        set(payload) == {"label"} and isinstance(payload["label"], str)
+    ):
+        return
+    raise ValueError("fixture subject payload requires one bounded typed value")
+
+
+def _fixture_reducer(snapshot: dict[str, object], event: object) -> dict[str, object]:
+    from copy import deepcopy
+
+    from services.studio.reducer import ReducerEvent
+
+    assert isinstance(event, ReducerEvent)
+    next_snapshot = deepcopy(snapshot)
+    next_snapshot["latest_event_sequence"] = event.sequence
+    return next_snapshot
+
+
+def _fixture_semantic_validator(payload: dict[str, object]) -> ValidationResult:
+    return ValidationResult(
+        ValidationStatus.INVALID if payload["value"] == 0 else ValidationStatus.VALID,
+        feedback_code="fixture-invalid" if payload["value"] == 0 else "fixture-valid",
+    )
+
+
+def _studio_test_registry() -> SubjectCapabilityRegistry:
+    access = AccessibilityContract("buttons", "required", "supported", "bidirectional", "text", "safe-text", ReducedMotionPolicy.NO_MOTION)
+    actions = (
+        ActivityActionContract(
+            "fixture.record", "fixture.recorded", "fixture-event-v1", "fixture-payload-v1", "fixture-payload", InteractionPolicy.RECORD_ONLY, SemanticValidationPolicy.NONE
+        ),
+        ActivityActionContract(
+            "fixture.submit", "fixture.step_submitted", "fixture-event-v1", "fixture-payload-v1", "fixture-payload", InteractionPolicy.TUTOR_TRIGGERING, SemanticValidationPolicy.REQUIRED, "fixture-submit", "fixture-semantic", "1"
+        ),
+    )
+    profile = SubjectCapabilityProfile(
+        subject_key="MATH", profile_version="fixture-v1", supported_grade_scope=(), concept_namespace="fixture.math",
+        tutor_guidance_fragment="fixture", grounding_policy_key="none", locale_policy_key="independent",
+        deterministic_fallback="safe-text", canvas_specialist_profile_key=None,
+        renderers=(RendererContract("native-react-svg", "1", "MATH", ("generic-workspace", "another-workspace"), "scene-v1", True, tuple(a.action_key for a in actions), (), "fixture", access, False, False, False, "TEST_ONLY"),),
+        payload_validators=(PayloadValidatorContract("fixture-payload", "scene-v1", _fixture_payload), PayloadValidatorContract("fixture-payload", "fixture-payload-v1", _fixture_payload)),
+        validators=(ValidatorContract("fixture-semantic", "1", _fixture_semantic_validator),),
+        reducers=(ReducerContract("fixture-reducer", "1", _fixture_reducer),),
+        activities=tuple(ActivityContract(key, "activity-v1", "MATH", "fixture.math", "native-react-svg", "1", "scene-v1", "fixture-payload", actions, "fixture", "bounded", (), "safe-text", access, "fixture-reducer", "1") for key in ("generic-workspace", "another-workspace")),
+    )
+    return SubjectCapabilityRegistry((profile,))
+
+
+@pytest.fixture(autouse=True)
+def _use_test_only_subject_registry(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run accepted Core persistence tests through a test-only capability, never a production activity."""
+
+    original_init = StudioStateService.__init__
+
+    def configured_init(self: StudioStateService, session: Session, *, subject_registry=None) -> None:
+        original_init(self, session, subject_registry=subject_registry or _studio_test_registry())
+
+    monkeypatch.setattr(StudioStateService, "__init__", configured_init)
 
 
 @pytest.fixture
@@ -99,6 +177,7 @@ def _scene_command(student: Student, learning_session: LearningSession, **overri
         "student_id": student.id,
         "learning_session_id": learning_session.id,
         "subject_key": "MATH",
+        "subject_profile_version": "fixture-v1",
         "concept_keys": ("fractions",),
         "activity_key": "generic-workspace",
         "artifact_type": "interactive-workspace",
@@ -126,26 +205,33 @@ def _append_command(
     idempotency_key: str | None = None,
     payload: dict[str, object] | None = None,
     actor: StudioActor = StudioActor.SYSTEM,
+    action_key: str | None = None,
     result_status: StudioEventResultStatus | str = StudioEventResultStatus.ACCEPTED,
     create_student_interaction: bool = False,
     source_message_id: UUID | None = None,
     source_segment_id: UUID | None = None,
 ) -> AppendStudioEventCommand:
+    if create_student_interaction and event_kind == "studio.scene.activated":
+        event_kind = "fixture.submit"
+    if create_student_interaction and actor is StudioActor.SYSTEM:
+        actor = StudioActor.STUDENT
+    if not event_kind.startswith("studio.") and action_key is None:
+        action_key = {"fixture.record": "fixture.record", "fixture.submit": "fixture.submit"}.get(event_kind)
+    is_core = event_kind.startswith("studio.")
     return AppendStudioEventCommand(
         runtime_id=runtime_id,
         student_id=student.id,
         learning_session_id=learning_session.id,
-        event_kind=event_kind,
-        event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+        event_kind=event_kind if is_core else None,
+        action_key=action_key,
+        event_schema_version=CORE_EVENT_SCHEMA_VERSION if is_core else None,
         actor=actor,
-        payload_schema_version="studio-event-payload-v1",
-        payload=payload or {},
+        payload_schema_version="studio-event-payload-v1" if is_core else "fixture-payload-v1",
+        payload=payload or ({} if is_core else {"value": 1}),
         scene_id=scene_id,
         base_scene_version=base_scene_version,
         idempotency_key=idempotency_key or f"event-{uuid4().hex}",
         result_status=result_status,
-        create_student_interaction=create_student_interaction,
-        interaction_kind="tutor-follow-up" if create_student_interaction else None,
         source_message_id=source_message_id,
         source_segment_id=source_segment_id,
     )
@@ -190,6 +276,32 @@ def test_schema_inventory_includes_only_studio_foundation_tables_and_indexes() -
     assert "ACCEPTED" in reflected_result_status
 
 
+def test_unregistered_production_scene_rejects_before_scene_event_or_snapshot_mutation(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Catch a generic Scene path that bypasses the production Subject Capability Registry."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "production-capability-rejection")
+        learning_session = _session(session, student)
+        service = StudioStateService(session, subject_registry=production_subject_registry())
+        runtime = service.get_or_create_runtime(student_id=student.id, learning_session_id=learning_session.id)
+        before = service.runtime_state(runtime_id=runtime.id, student_id=student.id)
+        before_counts = (
+            session.scalar(select(func.count()).select_from(StudioEvent)),
+            session.scalar(select(func.count()).select_from(StudioRuntime)),
+        )
+
+        with pytest.raises(StudioStateError, match="Unsupported Subject profile"):
+            service.accept_scene(_scene_command(student, learning_session))
+
+        assert service.runtime_state(runtime_id=runtime.id, student_id=student.id) == before
+        assert (
+            session.scalar(select(func.count()).select_from(StudioEvent)),
+            session.scalar(select(func.count()).select_from(StudioRuntime)),
+        ) == before_counts
+
+
 def test_runtime_is_one_per_session_and_student_scoped(postgres_session_factory: sessionmaker[Session]) -> None:
     with postgres_session_factory.begin() as session:
         student = _student(session, "runtime")
@@ -221,7 +333,7 @@ def test_result_status_invalid_direct_database_write_is_rejected(
                 learning_session_id=learning_session.id,
                 sequence=2,
                 actor=StudioActor.SYSTEM.value,
-                event_kind="studio.recorded",
+                event_kind="fixture.record",
                 event_schema_version=CORE_EVENT_SCHEMA_VERSION,
                 command_fingerprint="0" * 64,
                 payload_schema_version="studio-event-payload-v1",
@@ -247,7 +359,7 @@ def test_result_status_application_contract_accepts_only_accepted(
                 runtime_id,
                 student,
                 learning_session,
-                event_kind="studio.recorded",
+                event_kind="studio.runtime.initialized",
                 result_status=StudioEventResultStatus.ACCEPTED,
             )
         )
@@ -259,7 +371,7 @@ def test_result_status_application_contract_accepts_only_accepted(
                     runtime_id,
                     student,
                     learning_session,
-                    event_kind="studio.recorded",
+                    event_kind="studio.runtime.initialized",
                     result_status="INVALID",
                 )
             )
@@ -411,7 +523,7 @@ def test_append_updates_event_scene_and_snapshot_deterministically(postgres_sess
             "scene_seed": {"label": "A bounded scene seed"},
             "scene_status": "ACTIVE",
         }
-        with pytest.raises(StudioStateError, match="Recorded events must not carry activity state"):
+        with pytest.raises(StudioStateError, match="studio.recorded"):
             service.append_event(
                 _append_command(
                     runtime_id,
@@ -423,6 +535,45 @@ def test_append_updates_event_scene_and_snapshot_deterministically(postgres_sess
             )
         rebuilt = service.rebuild_snapshot(runtime_id=runtime_id, student_id=student.id)
         assert rebuilt == service.snapshot_projection(first.snapshot)
+
+
+def test_subject_event_persists_action_key_separately_from_event_kind_and_core_keeps_null(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Catch inferred action identity or a schema that forbids Core lifecycle NULL action keys."""
+
+    student_id, session_id, runtime_id, scene_id = _runtime_scene(postgres_session_factory)
+    with postgres_session_factory.begin() as session:
+        student = session.get(Student, student_id)
+        learning_session = session.get(LearningSession, session_id)
+        assert student is not None and learning_session is not None
+        service = StudioStateService(session)
+
+        subject_append = service.append_event(
+            _append_command(
+                runtime_id,
+                student,
+                learning_session,
+                event_kind="fixture.submit",
+                action_key="fixture.submit",
+                actor=StudioActor.STUDENT,
+                scene_id=scene_id,
+                base_scene_version=1,
+            )
+        )
+        core_append = service.append_event(
+            _append_command(
+                runtime_id,
+                student,
+                learning_session,
+                event_kind="studio.runtime.initialized",
+                action_key=None,
+            )
+        )
+
+        assert subject_append.event.action_key == "fixture.submit"
+        assert subject_append.event.event_kind == "fixture.step_submitted"
+        assert core_append.event.action_key is None
 
 
 def test_idempotent_replay_and_conflict_leave_state_unchanged(postgres_session_factory: sessionmaker[Session]) -> None:
@@ -459,6 +610,20 @@ def test_idempotent_replay_and_conflict_leave_state_unchanged(postgres_session_f
                 )
             )
         assert session.scalar(select(func.count()).select_from(first.event.__class__)) == 2
+        with pytest.raises(IdempotencyConflict):
+            service.append_event(
+                _append_command(
+                    runtime_id,
+                    student,
+                    learning_session,
+                    scene_id=scene_id,
+                    base_scene_version=2,
+                    idempotency_key="activate-once",
+                    event_kind="fixture.record",
+                    action_key="fixture.record",
+                )
+            )
+        assert session.scalar(select(func.count()).select_from(first.event.__class__)) == 2
 
 
 def test_stale_unknown_and_oversized_event_leave_no_partial_write(postgres_session_factory: sessionmaker[Session]) -> None:
@@ -473,13 +638,14 @@ def test_stale_unknown_and_oversized_event_leave_no_partial_write(postgres_sessi
             service.append_event(
                 _append_command(runtime_id, student, learning_session, scene_id=scene_id, base_scene_version=99)
             )
-        with pytest.raises(UnknownStudioEvent):
+        with pytest.raises(StudioStateError, match="Unsupported Activity action"):
             service.append_event(
                 _append_command(
                     runtime_id,
                     student,
                     learning_session,
                     event_kind="math.fraction.partitioned",
+                    action_key="math.fraction.partitioned",
                     scene_id=scene_id,
                     base_scene_version=1,
                 )
@@ -497,6 +663,45 @@ def test_stale_unknown_and_oversized_event_leave_no_partial_write(postgres_sessi
             )
         after = service.runtime_state(runtime_id=runtime_id, student_id=student.id)
         assert after == before
+
+
+def test_semantic_invalid_student_attempt_persists_bounded_result_and_one_interaction(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Catch rejection of a wrong but structurally valid Student action, or unbounded result persistence."""
+
+    student_id, session_id, runtime_id, scene_id = _runtime_scene(postgres_session_factory)
+    with postgres_session_factory.begin() as session:
+        student = session.get(Student, student_id)
+        learning_session = session.get(LearningSession, session_id)
+        assert student is not None and learning_session is not None
+        result = StudioStateService(session).append_event(
+            _append_command(
+                runtime_id,
+                student,
+                learning_session,
+                event_kind="fixture.submit",
+                action_key="fixture.submit",
+                actor=StudioActor.STUDENT,
+                scene_id=scene_id,
+                base_scene_version=1,
+                payload={"value": 0},
+            )
+        )
+
+        assert result.event.action_key == "fixture.submit"
+        assert result.event.event_kind == "fixture.step_submitted"
+        assert result.event.result_status == "ACCEPTED"
+        assert result.event.payload == {
+            "action": {"value": 0},
+            "validation": {
+                "status": "INVALID",
+                "feedback_code": "fixture-invalid",
+                "next_action_keys": [],
+            },
+        }
+        assert result.interaction is not None
+        assert session.scalar(select(func.count()).select_from(result.interaction.__class__)) == 1
 
 
 def test_scene_capacity_and_injected_snapshot_failure_roll_back_atomically(
@@ -698,7 +903,7 @@ def test_runtime_append_is_postgres_concurrent_and_unrelated_runtimes_are_indepe
                     runtime_id,
                     student,
                     learning_session,
-                    event_kind="studio.recorded",
+                        event_kind="studio.runtime.initialized",
                     idempotency_key=key,
                 )
             )
@@ -825,7 +1030,7 @@ def test_concurrent_identical_idempotency_key_persists_one_event(
                     runtime_id,
                     student,
                     learning_session,
-                    event_kind="studio.recorded",
+                        event_kind="studio.runtime.initialized",
                     idempotency_key="same-concurrent-key",
                 )
             )

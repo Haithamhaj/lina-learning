@@ -39,12 +39,16 @@ The FE-02 `/student/daily` prototype is preserved remotely on
 `prototype/FE-02_PROTOTYPE_MANIFEST.md`. It remains non-authoritative,
 non-production architecture: no Tutor-prose parsing, local browser state,
 polling, or display-only Canvas is Studio truth. The `codex/ctx-03` tracked
-tree contains an accepted production Studio state foundation only: no
-Studio protocol, Tutor runtime/context, subject capability, renderer, frontend,
-or specialist execution behavior exists. `STUDIO-STATE-01` is `DONE /
-ACCEPTED`; `STUDIO-SUBJECT-01` is the only ready task; all later Studio tasks
-are blocked. `CURR-RENDER-MATH-01A` remains deferred until the Grade 5 Math
-renderer batch and does not block Studio Core.
+tree contains accepted production Studio State and Subject Capability
+foundations at Alembic head `c7d8e9f0a1b2`: code-owned MATH, SCIENCE, ENGLISH,
+and ARABIC profiles; exact-version contracts; persisted Subject profile and
+Action identity; typed validator/reducer dispatch; and bounded validation
+results. No Student-facing Studio Activity, Studio API/feed, Tutor/Studio
+orchestration, production renderer, or FE-02 production integration exists.
+`STUDIO-PROTOCOL-01` is the only ready task; all later Studio tasks remain
+blocked. Real Lina longitudinal history has not started.
+`CURR-RENDER-MATH-01A` remains deferred until the Grade 5 Math renderer batch
+and does not block Studio Core.
 
 ---
 
@@ -198,9 +202,9 @@ UI code, dependencies, Voice, Vision, attachments, artifacts, or FE-02 work.
 
 ## Next recommended action
 
-`STUDIO-SUBJECT-01` is the only ready task. It was not started in this closure;
-all later Studio tasks remain blocked. Do not begin protocol/runtime/frontend
-work or the Math renderer correction.
+`STUDIO-PROTOCOL-01` is the only ready task. It has not been started; all
+runtime, frontend, renderer, curriculum, and follow-on Studio work remains
+blocked until separately authorized.
 
 ---
 

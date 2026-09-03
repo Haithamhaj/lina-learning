@@ -38,6 +38,7 @@ class CreateSceneCommand:
     activity_contract_version: str
     payload_schema_version: str
     seed_payload: Mapping[str, object]
+    subject_profile_version: str = "subject-profile-v1"
     accessibility_payload: Mapping[str, object] = field(default_factory=dict)
     locale: str = "en"
     direction: str = "auto"
@@ -51,12 +52,13 @@ class AppendStudioEventCommand:
     runtime_id: UUID
     student_id: UUID
     learning_session_id: UUID
-    event_kind: str
-    event_schema_version: str
+    event_kind: str | None
+    event_schema_version: str | None
     actor: StudioActor
     payload_schema_version: str
     payload: Mapping[str, object]
     idempotency_key: str
+    action_key: str | None = None
     result_status: StudioEventResultStatus | str = StudioEventResultStatus.ACCEPTED
     scene_id: UUID | None = None
     base_scene_version: int | None = None
@@ -65,8 +67,6 @@ class AppendStudioEventCommand:
     source_message_id: UUID | None = None
     source_segment_id: UUID | None = None
     causal_event_id: UUID | None = None
-    create_student_interaction: bool = False
-    interaction_kind: str | None = None
     occurred_at: datetime | None = None
 
 

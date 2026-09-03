@@ -35,7 +35,16 @@ dependencies, or FE-02 prototype acceptance.
 **Accepted migration:** `b6e4c2a9d7f1`.
 **Accepted result:** durable Runtime, Scene, semantic Event Log, Materialized
 Snapshot, and persistence seams; focused Studio PostgreSQL verification and the
-accepted full isolated suite passed. `STUDIO-SUBJECT-01` is promoted next as the
+accepted full isolated suite passed.
+
+## STUDIO-SUBJECT-01 — Subject Capability Foundation
+**Status:** DONE / ACCEPTED
+**Accepted migration:** `c7d8e9f0a1b2`.
+**Accepted result:** code-owned MATH, SCIENCE, ENGLISH, and ARABIC profiles;
+exact versioned Subject/Activity/Renderer/Action/Validator contracts; persisted
+Scene profile version and Event action identity; bounded validation results;
+and contract-owned Student-only Tutor triggering. No Student-facing production
+Activities or renderer implementation were added. `STUDIO-PROTOCOL-01` is the
 only ready task.
 
 `CURR-RENDER-MATH-01A` is the pre-Grade-5-renderer correction gate, not a

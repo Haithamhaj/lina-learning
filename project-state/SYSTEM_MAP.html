@@ -85,9 +85,9 @@
 </section>
 
 <section class="panel future section">
-<span class="status">PARTIAL — DURABLE STATE FOUNDATION IMPLEMENTED</span>
+<span class="status">PARTIAL — DURABLE STATE + SUBJECT CAPABILITY FOUNDATIONS IMPLEMENTED</span>
 <h2>Learning Studio — Target Architecture</h2>
-<p>The FE-02 Daily Student shell is a preserved prototype, not accepted production Studio architecture. Runtime, Scene, semantic Event Log, Materialized Snapshot, and interaction/observation/specialist persistence seams are implemented; the broader Studio architecture remains incomplete.</p>
+<p>The FE-02 Daily Student shell is a preserved prototype, not accepted production Studio architecture. Durable Studio State and the code-owned Subject Capability Registry are implemented; API/feed, Tutor orchestration, activities, renderers, and FE-02 production integration remain incomplete.</p>
 <div class="flow studio-flow" style="margin-top:12px">
 <div class="node"><strong>Student</strong><small>Uses Chat and/or Canvas. Chat remains usable when any Studio work fails.</small></div>
 <div class="node"><strong>Chat and/or Canvas</strong><small>Simple student-facing surfaces; neither is Studio authority.</small></div>
@@ -98,14 +98,15 @@
 <div class="node"><strong>Tutor</strong><small>Sole teaching authority; sees compact Studio snapshot/history and emits semantically meaningful Studio intents.</small></div>
 <div class="node"><strong>Deterministic Renderer / Activity Registry</strong><small>Handles SOURCE_VIEW, ANNOTATION, KNOWN_VISUAL, and KNOWN_INTERACTIVE.</small></div>
 <div class="node"><strong>Optional Canvas Specialist — CUSTOM_COMPOSE only</strong><small>May use a separate model, provider, and tools; returns only a Typed ScenePlan, has no direct state or Tutor access, is validated by Core, and cannot block Chat on failure.</small></div>
-<div class="node"><strong>Subject Capability Layer</strong><small>Provides Math, Science, and Language specifics without a generic lifecycle.</small></div>
+<div class="node done"><strong>Subject Capability Layer</strong><small>IMPLEMENTED: exact Subject/Activity/Renderer/Action/Validator contracts and typed validator/reducer dispatch; no production Activities or renderers.</small></div>
 </div>
-<p class="muted" style="margin-top:12px">Tutor SSE remains the Chat conversation feed. The target Studio Feed is resumable workspace state, not a second chat stream or raw Chat replay; it does not yet exist. Tutor/Studio orchestration, Subject Capability runtime, activities/renderers, Canvas Specialist execution, and FE-02 production integration do not yet exist. Canvas actions and derived Vision outputs do not create Evidence directly. All Studio work stays dependency-ordered and task-gated.</p>
+<p class="muted" style="margin-top:12px">Tutor SSE remains the Chat conversation feed. The target Studio Feed is resumable workspace state, not a second chat stream or raw Chat replay; it does not yet exist. Tutor/Studio orchestration, Student-facing activities/renderers, Canvas Specialist execution, and FE-02 production integration do not yet exist. Canvas actions and derived Vision outputs do not create Evidence directly. All Studio work stays dependency-ordered and task-gated.</p>
 <div class="flow studio-boundaries" style="margin-top:12px">
 <div class="node done"><strong>STUDIO-GOV-01</strong><small>DONE / ACCEPTED.</small></div>
 <div class="node done"><strong>FE-02-PRESERVE-01</strong><small>DONE / ACCEPTED. PRESERVED PROTOTYPE / NOT ACCEPTED PRODUCTION ARCHITECTURE.</small></div>
 <div class="node done"><strong>STUDIO-STATE-01</strong><small>DONE / ACCEPTED. DURABLE STATE FOUNDATION IMPLEMENTED.</small></div>
-<div class="node"><strong>STUDIO-SUBJECT-01</strong><small>ONLY READY TASK. Subject Capability runtime is not implemented; all later Studio tasks are blocked.</small></div>
+<div class="node done"><strong>STUDIO-SUBJECT-01</strong><small>DONE / ACCEPTED. SUBJECT CAPABILITY FOUNDATION IMPLEMENTED.</small></div>
+<div class="node"><strong>STUDIO-PROTOCOL-01</strong><small>ONLY READY TASK. API, snapshot endpoint, and resumable Studio feed are not implemented.</small></div>
 <div class="node"><strong>CURR-RENDER-MATH-01A</strong><small>FUTURE CORRECTION GATE BEFORE GRADE 5 RENDERERS. All other Studio implementation tasks are blocked.</small></div>
 </div>
 </section>
@@ -152,7 +153,8 @@
 <div class="node done"><strong>STUDIO-GOV-01</strong><small>DONE / ACCEPTED.</small></div>
 <div class="node done"><strong>FE-02-PRESERVE-01</strong><small>DONE / ACCEPTED. Preserved prototype; not accepted production architecture.</small></div>
 <div class="node done"><strong>STUDIO-STATE-01</strong><small>DONE / ACCEPTED. DURABLE STATE FOUNDATION IMPLEMENTED.</small></div>
-<div class="node"><strong>STUDIO-SUBJECT-01</strong><small>ONLY READY TASK. Subject Capability runtime is not implemented.</small></div>
+<div class="node done"><strong>STUDIO-SUBJECT-01</strong><small>DONE / ACCEPTED. SUBJECT CAPABILITY FOUNDATION IMPLEMENTED.</small></div>
+<div class="node"><strong>STUDIO-PROTOCOL-01</strong><small>ONLY READY TASK. API/feed and browser Studio controller are not implemented.</small></div>
 <div class="node"><strong>CURR-RENDER-MATH-01A</strong><small>Future correction gate before Grade 5 renderers. All other Studio implementation tasks remain blocked.</small></div>
 </div></article>
 </section>

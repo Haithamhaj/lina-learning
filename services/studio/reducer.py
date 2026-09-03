@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from typing import Callable
 from uuid import UUID
 
+from services.studio.subjects import production_subject_registry
+from services.studio.subjects.registry import SubjectCapabilityRegistry
+
 
 CORE_EVENT_SCHEMA_VERSION = "studio-core-v1"
 SNAPSHOT_SCHEMA_VERSION = "studio-snapshot-v1"
@@ -21,6 +24,7 @@ class ReducerEvent:
     id: UUID
     sequence: int
     event_kind: str
+    action_key: str | None
     event_schema_version: str
     actor: str
     scene_id: UUID | None
@@ -29,6 +33,9 @@ class ReducerEvent:
     subject_key: str | None
     activity_key: str | None
     payload: dict[str, object]
+    activity_contract_version: str | None = None
+    subject_profile_version: str | None = None
+    payload_schema_version: str | None = None
 
 
 SnapshotProjection = dict[str, object]
@@ -106,7 +113,6 @@ _REGISTRY: dict[tuple[str, str], Reducer] = {
     ("studio.scene.accepted", CORE_EVENT_SCHEMA_VERSION): _accepted,
     ("studio.scene.activated", CORE_EVENT_SCHEMA_VERSION): _activated,
     ("studio.scene.status_changed", CORE_EVENT_SCHEMA_VERSION): _status_changed,
-    ("studio.recorded", CORE_EVENT_SCHEMA_VERSION): _recorded,
 }
 
 
@@ -119,7 +125,37 @@ def registered_reducer(event_kind: str, event_schema_version: str) -> Reducer:
         ) from error
 
 
-def reduce_snapshot(snapshot: SnapshotProjection, event: ReducerEvent) -> SnapshotProjection:
+def reduce_snapshot(
+    snapshot: SnapshotProjection,
+    event: ReducerEvent,
+    *,
+    subject_registry: SubjectCapabilityRegistry | None = None,
+) -> SnapshotProjection:
     """Apply a known event without database, model, or side-effect dependencies."""
 
-    return registered_reducer(event.event_kind, event.event_schema_version)(snapshot, event)
+    if (event.event_kind, event.event_schema_version) in _REGISTRY:
+        return registered_reducer(event.event_kind, event.event_schema_version)(snapshot, event)
+    if (
+        event.subject_key is None
+        or event.subject_profile_version is None
+        or event.activity_key is None
+        or event.activity_contract_version is None
+        or event.action_key is None
+    ):
+        raise UnknownStudioEvent(
+            f"Unsupported Studio event contract: {event.event_kind!r} / {event.event_schema_version!r}."
+        )
+    registry = subject_registry or production_subject_registry()
+    action, _validation = registry.validate_subject_event(
+        subject_key=event.subject_key,
+        subject_profile_version=event.subject_profile_version,
+        activity_key=event.activity_key,
+        activity_version=event.activity_contract_version,
+        action_key=event.action_key,
+        payload_schema_version=event.payload_schema_version or "",
+        payload=event.payload,
+    )
+    del action, _validation
+    activity = registry.resolve_activity(event.subject_key, event.subject_profile_version, event.activity_key, event.activity_contract_version)
+    reducer = registry.resolve_reducer(event.subject_key, event.subject_profile_version, activity.reducer_key, activity.reducer_version)
+    return reducer.reducer(snapshot, event)

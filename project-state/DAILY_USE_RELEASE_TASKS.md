@@ -18,8 +18,8 @@ preserved Daily-Use history below.
 STUDIO-GOV-01 — DONE / ACCEPTED
 → FE-02-PRESERVE-01 — DONE / ACCEPTED
 → STUDIO-STATE-01 — DONE / ACCEPTED
-→ STUDIO-SUBJECT-01 — ONLY READY TASK
-→ STUDIO-PROTOCOL-01 — BLOCKED
+→ STUDIO-SUBJECT-01 — DONE / ACCEPTED
+→ STUDIO-PROTOCOL-01 — ONLY READY TASK
 → STUDIO-RUNTIME-01 — BLOCKED
 → STUDIO-RUNTIME-02 — BLOCKED
 → STUDIO-RUNTIME-03 — BLOCKED
@@ -65,8 +65,12 @@ non-production.
 Snapshot, and persistence seams are at Alembic head `b6e4c2a9d7f1`; focused
 Studio PostgreSQL verification and the accepted full isolated suite passed.
 
-`STUDIO-SUBJECT-01` is the only ready task. All later Studio tasks remain
-blocked.
+`STUDIO-SUBJECT-01` is `DONE / ACCEPTED` at Alembic head `c7d8e9f0a1b2`.
+It provides the code-owned Subject Capability Registry, exact capability
+versions, persisted Scene profile/action identity, bounded validation results,
+and Student-only Activity-owned Tutor triggering. Production profiles have no
+Student-facing Activities. `STUDIO-PROTOCOL-01` is the only ready task; all
+later Studio tasks remain blocked.
 `CURR-RENDER-MATH-01A` is **BLOCKED UNTIL THE GRADE 5 MATH RENDERER
 IMPLEMENTATION GATE**: it does not block Studio state, protocol, runtime,
 cross-subject foundation activities, or FE-02 Studio integration.

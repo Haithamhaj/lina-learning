@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, and `STUDIO-STATE-01` are `DONE / ACCEPTED`. `STUDIO-SUBJECT-01` is the only ready task; all later Studio tasks remain dependency-ordered and blocked.
+**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, and `STUDIO-SUBJECT-01` are `DONE / ACCEPTED`. `STUDIO-PROTOCOL-01` is the only ready task; all later Studio tasks remain dependency-ordered and blocked.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -1324,7 +1324,7 @@ The existing Technology Reuse Catalog contains broad `ADOPT BASELINE` wording fo
 
 #### `STUDIO-STATE-01 — Durable Studio State`
 
-**Status:** ONLY READY TASK.
+**Status:** DONE / ACCEPTED.
 **Purpose:** Implement additive migration, models, repositories, event append, snapshot reducer, scenes, interactions, observations, specialist-run seam.
 **Output:** production tables/contracts and pure reducer.
 **Likely areas:** DB models, migration, `services/studio/**`, PostgreSQL tests.
@@ -1336,6 +1336,7 @@ The existing Technology Reuse Catalog contains broad `ADOPT BASELINE` wording fo
 
 #### `STUDIO-SUBJECT-01 — Subject Capability Registry`
 
+**Status:** DONE / ACCEPTED.
 **Purpose:** Implement subject, renderer, activity, action-schema, validator, locale, and fallback registry.
 **Output:** Math, Science, English, Arabic bounded profiles and fixtures.
 **Verification:** register a new fixture subject without changing generic Studio state/transport/orchestration.
@@ -1345,6 +1346,7 @@ The existing Technology Reuse Catalog contains broad `ADOPT BASELINE` wording fo
 
 #### `STUDIO-PROTOCOL-01 — Commands, Snapshot, and Resumable Feed`
 
+**Status:** ONLY READY TASK.
 **Purpose:** Implement authenticated operation endpoints, snapshot reads, dedicated Studio SSE feed, resume, sequence, reconnect, and broadcast.
 **Output:** API contracts and project-owned web Studio controller.
 **Verification:** real auth; cross-Student denial; resume without duplicate state; Last-Event-ID; version conflict; idempotent replay; feed failure/reconnect.
@@ -1682,8 +1684,8 @@ After accepted governance and prototype-preservation closure, the remaining work
 
 ```text
 STUDIO-STATE-01 — DONE / ACCEPTED
-→ STUDIO-SUBJECT-01 — ONLY READY TASK
-→ STUDIO-PROTOCOL-01
+→ STUDIO-SUBJECT-01 — DONE / ACCEPTED
+→ STUDIO-PROTOCOL-01 — ONLY READY TASK
 → STUDIO-RUNTIME-01 / 02 / 03
 → Cross-subject production activities
 → FE-02-STUDIO-01
