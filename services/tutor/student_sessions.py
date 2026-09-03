@@ -9,7 +9,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from services.platform.db.models import LearningMessage, LearningSession, Student, User
+from services.platform.db.models import LearningMessage, LearningSession, Student
 from services.tutor.candidate_events import (
     PersistedGuidedLearningCheck,
     SuggestedAction,
@@ -38,47 +38,6 @@ class ResolvedGuidedLearningCheck:
 
     guided_check: PersistedGuidedLearningCheck
     source_tutor_message_id: UUID
-
-
-def student_for_authenticated_subject(
-    session: Session,
-    *,
-    identity_provider: str,
-    subject: str,
-    email: str | None,
-) -> Student:
-    """Return the Student profile anchored to a verified Clerk subject.
-
-    The browser never supplies a Student identifier. A first authenticated
-    Student visit receives an application-owned profile for that identity.
-    """
-
-    user = session.execute(
-        select(User).where(
-            User.identity_provider == identity_provider,
-            User.external_subject == subject,
-        )
-    ).scalar_one_or_none()
-    if user is None:
-        user = User(
-            identity_provider=identity_provider,
-            external_subject=subject,
-            email=email,
-            role="STUDENT",
-        )
-        session.add(user)
-        session.flush()
-    elif user.role != "STUDENT":
-        raise PermissionError("The verified Student identity has no Student profile.")
-
-    student = session.execute(
-        select(Student).where(Student.user_id == user.id).with_for_update()
-    ).scalar_one_or_none()
-    if student is None:
-        student = Student(user_id=user.id, display_name=user.display_name)
-        session.add(student)
-        session.flush()
-    return student
 
 
 def open_or_resume_math_session(

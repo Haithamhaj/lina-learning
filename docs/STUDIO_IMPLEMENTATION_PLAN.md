@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, and `STUDIO-SUBJECT-01` are `DONE / ACCEPTED`. `STUDIO-PROTOCOL-01` is the only ready task; all later Studio tasks remain dependency-ordered and blocked.
+**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, and `STUDIO-PROTOCOL-01` are `DONE / ACCEPTED`. `STUDIO-RUNTIME-01` is the only ready task; all later Studio tasks remain dependency-ordered and blocked.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -1346,7 +1346,7 @@ The existing Technology Reuse Catalog contains broad `ADOPT BASELINE` wording fo
 
 #### `STUDIO-PROTOCOL-01 — Commands, Snapshot, and Resumable Feed`
 
-**Status:** ONLY READY TASK.
+**Status:** DONE / ACCEPTED.
 **Purpose:** Implement authenticated operation endpoints, snapshot reads, dedicated Studio SSE feed, resume, sequence, reconnect, and broadcast.
 **Output:** API contracts and project-owned web Studio controller.
 **Verification:** real auth; cross-Student denial; resume without duplicate state; Last-Event-ID; version conflict; idempotent replay; feed failure/reconnect.
@@ -1356,6 +1356,7 @@ The existing Technology Reuse Catalog contains broad `ADOPT BASELINE` wording fo
 
 #### `STUDIO-RUNTIME-01 — Tutor Studio Context and Watermark`
 
+**Status:** ONLY READY TASK.
 **Purpose:** Add snapshot/unseen-event context, observation records, successful-commit watermark advancement, and history tool boundary.
 **Verification:** failed/incomplete/cancelled Tutor turns do not advance watermark; events arriving during generation remain unseen; one normal Tutor call.
 **Dependencies:** STUDIO-PROTOCOL-01.
@@ -1685,8 +1686,9 @@ After accepted governance and prototype-preservation closure, the remaining work
 ```text
 STUDIO-STATE-01 — DONE / ACCEPTED
 → STUDIO-SUBJECT-01 — DONE / ACCEPTED
-→ STUDIO-PROTOCOL-01 — ONLY READY TASK
-→ STUDIO-RUNTIME-01 / 02 / 03
+→ STUDIO-PROTOCOL-01 — DONE / ACCEPTED
+→ STUDIO-RUNTIME-01 — ONLY READY TASK
+→ STUDIO-RUNTIME-02 / 03 — BLOCKED
 → Cross-subject production activities
 → FE-02-STUDIO-01
 → CURR-RENDER-MATH-01A — Grade 5 renderer correction gate

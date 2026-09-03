@@ -43,12 +43,19 @@ tree contains accepted production Studio State and Subject Capability
 foundations at Alembic head `c7d8e9f0a1b2`: code-owned MATH, SCIENCE, ENGLISH,
 and ARABIC profiles; exact-version contracts; persisted Subject profile and
 Action identity; typed validator/reducer dispatch; and bounded validation
-results. No Student-facing Studio Activity, Studio API/feed, Tutor/Studio
-orchestration, production renderer, or FE-02 production integration exists.
-`STUDIO-PROTOCOL-01` is the only ready task; all later Studio tasks remain
-blocked. Real Lina longitudinal history has not started.
-`CURR-RENDER-MATH-01A` remains deferred until the Grade 5 Math renderer batch
-and does not block Studio Core.
+results. No Student-facing Studio Activity, Tutor/Studio orchestration,
+production renderer, or FE-02 production integration exists.
+
+`STUDIO-PROTOCOL-01` is `DONE / ACCEPTED`: authenticated Student
+open/snapshot/operation/feed APIs, resumable Event Log recovery, PostgreSQL
+commit-hint wake-up, and a project-owned web protocol/controller exist. Tutor
+does not consume Studio Snapshot/events; Tutor observation watermarks,
+Canvas-originated Tutor execution, WorkspaceIntent, Student-facing Activities,
+production Renderers, and FE-02 production integration do not exist.
+`STUDIO-RUNTIME-01` is the only ready task; all later Studio tasks remain
+blocked. `CURR-RENDER-MATH-01A` remains blocked until the Grade 5 Math renderer
+implementation gate and does not block `STUDIO-RUNTIME-01`. Real Lina
+longitudinal history has not started.
 
 ---
 
@@ -57,8 +64,8 @@ and does not block Studio Core.
 - Execution branch: `codex/ctx-03`.
 - Accepted PF-02 implementation commit: `062e2188ad5f4668183ff4ea8316f97926c5bd97`.
 - Daily-Use PostgreSQL 17.8 / pgvector 0.8.1 is at Alembic head
-  `b6e4c2a9d7f1`. Its pre-existing 39 application-table counts were unchanged
-  by the additive Studio migration; all seven new Studio tables are empty.
+  `c7d8e9f0a1b2`. Its pre-existing 39 application-table counts were unchanged
+  by the additive Studio migrations; all seven Studio tables are empty.
 - PF-02 already provides one dedicated asynchronous Personal Facts Model Gateway call per completed Learning Session, separate from Tutor and Segment Learning Review; strict Student-source/safety grounding; Fact + Observation persistence; retry-safe extraction runs; `ADD` / `SUPPORT` / `NOOP`; capacity skip; and an on-demand Personal Memory Document.
 - PF-02A is accepted: the same PF model call receives a compact Student-scoped catalog of current and historical Fact identities, then semantically chooses `SUPPORT_EXISTING` or `ADD_NEW`; the server remains the deterministic grounding, ownership, safety, canonicalization, idempotency, and persistence authority.
 - Known Facts are untrusted reference data only, not Evidence or instructions. PF-02A adds no schema/migration, second model call, embeddings, Tutor, Segment Review, Learning Intelligence, or RAG behavior.
@@ -171,7 +178,7 @@ StudentInteraction, Tutor Studio Observation, and dormant Canvas Specialist Run
 persistence; pure versioned core reducer; PostgreSQL-locked atomic append;
 idempotency, stale Scene-version, cross-Student, capacity, replay, rollback,
 and concurrency contracts. Daily-Use migration is applied at
-`b6e4c2a9d7f1` with unchanged pre-existing counts and zero Studio rows.
+`c7d8e9f0a1b2` with unchanged pre-existing counts and zero Studio rows.
 
 **Boundary:** no routes/SSE, frontend, Tutor runtime/context, Model Gateway,
 ModelTask, worker/job creation, subject profile, renderer, Learning Intelligence,
@@ -202,9 +209,9 @@ UI code, dependencies, Voice, Vision, attachments, artifacts, or FE-02 work.
 
 ## Next recommended action
 
-`STUDIO-PROTOCOL-01` is the only ready task. It has not been started; all
-runtime, frontend, renderer, curriculum, and follow-on Studio work remains
-blocked until separately authorized.
+`STUDIO-RUNTIME-01` is the next and only ready Studio task. Keep frontend Studio
+integration, renderers, curriculum, Canvas-originated Tutor execution, and all
+later Studio work blocked until separately authorized.
 
 ---
 

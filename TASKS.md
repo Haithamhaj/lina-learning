@@ -44,8 +44,14 @@ accepted full isolated suite passed.
 exact versioned Subject/Activity/Renderer/Action/Validator contracts; persisted
 Scene profile version and Event action identity; bounded validation results;
 and contract-owned Student-only Tutor triggering. No Student-facing production
-Activities or renderer implementation were added. `STUDIO-PROTOCOL-01` is the
-only ready task.
+Activities or renderer implementation were added.
+
+## STUDIO-PROTOCOL-01 — Commands, Snapshot, and Resumable Feed
+**Status:** DONE / ACCEPTED
+**Accepted result:** authenticated Studio open/resume, Snapshot and typed
+operation APIs, a dedicated resumable Studio SSE feed, durable Event Log
+catch-up, PostgreSQL LISTEN/NOTIFY wake-up hints, and the project-owned web
+protocol/controller library. `STUDIO-RUNTIME-01` is the only ready task.
 
 `CURR-RENDER-MATH-01A` is the pre-Grade-5-renderer correction gate, not a
 Studio Core dependency.

@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from typing import Mapping
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from services.platform.db.models import (
@@ -54,6 +54,7 @@ MAX_SNAPSHOT_PAYLOAD_BYTES = 16_384
 MAX_FAILURE_METADATA_BYTES = 4_096
 MAX_INTERACTION_PAYLOAD_BYTES = 4_096
 MAX_SUBJECT_EVENT_ENVELOPE_BYTES = 9_216
+STUDIO_EVENT_NOTIFICATION_CHANNEL = "lina_studio_events_v1"
 
 
 class StudioStateError(ValueError):
@@ -301,6 +302,13 @@ class StudioStateService:
             )
             self.session.add(interaction)
             self.session.flush()
+        # PostgreSQL delivers NOTIFY only when the owning outer transaction
+        # commits.  The payload is deliberately a routing hint; feed readers
+        # always re-read the ordered Event Log before emitting anything.
+        self.session.execute(
+            text("SELECT pg_notify('lina_studio_events_v1', :payload)"),
+            {"payload": json.dumps({"runtime_id": str(runtime.id), "sequence": event.sequence}, separators=(",", ":"))},
+        )
         return AppendStudioEventResult(event, snapshot, scene, interaction, replayed=False)
 
     def rebuild_snapshot(self, *, runtime_id: UUID, student_id: UUID) -> SnapshotProjection:

@@ -6,6 +6,7 @@ from apps.api.routes.content import router as content_router
 from apps.api.routes.demo import router as demo_router
 from apps.api.routes.parent import router as parent_router
 from apps.api.routes.student import router as student_router
+from apps.api.routes.studio import router as studio_router
 from services.platform.config import get_settings
 
 
@@ -22,13 +23,14 @@ app.add_middleware(
     allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "Last-Event-ID"],
 )
 app.include_router(auth_router)
 app.include_router(content_router)
 app.include_router(demo_router)
 app.include_router(parent_router)
 app.include_router(student_router)
+app.include_router(studio_router)
 
 
 @app.get("/health", tags=["platform"])

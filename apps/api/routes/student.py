@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from services.platform.auth import AuthenticatedPrincipal, UserRole, require_role
 from services.platform.db.models import LearningMessage, LearningSession
 from services.platform.db.session import get_session
+from services.platform.student_identity import resolve_student_for_authenticated_identity
 from services.tutor.candidate_events import (
     PersistedGuidedLearningCheck,
     SuggestedAction,
@@ -29,7 +30,6 @@ from services.tutor.student_sessions import (
     open_or_resume_math_session,
     ordered_messages,
     owned_open_math_session,
-    student_for_authenticated_subject,
 )
 from services.tutor.runtime import TutorModelStreamFailure, TutorTextDelta, TutorTurn, create_tutor_runtime
 from services.tutor.capacity import TutorContextCapacityExceeded
@@ -90,7 +90,7 @@ def _student_for_principal(
     principal: AuthenticatedPrincipal,
 ):
     try:
-        return student_for_authenticated_subject(
+        return resolve_student_for_authenticated_identity(
             session,
             identity_provider="clerk",
             subject=principal.subject,
