@@ -19,6 +19,7 @@ from services.personal_facts.memory_document import format_current_personal_memo
 from services.platform.core_profile import StudentCoreContext, student_core_context
 from services.platform.db.models import LearningExchangeEmbedding, LearningMessage, LearningSession, ModelTask
 from services.retrieval.service import CurrentFocus, QueryEmbedding, RetrievedBlock, RetrievalService
+from services.studio.tutor_context import StudioTutorWorkspaceContext
 from services.tutor.exchanges import SEMANTIC_RECALL_MIN_COSINE_SIMILARITY, ConversationExchangeContext, complete_exchanges_for_segment, immediate_exchange_for_current_turn, persist_exchange_embedding, serialize_exchange
 from services.tutor.segments import latest_segment_for_session, latest_valid_structured_segment_state
 
@@ -59,6 +60,12 @@ class TutorContextDebug:
     recent_exchange_message_ids: tuple[UUID, ...] = ()
     semantic_recall_exchange_message_ids: tuple[UUID, ...] = ()
     personal_memory_status: str = "PERSONAL_MEMORY_NOT_AVAILABLE"
+    studio_runtime_id: UUID | None = None
+    studio_snapshot_sequence: int | None = None
+    studio_observation_id: UUID | None = None
+    studio_from_sequence: int | None = None
+    studio_through_sequence: int | None = None
+    studio_selected_event_sequences: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -77,6 +84,7 @@ class TutorContext:
     recent_exchanges: tuple[ConversationExchangeContext, ...] = ()
     semantic_recall_exchanges: tuple[ConversationExchangeContext, ...] = ()
     semantic_recall_priority_message_ids: tuple[tuple[UUID, ...], ...] = ()
+    studio_workspace: StudioTutorWorkspaceContext | None = None
 
     @property
     def character_count(self) -> int:
@@ -89,6 +97,7 @@ class TutorContext:
             + sum(len(block.text) for block in self.retrieval)
             + sum(len(item.text) for item in self.intelligence)
             + len(self.personal_memory or "")
+            + (0 if self.studio_workspace is None else len(str(self.studio_workspace.as_model_payload())))
         )
 
 
@@ -121,6 +130,7 @@ class TutorContextBuilder:
         current_turn_message_id: UUID | None = None,
         grade_level: int = 5,
         focus: CurrentFocus | None = None,
+        studio_context: StudioTutorWorkspaceContext | None = None,
     ) -> TutorContext:
         question = question.strip()
         if not question:
@@ -218,6 +228,7 @@ class TutorContextBuilder:
             intelligence=intelligence,
             student_core_context=core_context,
             personal_memory=personal_memory,
+            studio_workspace=studio_context,
             debug=TutorContextDebug(
                 focus=effective_focus,
                 session_message_ids=(),
@@ -232,6 +243,18 @@ class TutorContextBuilder:
                 recent_exchange_message_ids=tuple(message_id for exchange in recent_exchanges for message_id in exchange.message_ids),
                 semantic_recall_exchange_message_ids=tuple(message_id for exchange in semantic_recall for message_id in exchange.message_ids),
                 personal_memory_status=personal_memory_status,
+                studio_runtime_id=None if studio_context is None else studio_context.runtime_id,
+                studio_snapshot_sequence=None if studio_context is None else studio_context.snapshot_sequence,
+                studio_observation_id=None if studio_context is None else studio_context.observation_id,
+                studio_from_sequence=(
+                    None
+                    if studio_context is None or not studio_context.unseen_events
+                    else studio_context.unseen_events[0].sequence
+                ),
+                studio_through_sequence=None if studio_context is None else studio_context.through_sequence,
+                studio_selected_event_sequences=(
+                    () if studio_context is None else tuple(event.sequence for event in studio_context.unseen_events)
+                ),
             ),
         )
 

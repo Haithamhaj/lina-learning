@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -9,6 +10,7 @@ import pytest
 
 from services.intelligence.selection import RelevantIntelligence
 from services.retrieval.service import RetrievedBlock
+from services.studio.tutor_context import StudioTutorEventContext, StudioTutorWorkspaceContext
 from services.tutor.capacity import (
     TUTOR_CONTEXT_CAPACITY_POLICY_VERSION,
     TutorContextCapacityExceeded,
@@ -113,6 +115,7 @@ def _payload(
         candidate_source_message_id=context.debug.current_turn_message_id,
         latest_segment_state=latest_segment_state,
         effective_parent_boundaries={"SEXUAL_CONTENT": "REDIRECT_TO_PARENT"},
+        studio_context=context.studio_workspace,
     )
 
 
@@ -314,6 +317,46 @@ def test_protected_only_overflow_fails_before_any_lossy_protected_mutation() -> 
 
     assert error.value.lineage.dropped_context == ()
     assert error.value.lineage.final_measured_size > error.value.lineage.capacity_limit
+
+
+def test_capacity_never_drops_part_of_a_selected_studio_event_range() -> None:
+    """Studio Snapshot and captured semantic range are one protected current-behavior unit."""
+
+    context = replace(
+        _context(),
+        studio_workspace=StudioTutorWorkspaceContext(
+            runtime_id=uuid4(),
+            snapshot_schema_version="studio-snapshot-v1",
+            through_sequence=2,
+            snapshot_sequence=2,
+            current_scene_id=None,
+            current_scene_version=None,
+            active_subject_key="MATH",
+            active_activity_key="fixture-activity",
+            state_payload={"current": "state"},
+            unseen_events=(
+                StudioTutorEventContext(
+                    sequence=1, actor="STUDENT", event_kind="fixture.one", action_key="ONE",
+                    subject_key="MATH", activity_key="fixture-activity", base_scene_version=1,
+                    resulting_scene_version=2, payload_schema_version="fixture-v1", payload={"action": {"value": 1}},
+                ),
+                StudioTutorEventContext(
+                    sequence=2, actor="STUDENT", event_kind="fixture.two", action_key="TWO",
+                    subject_key="MATH", activity_key="fixture-activity", base_scene_version=2,
+                    resulting_scene_version=3, payload_schema_version="fixture-v1", payload={"action": {"value": 2}},
+                ),
+            ),
+            observation_id=uuid4(),
+        ),
+    )
+    full_size = serialized_model_request_characters(_payload(context))
+
+    result = apply_context_capacity_guardrail(context, capacity_limit=full_size - 1, payload_builder=_payload)
+
+    assert result.context.studio_workspace == context.studio_workspace
+    assert '"sequence": 1' in str(result.payload["input"])
+    assert '"sequence": 2' in str(result.payload["input"])
+    assert result.lineage.kept_context["studio_workspace"]["selected_event_sequences"] == [1, 2]
 
 
 def test_measurement_includes_structured_response_schema() -> None:

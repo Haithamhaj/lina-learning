@@ -197,6 +197,7 @@ def _lowest_priority_semantic_exchange(context: TutorContext) -> ConversationExc
 def _context_metadata(context: TutorContext) -> dict[str, object]:
     """Record identifiers and refs only; raw hidden prompt text stays out of lineage."""
 
+    studio_workspace = context.studio_workspace
     return {
         "immediate_exchange_message_ids": _exchange_ids(context.immediate_exchange),
         "recent_exchange_message_ids": [
@@ -214,6 +215,23 @@ def _context_metadata(context: TutorContext) -> dict[str, object]:
         "personal_memory": {
             "included": context.personal_memory is not None,
             "status": context.debug.personal_memory_status,
+        },
+        "studio_workspace": {
+            "included": studio_workspace is not None,
+            "runtime_id": (
+                None if studio_workspace is None else str(studio_workspace.runtime_id)
+            ),
+            "snapshot_sequence": None if studio_workspace is None else studio_workspace.snapshot_sequence,
+            "observation_id": (
+                None if studio_workspace is None or studio_workspace.observation_id is None else str(studio_workspace.observation_id)
+            ),
+            "from_sequence": (
+                None if studio_workspace is None or not studio_workspace.unseen_events else studio_workspace.unseen_events[0].sequence
+            ),
+            "through_sequence": None if studio_workspace is None else studio_workspace.through_sequence,
+            "selected_event_sequences": (
+                [] if studio_workspace is None else [event.sequence for event in studio_workspace.unseen_events]
+            ),
         },
         "counts": {
             "personal_memory_included": int(context.personal_memory is not None),

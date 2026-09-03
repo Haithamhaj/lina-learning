@@ -17,6 +17,7 @@ from services.platform.auth import AuthenticatedPrincipal, UserRole, require_rol
 from services.platform.db.models import LearningMessage, LearningSession
 from services.platform.db.session import get_session
 from services.platform.student_identity import resolve_student_for_authenticated_identity
+from services.studio.tutor_context import acknowledge_studio_tutor_observation
 from services.tutor.candidate_events import (
     PersistedGuidedLearningCheck,
     SuggestedAction,
@@ -226,6 +227,14 @@ def stream_math_tutor_turn(
             committed = True
             if final_turn is not None:
                 yield f"event: turn\ndata: {json.dumps({'text': final_turn.text, 'suggested_actions': [action.model_dump() for action in final_turn.suggested_actions], 'guided_check': final_turn.guided_check.model_dump(mode='json') if final_turn.guided_check is not None else None})}\n\n"
+                if final_turn.studio_observation_id is not None:
+                    acknowledge_studio_tutor_observation(
+                        bind=bind,
+                        student_id=student_id,
+                        observation_id=final_turn.studio_observation_id,
+                        ai_execution_id=final_turn.studio_ai_execution_id,
+                        source_message_id=final_turn.studio_source_message_id,
+                    )
         except GeneratorExit:
             if turn_stream is not None:
                 turn_stream.close()

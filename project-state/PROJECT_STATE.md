@@ -46,16 +46,18 @@ Action identity; typed validator/reducer dispatch; and bounded validation
 results. No Student-facing Studio Activity, Tutor/Studio orchestration,
 production renderer, or FE-02 production integration exists.
 
-`STUDIO-PROTOCOL-01` is `DONE / ACCEPTED`: authenticated Student
-open/snapshot/operation/feed APIs, resumable Event Log recovery, PostgreSQL
-commit-hint wake-up, and a project-owned web protocol/controller exist. Tutor
-does not consume Studio Snapshot/events; Tutor observation watermarks,
-Canvas-originated Tutor execution, WorkspaceIntent, Student-facing Activities,
-production Renderers, and FE-02 production integration do not exist.
-`STUDIO-RUNTIME-01` is the only ready task; all later Studio tasks remain
-blocked. `CURR-RENDER-MATH-01A` remains blocked until the Grade 5 Math renderer
-implementation gate and does not block `STUDIO-RUNTIME-01`. Real Lina
-longitudinal history has not started.
+`STUDIO-PROTOCOL-01` and `STUDIO-RUNTIME-01` are `DONE / ACCEPTED`.
+The existing primary Tutor call now receives the current Studio Snapshot and
+exact unseen Event range; a completed successful Tutor turn advances the
+durable watermark through its captured boundary while later Events remain
+unseen. A bounded server-owned history service exists; model-invoked history is
+deferred because no provider-neutral Gateway tool-execution contract exists.
+WorkspaceIntent, an Execution Router, Canvas-originated Tutor turns,
+Student-facing Activities, production Renderers, and FE-02 production
+integration do not exist. `STUDIO-RUNTIME-02` is the only ready task; all later
+Studio tasks remain blocked. `CURR-RENDER-MATH-01A` remains blocked until the
+Grade 5 Math renderer implementation gate. Real Lina longitudinal history has
+not started.
 
 ---
 
@@ -209,9 +211,9 @@ UI code, dependencies, Voice, Vision, attachments, artifacts, or FE-02 work.
 
 ## Next recommended action
 
-`STUDIO-RUNTIME-01` is the next and only ready Studio task. Keep frontend Studio
-integration, renderers, curriculum, Canvas-originated Tutor execution, and all
-later Studio work blocked until separately authorized.
+`STUDIO-RUNTIME-02` is the only ready task. Keep frontend Studio integration,
+renderers, curriculum, Canvas-originated Tutor execution, and all later Studio
+work blocked until separately authorized.
 
 ---
 

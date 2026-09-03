@@ -51,10 +51,25 @@ Activities or renderer implementation were added.
 **Accepted result:** authenticated Studio open/resume, Snapshot and typed
 operation APIs, a dedicated resumable Studio SSE feed, durable Event Log
 catch-up, PostgreSQL LISTEN/NOTIFY wake-up hints, and the project-owned web
-protocol/controller library. `STUDIO-RUNTIME-01` is the only ready task.
+protocol/controller library. `STUDIO-RUNTIME-01` is complete; `STUDIO-RUNTIME-02`
+is the only ready task.
 
 `CURR-RENDER-MATH-01A` is the pre-Grade-5-renderer correction gate, not a
 Studio Core dependency.
+
+## STUDIO-RUNTIME-01 — Tutor Studio Context and Watermark
+**Status:** DONE / ACCEPTED
+**Accepted result:** the existing primary Tutor call receives a typed current
+Studio Snapshot and exact unseen Event range; a short independent selection
+transaction creates a `SELECTED` observation and releases the Runtime lock
+before generation. Only a completed successful Tutor turn with exact
+Student/session/Tutor/success/current-source-message execution provenance may
+advance the watermark through its captured sequence. Bounded server-owned
+history is available under `studio-history-v1` / 100 Events. No WorkspaceIntent,
+Canvas-originated Tutor turn, Activity, or renderer was added.
+
+`STUDIO-RUNTIME-02` is the only ready Studio task. All later Studio work remains
+blocked.
 
 ---
 

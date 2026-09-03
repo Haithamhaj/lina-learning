@@ -24,6 +24,7 @@ from services.platform.db.models import (
     LearningMessage,
     LearningSegment,
     LearningSession,
+    ModelTask,
     PersonalFact,
     Student,
     User,
@@ -819,8 +820,34 @@ def test_observation_and_specialist_are_dormant_scoped_persistence_seams(postgre
         )
         assert observation.status == "SELECTED"
         assert service.runtime_state(runtime_id=runtime_id, student_id=student.id)["last_tutor_observation_sequence"] == 0
-        with pytest.raises(ValueError, match="not available"):
-            service.advance_tutor_observation_watermark(observation_id=observation.id, student_id=student.id)
+        student_source_message = LearningMessage(
+            session_id=learning_session.id,
+            role="student",
+            content="source turn",
+        )
+        session.add(student_source_message)
+        session.flush()
+        execution = AIExecution(
+            task=ModelTask.TUTOR.value,
+            provider="fixture",
+            model="fixture-tutor",
+            latency_ms=1,
+            success=True,
+            operation_type="tutor_turn",
+            student_id=student.id,
+            learning_session_id=learning_session.id,
+            source_message_id=student_source_message.id,
+        )
+        session.add(execution)
+        session.flush()
+        committed = service.advance_tutor_observation_watermark(
+            observation_id=observation.id,
+            student_id=student.id,
+            ai_execution_id=execution.id,
+            source_message_id=student_source_message.id,
+        )
+        assert committed.status == "COMMITTED"
+        assert service.runtime_state(runtime_id=runtime_id, student_id=student.id)["last_tutor_observation_sequence"] == append.event.sequence
 
         source_message = LearningMessage(session_id=learning_session.id, role="tutor", content="source turn")
         session.add(source_message)
@@ -838,7 +865,7 @@ def test_observation_and_specialist_are_dormant_scoped_persistence_seams(postgre
             )
         )
         assert specialist.status == "PENDING"
-        assert session.scalar(select(func.count()).select_from(AIExecution)) == 0
+        assert session.scalar(select(func.count()).select_from(AIExecution)) == 1
 
 
 def test_observation_and_specialist_reject_cross_student_references(

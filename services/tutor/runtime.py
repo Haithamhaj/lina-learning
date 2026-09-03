@@ -25,6 +25,13 @@ from services.model_gateway.gateway import (
     StreamParentBoundaryDecision,
 )
 from services.platform.config import get_settings
+from services.studio.tutor_context import (
+    STUDIO_TUTOR_CONTEXT_SCHEMA_VERSION,
+    StudioTutorWorkspaceContext,
+    cancel_studio_tutor_observation,
+    mark_studio_tutor_observation_failed,
+    select_studio_tutor_context,
+)
 from services.platform.db.models import CandidateEvent, LearningMessage, LearningSegment, LearningSession, ModelTask
 from services.platform.safety import ParentBoundaryResolution, SafetyAction, SafetyPolicyService
 from services.retrieval.service import RetrievalService
@@ -113,6 +120,9 @@ class TutorTurn:
     strategy: TeachingStrategy | None
     safety: dict[str, str | int]
     guided_check: PersistedGuidedLearningCheck | None = None
+    studio_observation_id: UUID | None = None
+    studio_ai_execution_id: UUID | None = None
+    studio_source_message_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -197,6 +207,7 @@ def build_tutor_model_payload(
     suggested_action_source: LearningMessage | None = None,
     latest_segment_state: StructuredSegmentState | None = None,
     effective_parent_boundaries: dict[str, str] | None = None,
+    studio_context: StudioTutorWorkspaceContext | None = None,
 ) -> dict[str, object]:
     """Build bounded model input from the project-owned Tutor context only."""
 
@@ -289,6 +300,14 @@ def build_tutor_model_payload(
         "When REDIRECT_TO_PARENT is the effective setting, provide only brief acknowledgement, parent_reference, and safe_offer fragments in parent_boundary.redirect; do not put redirect wording in text. "
         "The server enforces the final visible response and may ignore your model_action or fragments."
     )
+    studio_workspace_context = (
+        "\n\nStudio Workspace Context (current authoritative Workspace state; unseen Events are meaningful Student actions since the last successful Tutor observation):\n"
+        f"{json.dumps(studio_context.as_model_payload(), ensure_ascii=False)}\n"
+        "Respond naturally to current Workspace behavior when useful. Do not mention internal event, storage, or observation terminology. "
+        "Studio validation is not Learning Evidence or mastery, and you must not mutate Studio state or emit WorkspaceIntent."
+        if studio_context is not None
+        else ""
+    )
     return {
         "instructions": TUTOR_SHARED_INSTRUCTIONS,
         "input": (
@@ -297,7 +316,7 @@ def build_tutor_model_payload(
             f"Current Turn:\nStudent question:\n{question}{current_turn_source_context}\n\nImmediate Exchange:\n{immediate_exchange_context}\n\n"
             f"Recent raw complete Exchanges:\n{recent_exchange_context}\n\n"
             f"Relevant older complete Exchanges from current Segment:\n{semantic_recall_context}\n\n"
-            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}{segment_context}{segment_state_context}{parent_boundary_context}"
+            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{studio_workspace_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}{segment_context}{segment_state_context}{parent_boundary_context}"
         ),
         "max_output_tokens": get_settings().tutor_max_output_tokens,
         "question": question,
@@ -384,11 +403,28 @@ class TutorRuntime:
             learning_session=learning_session,
             before_message=student_message,
         )
-        context = self._context_builder.build(
-            learning_session=learning_session,
-            question=content,
-            current_turn_message_id=student_message.id,
+        get_bind = getattr(self._session, "get_bind", None)
+        studio_selection = (
+            None
+            if not callable(get_bind)
+            else select_studio_tutor_context(
+                bind=get_bind(),
+                student_id=learning_session.student_id,
+                learning_session_id=learning_session.id,
+            )
         )
+        context_arguments = {
+            "learning_session": learning_session,
+            "question": content,
+            "current_turn_message_id": student_message.id,
+        }
+        # Preserve the established no-Studio builder boundary.  A Studio field is
+        # supplied only for a real, active Runtime selection; this also keeps
+        # existing in-memory test builders (which intentionally model no DB
+        # Runtime) compatible with the ordinary Tutor path.
+        if studio_selection is not None:
+            context_arguments["studio_context"] = studio_selection.context
+        context = self._context_builder.build(**context_arguments)
         latest_segment = latest_segment_for_session(self._session, session_id=learning_session.id)
         latest_segment_state = latest_valid_structured_segment_state(
             self._session,
@@ -410,6 +446,13 @@ class TutorRuntime:
                 ),
             )
         except TutorContextCapacityExceeded as error:
+            if context.studio_workspace is not None and context.studio_workspace.observation_id is not None:
+                mark_studio_tutor_observation_failed(
+                    bind=self._session.get_bind(),
+                    student_id=learning_session.student_id,
+                    observation_id=context.studio_workspace.observation_id,
+                    failure_code="CAPACITY_EXCEEDED",
+                )
             logger.warning(
                 "Tutor context capacity exceeded before the primary model call.",
                 extra={"tutor_context_capacity": error.lineage.as_metadata()},
@@ -474,11 +517,31 @@ class TutorRuntime:
                     parent_resolution=parent_resolution,
                     capacity_lineage=capacity_lineage,
                 )
+            if context.studio_workspace is not None and context.studio_workspace.observation_id is not None:
+                cancel_studio_tutor_observation(
+                    bind=self._session.get_bind(),
+                    student_id=learning_session.student_id,
+                    observation_id=context.studio_workspace.observation_id,
+                )
             raise
         except Exception as error:
+            if context.studio_workspace is not None and context.studio_workspace.observation_id is not None:
+                mark_studio_tutor_observation_failed(
+                    bind=self._session.get_bind(),
+                    student_id=learning_session.student_id,
+                    observation_id=context.studio_workspace.observation_id,
+                    failure_code="PROVIDER_FAILURE",
+                )
             raise TutorModelStreamFailure("The primary Tutor model stream failed.") from error
 
         if result is None:
+            if context.studio_workspace is not None and context.studio_workspace.observation_id is not None:
+                mark_studio_tutor_observation_failed(
+                    bind=self._session.get_bind(),
+                    student_id=learning_session.student_id,
+                    observation_id=context.studio_workspace.observation_id,
+                    failure_code="TERMINAL_FAILURE",
+                )
             raise TutorModelStreamFailure("The primary Tutor model stream ended without a final result.")
         deferred_deltas: list[str] = []
         if parent_resolution is None:
@@ -489,18 +552,28 @@ class TutorRuntime:
             )
             if parent_resolution.action is not SafetyAction.REDIRECT_TO_PARENT:
                 deferred_deltas = buffered_deltas
-        turn = self._persist_completed_turn(
-            learning_session=learning_session,
-            student_message=student_message,
-            result=result,
-            context=context,
-            safety=safety,
-            prior_method=prior_method,
-            prior_segment_state=latest_segment_state,
-            parent_decision=parent_decision,
-            parent_resolution=parent_resolution,
-            capacity_lineage=capacity_lineage,
-        )
+        try:
+            turn = self._persist_completed_turn(
+                learning_session=learning_session,
+                student_message=student_message,
+                result=result,
+                context=context,
+                safety=safety,
+                prior_method=prior_method,
+                prior_segment_state=latest_segment_state,
+                parent_decision=parent_decision,
+                parent_resolution=parent_resolution,
+                capacity_lineage=capacity_lineage,
+            )
+        except Exception:
+            if context.studio_workspace is not None and context.studio_workspace.observation_id is not None:
+                mark_studio_tutor_observation_failed(
+                    bind=self._session.get_bind(),
+                    student_id=learning_session.student_id,
+                    observation_id=context.studio_workspace.observation_id,
+                    failure_code="TERMINAL_FAILURE",
+                )
+            raise
         for buffered in deferred_deltas:
             yield TutorTextDelta(buffered)
         yield turn
@@ -935,6 +1008,22 @@ class TutorRuntime:
                 "retrieval_source_refs": list(context.debug.retrieval_source_refs),
                 "intelligence_source_ids": [str(identifier) for identifier in context.debug.intelligence_source_ids],
                 "personal_memory_status": context.debug.personal_memory_status,
+                "studio": {
+                    "included": context.studio_workspace is not None,
+                    "context_schema_version": (
+                        None if context.studio_workspace is None else STUDIO_TUTOR_CONTEXT_SCHEMA_VERSION
+                    ),
+                    "runtime_id": (
+                        None if context.debug.studio_runtime_id is None else str(context.debug.studio_runtime_id)
+                    ),
+                    "snapshot_sequence": context.debug.studio_snapshot_sequence,
+                    "observation_id": (
+                        None if context.debug.studio_observation_id is None else str(context.debug.studio_observation_id)
+                    ),
+                    "from_sequence": context.debug.studio_from_sequence,
+                    "through_sequence": context.debug.studio_through_sequence,
+                    "selected_event_sequences": list(context.debug.studio_selected_event_sequences),
+                },
             }
         self._session.add(
             LearningMessage(
@@ -949,7 +1038,19 @@ class TutorRuntime:
         )
         learning_session.last_activity_at = datetime.now(UTC)
         self._session.flush()
-        return TutorTurn(text, suggested_actions, sources, intelligence, mode, strategy, safety.audit_metadata(), guided_check)
+        return TutorTurn(
+            text,
+            suggested_actions,
+            sources,
+            intelligence,
+            mode,
+            strategy,
+            safety.audit_metadata(),
+            guided_check,
+            None if context is None or context.studio_workspace is None else context.studio_workspace.observation_id,
+            ai_execution_id,
+            None if context is None or context.studio_workspace is None else context.debug.current_turn_message_id,
+        )
 
 
 def _validated_provisional_broad_subject(value: object) -> str | None:
@@ -983,6 +1084,7 @@ def _payload_from_context(
         suggested_action_source=suggested_action_source,
         latest_segment_state=latest_segment_state,
         effective_parent_boundaries=effective_parent_boundaries,
+        studio_context=context.studio_workspace,
     )
 
 

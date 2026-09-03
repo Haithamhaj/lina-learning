@@ -18,6 +18,7 @@ from services.platform.db.models import (
     LearningMessage,
     LearningSegment,
     LearningSession,
+    ModelTask,
     StudioCanvasSpecialistRun,
     StudioEvent,
     StudioRuntime,
@@ -55,6 +56,12 @@ MAX_FAILURE_METADATA_BYTES = 4_096
 MAX_INTERACTION_PAYLOAD_BYTES = 4_096
 MAX_SUBJECT_EVENT_ENVELOPE_BYTES = 9_216
 STUDIO_EVENT_NOTIFICATION_CHANNEL = "lina_studio_events_v1"
+TUTOR_OBSERVATION_FAILURE_CODES = frozenset({
+    "PROVIDER_FAILURE",
+    "CAPACITY_EXCEEDED",
+    "TERMINAL_FAILURE",
+    "ACKNOWLEDGEMENT_FAILURE",
+})
 
 
 class StudioStateError(ValueError):
@@ -402,11 +409,148 @@ class StudioStateService:
             self.session.flush()
             return observation
 
-    def advance_tutor_observation_watermark(self, *, observation_id: UUID, student_id: UUID) -> None:
-        """Reserve acknowledgement advancement for STUDIO-RUNTIME-01's atomic Tutor contract."""
+    def advance_tutor_observation_watermark(
+        self,
+        *,
+        observation_id: UUID,
+        student_id: UUID,
+        ai_execution_id: UUID,
+        source_message_id: UUID,
+    ) -> StudioTutorObservation:
+        """Commit one selected Tutor observation and its exact Runtime watermark.
 
-        del observation_id, student_id
-        raise ValueError("Tutor observation watermark advancement is not available in STUDIO-STATE-01.")
+        The caller owns the surrounding short acknowledgement transaction.  The
+        Runtime is locked before the observation, matching append/selection lock
+        ordering and preventing a watermark from consuming an unseen suffix.
+        """
+
+        reference = self.session.execute(
+            select(StudioTutorObservation).where(
+                StudioTutorObservation.id == observation_id,
+                StudioTutorObservation.student_id == student_id,
+            )
+        ).scalar_one_or_none()
+        if reference is None:
+            raise InvalidStudioLineage("Studio observation is outside the supplied Student scope.")
+        with self.session.begin_nested():
+            runtime = self._runtime_locked(student_id, None, runtime_id=reference.studio_runtime_id)
+            observation = self.session.execute(
+                select(StudioTutorObservation)
+                .where(
+                    StudioTutorObservation.id == observation_id,
+                    StudioTutorObservation.student_id == student_id,
+                    StudioTutorObservation.studio_runtime_id == runtime.id,
+                )
+                .with_for_update()
+            ).scalar_one_or_none()
+            if observation is None:
+                raise InvalidStudioLineage("Studio observation is outside the locked Runtime.")
+            if observation.status == "COMMITTED":
+                self._validate_tutor_ai_execution(
+                    ai_execution_id,
+                    source_message_id,
+                    runtime,
+                )
+                if observation.ai_execution_id != ai_execution_id:
+                    raise InvalidStudioLineage("AI execution does not match the committed Studio observation.")
+                return observation
+            if observation.status != "SELECTED":
+                raise StudioStateError("Only a selected Studio observation may be acknowledged.")
+            if observation.from_event_sequence != runtime.last_tutor_observation_sequence + 1:
+                raise StudioStateError("Studio observation no longer begins at the committed watermark.")
+            if observation.through_event_sequence > runtime.latest_event_sequence:
+                raise StudioStateError("Studio observation extends beyond committed Studio history.")
+            self._validate_tutor_ai_execution(ai_execution_id, source_message_id, runtime)
+            observation.ai_execution_id = ai_execution_id
+            observation.status = "COMMITTED"
+            observation.completed_at = datetime.now(UTC)
+            runtime.last_tutor_observation_sequence = observation.through_event_sequence
+            runtime.updated_at = datetime.now(UTC)
+            self.session.flush()
+            return observation
+
+    def fail_tutor_observation(
+        self,
+        *,
+        observation_id: UUID,
+        student_id: UUID,
+        failure_code: str,
+    ) -> StudioTutorObservation:
+        """Record a finite safe failure code without consuming Studio Events."""
+
+        if failure_code not in TUTOR_OBSERVATION_FAILURE_CODES:
+            raise ValueError("Studio observation failure code is unsupported.")
+        return self._finish_tutor_observation(
+            observation_id=observation_id,
+            student_id=student_id,
+            status="FAILED",
+            failure_metadata={"code": failure_code},
+        )
+
+    def cancel_tutor_observation(self, *, observation_id: UUID, student_id: UUID) -> StudioTutorObservation:
+        """Record an incomplete stream without consuming Studio Events."""
+
+        return self._finish_tutor_observation(
+            observation_id=observation_id,
+            student_id=student_id,
+            status="CANCELLED",
+            failure_metadata=None,
+        )
+
+    def supersede_selected_tutor_observations(
+        self,
+        *,
+        runtime_id: UUID,
+        student_id: UUID,
+        through_event_sequence: int,
+    ) -> None:
+        """Close prior unacknowledged selections that overlap the new unseen range."""
+
+        runtime = self._runtime_locked(student_id, None, runtime_id=runtime_id)
+        now = datetime.now(UTC)
+        for observation in self.session.execute(
+            select(StudioTutorObservation)
+            .where(
+                StudioTutorObservation.studio_runtime_id == runtime.id,
+                StudioTutorObservation.student_id == student_id,
+                StudioTutorObservation.status == "SELECTED",
+                StudioTutorObservation.through_event_sequence > runtime.last_tutor_observation_sequence,
+                StudioTutorObservation.from_event_sequence <= through_event_sequence,
+            )
+            .with_for_update()
+        ).scalars():
+            observation.status = "SUPERSEDED"
+            observation.completed_at = now
+
+    def _finish_tutor_observation(
+        self,
+        *,
+        observation_id: UUID,
+        student_id: UUID,
+        status: str,
+        failure_metadata: Mapping[str, object] | None,
+    ) -> StudioTutorObservation:
+        if status not in {"FAILED", "CANCELLED", "SUPERSEDED"}:
+            raise ValueError("Studio observation terminal status is unsupported.")
+        self._validate_json_capacity(failure_metadata, MAX_FAILURE_METADATA_BYTES, "Observation failure metadata")
+        with self.session.begin_nested():
+            observation = self.session.execute(
+                select(StudioTutorObservation)
+                .where(
+                    StudioTutorObservation.id == observation_id,
+                    StudioTutorObservation.student_id == student_id,
+                )
+                .with_for_update()
+            ).scalar_one_or_none()
+            if observation is None:
+                raise InvalidStudioLineage("Studio observation is outside the supplied Student scope.")
+            if observation.status != "SELECTED":
+                return observation
+            observation.status = status
+            observation.failure_metadata = None if failure_metadata is None else dict(failure_metadata)
+            observation.completed_at = datetime.now(UTC)
+            self.session.flush()
+            return observation
 
     def create_canvas_specialist_run(
         self,
@@ -723,6 +867,27 @@ class StudioStateService:
         execution = self.session.get(AIExecution, execution_id)
         if execution is None or execution.student_id != student_id:
             raise InvalidStudioLineage("AI execution is outside the supplied Student scope.")
+
+    def _validate_tutor_ai_execution(
+        self,
+        execution_id: UUID,
+        source_message_id: UUID,
+        runtime: StudioRuntime,
+    ) -> None:
+        """Accept acknowledgement provenance only from the exact successful Tutor turn."""
+
+        if execution_id is None or source_message_id is None:
+            raise InvalidStudioLineage("AI execution provenance is required for Studio acknowledgement.")
+        execution = self.session.get(AIExecution, execution_id)
+        if (
+            execution is None
+            or execution.student_id != runtime.student_id
+            or execution.learning_session_id != runtime.learning_session_id
+            or execution.task != ModelTask.TUTOR.value
+            or execution.success is not True
+            or execution.source_message_id != source_message_id
+        ):
+            raise InvalidStudioLineage("AI execution is not the successful Tutor execution for this Studio Runtime.")
 
     @staticmethod
     def _require_open_runtime(runtime: StudioRuntime) -> None:

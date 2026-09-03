@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from types import SimpleNamespace
 from threading import Event, Thread
 from time import monotonic
 from uuid import UUID
@@ -29,6 +30,8 @@ from services.platform.db.models import (
     LearnerIntelligenceCard,
     LearningSession,
     SafetyAudit,
+    StudioRuntime,
+    StudioTutorObservation,
     Student,
     User,
 )
@@ -38,6 +41,9 @@ from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute
 from services.platform.db.models import ModelTask
 from services.platform.safety import SafetyPolicyService
 from services.retrieval.service import RetrievalService
+from services.studio.contracts import AppendStudioEventCommand, StudioActor
+from services.studio.reducer import CORE_EVENT_SCHEMA_VERSION
+from services.studio.service import StudioStateService
 from services.tutor.capacity import TutorContextCapacityExceeded, TutorContextCapacityLineage
 from services.tutor.context import TutorContextBuilder
 from services.tutor.candidate_events import SuggestedAction
@@ -172,11 +178,47 @@ class _ImmediateSuccessfulTutorProvider:
     def __init__(self) -> None:
         self.called = Event()
         self.call_count = 0
+        self.payloads: list[dict[str, object]] = []
 
     def stream(self, route: ModelRoute, payload: dict[str, object]):
         del route
         self.call_count += 1
+        self.payloads.append(payload)
         self.called.set()
+        text = "Keep the denominator and add the numerators."
+        yield StreamDelta(text)
+        yield StreamComplete(ModelResult(
+            output={
+                "text": text,
+                "suggested_actions": [],
+                "guided_check": None,
+                "teaching_mode": None,
+                "teaching_strategy": None,
+                "teaching_method_id": None,
+                "prior_method_relation": None,
+                "candidate_metadata": None,
+                "provisional_broad_subject": None,
+                "segment_relation": None,
+                "structured_segment_state": None,
+            },
+            input_tokens=4,
+            output_tokens=3,
+        ))
+
+
+class _BlockingTutorProvider(_ImmediateSuccessfulTutorProvider):
+    """Holds the one primary provider call so a concurrent Studio append is observable."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.release = Event()
+
+    def stream(self, route: ModelRoute, payload: dict[str, object]):
+        del route
+        self.call_count += 1
+        self.payloads.append(payload)
+        self.called.set()
+        assert self.release.wait(timeout=5), "test must release the primary Tutor provider"
         text = "Keep the denominator and add the numerators."
         yield StreamDelta(text)
         yield StreamComplete(ModelResult(
@@ -477,7 +519,24 @@ def test_failed_stream_keeps_the_student_message_and_failure_ledger_without_part
         learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
         session.add(learning_session)
         session.flush()
-        session_id = learning_session.id
+        runtime = StudioStateService(session).get_or_create_runtime(
+            student_id=student.id,
+            learning_session_id=learning_session.id,
+        )
+        StudioStateService(session).append_event(
+            AppendStudioEventCommand(
+                runtime_id=runtime.id,
+                student_id=student.id,
+                learning_session_id=learning_session.id,
+                event_kind="studio.runtime.initialized",
+                event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+                actor=StudioActor.SYSTEM,
+                payload_schema_version="studio-runtime-initialized-v1",
+                payload={},
+                idempotency_key="failed-stream-studio-1",
+            )
+        )
+        session_id, runtime_id = learning_session.id, runtime.id
 
     from apps.api.routes import student as student_routes
 
@@ -511,6 +570,11 @@ def test_failed_stream_keeps_the_student_message_and_failure_ledger_without_part
         assert execution.operation_type == "tutor_turn"
         assert session.query(CandidateEvent).filter_by(session_id=session_id).count() == 0
         assert session.get(LearningSession, session_id).status == "OPEN"
+        observation = session.query(StudioTutorObservation).one()
+        runtime = session.get(StudioRuntime, runtime_id)
+        assert observation.status == "FAILED"
+        assert observation.failure_metadata == {"code": "PROVIDER_FAILURE"}
+        assert runtime is not None and runtime.last_tutor_observation_sequence == 0
 
 
 def test_capacity_failure_keeps_the_accepted_student_turn_without_a_model_execution(
@@ -663,9 +727,402 @@ def test_streaming_route_releases_request_student_lock_before_safety_audit_and_m
         ).all()
         assert [message.role for message in messages] == ["student", "tutor"]
         assert session.query(SafetyAudit).filter_by(student_id=student.id).count() == 1
-        execution = session.query(AIExecution).filter_by(learning_session_id=session_id, task="tutor").one()
+        execution = session.query(AIExecution).filter_by(
+            learning_session_id=session_id,
+            task=ModelTask.TUTOR.value,
+        ).one()
         assert execution.success is True
         assert execution.provider == "fixture-stream"
+
+
+def test_normal_chat_turn_observes_studio_in_its_one_primary_call_then_acknowledges(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A successful terminal SSE commits exactly the selected Studio range after Chat persistence."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-studio-observation")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        runtime = StudioStateService(session).get_or_create_runtime(
+            student_id=student.id,
+            learning_session_id=learning_session.id,
+        )
+        StudioStateService(session).append_event(
+            AppendStudioEventCommand(
+                runtime_id=runtime.id,
+                student_id=student.id,
+                learning_session_id=learning_session.id,
+                event_kind="studio.runtime.initialized",
+                event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+                actor=StudioActor.SYSTEM,
+                payload_schema_version="studio-runtime-initialized-v1",
+                payload={},
+                idempotency_key="chat-studio-observation-1",
+            )
+        )
+        session_id, runtime_id, student_id = learning_session.id, runtime.id, student.id
+
+    from apps.api.routes import student as student_routes
+
+    provider = _ImmediateSuccessfulTutorProvider()
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    client = _client(postgres_session_factory, subject="student-studio-observation")
+    try:
+        response = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": "I just worked in the Studio."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert "event: turn" in response.text
+    assert provider.call_count == 1
+    assert "Studio Workspace Context" in str(provider.payloads[0]["input"])
+    assert '"through_sequence": 1' in str(provider.payloads[0]["input"])
+    with postgres_session_factory() as session:
+        observation = session.query(StudioTutorObservation).one()
+        runtime = session.get(StudioRuntime, runtime_id)
+        execution = session.query(AIExecution).filter_by(learning_session_id=session_id, task="tutor").one()
+        student_message = session.query(LearningMessage).filter_by(session_id=session_id, role="student").one()
+        tutor_message = session.query(LearningMessage).filter_by(session_id=session_id, role="tutor").one()
+        assert observation.status == "COMMITTED"
+        assert observation.ai_execution_id == execution.id
+        assert execution.student_id == student_id
+        assert execution.learning_session_id == session_id
+        assert execution.task == ModelTask.TUTOR.value
+        assert execution.success is True
+        assert execution.source_message_id == student_message.id
+        assert session.query(AIExecution).filter_by(learning_session_id=session_id).count() == 1
+        assert runtime is not None and runtime.last_tutor_observation_sequence == 1
+        assert session.query(CandidateEvent).filter_by(session_id=session_id).count() == 0
+        assert session.query(LearningEvent).filter_by(session_id=session_id).count() == 0
+        assert session.query(LearningEvidence).count() == 0
+        assert tutor_message.payload["context_debug"]["studio"] == {
+            "included": True,
+            "context_schema_version": "studio-tutor-context-v1",
+            "runtime_id": str(runtime_id),
+            "snapshot_sequence": 1,
+            "observation_id": str(observation.id),
+            "from_sequence": 1,
+            "through_sequence": 1,
+            "selected_event_sequences": [1],
+        }
+
+
+def test_idle_studio_runtime_still_supplies_snapshot_without_creating_observation(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An active but unchanged Studio remains current context without pretending a new action occurred."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-studio-idle")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        runtime = StudioStateService(session).get_or_create_runtime(student_id=student.id, learning_session_id=learning_session.id)
+        session_id, runtime_id = learning_session.id, runtime.id
+
+    from apps.api.routes import student as student_routes
+
+    provider = _ImmediateSuccessfulTutorProvider()
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    client = _client(postgres_session_factory, subject="student-studio-idle")
+    try:
+        response = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": "Can you see my current Studio?"},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert provider.call_count == 1
+    assert '"through_sequence": 0' in str(provider.payloads[0]["input"])
+    assert '"unseen_events": []' in str(provider.payloads[0]["input"])
+    with postgres_session_factory() as session:
+        runtime = session.get(StudioRuntime, runtime_id)
+        assert runtime is not None and runtime.last_tutor_observation_sequence == 0
+        assert session.query(StudioTutorObservation).count() == 0
+
+
+def test_studio_capacity_failure_marks_selected_observation_without_calling_provider(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The whole selected Studio range stays unseen when protected request capacity is exceeded."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-studio-capacity")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        runtime = StudioStateService(session).get_or_create_runtime(student_id=student.id, learning_session_id=learning_session.id)
+        StudioStateService(session).append_event(
+            AppendStudioEventCommand(
+                runtime_id=runtime.id, student_id=student.id, learning_session_id=learning_session.id,
+                event_kind="studio.runtime.initialized", event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+                actor=StudioActor.SYSTEM, payload_schema_version="studio-runtime-initialized-v1", payload={},
+                idempotency_key="chat-studio-capacity-1",
+            )
+        )
+        session_id, runtime_id = learning_session.id, runtime.id
+
+    from apps.api.routes import student as student_routes
+    from services.tutor import runtime as tutor_runtime
+
+    provider = _ImmediateSuccessfulTutorProvider()
+    observed_failures: list[dict[str, object]] = []
+    original_mark_failed = tutor_runtime.mark_studio_tutor_observation_failed
+
+    def record_failure(**kwargs: object) -> None:
+        observed_failures.append(kwargs)
+        original_mark_failed(**kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    monkeypatch.setattr(
+        tutor_runtime,
+        "get_settings",
+        lambda: SimpleNamespace(tutor_context_capacity=1, tutor_max_output_tokens=2000),
+    )
+    monkeypatch.setattr(tutor_runtime, "mark_studio_tutor_observation_failed", record_failure)
+    client = _client(postgres_session_factory, subject="student-studio-capacity", raise_server_exceptions=False)
+    try:
+        response = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": "Please help with this Studio step."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert "event: turn" not in response.text
+    assert provider.call_count == 0
+    assert len(observed_failures) == 1
+    with postgres_session_factory() as session:
+        observation = session.query(StudioTutorObservation).one()
+        runtime = session.get(StudioRuntime, runtime_id)
+        assert observation.status == "FAILED"
+        assert observation.failure_metadata == {"code": "CAPACITY_EXCEEDED"}
+        assert runtime is not None and runtime.last_tutor_observation_sequence == 0
+
+
+def test_studio_append_during_primary_tutor_generation_is_not_blocked_or_acknowledged_early(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The short selection lock releases before the provider, leaving the appended suffix for next turn."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-studio-concurrency")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        runtime = StudioStateService(session).get_or_create_runtime(student_id=student.id, learning_session_id=learning_session.id)
+        StudioStateService(session).append_event(
+            AppendStudioEventCommand(
+                runtime_id=runtime.id, student_id=student.id, learning_session_id=learning_session.id,
+                event_kind="studio.runtime.initialized", event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+                actor=StudioActor.SYSTEM, payload_schema_version="studio-runtime-initialized-v1", payload={},
+                idempotency_key="chat-studio-concurrency-1",
+            )
+        )
+        session_id, runtime_id, student_id = learning_session.id, runtime.id, student.id
+
+    from apps.api.routes import student as student_routes
+    from services.studio.tutor_context import select_studio_tutor_context
+
+    provider = _BlockingTutorProvider()
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    principal = AuthenticatedPrincipal(
+        subject="student-studio-concurrency", role=UserRole.STUDENT,
+        email="student-studio-concurrency@example.test",
+    )
+    request_session = postgres_session_factory()
+    response = student_routes.stream_math_tutor_turn(
+        session_id=session_id,
+        request=student_routes.StudentMessageRequest(content="Please look at my current Studio work."),
+        principal=principal,
+        session=request_session,
+    )
+    chunks: list[str] = []
+    errors: list[BaseException] = []
+
+    async def drain() -> None:
+        iterator = response.body_iterator
+        try:
+            async for chunk in iterator:
+                chunks.append(chunk.decode() if isinstance(chunk, bytes) else str(chunk))
+        except BaseException as error:
+            errors.append(error)
+        finally:
+            await iterator.aclose()
+
+    streaming = Thread(target=lambda: asyncio.run(drain()))
+    streaming.start()
+    try:
+        assert provider.called.wait(timeout=1), "the single primary Tutor provider must begin"
+        append_finished = Event()
+        append_errors: list[BaseException] = []
+
+        def append_later_event() -> None:
+            try:
+                with postgres_session_factory.begin() as session:
+                    StudioStateService(session).append_event(
+                        AppendStudioEventCommand(
+                            runtime_id=runtime_id, student_id=student_id, learning_session_id=session_id,
+                            event_kind="studio.runtime.initialized", event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+                            actor=StudioActor.SYSTEM, payload_schema_version="studio-runtime-initialized-v1", payload={},
+                            idempotency_key="chat-studio-concurrency-2",
+                        )
+                    )
+            except BaseException as error:
+                append_errors.append(error)
+            finally:
+                append_finished.set()
+
+        append_thread = Thread(target=append_later_event)
+        append_thread.start()
+        assert append_finished.wait(timeout=1), "Studio append must not wait for the primary Tutor provider"
+        append_thread.join(timeout=1)
+        assert append_errors == []
+        assert '"through_sequence": 1' in str(provider.payloads[0]["input"])
+        assert '"sequence": 2' not in str(provider.payloads[0]["input"])
+        provider.release.set()
+    finally:
+        request_session.close()
+        streaming.join(timeout=5)
+
+    assert not streaming.is_alive()
+    assert errors == []
+    assert "event: turn" in "".join(chunks)
+    with postgres_session_factory() as session:
+        runtime = session.get(StudioRuntime, runtime_id)
+        observation = session.query(StudioTutorObservation).one()
+        assert runtime is not None and runtime.latest_event_sequence == 2
+        assert runtime.last_tutor_observation_sequence == 1
+        assert observation.status == "COMMITTED" and observation.through_event_sequence == 1
+    with postgres_session_factory() as session:
+        engine = session.get_bind()
+    next_selection = select_studio_tutor_context(bind=engine, student_id=student_id, learning_session_id=session_id)
+    assert next_selection is not None
+    assert [event.sequence for event in next_selection.context.unseen_events] == [2]
+
+
+def test_terminal_persistence_failure_marks_studio_observation_failed_without_advancing(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A validated provider terminal result is not a successful Studio observation until Tutor persistence succeeds."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-studio-terminal-failure")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        runtime = StudioStateService(session).get_or_create_runtime(student_id=student.id, learning_session_id=learning_session.id)
+        StudioStateService(session).append_event(
+            AppendStudioEventCommand(
+                runtime_id=runtime.id, student_id=student.id, learning_session_id=learning_session.id,
+                event_kind="studio.runtime.initialized", event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+                actor=StudioActor.SYSTEM, payload_schema_version="studio-runtime-initialized-v1", payload={},
+                idempotency_key="chat-studio-terminal-failure-1",
+            )
+        )
+        session_id, runtime_id = learning_session.id, runtime.id
+
+    from apps.api.routes import student as student_routes
+
+    def fail_tutor_persistence(*_: object, **__: object) -> TutorTurn:
+        raise RuntimeError("fixture terminal persistence failure")
+
+    provider = _ImmediateSuccessfulTutorProvider()
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    monkeypatch.setattr(TutorRuntime, "_persist_completed_turn", fail_tutor_persistence)
+    client = _client(postgres_session_factory, subject="student-studio-terminal-failure", raise_server_exceptions=False)
+    try:
+        response = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": "Please help with this Studio step."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert provider.call_count == 1
+    assert "event: turn" not in response.text
+    with postgres_session_factory() as session:
+        observation = session.query(StudioTutorObservation).one()
+        runtime = session.get(StudioRuntime, runtime_id)
+        assert observation.status == "FAILED"
+        assert observation.failure_metadata == {"code": "TERMINAL_FAILURE"}
+        assert runtime is not None and runtime.last_tutor_observation_sequence == 0
+
+
+def test_terminal_stream_interruption_leaves_selected_studio_range_unacknowledged_for_reselection(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Closing the SSE generator at its terminal yield never consumes Studio Events prematurely."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "student-studio-interrupted-terminal")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        runtime = StudioStateService(session).get_or_create_runtime(student_id=student.id, learning_session_id=learning_session.id)
+        StudioStateService(session).append_event(
+            AppendStudioEventCommand(
+                runtime_id=runtime.id, student_id=student.id, learning_session_id=learning_session.id,
+                event_kind="studio.runtime.initialized", event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+                actor=StudioActor.SYSTEM, payload_schema_version="studio-runtime-initialized-v1", payload={},
+                idempotency_key="chat-studio-interrupted-terminal-1",
+            )
+        )
+        session_id, runtime_id, student_id = learning_session.id, runtime.id, student.id
+
+    from apps.api.routes import student as student_routes
+    from services.studio.tutor_context import select_studio_tutor_context
+
+    provider = _ImmediateSuccessfulTutorProvider()
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    principal = AuthenticatedPrincipal(
+        subject="student-studio-interrupted-terminal", role=UserRole.STUDENT,
+        email="student-studio-interrupted-terminal@example.test",
+    )
+    with postgres_session_factory() as route_session:
+        response = student_routes.stream_math_tutor_turn(
+            session_id=session_id,
+            request=student_routes.StudentMessageRequest(content="Please help with this Studio step."),
+            principal=principal,
+            session=route_session,
+        )
+
+        async def stop_at_terminal() -> None:
+            iterator = response.body_iterator
+            try:
+                first = await anext(iterator)
+                assert "event: delta" in first
+                terminal = await anext(iterator)
+                assert "event: turn" in terminal
+            finally:
+                await iterator.aclose()
+
+        asyncio.run(stop_at_terminal())
+
+    with postgres_session_factory() as session:
+        runtime = session.get(StudioRuntime, runtime_id)
+        observation = session.query(StudioTutorObservation).one()
+        engine = session.get_bind()
+        assert runtime is not None and runtime.last_tutor_observation_sequence == 0
+        assert observation.status in {"SELECTED", "CANCELLED"}
+    replacement = select_studio_tutor_context(bind=engine, student_id=student_id, learning_session_id=session_id)
+    assert replacement is not None
+    assert [event.sequence for event in replacement.context.unseen_events] == [1]
 
 
 def test_a_session_recovers_with_a_successful_turn_after_a_failed_stream(
@@ -758,6 +1215,8 @@ def test_zero_content_student_tutor_turn_uses_empty_retrieval_and_persists_respo
     with postgres_session_factory() as session:
         messages = session.query(LearningMessage).filter_by(session_id=UUID(session_id)).order_by(LearningMessage.created_at, LearningMessage.id).all()
         assert [message.role for message in messages] == ["student", "tutor"]
+        assert session.query(StudioRuntime).filter_by(learning_session_id=UUID(session_id)).count() == 0
+        assert session.query(StudioTutorObservation).count() == 0
         assert messages[-1].payload["source_refs"] == []
         assert messages[-1].payload["suggested_actions"] == []
         assert session.query(AIExecution).filter_by(task="tutor").count() == executions_before + 1
