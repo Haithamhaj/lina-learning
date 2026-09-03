@@ -26,10 +26,12 @@ preserves task provenance; the overlay owns current readiness.
 dependencies, or FE-02 prototype acceptance.
 
 ## FE-02-PRESERVE-01 — Preserve Prototype Shell
-**Status:** ONLY READY TASK.
+**Status:** DONE / ACCEPTED — preserved on
+`prototype/fe-02-studio-shell-2026-09-02` at
+`8648371480b0aac116af2a49e2d3d7493d26360f`.
 
-All Studio runtime, protocol, subject, renderer, and integration work remains
-blocked behind the approved dependency track.
+`STUDIO-STATE-01` is promoted as the only ready task. `CURR-RENDER-MATH-01A`
+is the pre-Grade-5-renderer correction gate, not a Studio Core dependency.
 
 ---
 

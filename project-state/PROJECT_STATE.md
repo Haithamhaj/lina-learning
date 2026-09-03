@@ -24,20 +24,25 @@ Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.
 
 ### Studio governance status — 2026-09-02
 
-`STUDIO-GOV-01` is `DONE / ACCEPTED`; repository verification and governing
-promotion are complete. The approved target is documented in
+`STUDIO-GOV-01` and `FE-02-PRESERVE-01` are `DONE / ACCEPTED`; repository
+verification, governing promotion, and prototype preservation are complete.
+The approved target is documented in
 `docs/STUDIO_IMPLEMENTATION_PLAN.md`: application-owned, subject-agnostic
 Studio Core; semantic Event Log plus Materialized Current Snapshot; one
 Student-facing Tutor; persistent Workspace; dedicated resumable Studio feed;
 and deterministic subject capabilities before optional `CUSTOM_COMPOSE`
 specialist work.
 
-The uncommitted FE-02 `/student/daily` prototype remains preserved, unaccepted,
-and outside this governance diff. It is not Studio truth: no Tutor-prose
-parsing, local browser state, polling, or display-only Canvas is accepted as
-production architecture. `FE-02-PRESERVE-01` is the only ready task. Math
-correction and all runtime/schema/protocol, renderer, and integration tasks
-remain blocked.
+The FE-02 `/student/daily` prototype is preserved remotely on
+`prototype/fe-02-studio-shell-2026-09-02` at
+`8648371480b0aac116af2a49e2d3d7493d26360f`; its manifest is
+`prototype/FE-02_PROTOTYPE_MANIFEST.md`. It remains non-authoritative,
+non-production architecture: no Tutor-prose parsing, local browser state,
+polling, or display-only Canvas is Studio truth. The `codex/ctx-03` tracked
+tree remains clean and no production Studio runtime, schema, or protocol exists.
+`STUDIO-STATE-01` is the only ready task. `CURR-RENDER-MATH-01A` is deferred
+until the Grade 5 Math renderer batch and does not block Studio Core or bounded
+foundation work; all other Studio tasks remain blocked.
 
 ---
 
@@ -170,8 +175,9 @@ UI code, dependencies, Voice, Vision, attachments, artifacts, or FE-02 work.
 
 ## Next recommended action
 
-`FE-02-PRESERVE-01` is the only ready task. Do not begin it, the Math research
-correction, or any Studio runtime/schema/frontend work in this closure task.
+`STUDIO-STATE-01` is the only ready task. It was not started in this closure
+task; do not begin the Math research correction or any other Studio
+runtime/schema/frontend work.
 
 ---
 

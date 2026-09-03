@@ -16,9 +16,8 @@ preserved Daily-Use history below.
 
 ```text
 STUDIO-GOV-01 — DONE / ACCEPTED
-→ FE-02-PRESERVE-01 — ONLY READY TASK
-→ CURR-RENDER-MATH-01A — BLOCKED behind prototype preservation
-→ STUDIO-STATE-01 — BLOCKED
+→ FE-02-PRESERVE-01 — DONE / ACCEPTED
+→ STUDIO-STATE-01 — ONLY READY TASK
 → STUDIO-SUBJECT-01 — BLOCKED
 → STUDIO-PROTOCOL-01 — BLOCKED
 → STUDIO-RUNTIME-01 — BLOCKED
@@ -29,6 +28,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-ACT-EN-01 — BLOCKED
 → STUDIO-ACT-AR-01 — BLOCKED
 → FE-02-STUDIO-01 — BLOCKED
+→ CURR-RENDER-MATH-01A — BLOCKED UNTIL THE GRADE 5 MATH RENDERER IMPLEMENTATION GATE
 → independently reviewed Grade 5 renderer tasks — BLOCKED
 → STUDIO-ACCEPT-01 — BLOCKED
 → optional STUDIO-SPECIALIST-01 / STUDIO-REUSE-01 — BLOCKED
@@ -43,12 +43,28 @@ dependency, or frontend behavior change.
 
 ## FE-02-PRESERVE-01 — Preserve Prototype Shell
 
-**Status:** ONLY READY TASK
+**Status:** DONE / ACCEPTED
 **Purpose:** create a recoverable isolated prototype artifact without accepting
 the FE-02 browser implementation as production Studio architecture.
 
+**Accepted output:** branch `prototype/fe-02-studio-shell-2026-09-02`, commit
+`8648371480b0aac116af2a49e2d3d7493d26360f`, parent
+`059ff3aa6bfb983507470f484596bf05eae3b9b3`, and manifest
+`prototype/FE-02_PROTOTYPE_MANIFEST.md`.
+
+**Accepted verification:** seven focused Node tests, TypeScript typecheck,
+production build, and SHA-256 identity passed. The prototype remains
+non-production.
+
+## STUDIO-STATE-01 — Durable Studio State
+
+**Status:** ONLY READY TASK
+**Dependencies:** accepted `STUDIO-GOV-01` and `FE-02-PRESERVE-01` only.
+
 All later Studio tasks remain blocked until their direct predecessors are
-accepted. `CURR-RENDER-MATH-01A` remains blocked behind prototype preservation.
+accepted. `CURR-RENDER-MATH-01A` is **BLOCKED UNTIL THE GRADE 5 MATH RENDERER
+IMPLEMENTATION GATE**: it does not block Studio state, protocol, runtime,
+cross-subject foundation activities, or FE-02 Studio integration.
 
 ---
 

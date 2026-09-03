@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01` is `DONE / ACCEPTED`. `FE-02-PRESERVE-01` is the only ready task; all later Studio tasks remain dependency-ordered and blocked.
+**Current readiness:** `STUDIO-GOV-01` and `FE-02-PRESERVE-01` are `DONE / ACCEPTED`. `STUDIO-STATE-01` is the only ready task; all later Studio tasks remain dependency-ordered and blocked.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -20,7 +20,7 @@ The latest research baseline reviewed for this plan is:
 - Latest research commit: `eafd1121a240bd7873de46d260b296dcde52a46f`
 - Current accepted application database head before Studio work: `a1d2e3f4b5c6`
 
-The current FE-02 Desktop Learning Studio shell remains uncommitted. It is a prototype UI asset and must not be mixed into foundation commits before its reusable parts and prototype-only parts are separated.
+The FE-02 Desktop Learning Studio shell is preserved as a remote prototype asset. It is not accepted production Studio architecture and must not be mixed into foundation commits.
 
 ### 1.2 Governing source order
 
@@ -150,7 +150,7 @@ The implementation should reuse the current accepted foundations:
 - Personal Facts and Learner Intelligence authority separation;
 - object-storage abstraction for original and derived assets;
 - Next.js/Tailwind/shadcn web baseline;
-- the useful layout and interaction lessons in the uncommitted FE-02 shell.
+- the useful layout and interaction lessons in the preserved FE-02 prototype.
 
 ### 4.2 FE-02 parts to preserve
 
@@ -983,7 +983,12 @@ Studio Core dispatches by renderer/activity key. The underlying implementation m
 
 Before implementation, run a bounded correction task rather than treating the current counts and names as final.
 
-### 14.2 Mandatory research correction gate
+### 14.2 Grade 5 renderer research correction gate
+
+`CURR-RENDER-MATH-01A` is a correction gate immediately before the Grade 5
+Math renderer batch. It does not block Studio Core state, subject, protocol,
+runtime, bounded cross-subject foundation activities, or FE-02 Studio
+integration.
 
 `CURR-RENDER-MATH-01A` must:
 
@@ -1015,6 +1020,9 @@ Requirements:
 - duplicate and stale-operation rejection;
 - Arabic/English/mixed-language presentation;
 - no inclusion in Grade 5 coverage statistics.
+
+This bounded foundation activity does not depend on completion of
+`CURR-RENDER-MATH-01A` or the full Grade 5 renderer catalog correction.
 
 ### 14.4 Recommended Grade 5 Batch 1
 
@@ -1307,27 +1315,22 @@ The existing Technology Reuse Catalog contains broad `ADOPT BASELINE` wording fo
 
 #### `FE-02-PRESERVE-01 — Preserve Prototype Shell`
 
-**Status:** ONLY READY TASK.
-**Purpose:** Protect the current uncommitted FE-02 shell without promoting its prototype Canvas adapter.
-**Output:** dedicated prototype branch/commit or immutable patch plus file/hash inventory; clean isolated Studio worktree.
-**Verification:** prototype recoverable; no production branch pollution; no source loss.
-
-#### `CURR-RENDER-MATH-01A — Correct Math Planning Pack`
-
-**Purpose:** Resolve the six Math-catalog corrections listed in Section 14.2.
-**Output:** corrected research files, recalculated coverage, renamed/split renderer recommendations, cross-grade Make-Ten entry.
-**Verification:** official Grade 5 standards mapping, defined denominator, rights manifest unchanged except verified corrections.
-**Implementation:** none.
+**Status:** DONE / ACCEPTED.
+**Purpose:** Preserve the FE-02 shell without promoting its prototype Canvas adapter.
+**Accepted output:** remote prototype branch `prototype/fe-02-studio-shell-2026-09-02` at `8648371480b0aac116af2a49e2d3d7493d26360f`, parent `059ff3aa6bfb983507470f484596bf05eae3b9b3`, with `prototype/FE-02_PROTOTYPE_MANIFEST.md`.
+**Accepted verification:** seven focused Node tests, TypeScript typecheck, production build, and SHA-256 identity passed. The prototype remains non-production.
 
 ### Phase 1 — Production Studio state foundation
 
 #### `STUDIO-STATE-01 — Durable Studio State`
 
+**Status:** ONLY READY TASK.
 **Purpose:** Implement additive migration, models, repositories, event append, snapshot reducer, scenes, interactions, observations, specialist-run seam.
 **Output:** production tables/contracts and pure reducer.
 **Likely areas:** DB models, migration, `services/studio/**`, PostgreSQL tests.
 **Verification:** fresh migration; in-place Daily-Use migration; Student isolation; ordering; idempotency; rebuild equality; stale rejection; rollback atomicity.
 **Extra model calls:** zero.
+**Dependencies:** accepted `STUDIO-GOV-01` and `FE-02-PRESERVE-01` only.
 
 ### Phase 2 — Subject and activity capability foundation
 
@@ -1372,6 +1375,8 @@ The existing Technology Reuse Catalog contains broad `ADOPT BASELINE` wording fo
 #### `STUDIO-ACT-MATH-01 — Make-Ten Group Transfer`
 
 Production implementation of `ten_frame_group_transfer` and approved acceptance flow.
+It is a bounded cross-grade foundation activity and does not depend on the
+Grade 5 renderer research correction.
 
 #### `STUDIO-ACT-SCI-01 — Process Sequence Workspace`
 
@@ -1397,6 +1402,17 @@ Each task verifies accessibility, touch, keyboard, locale, semantic events, snap
 **Verification:** authenticated visual flows for empty, active, streaming, reconnect, error, RTL/LTR, narrow layout, keyboard.
 
 ### Phase 7 — Grade 5 Math renderer batch
+
+#### `CURR-RENDER-MATH-01A — Correct Math Planning Pack`
+
+**Status:** BLOCKED UNTIL THE GRADE 5 MATH RENDERER IMPLEMENTATION GATE.
+**Purpose:** Resolve the Grade 5 Math catalog corrections in Section 14.2.
+**Output:** corrected research files, recalculated coverage, renamed/split renderer recommendations, and cross-grade Make-Ten entry.
+**Verification:** official Grade 5 standards mapping, defined denominator, rights manifest unchanged except verified corrections.
+**Dependency boundary:** this gate does not block Studio state, subject,
+protocol, runtime, bounded Math/Science/English/Arabic foundation activities,
+or FE-02 Studio integration. It must be accepted before `MATH-RENDER-BATCH-01`.
+**Implementation:** none.
 
 #### `MATH-RENDER-BATCH-01`
 
@@ -1626,13 +1642,14 @@ Each remains behind its named task and acceptance gate.
 
 ## 27. Governance Closure Status
 
-`STUDIO-GOV-01` is complete and accepted. This acceptance does not authorize
-Studio implementation; the dependency sequence remains task-gated.
+`STUDIO-GOV-01` and `FE-02-PRESERVE-01` are complete and accepted. This
+acceptance does not authorize Studio implementation; the dependency sequence
+remains task-gated.
 
 ### 27.1 Only ready task
 
 ```text
-FE-02-PRESERVE-01 — Preserve Prototype Shell
+STUDIO-STATE-01 — Durable Studio State
 ```
 
 ### 27.2 Completed governance outcome
@@ -1640,10 +1657,17 @@ FE-02-PRESERVE-01 — Preserve Prototype Shell
 `STUDIO-GOV-01` completed:
 
 1. repository verification against the checked-in repository and published research commits;
-2. preservation of the uncommitted FE-02 prototype with hashes and no staged prototype files;
+2. the governing promotion and dependency-ordered task sequence;
 3. addition of this document as `docs/STUDIO_IMPLEMENTATION_PLAN.md`;
 4. the minimum consistent governing/reference/task-state promotion;
 5. recording of the dependency-ordered task sequence without starting runtime, schema, renderer, protocol, or FE-02 implementation.
+
+`FE-02-PRESERVE-01` completed:
+
+1. remote prototype preservation on `prototype/fe-02-studio-shell-2026-09-02` at `8648371480b0aac116af2a49e2d3d7493d26360f`, parent `059ff3aa6bfb983507470f484596bf05eae3b9b3`;
+2. manifest at `prototype/FE-02_PROTOTYPE_MANIFEST.md`;
+3. seven focused Node tests, TypeScript typecheck, production build, and SHA-256 identity verification;
+4. retention of the prototype as non-authoritative, non-production architecture.
 
 ### 27.3 Current source baselines
 
@@ -1653,17 +1677,16 @@ FE-02-PRESERVE-01 — Preserve Prototype Shell
 
 ### 27.4 Immediate post-governance sequence
 
-After accepted `STUDIO-GOV-01` closure, the remaining work stays dependency ordered:
+After accepted governance and prototype-preservation closure, the remaining work stays dependency ordered:
 
 ```text
-FE-02-PRESERVE-01
-→ CURR-RENDER-MATH-01A
-→ STUDIO-STATE-01
+STUDIO-STATE-01
 → STUDIO-SUBJECT-01
 → STUDIO-PROTOCOL-01
 → STUDIO-RUNTIME-01 / 02 / 03
 → Cross-subject production activities
 → FE-02-STUDIO-01
+→ CURR-RENDER-MATH-01A — Grade 5 renderer correction gate
 → Grade 5 renderer tasks
 → STUDIO-ACCEPT-01
 ```
