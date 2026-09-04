@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, and `STUDIO-RUNTIME-01` are `DONE / ACCEPTED`. `STUDIO-RUNTIME-02` is the only ready task; all later Studio tasks remain dependency-ordered and blocked.
+**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, and `STUDIO-RUNTIME-02` are `DONE / ACCEPTED`. `STUDIO-RUNTIME-03` is the only ready task; all later Studio tasks remain dependency-ordered and blocked.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -1363,14 +1363,14 @@ The existing Technology Reuse Catalog contains broad `ADOPT BASELINE` wording fo
 
 #### `STUDIO-RUNTIME-02 — Workspace Intent and Execution Router`
 
-**Status:** ONLY READY TASK.
+**Status:** DONE / ACCEPTED.
 **Purpose:** Add versioned optional WorkspaceIntent and route to source/annotation/known visual/known interactive/custom compose.
 **Verification:** Tutor does not select implementation technology; `NO_CHANGE` preserves scene; fallback is honest; Canvas failure does not fail Chat.
 **Dependencies:** STUDIO-RUNTIME-01, STUDIO-SUBJECT-01.
 
 #### `STUDIO-RUNTIME-03 — Canvas-Originated Tutor Turns`
 
-**Status:** BLOCKED.
+**Status:** ONLY READY TASK.
 **Purpose:** Route declared StudentInteractions to Tutor without fake Chat messages; implement record-only versus triggering behavior and supersession.
 **Verification:** submit/help triggers one Tutor turn; exploration does not; raw interaction persists; stale terminal result rejected.
 **Dependencies:** STUDIO-RUNTIME-01/02.
@@ -1686,12 +1686,14 @@ STUDIO-SUBJECT-01 — Subject Capability Layer
 After accepted governance and prototype-preservation closure, the remaining work stays dependency ordered:
 
 ```text
-STUDIO-STATE-01 — DONE / ACCEPTED
+STUDIO-GOV-01 — DONE / ACCEPTED
+→ FE-02-PRESERVE-01 — DONE / ACCEPTED
+→ STUDIO-STATE-01 — DONE / ACCEPTED
 → STUDIO-SUBJECT-01 — DONE / ACCEPTED
 → STUDIO-PROTOCOL-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-01 — DONE / ACCEPTED
-→ STUDIO-RUNTIME-02 — ONLY READY TASK
-→ STUDIO-RUNTIME-03 — BLOCKED
+→ STUDIO-RUNTIME-02 — DONE / ACCEPTED
+→ STUDIO-RUNTIME-03 — ONLY READY TASK
 → Cross-subject production activities
 → FE-02-STUDIO-01
 → CURR-RENDER-MATH-01A — Grade 5 renderer correction gate

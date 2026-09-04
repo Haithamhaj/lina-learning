@@ -52,7 +52,7 @@ Activities or renderer implementation were added.
 operation APIs, a dedicated resumable Studio SSE feed, durable Event Log
 catch-up, PostgreSQL LISTEN/NOTIFY wake-up hints, and the project-owned web
 protocol/controller library. `STUDIO-RUNTIME-01` is complete; `STUDIO-RUNTIME-02`
-is the only ready task.
+is complete and accepted.
 
 `CURR-RENDER-MATH-01A` is the pre-Grade-5-renderer correction gate, not a
 Studio Core dependency.
@@ -68,7 +68,15 @@ advance the watermark through its captured sequence. Bounded server-owned
 history is available under `studio-history-v1` / 100 Events. No WorkspaceIntent,
 Canvas-originated Tutor turn, Activity, or renderer was added.
 
-`STUDIO-RUNTIME-02` is the only ready Studio task. All later Studio work remains
+## STUDIO-RUNTIME-02 — Workspace Intent and Execution Router
+**Status:** DONE / ACCEPTED
+**Accepted result:** `tutor_turn_v9` requires a strict nullable
+WorkspaceIntent. The deterministic, non-mutating Studio Router evaluates active
+Scene suitability before authorized source/annotation, known-capability, and
+CUSTOM_COMPOSE-eligibility routing. It adds no production Activities or
+Renderers and no Canvas-originated Tutor turns.
+
+`STUDIO-RUNTIME-03` is the only ready Studio task. All later Studio work remains
 blocked.
 
 ---
