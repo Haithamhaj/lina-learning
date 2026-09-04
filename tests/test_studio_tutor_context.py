@@ -49,9 +49,10 @@ def test_studio_tutor_context_exposes_snapshot_and_ordered_semantic_events() -> 
             "sequence": 4,
             "current_scene_id": None,
             "current_scene_version": None,
-            "active_subject_key": "MATH",
-            "active_activity_key": None,
-            "state": {"scene": "accepted"},
+                "active_subject_key": "MATH",
+                "active_activity_key": None,
+                "current_scene_capability": None,
+                "state": {"scene": "accepted"},
         },
         "unseen_events": [
             {
@@ -86,3 +87,28 @@ def test_tutor_model_payload_includes_typed_studio_workspace_context() -> None:
 
     assert "Studio Workspace Context" in str(payload["input"])
     assert '"through_sequence": 0' in str(payload["input"])
+
+
+def test_workspace_context_carries_exact_active_scene_capability_without_registry_dump() -> None:
+    """Runtime-02 uses Scene-persisted versions rather than a latest capability guess."""
+
+    from services.studio.tutor_context import (  # noqa: PLC0415 - RED contract
+        StudioTutorSceneCapability,
+        StudioTutorWorkspaceContext,
+    )
+
+    context = StudioTutorWorkspaceContext(
+        runtime_id=uuid4(), snapshot_schema_version="studio-snapshot-v1", through_sequence=0,
+        snapshot_sequence=0, current_scene_id=uuid4(), current_scene_version=3,
+        active_subject_key="MATH", active_activity_key="fraction_fixture", state_payload={}, unseen_events=(), observation_id=None,
+        current_scene_capability=StudioTutorSceneCapability(
+            scene_id=uuid4(), subject_key="MATH", subject_profile_version="subject-profile-v1",
+            activity_key="fraction_fixture", activity_version="activity-v1", renderer_key="fraction-renderer",
+            renderer_version="renderer-v1", allowed_action_keys=("SUBMIT",), source_references=("source-1",),
+        ),
+    )
+
+    scene = context.as_model_payload()["snapshot"]["current_scene_capability"]
+    assert scene["subject_profile_version"] == "subject-profile-v1"
+    assert scene["allowed_action_keys"] == ["SUBMIT"]
+    assert "renderer_key" not in scene

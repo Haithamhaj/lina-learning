@@ -45,7 +45,7 @@ from services.tutor.candidate_events import (
     CandidateEventMetadataItem,
     CandidateEventType,
     MisconceptionEvidence,
-    TUTOR_TURN_SCHEMA_VERSION,
+    TUTOR_TURN_SCHEMA_VERSIONS_WITH_PROVISIONAL_BROAD_SUBJECT,
     persisted_guided_learning_check,
 )
 from services.tutor.teaching_methods import (
@@ -693,7 +693,7 @@ def _coherent_provisional_broad_subject(messages: list[LearningMessage]) -> str 
             continue
         if "provisional_broad_subject" not in message.payload:
             continue
-        if message.payload.get("tutor_turn_schema_version") != TUTOR_TURN_SCHEMA_VERSION:
+        if message.payload.get("tutor_turn_schema_version") not in TUTOR_TURN_SCHEMA_VERSIONS_WITH_PROVISIONAL_BROAD_SUBJECT:
             return None
         hint = message.payload.get("provisional_broad_subject")
         if hint is None:

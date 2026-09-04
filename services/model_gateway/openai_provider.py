@@ -226,10 +226,11 @@ def _normalize_output(
 ) -> dict[str, object]:
     if not _has_response_schema(payload):
         return {"text": text}
+    tutor_schema_name = _tutor_response_schema_name(payload)
     try:
         parsed = json.loads(text)
     except json.JSONDecodeError:
-        if fallback_text:
+        if fallback_text and tutor_schema_name != "tutor_turn_v9":
             return {
                 "text": fallback_text,
                 "suggested_actions": [],
@@ -239,29 +240,42 @@ def _normalize_output(
         raise ValueError("OpenAI structured Tutor output is not valid JSON.") from None
     if not isinstance(parsed, dict):
         raise ValueError("OpenAI structured output must be a JSON object.")
-    if not _is_tutor_response_schema(payload):
+    if tutor_schema_name is None:
         return parsed
     if not isinstance(parsed.get("text"), str) or not parsed["text"].strip():
         raise ValueError("OpenAI structured Tutor output has no student-facing text.")
+    if tutor_schema_name == "tutor_turn_v9" and "workspace_intent" not in parsed:
+        raise ValueError("OpenAI structured tutor_turn_v9 output is missing required workspace_intent.")
+    workspace_intent = {"workspace_intent": parsed["workspace_intent"]} if "workspace_intent" in parsed else {}
     if "candidate_metadata" not in parsed:
         return {
             "text": parsed["text"],
             "suggested_actions": parsed.get("suggested_actions", []),
             "candidate_metadata": None,
             "candidate_metadata_error": "candidate_metadata_missing",
+            **workspace_intent,
             **_teaching_decision_output(parsed),
         }
     return {
         "text": parsed["text"],
         "suggested_actions": parsed.get("suggested_actions", []),
         "candidate_metadata": parsed["candidate_metadata"],
+        **workspace_intent,
         **_teaching_decision_output(parsed),
     }
 
 
 def _is_tutor_response_schema(payload: dict[str, object]) -> bool:
+    return _tutor_response_schema_name(payload) is not None
+
+
+def _tutor_response_schema_name(payload: dict[str, object]) -> str | None:
     response_schema = payload.get("response_schema")
-    return isinstance(response_schema, dict) and response_schema.get("name") == "tutor_turn_v8"
+    name = response_schema.get("name") if isinstance(response_schema, dict) else None
+    return name if name in {
+        "tutor_turn_v8",
+        "tutor_turn_v9",
+    } else None
 
 
 def _teaching_decision_output(parsed: dict[str, object]) -> dict[str, object]:

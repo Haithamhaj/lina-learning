@@ -32,6 +32,16 @@ from services.studio.tutor_context import (
     mark_studio_tutor_observation_failed,
     select_studio_tutor_context,
 )
+from services.studio.router import (
+    ActiveSceneCapability,
+    WorkspaceAuthorityContext,
+    WorkspaceExecutionDecision,
+    WorkspaceDecisionStatus,
+    route_workspace_intent,
+)
+from services.studio.subjects import PRODUCTION_CURRENT_PROFILE_VERSIONS, production_subject_registry
+from services.studio.workspace_capabilities import build_workspace_capability_context
+from services.studio.workspace_intent import WorkspaceIntentContractError, parse_workspace_intent
 from services.platform.db.models import CandidateEvent, LearningMessage, LearningSegment, LearningSession, ModelTask
 from services.platform.safety import ParentBoundaryResolution, SafetyAction, SafetyPolicyService
 from services.retrieval.service import RetrievalService
@@ -152,6 +162,7 @@ class LocalTutorProvider:
                 "prior_method_relation": None,
                 "candidate_metadata": None,
                 "provisional_broad_subject": None,
+                "workspace_intent": None,
             },
             input_tokens=20,
             output_tokens=18,
@@ -187,7 +198,7 @@ TUTOR_SHARED_INSTRUCTIONS = (
     "Emit Candidate Event metadata only for a specific, source-linked observable learning signal such as solving, explaining, applying, self-correcting, or transferring an idea. "
     "For Candidate event type selection, independent_success means the Student succeeds on the target response without meaningful task-specific support that materially supplies or narrows the solution path; correctness alone is insufficient without an observable successful learning signal. Earlier general teaching does not by itself make a later fresh-task success guided, and ordinary task presentation or encouragement is not guidance: a Student may learn the concept earlier and still demonstrate independent_success on a new task. guided_success requires meaningful immediate, task-specific scaffolding that materially helps produce the target response, such as a specific hint, supplied operation, key intermediate step, decomposed next step, materially narrowed path, or directly supplied key relationship. The distinction is support for the observed target response. Do not classify based merely on whether the Tutor taught earlier, TeachingStrategy alone, TeachingMethod alone, Student confidence, or response length. "
     "Confusion is not a misconception. Uncertainty, a request for another explanation, a wrong answer without stated reasoning, and a calculation slip are not misconceptions by themselves. When the Student is confused, respond pedagogically and change support or representation when useful. A misconception_signal is allowed only when the Student-authored current raw message explicitly demonstrates a specific incorrect mental model, rule, relationship, or interpretation. When only an answer is wrong without stated reasoning, prefer incorrect_attempt when appropriate. Every misconception_signal must include misconception_evidence with version misconception-evidence-v1, a concise incorrect_model, the current Student source_message_id, and an explicit_student_reasoning field that must copy the supporting Student reasoning span exactly from that raw message; do not paraphrase or use Tutor text. "
-    "Never treat a chosen Tutor strategy as an outcome without an observable Student result. provisional_broad_subject is optional, must be null for casual or ambiguous turns, and when present must select only the supplied controlled Broad Subject key from the current conversation. It is a non-authoritative runtime hint only: it is not Evidence, learner intelligence, or final Segment Subject authority. Never mention hidden metadata in text."
+    "Never treat a chosen Tutor strategy as an outcome without an observable Student result. provisional_broad_subject is optional, must be null for casual or ambiguous turns, and when present must select only the supplied controlled Broad Subject key from the current conversation. It is a non-authoritative runtime hint only: it is not Evidence, learner intelligence, or final Segment Subject authority. workspace_intent is required but nullable: use null when no Workspace support is needed. When useful, it may express only a bounded educational need, current academic Subject, learning goal, representation need, Student response mode, source reference, and safe text fallback. Never choose a renderer, implementation technology, provider, model, Scene ID, event, reducer, validator, or specialist execution. Never mention hidden metadata in text."
 )
 
 
@@ -300,11 +311,19 @@ def build_tutor_model_payload(
         "When REDIRECT_TO_PARENT is the effective setting, provide only brief acknowledgement, parent_reference, and safe_offer fragments in parent_boundary.redirect; do not put redirect wording in text. "
         "The server enforces the final visible response and may ignore your model_action or fragments."
     )
+    workspace_capability_context = build_workspace_capability_context(
+        studio_context,
+        authorized_source_references=tuple(
+            str(source["ref"]) for source in (sources or []) if isinstance(source, dict) and isinstance(source.get("ref"), str)
+        ),
+    )
     studio_workspace_context = (
         "\n\nStudio Workspace Context (current authoritative Workspace state; unseen Events are meaningful Student actions since the last successful Tutor observation):\n"
         f"{json.dumps(studio_context.as_model_payload(), ensure_ascii=False)}\n"
+        "Workspace Capability Context (compact server-owned availability, not an implementation menu):\n"
+        f"{json.dumps(workspace_capability_context.as_model_payload(), ensure_ascii=False)}\n"
         "Respond naturally to current Workspace behavior when useful. Do not mention internal event, storage, or observation terminology. "
-        "Studio validation is not Learning Evidence or mastery, and you must not mutate Studio state or emit WorkspaceIntent."
+        "Studio validation is not Learning Evidence or mastery. You must not mutate Studio state. If Workspace support would help, use only the strict workspace_intent field to express educational need; Studio selects any capability deterministically."
         if studio_context is not None
         else ""
     )
@@ -710,6 +729,7 @@ class TutorRuntime:
         provisional_broad_subject = _validated_provisional_broad_subject(
             result.output.get("provisional_broad_subject")
         )
+        workspace_audit = self._workspace_audit(context=context, raw_intent=result.output.get("workspace_intent"))
         candidate_metadata_status, candidate_metadata_error = self._persist_candidates(
             learning_session=learning_session,
             source_message=student_message,
@@ -742,6 +762,7 @@ class TutorRuntime:
             parent_boundary=parent_audit,
             capacity_lineage=capacity_lineage,
             guided_check=guided_check,
+            workspace_audit=workspace_audit,
         )
         if state is not None:
             resolved_segment.segment.structured_state = state.model_dump(mode="json")
@@ -754,6 +775,62 @@ class TutorRuntime:
             return {}
         value = settings(student_id=student_id)
         return value if isinstance(value, dict) else {}
+
+    def _workspace_audit(self, *, context: TutorContext, raw_intent: object) -> dict[str, object]:
+        """Keep optional Workspace routing bounded, hidden, and unable to fail Chat."""
+
+        try:
+            intent = parse_workspace_intent(raw_intent)
+        except WorkspaceIntentContractError:
+            return {
+                "intent_status": "INVALID",
+                "intent": None,
+                "decision": WorkspaceExecutionDecision(
+                    version="workspace-execution-decision-v1",
+                    status=WorkspaceDecisionStatus.FALLBACK,
+                    mode=None,
+                    reason_code="INTENT_INVALID",
+                    target_scene_id=None,
+                    target_source_reference=None,
+                ).as_audit_payload(),
+            }
+        if intent is None:
+            return {
+                "intent_status": "ABSENT",
+                "intent": None,
+                "decision": WorkspaceExecutionDecision(
+                    version="workspace-execution-decision-v1",
+                    status=WorkspaceDecisionStatus.NO_CHANGE,
+                    mode=None,
+                    reason_code="NO_WORKSPACE_INTENT",
+                    target_scene_id=None,
+                    target_source_reference=None,
+                ).as_audit_payload(),
+            }
+        scene = context.studio_workspace.current_scene_capability if context.studio_workspace is not None else None
+        decision = route_workspace_intent(
+            intent,
+            WorkspaceAuthorityContext(
+                active_scene_id=None if scene is None else str(scene.scene_id),
+                active_subject_key=None if scene is None else scene.subject_key,
+                active_scene=(
+                    None if scene is None else ActiveSceneCapability(
+                        scene_id=str(scene.scene_id), subject_key=scene.subject_key,
+                        subject_profile_version=scene.subject_profile_version, activity_key=scene.activity_key,
+                        activity_version=scene.activity_version, renderer_key=scene.renderer_key,
+                        renderer_version=scene.renderer_version, source_references=scene.source_references,
+                    )
+                ),
+                authorized_source_references=context.debug.retrieval_source_refs,
+                registry=production_subject_registry(),
+                current_profile_versions=PRODUCTION_CURRENT_PROFILE_VERSIONS,
+            ),
+        )
+        return {
+            "intent_status": "VALID",
+            "intent": intent.model_dump(mode="json"),
+            "decision": decision.as_audit_payload(),
+        }
 
     def _resolve_parent_boundary(
         self,
@@ -963,6 +1040,7 @@ class TutorRuntime:
         capacity_lineage: TutorContextCapacityLineage | None = None,
         guided_check: PersistedGuidedLearningCheck | None = None,
         provisional_broad_subject: str | None = None,
+        workspace_audit: dict[str, object] | None = None,
     ) -> TutorTurn:
         sources = _source_metadata(context)
         intelligence = [item.text for item in context.intelligence] if context else []
@@ -980,6 +1058,11 @@ class TutorRuntime:
             "guided_check": guided_check.model_dump(mode="json") if guided_check is not None else None,
             "tutor_turn_schema_version": TUTOR_TURN_SCHEMA_VERSION,
             "provisional_broad_subject": provisional_broad_subject,
+            "workspace": workspace_audit or {
+                "intent_status": "NOT_REQUESTED",
+                "intent": None,
+                "decision": None,
+            },
         }
         if selected_method is not None:
             payload["teaching_method_registry_version"] = TEACHING_METHOD_REGISTRY_VERSION

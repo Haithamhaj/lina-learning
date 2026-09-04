@@ -11,8 +11,10 @@ from sqlalchemy import select
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.orm import Session
 
-from services.platform.db.models import StudioEvent, StudioRuntime, StudioSnapshot, StudioTutorObservation
+from services.platform.db.models import StudioEvent, StudioRuntime, StudioScene, StudioSnapshot, StudioTutorObservation
 from services.studio.service import StudioStateService, TUTOR_OBSERVATION_FAILURE_CODES
+from services.studio.subjects import production_subject_registry
+from services.studio.subjects.registry import SubjectCapabilityError
 
 
 STUDIO_TUTOR_CONTEXT_SCHEMA_VERSION = "studio-tutor-context-v1"
@@ -50,6 +52,34 @@ class StudioTutorEventContext:
 
 
 @dataclass(frozen=True)
+class StudioTutorSceneCapability:
+    """Exact persisted active-Scene identity plus compact allowed semantics."""
+
+    scene_id: UUID
+    subject_key: str
+    subject_profile_version: str
+    activity_key: str
+    activity_version: str
+    renderer_key: str
+    renderer_version: str
+    allowed_action_keys: tuple[str, ...]
+    source_references: tuple[str, ...]
+    capability_status: str = "RESOLVED"
+
+    def as_model_payload(self) -> dict[str, object]:
+        return {
+            "scene_id": str(self.scene_id),
+            "subject_key": self.subject_key,
+            "subject_profile_version": self.subject_profile_version,
+            "activity_key": self.activity_key,
+            "activity_version": self.activity_version,
+            "allowed_action_keys": list(self.allowed_action_keys),
+            "source_references": list(self.source_references),
+            "capability_status": self.capability_status,
+        }
+
+
+@dataclass(frozen=True)
 class StudioTutorWorkspaceContext:
     """Current Snapshot plus the exact unseen Event range selected for one turn."""
 
@@ -64,6 +94,7 @@ class StudioTutorWorkspaceContext:
     state_payload: Mapping[str, object]
     unseen_events: tuple[StudioTutorEventContext, ...]
     observation_id: UUID | None
+    current_scene_capability: StudioTutorSceneCapability | None = None
 
     def as_model_payload(self) -> dict[str, object]:
         return {
@@ -76,6 +107,9 @@ class StudioTutorWorkspaceContext:
                 "current_scene_version": self.current_scene_version,
                 "active_subject_key": self.active_subject_key,
                 "active_activity_key": self.active_activity_key,
+                "current_scene_capability": (
+                    None if self.current_scene_capability is None else self.current_scene_capability.as_model_payload()
+                ),
                 "state": dict(self.state_payload),
             },
             "unseen_events": [event.as_model_payload() for event in self.unseen_events],
@@ -121,6 +155,12 @@ def select_studio_tutor_context(
                 raise RuntimeError("Studio Snapshot is inconsistent with the locked Runtime sequence.")
             previous_watermark = runtime.last_tutor_observation_sequence
             through_sequence = runtime.latest_event_sequence
+            scene_capability = _selected_scene_capability(
+                selection_session=selection_session,
+                runtime_id=runtime.id,
+                student_id=student_id,
+                scene_id=snapshot.current_scene_id,
+            )
             events = tuple(
                 StudioTutorEventContext(
                     sequence=event.sequence,
@@ -175,11 +215,59 @@ def select_studio_tutor_context(
                     state_payload=dict(snapshot.state_payload),
                     unseen_events=events,
                     observation_id=observation_id,
+                    current_scene_capability=scene_capability,
                 ),
                 previous_watermark=previous_watermark,
             )
     finally:
         selection_session.close()
+
+
+def _selected_scene_capability(
+    *,
+    selection_session: Session,
+    runtime_id: UUID,
+    student_id: UUID,
+    scene_id: UUID | None,
+) -> StudioTutorSceneCapability | None:
+    if scene_id is None:
+        return None
+    scene = selection_session.execute(
+        select(StudioScene).where(
+            StudioScene.id == scene_id,
+            StudioScene.studio_runtime_id == runtime_id,
+            StudioScene.student_id == student_id,
+        )
+    ).scalar_one_or_none()
+    if scene is None:
+        raise RuntimeError("Studio Snapshot references an unavailable current Scene.")
+    status = "RESOLVED"
+    action_keys: tuple[str, ...] = ()
+    try:
+        registry = production_subject_registry()
+        activity = registry.resolve_activity(
+            scene.subject_key, scene.subject_profile_version, scene.activity_key, scene.activity_contract_version
+        )
+        renderer = registry.resolve_renderer(
+            scene.subject_key, scene.subject_profile_version, scene.renderer_key, scene.renderer_version
+        )
+        if activity.renderer_key != renderer.renderer_key or activity.renderer_version != renderer.renderer_version:
+            raise SubjectCapabilityError("Scene Activity and Renderer relation is unsupported.")
+        action_keys = tuple(action.action_key for action in activity.actions)
+    except SubjectCapabilityError:
+        status = "UNSUPPORTED_HISTORICAL_CAPABILITY"
+    return StudioTutorSceneCapability(
+        scene_id=scene.id,
+        subject_key=scene.subject_key,
+        subject_profile_version=scene.subject_profile_version,
+        activity_key=scene.activity_key,
+        activity_version=scene.activity_contract_version,
+        renderer_key=scene.renderer_key,
+        renderer_version=scene.renderer_version,
+        allowed_action_keys=action_keys,
+        source_references=tuple(scene.source_asset_refs),
+        capability_status=status,
+    )
 
 
 def acknowledge_studio_tutor_observation(

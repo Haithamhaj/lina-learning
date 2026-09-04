@@ -3,9 +3,18 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from types import MappingProxyType
 
 from services.studio.subjects.contracts import SubjectCapabilityProfile
 from services.studio.subjects.registry import SubjectCapabilityRegistry
+
+
+PRODUCTION_CURRENT_PROFILE_VERSIONS = MappingProxyType({
+    "MATH": "subject-profile-v1",
+    "SCIENCE": "subject-profile-v1",
+    "ENGLISH": "subject-profile-v1",
+    "ARABIC": "subject-profile-v1",
+})
 
 
 @lru_cache(maxsize=1)
@@ -29,4 +38,4 @@ def production_subject_registry() -> SubjectCapabilityRegistry:
     return SubjectCapabilityRegistry(profiles)
 
 
-__all__ = ["SubjectCapabilityProfile", "SubjectCapabilityRegistry", "production_subject_registry"]
+__all__ = ["PRODUCTION_CURRENT_PROFILE_VERSIONS", "SubjectCapabilityProfile", "SubjectCapabilityRegistry", "production_subject_registry"]

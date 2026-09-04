@@ -87,20 +87,20 @@
 <section class="panel future section">
 <span class="status">PARTIAL — STATE, SUBJECT CAPABILITY, PROTOCOL + TUTOR RUNTIME FOUNDATIONS IMPLEMENTED</span>
 <h2>Learning Studio — Target Architecture</h2>
-<p>The FE-02 Daily Student shell is a preserved prototype, not accepted production Studio architecture. Durable Studio State, Subject Capability, authenticated resumable Protocol, and Tutor Snapshot/Event observation-watermark foundations are implemented; WorkspaceIntent, activities, renderers, and FE-02 production integration remain incomplete.</p>
+<p>The FE-02 Daily Student shell is a preserved prototype, not accepted production Studio architecture. Durable Studio State, Subject Capability, authenticated resumable Protocol, Tutor Snapshot/Event observation-watermark, WorkspaceIntent, and the deterministic Workspace Router are implemented; activities, renderers, and FE-02 production integration remain incomplete.</p>
 <div class="flow studio-flow" style="margin-top:12px">
 <div class="node"><strong>Student</strong><small>Uses Chat and/or Canvas. Chat remains usable when any Studio work fails.</small></div>
 <div class="node"><strong>Chat and/or Canvas</strong><small>Simple student-facing surfaces; neither is Studio authority.</small></div>
 <div class="node"><strong>Studio Core</strong><small>Target application-owned authority for semantic Event Log, Materialized Snapshot, authorization, Safety/Parent Boundary, scene versions, idempotency, cancellation, stale-result rejection, resumable Studio feed, and routing.</small></div>
 </div>
-<p class="muted" style="margin-top:12px">Implemented foundations cover durable state, exact subject capability contracts, authenticated protocol transport, and one-primary-call Tutor access to the current Snapshot plus exact unseen Events. Workspace execution relationships below are not implemented paths.</p>
+<p class="muted" style="margin-top:12px">Implemented foundations cover durable state, exact subject capability contracts, authenticated protocol transport, one-primary-call Tutor access to the current Snapshot plus exact unseen Events, and deterministic Workspace decisions. Routed decisions do not render a Canvas or mutate Studio state.</p>
 <div class="flow studio-boundaries" style="margin-top:12px">
 <div class="node"><strong>Tutor</strong><small>Sole teaching authority; sees compact Studio snapshot/history and emits semantically meaningful Studio intents.</small></div>
-<div class="node"><strong>Deterministic Renderer / Activity Registry</strong><small>Handles SOURCE_VIEW, ANNOTATION, KNOWN_VISUAL, and KNOWN_INTERACTIVE.</small></div>
-<div class="node"><strong>Optional Canvas Specialist — CUSTOM_COMPOSE only</strong><small>May use a separate model, provider, and tools; returns only a Typed ScenePlan, has no direct state or Tutor access, is validated by Core, and cannot block Chat on failure.</small></div>
+<div class="node done"><strong>Deterministic Workspace Router</strong><small>IMPLEMENTED: decision-only active Scene, authorized Source/Annotation, known-capability, custom-compose eligibility, and fallback routing.</small></div>
+<div class="node"><strong>Optional Canvas Specialist — CUSTOM_COMPOSE only</strong><small>NOT IMPLEMENTED. The Router may record eligibility only; no specialist model, provider, tools, or ScenePlan execution exists.</small></div>
 <div class="node done"><strong>Subject Capability Layer</strong><small>IMPLEMENTED: exact Subject/Activity/Renderer/Action/Validator contracts and typed validator/reducer dispatch; no production Activities or renderers.</small></div>
 </div>
-<p class="muted" style="margin-top:12px">Tutor SSE remains the Chat conversation feed. The implemented Studio Feed is authenticated resumable workspace state, not a second chat stream or raw Chat replay. Tutor context observation/watermark is implemented, but WorkspaceIntent/Execution Router, Canvas-originated Tutor turns, Student-facing activities/renderers, Canvas Specialist execution, and FE-02 production integration do not yet exist. Canvas actions and derived Vision outputs do not create Evidence directly. All later Studio work stays dependency-ordered and blocked.</p>
+<p class="muted" style="margin-top:12px">Tutor SSE remains the Chat conversation feed. The implemented Studio Feed is authenticated resumable workspace state, not a second chat stream or raw Chat replay. Tutor context observation/watermark, WorkspaceIntent, and the Execution Router are implemented; Canvas-originated Tutor turns, Student-facing activities/renderers, Canvas Specialist execution, and FE-02 production integration do not yet exist. Canvas actions and derived Vision outputs do not create Evidence directly. All later Studio work stays dependency-ordered and blocked.</p>
 <div class="flow studio-boundaries" style="margin-top:12px">
 <div class="node done"><strong>STUDIO-GOV-01</strong><small>DONE / ACCEPTED.</small></div>
 <div class="node done"><strong>FE-02-PRESERVE-01</strong><small>DONE / ACCEPTED. PRESERVED PROTOTYPE / NOT ACCEPTED PRODUCTION ARCHITECTURE.</small></div>
@@ -108,8 +108,9 @@
 <div class="node done"><strong>STUDIO-SUBJECT-01</strong><small>DONE / ACCEPTED. SUBJECT CAPABILITY FOUNDATION IMPLEMENTED.</small></div>
 <div class="node done"><strong>STUDIO-PROTOCOL-01</strong><small>DONE / ACCEPTED. Authenticated open/resume, Snapshot API, typed operation API, resumable Studio SSE, Event Log catch-up, PostgreSQL wake-up, and web protocol/controller are implemented.</small></div>
 <div class="node done"><strong>STUDIO-RUNTIME-01</strong><small>DONE / ACCEPTED. Current Snapshot and exact unseen Events enter the existing Tutor call; completed successful Tutor provenance advances the watermark.</small></div>
-<div class="node"><strong>STUDIO-RUNTIME-02</strong><small>ONLY READY TASK. WorkspaceIntent and Execution Router are not implemented.</small></div>
-<div class="node"><strong>STUDIO-RUNTIME-03 + LATER STUDIO WORK</strong><small>BLOCKED. Canvas-originated Tutor turns, activities, renderers, Specialist execution, and FE-02 production integration are not implemented.</small></div>
+<div class="node done"><strong>STUDIO-RUNTIME-02</strong><small>DONE / ACCEPTED. Strict WorkspaceIntent and deterministic non-mutating execution routing are implemented.</small></div>
+<div class="node"><strong>STUDIO-RUNTIME-03</strong><small>ONLY READY TASK. It has not started.</small></div>
+<div class="node"><strong>LATER STUDIO WORK</strong><small>BLOCKED. Canvas-originated Tutor turns, activities, renderers, Specialist execution, and FE-02 production integration are not implemented.</small></div>
 <div class="node"><strong>CURR-RENDER-MATH-01A</strong><small>BLOCKED UNTIL THE GRADE 5 MATH RENDERER IMPLEMENTATION GATE.</small></div>
 </div>
 </section>
@@ -159,8 +160,9 @@
 <div class="node done"><strong>STUDIO-SUBJECT-01</strong><small>DONE / ACCEPTED. SUBJECT CAPABILITY FOUNDATION IMPLEMENTED.</small></div>
 <div class="node done"><strong>STUDIO-PROTOCOL-01</strong><small>DONE / ACCEPTED. Authenticated Studio API, resumable feed, Event Log recovery, PostgreSQL wake-up, and web protocol/controller are implemented.</small></div>
 <div class="node done"><strong>STUDIO-RUNTIME-01</strong><small>DONE / ACCEPTED. Current Snapshot and exact unseen Events enter the existing Tutor call; completed successful Tutor provenance advances the watermark.</small></div>
-<div class="node"><strong>STUDIO-RUNTIME-02</strong><small>ONLY READY TASK. WorkspaceIntent and Execution Router are not implemented.</small></div>
-<div class="node"><strong>STUDIO-RUNTIME-03 + LATER STUDIO WORK</strong><small>BLOCKED. Canvas-originated Tutor turns, activities, renderers, Specialist execution, and FE-02 production integration are not implemented.</small></div>
+<div class="node done"><strong>STUDIO-RUNTIME-02</strong><small>DONE / ACCEPTED. Strict WorkspaceIntent and deterministic non-mutating execution routing are implemented.</small></div>
+<div class="node"><strong>STUDIO-RUNTIME-03</strong><small>ONLY READY TASK. It has not started.</small></div>
+<div class="node"><strong>LATER STUDIO WORK</strong><small>BLOCKED. Canvas-originated Tutor turns, activities, renderers, Specialist execution, and FE-02 production integration are not implemented.</small></div>
 <div class="node"><strong>CURR-RENDER-MATH-01A</strong><small>BLOCKED UNTIL THE GRADE 5 MATH RENDERER IMPLEMENTATION GATE.</small></div>
 </div></article>
 </section>

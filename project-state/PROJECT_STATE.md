@@ -52,12 +52,15 @@ exact unseen Event range; a completed successful Tutor turn advances the
 durable watermark through its captured boundary while later Events remain
 unseen. A bounded server-owned history service exists; model-invoked history is
 deferred because no provider-neutral Gateway tool-execution contract exists.
-WorkspaceIntent, an Execution Router, Canvas-originated Tutor turns,
-Student-facing Activities, production Renderers, and FE-02 production
-integration do not exist. `STUDIO-RUNTIME-02` is the only ready task; all later
-Studio tasks remain blocked. `CURR-RENDER-MATH-01A` remains blocked until the
-Grade 5 Math renderer implementation gate. Real Lina longitudinal history has
-not started.
+`STUDIO-RUNTIME-02` is `DONE / ACCEPTED`: the same primary Tutor result may
+contain a strict bounded WorkspaceIntent, and a deterministic Studio-owned
+Router records a hidden non-mutating active-Scene/source/annotation/known-
+capability/custom-compose-eligibility decision. Production Activities,
+production Renderers, Canvas Specialist execution, Canvas-originated Tutor
+turns, and FE-02 production integration are not implemented. `STUDIO-RUNTIME-03`
+is the only ready task; all later Studio tasks remain blocked.
+`CURR-RENDER-MATH-01A` remains blocked until the Grade 5 Math renderer
+implementation gate. Real Lina longitudinal history has not started.
 
 ---
 
@@ -211,9 +214,9 @@ UI code, dependencies, Voice, Vision, attachments, artifacts, or FE-02 work.
 
 ## Next recommended action
 
-`STUDIO-RUNTIME-02` is the only ready task. Keep frontend Studio integration,
-renderers, curriculum, Canvas-originated Tutor execution, and all later Studio
-work blocked until separately authorized.
+`STUDIO-RUNTIME-03` is the only ready task and has not started. Keep frontend
+Studio integration, renderers, curriculum, Canvas-originated Tutor execution,
+and all later Studio work blocked until separately authorized.
 
 ---
 

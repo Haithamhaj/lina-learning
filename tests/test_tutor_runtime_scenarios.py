@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from uuid import uuid4
@@ -9,13 +10,14 @@ from uuid import uuid4
 import pytest
 
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta, StreamParentBoundaryDecision
+from services.model_gateway.openai_provider import OpenAIResponsesProvider
 from services.platform.db.models import CandidateEvent, LearningMessage, ModelTask
 from services.platform.safety import ParentBoundaryResolution, SafetyAction, SafetyDecision
 from services.retrieval.service import RetrievedBlock
 from services.tutor.context import SessionContextMessage, TutorContext, TutorContextDebug
 from services.tutor.exchanges import ConversationExchangeContext
 from services.tutor.capacity import TutorContextCapacityExceeded
-from services.tutor.runtime import TutorRuntime, TutorTextDelta, TutorTurn, _compose_parent_redirect
+from services.tutor.runtime import TutorModelStreamFailure, TutorRuntime, TutorTextDelta, TutorTurn, _compose_parent_redirect
 from services.tutor.teaching_decisions import PriorMethodRelation, TeachingMode, TeachingStrategy
 from services.tutor.parent_boundaries import (
     PARENT_BOUNDARY_SCHEMA_VERSION,
@@ -105,6 +107,7 @@ class _Provider:
         teaching_mode: object | None = None,
         teaching_strategy: object | None = None,
         prior_method_relation: object | None = None,
+        workspace_intent: object | None = None,
     ) -> None:
         self.calls = 0
         self.payloads: list[dict[str, object]] = []
@@ -116,6 +119,7 @@ class _Provider:
         self.teaching_mode = teaching_mode
         self.teaching_strategy = teaching_strategy
         self.prior_method_relation = prior_method_relation
+        self.workspace_intent = workspace_intent
 
     def stream(self, route: ModelRoute, payload: dict[str, object]):
         del route
@@ -133,6 +137,7 @@ class _Provider:
             "teaching_strategy": self.teaching_strategy,
             "prior_method_relation": self.prior_method_relation,
             "candidate_metadata": metadata,
+            "workspace_intent": self.workspace_intent,
         }
         if self.suggested_actions is not None:
             output["suggested_actions"] = self.suggested_actions
@@ -154,6 +159,7 @@ def _runtime(
     teaching_mode: object | None = None,
     teaching_strategy: object | None = None,
     prior_method_relation: object | None = None,
+    workspace_intent: object | None = None,
     immediate_exchange: ConversationExchangeContext | None = None,
 ) -> tuple[TutorRuntime, _ContextBuilder, _Provider, _Session]:
     session = _Session()
@@ -166,6 +172,7 @@ def _runtime(
         teaching_mode=teaching_mode,
         teaching_strategy=teaching_strategy,
         prior_method_relation=prior_method_relation,
+        workspace_intent=workspace_intent,
     )
     gateway = ModelGateway(session, routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")}, providers={"fixture": provider})
     return TutorRuntime(session, context_builder=context, safety_policy=_Policy(decision), gateway=gateway), context, provider, session
@@ -197,12 +204,109 @@ def test_arbitrary_literal_message_persists_luna_semantic_decision_without_runti
     assert turn.sources == [{"source_ref": "book#page=12", "page_number": 12, "block_type": "EXERCISE"}]
     assert context.calls == 1
     assert provider.calls == 1
+
+
+def test_valid_workspace_intent_is_hidden_bounded_audit_metadata_and_never_candidate_evidence() -> None:
+    """A primary-call educational request persists separately from visible Chat and Candidate Events."""
+
+    runtime, _, provider, session = _runtime(
+        _decision(),
+        workspace_intent={
+            "version": "workspace-intent-v1", "action": "OPEN_ACTIVITY", "subject_key": "MATH",
+            "concept_keys": ["equivalent_fractions"], "learning_goal": "Compare fractions.",
+            "activity_hint": None, "representation_need": "INTERACTIVE",
+            "expected_student_response_mode": "WORKSPACE", "presentation_sequence": "PARALLEL",
+            "source_references": [], "safe_text_fallback": "Let's compare the fractions here.",
+        },
+    )
+
+    list(runtime.stream_turn(learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH"), question="Can I see it?"))
+
+    message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    assert provider.calls == 1
+    assert message.payload["workspace"]["intent_status"] == "VALID"
+    assert message.payload["workspace"]["intent"]["version"] == "workspace-intent-v1"
+    assert message.payload["workspace"]["decision"]["status"] == "FALLBACK"
+    assert not [row for row in session.rows if isinstance(row, CandidateEvent)]
     assert "Reply primarily in the language" in str(provider.payloads[0]["instructions"])
     assert provider.payloads[0]["active_teaching_methods"] == [
         "CONCRETE_EXAMPLE", "VISUAL_REPRESENTATION", "WORKED_EXAMPLE", "SOCRATIC_FOCUS",
         "DECOMPOSITION", "ANALOGY", "SYMBOLIC_EXPLANATION",
     ]
     assert len([row for row in session.rows if isinstance(row, LearningMessage)]) == 2
+
+
+def test_null_workspace_intent_persists_as_no_workspace_request() -> None:
+    """The explicit nullable v9 value remains a valid ordinary Tutor turn."""
+
+    runtime, _, provider, session = _runtime(_decision(), workspace_intent=None)
+
+    events = list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), last_activity_at=None),
+        question="Explain equivalent fractions.",
+    ))
+
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    assert isinstance(events[-1], TutorTurn)
+    assert provider.calls == 1
+    assert tutor_message.payload["workspace"]["intent_status"] == "ABSENT"
+    assert tutor_message.payload["workspace"]["intent"] is None
+
+
+def test_runtime_rejects_openai_v9_missing_workspace_intent_before_absent_audit() -> None:
+    """A provider-invalid v9 result fails before Runtime can write an ordinary absent intent audit."""
+
+    malformed_v9 = json.dumps({
+        "text": "Try one step.",
+        "suggested_actions": [],
+        "guided_check": None,
+        "teaching_mode": None,
+        "teaching_strategy": None,
+        "teaching_method_id": None,
+        "prior_method_relation": None,
+        "segment_relation": None,
+        "structured_segment_state": None,
+        "parent_boundary": None,
+        "candidate_metadata": None,
+        "provisional_broad_subject": None,
+    })
+
+    class FakeResponse:
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def __iter__(self):
+            return iter([
+                f"data: {json.dumps({'type': 'response.output_text.delta', 'delta': malformed_v9})}\n\n".encode(),
+                b'data: {"type":"response.completed","response":{"usage":{"input_tokens":4,"output_tokens":3}}}\n\n',
+            ])
+
+    def send(request: object, *, timeout: float) -> FakeResponse:
+        del request, timeout
+        return FakeResponse()
+
+    session = _Session()
+    runtime = TutorRuntime(
+        session,
+        context_builder=_ContextBuilder(),
+        safety_policy=_Policy(_decision()),
+        gateway=ModelGateway(
+            session,
+            routes={ModelTask.TUTOR: ModelRoute("openai", "gpt-5.6-luna")},
+            providers={"openai": OpenAIResponsesProvider(api_key="test-key", request_sender=send)},
+        ),
+    )
+
+    with pytest.raises(TutorModelStreamFailure):
+        list(runtime.stream_turn(
+            learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), last_activity_at=None),
+            question="Can I compare these fractions visually?",
+        ))
+
+    assert not [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor"]
 
 
 def test_allow_turn_sends_situational_safety_guidance_in_its_one_tutor_call() -> None:

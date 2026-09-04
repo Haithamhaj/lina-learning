@@ -21,8 +21,8 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-SUBJECT-01 — DONE / ACCEPTED
 → STUDIO-PROTOCOL-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-01 — DONE / ACCEPTED
-→ STUDIO-RUNTIME-02 — ONLY READY TASK
-→ STUDIO-RUNTIME-03 — BLOCKED
+→ STUDIO-RUNTIME-02 — DONE / ACCEPTED
+→ STUDIO-RUNTIME-03 — ONLY READY TASK
 → STUDIO-ACT-MATH-01 — BLOCKED
 → STUDIO-ACT-SCI-01 — BLOCKED
 → STUDIO-ACT-EN-01 — BLOCKED
@@ -75,7 +75,9 @@ recovery, PostgreSQL wake-up seam, and web protocol/controller are implemented.
 `STUDIO-RUNTIME-01` is `DONE / ACCEPTED`: the existing Tutor call receives the
 current Studio Snapshot and exact unseen Event range, and successful completed
 Tutor consumption advances the durable Studio watermark. `STUDIO-RUNTIME-02`
-is the only ready Studio task; all later Studio tasks remain blocked.
+is `DONE / ACCEPTED`: its strict WorkspaceIntent and deterministic,
+non-mutating Workspace Router are implemented. `STUDIO-RUNTIME-03` is the only
+ready Studio task; all later Studio tasks remain blocked.
 `CURR-RENDER-MATH-01A` is **BLOCKED UNTIL THE GRADE 5 MATH RENDERER
 IMPLEMENTATION GATE**: it does not block Studio state, protocol, runtime,
 cross-subject foundation activities, or FE-02 Studio integration.

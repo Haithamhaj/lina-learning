@@ -12,6 +12,32 @@ from services.model_gateway.gateway import ModelResult, ModelRoute, StaticModelP
 from services.model_gateway.openai_provider import OpenAIResponsesProvider
 from services.platform.config import Settings, reset_settings_cache
 from services.platform.db.models import ModelTask
+from services.tutor.candidate_events import TUTOR_OUTPUT_RESPONSE_SCHEMA
+
+
+def _v9_tutor_payload_without_workspace_intent() -> dict[str, object]:
+    return {
+        "instructions": "Teach calmly.",
+        "input": "Help with fractions.",
+        "response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA,
+    }
+
+
+def _v9_tutor_body_without_workspace_intent() -> str:
+    return json.dumps({
+        "text": "Try one step.",
+        "suggested_actions": [],
+        "guided_check": None,
+        "teaching_mode": None,
+        "teaching_strategy": None,
+        "teaching_method_id": None,
+        "prior_method_relation": None,
+        "segment_relation": None,
+        "structured_segment_state": None,
+        "parent_boundary": None,
+        "candidate_metadata": None,
+        "provisional_broad_subject": None,
+    })
 
 
 def test_tutor_runtime_exposes_a_provider_neutral_model_payload(
@@ -139,6 +165,62 @@ def test_openai_responses_provider_accounts_for_each_luna_prompt_cache_category(
     assert result.cache_write_tokens == 200
     assert result.output_tokens == 100
     assert result.estimated_cost_usd == 0.000645
+
+
+def test_openai_execute_rejects_v9_result_without_required_workspace_intent() -> None:
+    """A completed strict v9 response cannot be normalized as an ordinary absent intent."""
+
+    class FakeResponse:
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return json.dumps({
+                "output": [{"type": "message", "content": [{"type": "output_text", "text": _v9_tutor_body_without_workspace_intent()}]}],
+                "usage": {"input_tokens": 5, "output_tokens": 2},
+            }).encode()
+
+    def send(request: object, *, timeout: float) -> FakeResponse:
+        del request, timeout
+        return FakeResponse()
+
+    with pytest.raises(ValueError, match="workspace_intent"):
+        OpenAIResponsesProvider(api_key="test-key", request_sender=send).execute(
+            ModelRoute(provider="openai", model="gpt-5.6-luna"),
+            _v9_tutor_payload_without_workspace_intent(),
+        )
+
+
+def test_openai_stream_rejects_v9_result_without_required_workspace_intent() -> None:
+    """The streaming completion path enforces the same strict v9 boundary as execute."""
+
+    class FakeResponse:
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def __iter__(self):
+            return iter([
+                f"data: {json.dumps({'type': 'response.output_text.delta', 'delta': _v9_tutor_body_without_workspace_intent()})}\n\n".encode(),
+                b'data: {"type":"response.completed","response":{"usage":{"input_tokens":5,"output_tokens":2}}}\n\n',
+            ])
+
+    def send(request: object, *, timeout: float) -> FakeResponse:
+        del request, timeout
+        return FakeResponse()
+
+    with pytest.raises(ValueError, match="workspace_intent"):
+        list(
+            OpenAIResponsesProvider(api_key="test-key", request_sender=send).stream(
+                ModelRoute(provider="openai", model="gpt-5.6-luna"),
+                _v9_tutor_payload_without_workspace_intent(),
+            )
+        )
 
 
 def test_openai_responses_provider_forwards_real_sse_deltas_from_one_request() -> None:

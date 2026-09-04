@@ -175,10 +175,11 @@ class _DeltaThenFailureTutorProvider:
 class _ImmediateSuccessfulTutorProvider:
     """Deterministic one-call provider for the real Tutor streaming route."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, workspace_intent: object | None = None) -> None:
         self.called = Event()
         self.call_count = 0
         self.payloads: list[dict[str, object]] = []
+        self.workspace_intent = workspace_intent
 
     def stream(self, route: ModelRoute, payload: dict[str, object]):
         del route
@@ -200,6 +201,7 @@ class _ImmediateSuccessfulTutorProvider:
                 "provisional_broad_subject": None,
                 "segment_relation": None,
                 "structured_segment_state": None,
+                "workspace_intent": self.workspace_intent,
             },
             input_tokens=4,
             output_tokens=3,
@@ -1220,6 +1222,55 @@ def test_zero_content_student_tutor_turn_uses_empty_retrieval_and_persists_respo
         assert messages[-1].payload["source_refs"] == []
         assert messages[-1].payload["suggested_actions"] == []
         assert session.query(AIExecution).filter_by(task="tutor").count() == executions_before + 1
+
+
+def test_student_sse_never_exposes_hidden_workspace_intent_or_router_audit(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The real Student route exposes only its stable terminal turn shape."""
+
+    with postgres_session_factory.begin() as session:
+        _student(session, "student-workspace-sse")
+
+    from apps.api.routes import student as student_routes
+
+    provider = _ImmediateSuccessfulTutorProvider(
+        workspace_intent={
+            "version": "workspace-intent-v1",
+            "action": "OPEN_ACTIVITY",
+            "subject_key": "MATH",
+            "concept_keys": ["equivalent_fractions"],
+            "learning_goal": "Compare equivalent fractions.",
+            "activity_hint": None,
+            "representation_need": "VISUAL",
+            "expected_student_response_mode": "WORKSPACE",
+            "presentation_sequence": "PARALLEL",
+            "source_references": [],
+            "safe_text_fallback": "Let us compare the fractions.",
+        }
+    )
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    client = _client(postgres_session_factory, subject="student-workspace-sse")
+    try:
+        session_id = client.post("/api/v1/student/math/session").json()["id"]
+        response = client.post(
+            f"/api/v1/student/math/session/{session_id}/turn/stream",
+            json={"content": "Can we compare these fractions visually?"},
+        )
+    finally:
+        _clear_overrides()
+
+    final_event = response.text.split("event: turn\ndata: ", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
+    assert response.status_code == 200
+    assert set(json.loads(final_event)) == {"text", "suggested_actions", "guided_check"}
+    assert "workspace_intent" not in response.text
+    assert "workspace_execution_decision" not in response.text
+    assert "workspace" not in response.text
+    with postgres_session_factory() as session:
+        message = session.query(LearningMessage).filter_by(session_id=UUID(session_id), role="tutor").one()
+        assert message.payload["workspace"]["intent_status"] == "VALID"
+        assert message.payload["workspace"]["intent"]["action"] == "OPEN_ACTIVITY"
 
 
 def test_session_reload_exposes_persisted_tutor_actions_and_defaults_legacy_messages_to_empty(

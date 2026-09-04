@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from services.model_gateway.gateway import (
     ModelGateway,
     ModelResult,
@@ -53,7 +55,7 @@ def test_structured_tutor_normalization_preserves_all_luna_semantic_decisions() 
     """Catches a valid v6 decision being dropped before Tutor runtime validation."""
 
     output = _normalize_output(
-        '{"text":"Use a fraction bar.","suggested_actions":[],"teaching_mode":"HOMEWORK","teaching_strategy":"HINT_FIRST","teaching_method_id":"VISUAL_REPRESENTATION","prior_method_relation":"CONTINUATION","segment_relation":"CONTINUE","structured_segment_state":null,"candidate_metadata":null}',
+        '{"text":"Use a fraction bar.","suggested_actions":[],"teaching_mode":"HOMEWORK","teaching_strategy":"HINT_FIRST","teaching_method_id":"VISUAL_REPRESENTATION","prior_method_relation":"CONTINUATION","segment_relation":"CONTINUE","structured_segment_state":null,"candidate_metadata":null,"workspace_intent":null}',
         {"response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA},
     )
 
@@ -65,10 +67,73 @@ def test_structured_tutor_normalization_preserves_all_luna_semantic_decisions() 
     assert output["structured_segment_state"] is None
 
 
+def test_structured_v9_tutor_normalization_preserves_workspace_intent() -> None:
+    """A v9 Tutor response keeps its strict Workspace Intent rather than taking the generic path."""
+
+    output = _normalize_output(
+        '{"text":"Try a number line.","suggested_actions":[],"workspace_intent":{"version":"workspace-intent-v1","action":"OPEN_ACTIVITY","subject_key":"MATH","concept_keys":["fraction-equivalence"],"learning_goal":"Compare equivalent fractions.","activity_hint":null,"representation_need":"VISUAL","expected_student_response_mode":"WORKSPACE","presentation_sequence":"PARALLEL","source_references":[],"safe_text_fallback":"Let us compare the fractions."}}',
+        {"response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA},
+    )
+
+    assert output["workspace_intent"] == {
+        "version": "workspace-intent-v1",
+        "action": "OPEN_ACTIVITY",
+        "subject_key": "MATH",
+        "concept_keys": ["fraction-equivalence"],
+        "learning_goal": "Compare equivalent fractions.",
+        "activity_hint": None,
+        "representation_need": "VISUAL",
+        "expected_student_response_mode": "WORKSPACE",
+        "presentation_sequence": "PARALLEL",
+        "source_references": [],
+        "safe_text_fallback": "Let us compare the fractions.",
+    }
+    assert output["candidate_metadata"] is None
+    assert output["candidate_metadata_error"] == "candidate_metadata_missing"
+
+    null_output = _normalize_output(
+        '{"text":"Keep going.","suggested_actions":[],"candidate_metadata":null,"workspace_intent":null}',
+        {"response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA},
+    )
+    assert null_output["workspace_intent"] is None
+
+
+def test_structured_v9_tutor_normalization_rejects_missing_workspace_intent() -> None:
+    """A missing v9 required field must not be converted to ordinary Workspace absence."""
+
+    with pytest.raises(ValueError, match="workspace_intent"):
+        _normalize_output(
+            '{"text":"Try one step.","suggested_actions":[],"candidate_metadata":null}',
+            {"response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA},
+        )
+
+
+def test_structured_v8_tutor_normalization_keeps_historical_absent_workspace_intent() -> None:
+    """v8 predates WorkspaceIntent and remains provider-compatible without that field."""
+
+    output = _normalize_output(
+        '{"text":"Try one step.","suggested_actions":[],"candidate_metadata":null}',
+        {"response_schema": {"name": "tutor_turn_v8", "schema": {"type": "object"}}},
+    )
+
+    assert "workspace_intent" not in output
+
+
+def test_structured_v9_fallback_cannot_masquerade_as_a_valid_result() -> None:
+    """A malformed v9 stream cannot use text fallback to bypass its required field contract."""
+
+    with pytest.raises(ValueError, match="valid JSON"):
+        _normalize_output(
+            "not JSON",
+            {"response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA},
+            fallback_text="Try one small step.",
+        )
+
+
 def test_malformed_structured_tutor_fallback_does_not_invent_semantic_decisions() -> None:
     output = _normalize_output(
         "not JSON",
-        {"response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA},
+        {"response_schema": {"name": "tutor_turn_v8", "schema": {"type": "object"}}},
         fallback_text="Try one small step.",
     )
 

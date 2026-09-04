@@ -19,11 +19,11 @@ from services.tutor.teaching_methods import (
 )
 
 
-def test_tutor_turn_v8_requires_optional_provisional_subject_without_rewriting_other_metadata() -> None:
+def test_tutor_turn_v9_requires_nullable_workspace_intent_without_rewriting_other_metadata() -> None:
     """SAFE-02 keeps one strict output contract for visible text and hidden decisions."""
 
-    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v8"
-    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject"]
+    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v9"
+    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject", "workspace_intent"]
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["provisional_broad_subject"] == {
         "type": ["string", "null"],
         "enum": [
@@ -32,6 +32,9 @@ def test_tutor_turn_v8_requires_optional_provisional_subject_without_rewriting_o
             "OTHER", None,
         ],
     }
+    workspace_intent = TUTOR_OUTPUT_JSON_SCHEMA["properties"]["workspace_intent"]
+    assert workspace_intent["anyOf"][0]["additionalProperties"] is False
+    assert workspace_intent["anyOf"][0]["properties"]["version"]["enum"] == ["workspace-intent-v1"]
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_mode"] == {"type": ["string", "null"], "enum": [*(mode.value for mode in TeachingMode), None]}
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_strategy"] == {"type": ["string", "null"], "enum": [*(strategy.value for strategy in TeachingStrategy), None]}
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_method_id"] == {"type": ["string", "null"], "enum": [*(method.value for method in ACTIVE_TEACHING_METHODS), None]}
@@ -110,6 +113,18 @@ def test_one_luna_call_receives_full_definitions_without_preselected_semantic_ax
     assert "eligible_teaching_methods" not in payload
     assert "Effective Parent Boundary settings" in str(payload["input"])
     assert "Parent Boundary semantic decision" in str(payload["input"])
+
+
+def test_primary_tutor_contract_instructs_workspace_intent_and_local_provider_returns_null() -> None:
+    """Runtime-02 adds one field to the same primary structured result, not another call."""
+
+    from services.tutor.runtime import LocalTutorProvider
+
+    payload = build_tutor_model_payload(question="Could a workspace help?")
+    result = LocalTutorProvider().execute(None, payload)  # type: ignore[arg-type]
+
+    assert "workspace_intent" in payload["response_schema"]["schema"]["properties"]
+    assert result.output["workspace_intent"] is None
 
 
 def test_relation_guidance_distinguishes_a_new_topic_from_an_immediate_method_outcome() -> None:
@@ -203,7 +218,7 @@ def test_candidate_guidance_contrastively_defines_support_for_the_observed_targe
         assert required_concept in instructions
 
     payload = build_tutor_model_payload(question="I solved the new task and can explain why.")
-    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v8"
+    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v9"
     assert "candidate_classifier" not in payload
     assert "support_score" not in payload
     assert "support_threshold" not in payload

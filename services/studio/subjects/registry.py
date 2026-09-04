@@ -142,6 +142,16 @@ class SubjectCapabilityRegistry:
     def resolve_profile(self, subject_key: str, profile_version: str) -> SubjectCapabilityProfile:
         return self._resolve(self._profiles, (subject_key, profile_version), "Subject profile")
 
+    def activities_for_profile(self, subject_key: str, profile_version: str) -> tuple[ActivityContract, ...]:
+        """Return exact-version Activity declarations without applying a latest policy."""
+
+        return self.resolve_profile(subject_key, profile_version).activities
+
+    def renderers_for_profile(self, subject_key: str, profile_version: str) -> tuple[RendererContract, ...]:
+        """Return exact-version Renderer declarations without applying a latest policy."""
+
+        return self.resolve_profile(subject_key, profile_version).renderers
+
     def resolve_activity(self, subject_key: str, profile_version: str, activity_key: str, activity_version: str) -> ActivityContract:
         return self._resolve(self._activities, (subject_key, profile_version, activity_key, activity_version), "Activity contract")
 
