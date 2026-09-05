@@ -24,7 +24,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-02 — DONE / ACCEPTED
 → STUDIO-RUNTIME-03 — DONE / ACCEPTED
 → STUDIO-ACT-MATH-01 — DONE / ACCEPTED
-→ STUDIO-ACT-SCI-01 — BLOCKED
+→ STUDIO-ACT-SCI-01 — READY
 → STUDIO-ACT-EN-01 — BLOCKED
 → STUDIO-ACT-AR-01 — BLOCKED
 → FE-02-STUDIO-01 — BLOCKED
@@ -95,8 +95,9 @@ the five opt-in cloud-writing S3 tests and two opt-in real-Luna tests, not
 passes. Student-authored free-form language remains Chat-only, including
 Voice-to-STT; Canvas uses bounded semantic controls and may display language.
 
-`STUDIO-ACT-MATH-01` is `DONE / ACCEPTED`. All later Studio tasks remain
-blocked pending explicit promotion.
+`STUDIO-ACT-MATH-01` is `DONE / ACCEPTED`. `STUDIO-ACT-SCI-01` is the only
+`READY` Studio task. All subsequent Studio tasks remain blocked pending
+explicit promotion.
 `CURR-RENDER-MATH-01A` is **BLOCKED UNTIL THE GRADE 5 MATH RENDERER
 IMPLEMENTATION GATE**: it does not block Studio state, protocol, runtime,
 cross-subject foundation activities, or FE-02 Studio integration.
@@ -209,6 +210,102 @@ change; dependency change; or a new Canvas model call.
 regression-test source, final browser runner, and this evidence record. The
 generated screenshots, logs, traces, and result files remain local evidence
 and are intentionally outside the source commit.
+
+---
+
+## STUDIO-ACT-SCI-01 — Process Sequence Workspace
+
+**Status:** READY
+
+**Purpose:** Deliver one production `process_sequence_workspace` Science
+activity using bounded authored/trusted fixture content. It proves the same
+Studio architecture with stable Science stage identities and deterministic
+sequence/relationship validation; it is not a water-cycle-only component,
+generic ordering framework, Grade 5 Science curriculum claim, or replacement
+for the later Science-production work. The water cycle is permitted but not
+selected by this promotion.
+
+**Accepted dependencies:** `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`,
+`STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`,
+`STUDIO-RUNTIME-03`, and `STUDIO-ACT-MATH-01` are `DONE / ACCEPTED`.
+`CURR-RENDER-MATH-01A`, `TASK-035`, and a generic Artifact Engine do not block
+this bounded cross-subject activity.
+
+**Required production outputs:**
+
+- an exact-version SCIENCE profile, Activity, Renderer, payload-validator,
+  deterministic semantic-validator, reducer, fixture identity, and typed
+  stable stage identities for `process_sequence_workspace`; preserve the
+  current empty `SCIENCE / subject-profile-v1` for replay rather than changing
+  its meaning;
+- bounded reorder and submission Action contracts. Reordering is
+  `RECORD_ONLY`; exactly one contract-declared submitted configuration creates
+  a `StudentInteraction` and uses one existing Runtime-03 Tutor continuation;
+- server-owned Event/Snapshot state, exact reload/rebuild, idempotency,
+  ownership, rejection, and stale-operation handling. The submission must
+  preserve the exact submitted configuration for Tutor context even if later
+  record-only rearrangements change current Snapshot state;
+- a deterministic, fixture-owned valid-order/relationship rule. The browser
+  may submit only a one-to-one permutation of the declared stable stage IDs;
+  unknown, duplicate, missing, extra, or Snapshot-mismatched identities reject
+  without mutation. The implementation must explicitly decide and test whether
+  the fixture permits alternative valid orders. Keep the answer key in a
+  server-owned fixture map rather than a browser-visible Scene seed unless a
+  later Product Owner decision authorizes a narrow alternative;
+- a minimal React DOM/SVG renderer and mock-labelled isolated review seam, not
+  `/student/daily`, with pointer, emulated touch, keyboard/button, accessible
+  text/control equivalents, locale/direction, narrow layout, failure/rejection
+  recovery, and reduced-motion/static verification; and
+- no fake Student `LearningMessage`, direct Candidate/Evidence/Personal
+  Facts/Intelligence write, additional Canvas/Specialist model call, or change
+  to existing Safety, ownership, provenance, or supersession rules.
+
+**Confirmed reusable seams and likely implementation areas:**
+
+- reuse the production Subject Capability Registry;
+  `CreateSceneCommand`/`AppendStudioEventCommand`; `StudioStateService`;
+  `StudioProtocolService`; reducer/rebuild; dedicated Studio feed; web Studio
+  operation/controller contracts; and the Runtime-03 interaction lifecycle;
+- add a bounded Science activity module and profile registration under
+  `services/studio/subjects/`, plus a specific activation adapter or a small
+  application-owned activation dispatcher. The current Make-Ten adapter is an
+  exact-activity reference, not a generic cross-subject activation system;
+  any active-Scene replacement/supersession behavior must be explicit and
+  tested rather than inferred;
+- add focused PostgreSQL/Runtime-03 regressions beside the existing
+  `tests/test_studio_make_ten_postgres.py` coverage, and an activity-specific
+  review page/component/client helper under `apps/web/app/studio/`,
+  `apps/web/components/studio/`, and `apps/web/lib/studio/`. Reuse the existing
+  server-authoritative controller only; do not create browser-owned truth or a
+  generic drag framework.
+
+**Bounded implementation checks before completion:** record the exact profile,
+activity, renderer, scene, Action/payload/event, reducer, validator, and
+fixture/version literals; trusted/authored fixture provenance and source
+rights; the stage/order or relationship contract; activation identity; and
+the selected renderer interaction design. These are implementation choices not
+settled by this promotion. Reuse the approved native React/SVG baseline where
+it fits; do not install a package merely because it appears in the reuse
+catalog.
+
+**Required verification and independent-review gate:** prove exact
+contract/registry resolution; activation identity/idempotency; durable
+reorder/submit state; valid, invalid, alternative-valid-if-declared,
+duplicate, missing, extra, stale, replay, and cross-Student cases; exact
+rebuild/reload; submitted configuration versus later current state in the one
+Runtime-03 Tutor continuation; no fake message or direct learning-intelligence
+write; and zero additional Canvas calls. Independently review the final diff
+and inspect the isolated browser matrix for pointer, emulated touch,
+keyboard/button, locale/direction, accessibility, narrow layout, rejection,
+and reduced motion. Do not treat prior Make-Ten tests as fresh Science
+evidence.
+
+**Explicit non-scope:** no full `/student/daily` integration; generic Artifact
+Engine or drag framework; full Science curriculum, Grade 5 coverage, or
+English/Arabic activity; Canvas Specialist; free-form Canvas language or
+SafetyTextProjection; schema/dependency installation by default; deployment;
+live-model/real-Lina execution; or implementation of any subsequent Studio
+task.
 
 ---
 

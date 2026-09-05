@@ -20,6 +20,7 @@ PF-03 Tutor Personal Context        ACCEPTED / COMPLETED
 FE-01 Visual System + Reuse Record  ACCEPTED / COMPLETED
 STUDIO-RUNTIME-03 Canvas Tutor Turns DONE / ACCEPTED
 STUDIO-ACT-MATH-01 Make-Ten Transfer DONE / ACCEPTED
+STUDIO-ACT-SCI-01 Process Sequence READY
 ```
 
 Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical ledger.
@@ -75,8 +76,11 @@ or direct learning-intelligence writes. The isolated mock-labelled review mount
 is not `/student/daily`.
 Student-authored free-form language belongs in Chat, including Voice-to-STT;
 Canvas accepts bounded semantic controls and may display language, without
-SafetyTextProjection or unrestricted Canvas language input. Every later Studio
-task remains blocked.
+SafetyTextProjection or unrestricted Canvas language input.
+`STUDIO-ACT-SCI-01` is the only `READY` Studio implementation task: it will
+add one bounded Science `process_sequence_workspace` activity, not a generic
+Artifact Engine or Science curriculum. Every subsequent Studio task remains
+blocked.
 `CURR-RENDER-MATH-01A` remains blocked until the Grade 5 Math renderer
 implementation gate. Real Lina longitudinal history has not started.
 
@@ -125,6 +129,13 @@ implementation gate. Real Lina longitudinal history has not started.
   covers mouse, emulated touch, keyboard, cancellation, rejection, RTL/narrow
   layout, and reduced motion; detailed commands, skips, and review evidence
   are in `project-state/DAILY_USE_RELEASE_TASKS.md`.
+- STUDIO-ACT-SCI-01 is the only READY Studio task. Its bounded executable
+  contract is in `project-state/DAILY_USE_RELEASE_TASKS.md`: exact new Science
+  contracts and fixture identity remain implementation checks, while the
+  accepted dependencies, server-owned state/rebuild, record-only reorder,
+  submitted-configuration continuation, isolated review seam, and review gate
+  are fixed. No Science activity or renderer code has been written by this
+  promotion.
 
 ---
 
@@ -196,7 +207,7 @@ Protected invariants:
 
 ## Active risks
 
-- **STUDIO-R1 — Studio backend foundations and bounded Make-Ten are accepted; full frontend integration and all later Studio tasks remain blocked — Criticality 4**
+- **STUDIO-R1 — Studio foundations and bounded Make-Ten are accepted; only the bounded Science process activity is READY, while full frontend integration and every subsequent Studio task remain blocked — Criticality 4**
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**
 - **VISION-R1 — Durable Student Asset Hosting Required Before Daily Vision — Criticality 4**
 - **MATH-01 — Structured Math Readability — Criticality 4 / independent**
@@ -274,10 +285,10 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
-Verify Make-Ten closure/remote parity, then obtain explicit promotion of
-`STUDIO-ACT-SCI-01`. Keep full FE-02 `/student/daily` Studio integration,
-all other activities, Grade 5 renderer work, Canvas Specialist work, and all
-later Studio work blocked until separately authorized.
+Implement only `STUDIO-ACT-SCI-01 — Process Sequence Workspace` from its
+bounded current-execution entry. Keep full FE-02 `/student/daily` Studio
+integration, all other activities, Grade 5 renderer work, Canvas Specialist
+work, and all later Studio work blocked until separately authorized.
 
 ---
 

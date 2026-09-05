@@ -123,7 +123,21 @@ No fake Student message, direct learning-intelligence write, Canvas Specialist,
 or additional Canvas model call was introduced. The isolated mock-labelled
 review mount is not `/student/daily`; Make-Ten remains outside Grade 5
 coverage. Detailed acceptance evidence is retained in the current execution
-overlay. All later Studio tasks remain BLOCKED pending explicit promotion.
+overlay.
+
+## STUDIO-ACT-SCI-01 — Process Sequence Workspace
+**Status:** READY
+**Scope:** one bounded production `process_sequence_workspace` Science fixture
+with exact contracts, stable stage identities, server-owned deterministic
+validation/rebuild, record-only reorder, one contract-declared submitted-
+configuration Runtime-03 continuation, and an isolated accessible review seam.
+The current empty `SCIENCE / subject-profile-v1` remains historical/replay
+truth; the new exact contract versions, fixture, payloads, order rule, and
+activation policy are implementation checks in the current execution overlay.
+No generic Artifact Engine, full Science curriculum, FE-02 integration,
+Canvas Specialist, direct learning-intelligence write, or additional Canvas
+model call is authorized. It is the only READY Studio task; all subsequent
+Studio tasks remain BLOCKED.
 
 ---
 

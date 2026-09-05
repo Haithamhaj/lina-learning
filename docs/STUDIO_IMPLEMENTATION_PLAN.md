@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, and `STUDIO-ACT-MATH-01` are `DONE / ACCEPTED`. No Studio implementation task is `READY`; every subsequent Studio task remains dependency-ordered and blocked pending explicit promotion.
+**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, and `STUDIO-ACT-MATH-01` are `DONE / ACCEPTED`. `STUDIO-ACT-SCI-01` is the only `READY` Studio implementation task; every subsequent Studio task remains dependency-ordered and blocked pending explicit promotion.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -1422,9 +1422,40 @@ outside the Grade 5 denominator.
 
 #### `STUDIO-ACT-SCI-01 — Process Sequence Workspace`
 
-**Status:** BLOCKED pending explicit promotion.
-
-Production generic process-ordering activity with Science fixture and validator.
+**Status:** READY.
+**Purpose:** implement the bounded, production `process_sequence_workspace`
+Science activity with authored/trusted fixture content. It is generic to the
+fixture's scientific process, not a one-off water-cycle component; water cycle
+remains permitted rather than selected.
+**Dependencies:** accepted `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`,
+`STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`,
+`STUDIO-RUNTIME-03`, and `STUDIO-ACT-MATH-01`.
+**Output:** an exact-version Science Activity/Renderer/fixture contract with
+stable typed stages; deterministic fixture-owned sequence/relationship
+validation; record-only reordering; exactly one contract-declared submitted
+configuration interaction; durable Event/Snapshot replay; and one Runtime-03
+Tutor continuation from the exact submission. Reuse the existing Registry,
+state/protocol/feed, interaction, and web-controller seams. The renderer is a
+minimal isolated review seam, not a `/student/daily` host.
+**Implementation checks:** retain empty `SCIENCE / subject-profile-v1` for
+replay and declare all new exact version literals; record fixture provenance,
+stage identities, order/relationship and alternative-order policy, payloads,
+activation identity, and interaction design. The answer key remains
+server-owned rather than browser-visible Scene seed data unless separately
+approved. Any cross-activity activation/supersession behavior must be explicit
+and tested; the current Make-Ten adapter is only an exact-activity reference.
+**Verification:** exact registry/activation identity; valid, invalid,
+alternative-valid-if-declared, duplicate, missing, extra, stale, replay, and
+cross-Student operation behavior; reload/rebuild equality; submitted
+configuration distinct from later current state in the Tutor context; one
+Runtime-03 continuation with no fake Student message, direct intelligence
+write, or additional Canvas call; and isolated pointer, emulated touch,
+keyboard/button, accessibility, locale/direction, narrow-layout, rejection,
+and reduced-motion review. Independent review is required before acceptance.
+**Non-scope:** generic Artifact Engine/drag framework, full Science curriculum,
+Canvas Specialist, unrestricted Canvas language/SafetyTextProjection, FE-02
+integration, dependency installation by default, deployment, or real-Lina
+execution.
 
 #### `STUDIO-ACT-EN-01 — English Sentence Ordering`
 
@@ -1697,8 +1728,9 @@ accepted. The durable Studio state foundation is implemented at Alembic head
 ### 27.1 Only ready task
 
 ```text
-No Studio implementation task is READY. `STUDIO-ACT-MATH-01` is DONE /
-ACCEPTED; every later Studio task remains BLOCKED pending explicit promotion.
+`STUDIO-ACT-MATH-01` is DONE / ACCEPTED. `STUDIO-ACT-SCI-01` is the only
+READY Studio implementation task; every subsequent Studio task remains BLOCKED
+pending explicit promotion.
 ```
 
 ### 27.2 Completed governance outcome
@@ -1739,7 +1771,8 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-02 — DONE / ACCEPTED
 → STUDIO-RUNTIME-03 — DONE / ACCEPTED
 → STUDIO-ACT-MATH-01 — DONE / ACCEPTED
-→ Cross-subject production activities — BLOCKED
+→ STUDIO-ACT-SCI-01 — READY
+→ all subsequent cross-subject production activities — BLOCKED
 → FE-02-STUDIO-01 — BLOCKED
 → CURR-RENDER-MATH-01A — BLOCKED pending Grade 5 renderer correction gate
 → Grade 5 renderer tasks — BLOCKED
