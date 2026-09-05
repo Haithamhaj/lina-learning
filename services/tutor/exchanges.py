@@ -74,6 +74,39 @@ def immediate_exchange_for_current_turn(
     )
     if tutor is None:
         return None
+    # A model-backed Chat turn has durable exact Student lineage.  Resolve it
+    # before considering historical chronology, which prevents a later Canvas
+    # Tutor message from being accidentally paired with an earlier Chat input.
+    execution = session.get(AIExecution, tutor.ai_execution_id) if tutor.ai_execution_id is not None else None
+    if execution is not None and execution.source_message_id is not None:
+        source = session.get(LearningMessage, execution.source_message_id)
+        if (
+            source is not None
+            and source.session_id == learning_session.id
+            and source.role == "student"
+        ):
+            return ConversationExchangeContext(
+                session_id=learning_session.id,
+                segment_id=source.segment_id if source.segment_id == tutor.segment_id else None,
+                student_message_id=source.id,
+                tutor_message_id=tutor.id,
+                student_content=source.content,
+                tutor_content=tutor.content,
+                student_created_at=source.created_at,
+                tutor_created_at=tutor.created_at,
+            )
+    payload = tutor.payload if isinstance(tutor.payload, dict) else {}
+    if payload.get("turn_origin") == "STUDIO_INTERACTION":
+        return ConversationExchangeContext(
+            session_id=learning_session.id,
+            segment_id=None,
+            student_message_id=None,
+            tutor_message_id=tutor.id,
+            student_content=None,
+            tutor_content=tutor.content,
+            student_created_at=None,
+            tutor_created_at=tutor.created_at,
+        )
     before_tutor = or_(
         LearningMessage.created_at < tutor.created_at,
         (LearningMessage.created_at == tutor.created_at) & (LearningMessage.id < tutor.id),

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from concurrent.futures import ThreadPoolExecutor
-from threading import Event
+from threading import Barrier, Event
 from uuid import UUID, uuid4
 
 import pytest
@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from services.platform.db.connection import normalize_database_url
+from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
 from services.platform.db.models import (
     AIExecution,
     CandidateEvent,
@@ -29,7 +30,10 @@ from services.platform.db.models import (
     Student,
     User,
     StudioRuntime,
+    StudioScene,
     StudioEvent,
+    StudioStudentInteraction,
+    StudioTutorObservation,
 )
 from services.studio.contracts import (
     AppendStudioEventCommand,
@@ -96,6 +100,80 @@ def _fixture_semantic_validator(payload: dict[str, object]) -> ValidationResult:
     return ValidationResult(
         ValidationStatus.INVALID if payload["value"] == 0 else ValidationStatus.VALID,
         feedback_code="fixture-invalid" if payload["value"] == 0 else "fixture-valid",
+    )
+
+
+class _RecordingStudioTutorProvider:
+    """A Gateway-level fixture that records one internal Canvas Tutor call."""
+
+    def __init__(self) -> None:
+        self.payloads: list[dict[str, object]] = []
+
+    def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+        assert route.model == "fixture-tutor"
+        self.payloads.append(payload)
+        return ModelResult(
+            output={"text": "Let us examine that step.", "workspace_intent": None},
+            input_tokens=7,
+            output_tokens=5,
+        )
+
+
+class _StreamingStudioTutorProvider(_RecordingStudioTutorProvider):
+    """A real Gateway stream fixture; it never synthesizes route-level deltas."""
+
+    def stream(self, route: ModelRoute, payload: dict[str, object]):  # type: ignore[no-untyped-def]
+        result = self.execute(route, payload)
+        yield StreamDelta("Let us ")
+        yield StreamDelta("examine that step.")
+        yield StreamComplete(result)
+
+
+class _PausedStudioTutorProvider(_RecordingStudioTutorProvider):
+    """Blocks provider work after admission so concurrent database work is observable."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.started = Event()
+        self.release = Event()
+
+    def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+        self.started.set()
+        assert self.release.wait(timeout=5)
+        return super().execute(route, payload)
+
+
+class _FailingStudioTutorProvider:
+    """Exercises the real Gateway failure ledger without a live model call."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+        del route, payload
+        self.calls += 1
+        raise RuntimeError("fixture provider failure")
+
+
+class _MissingWorkspaceIntentProvider:
+    """Models a malformed v9 result that must not silently become null."""
+
+    def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+        del route, payload
+        return ModelResult(output={"text": "Malformed v9 fixture."})
+
+
+def _studio_tutor_service(*, engine: object, provider: object):
+    from services.studio.interactions import StudioInteractionTutorService
+
+    return StudioInteractionTutorService(
+        bind=engine,  # type: ignore[arg-type]
+        gateway_factory=lambda gateway_session: ModelGateway(
+            gateway_session,
+            routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")},
+            providers={"fixture": provider},  # type: ignore[dict-item]
+        ),
+        subject_registry=_studio_test_registry(),
     )
 
 
@@ -250,6 +328,32 @@ def _runtime_scene(
         )
         scene = service.accept_scene(_scene_command(student, learning_session))
         return student.id, learning_session.id, runtime.id, scene.id
+
+
+def _triggering_interaction(
+    factory: sessionmaker[Session],
+    *,
+    payload: dict[str, object] | None = None,
+) -> tuple[UUID, UUID, UUID, UUID, UUID, object]:
+    student_id, session_id, runtime_id, scene_id = _runtime_scene(factory)
+    with factory.begin() as session:
+        student = session.get(Student, student_id)
+        learning_session = session.get(LearningSession, session_id)
+        assert student is not None and learning_session is not None
+        append = StudioStateService(session).append_event(
+            _append_command(
+                runtime_id,
+                student,
+                learning_session,
+                scene_id=scene_id,
+                base_scene_version=1,
+                create_student_interaction=True,
+                actor=StudioActor.STUDENT,
+                payload=payload or {"value": 0},
+            )
+        )
+        assert append.interaction is not None
+        return student_id, session_id, runtime_id, scene_id, append.interaction.id, session.get_bind()
 
 
 def test_schema_inventory_includes_only_studio_foundation_tables_and_indexes() -> None:
@@ -790,6 +894,704 @@ def test_student_interaction_and_intelligence_personal_facts_boundaries(postgres
         assert session.scalar(select(func.count()).select_from(LearningEvidence)) == 0
         assert session.scalar(select(func.count()).select_from(CurrentLearningState)) == 0
         assert session.scalar(select(func.count()).select_from(PersonalFact)) == 0
+
+
+def test_pending_interaction_claim_is_owned_atomic_and_non_repeatable(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Only the owning Student may atomically claim one contract-created hand-off."""
+
+    from services.studio.interactions import (  # noqa: PLC0415 - RED contract
+        StudioInteractionAccessDenied,
+        StudioInteractionService,
+        StudioInteractionStateError,
+    )
+
+    student_id, session_id, runtime_id, scene_id = _runtime_scene(postgres_session_factory)
+    with postgres_session_factory.begin() as session:
+        student = session.get(Student, student_id)
+        learning_session = session.get(LearningSession, session_id)
+        assert student is not None and learning_session is not None
+        interaction = StudioStateService(session).append_event(
+            _append_command(
+                runtime_id,
+                student,
+                learning_session,
+                scene_id=scene_id,
+                base_scene_version=1,
+                create_student_interaction=True,
+                actor=StudioActor.STUDENT,
+            )
+        ).interaction
+        assert interaction is not None
+        interaction_id = interaction.id
+
+    with postgres_session_factory.begin() as session:
+        claimed = StudioInteractionService(session).claim_pending(
+            student_id=student_id,
+            runtime_id=runtime_id,
+            interaction_id=interaction_id,
+        )
+        assert claimed.status == "RUNNING"
+
+    with postgres_session_factory.begin() as session:
+        with pytest.raises(StudioInteractionStateError, match="not pending"):
+            StudioInteractionService(session).claim_pending(
+                student_id=student_id,
+                runtime_id=runtime_id,
+                interaction_id=interaction_id,
+            )
+        with pytest.raises(StudioInteractionAccessDenied):
+            StudioInteractionService(session).claim_pending(
+                student_id=uuid4(),
+                runtime_id=runtime_id,
+                interaction_id=interaction_id,
+            )
+
+
+def test_new_triggering_action_supersedes_a_running_interaction(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """A newer meaningful Canvas action wins without treating record-only events as a turn."""
+
+    from services.studio.interactions import StudioInteractionService  # noqa: PLC0415 - RED contract
+
+    student_id, session_id, runtime_id, scene_id = _runtime_scene(postgres_session_factory)
+    with postgres_session_factory.begin() as session:
+        student = session.get(Student, student_id)
+        learning_session = session.get(LearningSession, session_id)
+        assert student is not None and learning_session is not None
+        state = StudioStateService(session)
+        first = state.append_event(
+            _append_command(
+                runtime_id, student, learning_session, scene_id=scene_id, base_scene_version=1,
+                create_student_interaction=True, actor=StudioActor.STUDENT,
+            )
+        )
+        assert first.interaction is not None and first.scene is not None
+        StudioInteractionService(session).claim_pending(
+            student_id=student_id, runtime_id=runtime_id, interaction_id=first.interaction.id,
+        )
+        second = state.append_event(
+            _append_command(
+                runtime_id, student, learning_session, scene_id=scene_id,
+                base_scene_version=first.scene.scene_version,
+                create_student_interaction=True, actor=StudioActor.STUDENT,
+            )
+        )
+        assert second.interaction is not None
+        assert first.interaction.status == "SUPERSEDED"
+        assert second.interaction.status == "PENDING"
+
+
+def test_new_real_chat_input_supersedes_a_running_canvas_interaction(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """A later Chat Student message is the causal successor of Canvas generation."""
+
+    from services.studio.interactions import StudioInteractionService
+
+    student_id, session_id, runtime_id, _scene_id, interaction_id, _engine = _triggering_interaction(
+        postgres_session_factory
+    )
+    with postgres_session_factory.begin() as session:
+        StudioInteractionService(session).claim_pending(
+            student_id=student_id, runtime_id=runtime_id, interaction_id=interaction_id
+        )
+        StudioInteractionService(session).supersede_running_for_new_chat_student_input(
+            student_id=student_id,
+            learning_session_id=session_id,
+        )
+
+    with postgres_session_factory.begin() as session:
+        interaction = session.get(StudioStudentInteraction, interaction_id)
+        assert interaction is not None and interaction.status == "SUPERSEDED"
+
+
+def test_chat_terminal_guard_rejects_newer_triggering_canvas_but_not_record_only(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """The terminal guard consults durable triggering interactions, not all events."""
+
+    from services.studio.interactions import StudioInteractionService, StudioInteractionStateError
+
+    student_id, session_id, runtime_id, scene_id = _runtime_scene(postgres_session_factory)
+    with postgres_session_factory.begin() as session:
+        student = session.get(Student, student_id)
+        learning_session = session.get(LearningSession, session_id)
+        scene = session.get(StudioScene, scene_id)
+        assert student is not None and learning_session is not None and scene is not None
+        state = StudioStateService(session)
+        state.append_event(
+            _append_command(
+                runtime_id, student, learning_session, scene_id=scene_id,
+                base_scene_version=scene.scene_version, action_key="fixture.record",
+                event_kind="fixture.record", actor=StudioActor.STUDENT, payload={"value": 1},
+            )
+        )
+        StudioInteractionService(session).require_chat_terminal_current(
+            student_id=student_id, learning_session_id=session_id, through_event_sequence=1,
+        )
+        scene = session.get(StudioScene, scene_id)
+        assert scene is not None
+        state.append_event(
+            _append_command(
+                runtime_id, student, learning_session, scene_id=scene_id,
+                base_scene_version=scene.scene_version, create_student_interaction=True,
+                actor=StudioActor.STUDENT, payload={"value": 2},
+            )
+        )
+        with pytest.raises(StudioInteractionStateError, match="newer Canvas"):
+            StudioInteractionService(session).require_chat_terminal_current(
+                student_id=student_id, learning_session_id=session_id, through_event_sequence=2,
+            )
+
+
+def test_owned_canvas_interaction_executes_once_with_exact_gateway_lineage(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """A persisted trigger starts one internal Tutor execution without Chat side effects."""
+
+    from services.studio.interactions import StudioInteractionTutorService  # noqa: PLC0415 - RED contract
+
+    student_id, session_id, runtime_id, scene_id = _runtime_scene(postgres_session_factory)
+    with postgres_session_factory.begin() as session:
+        student = session.get(Student, student_id)
+        learning_session = session.get(LearningSession, session_id)
+        assert student is not None and learning_session is not None
+        interaction = StudioStateService(session).append_event(
+            _append_command(
+                runtime_id,
+                student,
+                learning_session,
+                scene_id=scene_id,
+                base_scene_version=1,
+                create_student_interaction=True,
+                actor=StudioActor.STUDENT,
+                payload={"value": 0},
+            )
+        ).interaction
+        assert interaction is not None
+        interaction_id = interaction.id
+        engine = session.get_bind()
+
+    provider = _RecordingStudioTutorProvider()
+
+    def gateway_factory(gateway_session: Session) -> ModelGateway:
+        return ModelGateway(
+            gateway_session,
+            routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")},
+            providers={"fixture": provider},
+        )
+
+    result = StudioInteractionTutorService(
+        bind=engine,
+        gateway_factory=gateway_factory,
+        subject_registry=_studio_test_registry(),
+    ).execute(
+        student_id=student_id,
+        learning_session_id=session_id,
+        runtime_id=runtime_id,
+        interaction_id=interaction_id,
+    )
+
+    assert len(provider.payloads) == 1
+    assert provider.payloads[0]["response_schema"]["name"] == "tutor_turn_v9"  # type: ignore[index]
+    assert "question" not in provider.payloads[0]
+    source = result.context.as_model_payload()["source"]
+    assert source["turn_origin"] == "CANVAS_INTERACTION"
+    assert source["interaction_kind"] == "fixture-submit"
+    assert source["event"]["sequence"] == 2
+    assert source["event"]["action_key"] == "fixture.submit"
+    assert source["event"]["event_kind"] == "fixture.step_submitted"
+    assert source["event"]["validation"]["status"] == "INVALID"
+    assert source["event"]["action_payload"] == {"value": 0}
+
+    with postgres_session_factory.begin() as session:
+        execution = session.get(AIExecution, result.result.execution_id)
+        interaction = session.get(StudioStudentInteraction, interaction_id)
+        assert execution is not None
+        assert execution.task == ModelTask.TUTOR.value
+        assert execution.operation_type == "studio_interaction_tutor_turn"
+        assert execution.operation_id == interaction_id
+        assert execution.student_id == student_id
+        assert execution.learning_session_id == session_id
+        assert execution.source_message_id is None
+        assert execution.success is True
+        assert interaction is not None and interaction.status == "RUNNING"
+        assert session.scalar(select(func.count()).select_from(LearningMessage)) == 0
+        assert session.scalar(select(func.count()).select_from(CandidateEvent)) == 0
+        assert session.scalar(select(func.count()).select_from(LearningEvent)) == 0
+        assert session.scalar(select(func.count()).select_from(LearningEvidence)) == 0
+        assert session.scalar(select(func.count()).select_from(CurrentLearningState)) == 0
+        assert session.scalar(select(func.count()).select_from(PersonalFact)) == 0
+
+
+def test_canvas_interaction_rejects_a_noncanonical_persisted_validation_envelope(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """A source mutation cannot reintroduce arbitrary validation metadata into Tutor context."""
+
+    from services.studio.interactions import (  # noqa: PLC0415 - RED contract
+        StudioInteractionSourceError,
+        StudioInteractionTutorService,
+    )
+
+    student_id, session_id, runtime_id, scene_id = _runtime_scene(postgres_session_factory)
+    with postgres_session_factory.begin() as session:
+        student = session.get(Student, student_id)
+        learning_session = session.get(LearningSession, session_id)
+        assert student is not None and learning_session is not None
+        interaction = StudioStateService(session).append_event(
+            _append_command(
+                runtime_id,
+                student,
+                learning_session,
+                scene_id=scene_id,
+                base_scene_version=1,
+                create_student_interaction=True,
+                actor=StudioActor.STUDENT,
+                payload={"value": 0},
+            )
+        ).interaction
+        assert interaction is not None
+        event = session.get(StudioEvent, interaction.source_event_id)
+        assert event is not None
+        event.payload = {
+            "action": {"value": 0},
+            "validation": {
+                "status": "INVALID",
+                "feedback_code": "fixture-invalid",
+                "next_action_keys": [],
+                "metadata": {"unbounded": "must not reach the model"},
+            },
+        }
+        interaction_id = interaction.id
+        engine = session.get_bind()
+
+    provider = _RecordingStudioTutorProvider()
+    with pytest.raises(StudioInteractionSourceError, match="validation"):
+        StudioInteractionTutorService(
+            bind=engine,
+            gateway_factory=lambda gateway_session: ModelGateway(
+                gateway_session,
+                routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")},
+                providers={"fixture": provider},
+            ),
+            subject_registry=_studio_test_registry(),
+        ).execute(
+            student_id=student_id,
+            learning_session_id=session_id,
+            runtime_id=runtime_id,
+            interaction_id=interaction_id,
+        )
+    assert provider.payloads == []
+    with postgres_session_factory.begin() as session:
+        interaction = session.get(StudioStudentInteraction, interaction_id)
+        assert interaction is not None and interaction.status == "PENDING"
+        assert session.scalar(select(func.count()).select_from(AIExecution)) == 0
+
+
+def test_canvas_interaction_scope_rejection_preserves_pending_state_without_provider_execution(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Wrong trusted Student/session/runtime scope cannot claim or execute a Canvas interaction."""
+
+    from services.studio.interactions import StudioInteractionAccessDenied, StudioInteractionSourceError
+
+    student_id, session_id, runtime_id, _scene_id, interaction_id, engine = _triggering_interaction(
+        postgres_session_factory
+    )
+    provider = _RecordingStudioTutorProvider()
+    service = _studio_tutor_service(engine=engine, provider=provider)
+
+    for rejected_scope in (
+        {"student_id": uuid4()},
+        {"learning_session_id": uuid4()},
+        {"runtime_id": uuid4()},
+    ):
+        with pytest.raises(StudioInteractionAccessDenied):
+            service.execute(
+                student_id=rejected_scope.get("student_id", student_id),  # type: ignore[arg-type]
+                learning_session_id=rejected_scope.get("learning_session_id", session_id),  # type: ignore[arg-type]
+                runtime_id=rejected_scope.get("runtime_id", runtime_id),  # type: ignore[arg-type]
+                interaction_id=interaction_id,
+            )
+
+    with postgres_session_factory.begin() as session:
+        interaction = session.get(StudioStudentInteraction, interaction_id)
+        assert interaction is not None
+        source_event = session.get(StudioEvent, interaction.source_event_id)
+        assert source_event is not None
+        source_event.subject_key = "SCIENCE"
+    with pytest.raises(StudioInteractionSourceError, match="does not match"):
+        service.execute(
+            student_id=student_id,
+            learning_session_id=session_id,
+            runtime_id=runtime_id,
+            interaction_id=interaction_id,
+        )
+
+    assert provider.payloads == []
+    with postgres_session_factory.begin() as session:
+        interaction = session.get(StudioStudentInteraction, interaction_id)
+        assert interaction is not None and interaction.status == "PENDING"
+        assert session.scalar(select(func.count()).select_from(AIExecution)) == 0
+
+
+def test_canvas_interaction_replay_refuses_a_second_provider_execution(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Only the admitted PENDING transition may initiate a primary Tutor call."""
+
+    from services.studio.interactions import StudioInteractionStateError
+
+    student_id, session_id, runtime_id, _scene_id, interaction_id, engine = _triggering_interaction(
+        postgres_session_factory
+    )
+    provider = _RecordingStudioTutorProvider()
+    service = _studio_tutor_service(engine=engine, provider=provider)
+    service.execute(
+        student_id=student_id,
+        learning_session_id=session_id,
+        runtime_id=runtime_id,
+        interaction_id=interaction_id,
+    )
+
+    with pytest.raises(StudioInteractionStateError, match="not pending"):
+        service.execute(
+            student_id=student_id,
+            learning_session_id=session_id,
+            runtime_id=runtime_id,
+            interaction_id=interaction_id,
+        )
+
+    assert len(provider.payloads) == 1
+    with postgres_session_factory.begin() as session:
+        assert session.scalar(select(func.count()).select_from(AIExecution)) == 1
+
+
+def test_canvas_interaction_context_retains_its_source_below_the_tutor_watermark(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """The current interaction source is explicit, not selected from unseen Chat observation Events."""
+
+    student_id, session_id, runtime_id, _scene_id, interaction_id, engine = _triggering_interaction(
+        postgres_session_factory
+    )
+    with postgres_session_factory.begin() as session:
+        runtime = session.get(StudioRuntime, runtime_id)
+        assert runtime is not None
+        runtime.last_tutor_observation_sequence = runtime.latest_event_sequence
+
+    provider = _RecordingStudioTutorProvider()
+    result = _studio_tutor_service(engine=engine, provider=provider).execute(
+        student_id=student_id,
+        learning_session_id=session_id,
+        runtime_id=runtime_id,
+        interaction_id=interaction_id,
+    )
+
+    assert result.context.as_model_payload()["source"]["event"]["sequence"] == 2
+    assert result.context.as_model_payload()["workspace"]["last_tutor_observation_sequence"] == 2
+    with postgres_session_factory.begin() as session:
+        assert session.scalar(select(func.count()).select_from(StudioTutorObservation)) == 0
+        runtime = session.get(StudioRuntime, runtime_id)
+        assert runtime is not None and runtime.last_tutor_observation_sequence == 2
+
+
+def test_canvas_selection_binds_its_exact_interaction_to_the_observation(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """A Canvas turn owns any unseen-range observation it selected."""
+
+    from services.studio.tutor_context import select_studio_tutor_context  # noqa: PLC0415 - RED contract
+
+    student_id, session_id, _runtime_id, _scene_id, interaction_id, engine = _triggering_interaction(
+        postgres_session_factory
+    )
+
+    selection = select_studio_tutor_context(
+        bind=engine,
+        student_id=student_id,
+        learning_session_id=session_id,
+        student_interaction_id=interaction_id,
+    )
+
+    assert selection is not None
+    assert selection.context.observation_id is not None
+    with postgres_session_factory.begin() as session:
+        observation = session.get(StudioTutorObservation, selection.context.observation_id)
+        assert observation is not None
+        assert observation.student_interaction_id == interaction_id
+
+
+def test_canvas_stream_persists_one_real_tutor_message_then_finalizes(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Canvas delivery uses one Gateway stream, no fake Student message, and exact completion."""
+
+    from services.studio.interactions import (
+        StudioInteractionTutorService,
+    )  # noqa: PLC0415 - RED contract
+
+    student_id, session_id, runtime_id, _scene_id, interaction_id, engine = _triggering_interaction(
+        postgres_session_factory
+    )
+    provider = _StreamingStudioTutorProvider()
+    service = _studio_tutor_service(engine=engine, provider=provider)
+    admission = service.admit(
+        student_id=student_id,
+        learning_session_id=session_id,
+        runtime_id=runtime_id,
+        interaction_id=interaction_id,
+    )
+    terminal = None
+    deltas: list[str] = []
+    for event in service.stream_admitted(admission=admission, student_id=student_id):
+        if isinstance(event, StreamDelta):
+            deltas.append(event.text)
+        elif isinstance(event, StreamComplete):
+            terminal = event.result
+    assert terminal is not None
+    turn = service.persist_canvas_turn(admission=admission, result=terminal, student_id=student_id)
+    service.finalize_delivered_turn(admission=admission, turn=turn, student_id=student_id)
+
+    assert deltas == ["Let us ", "examine that step."]
+    assert len(provider.payloads) == 1
+    provider_payload = provider.payloads[0]
+    workspace = provider_payload["studio_workspace_context"]
+    assert workspace["snapshot"]["sequence"] == 2
+    assert [event["sequence"] for event in workspace["unseen_events"]] == [1, 2]
+    assert provider_payload["studio_interaction_context"]["source"]["event"]["sequence"] == 2
+    assert '"through_sequence": 2' in provider_payload["input"]
+    with postgres_session_factory.begin() as session:
+        interaction = session.get(StudioStudentInteraction, interaction_id)
+        assert interaction is not None
+        assert interaction.status == "COMPLETED"
+        assert interaction.tutor_message_id == turn.message_id
+        assert interaction.ai_execution_id == terminal.execution_id
+        tutor_message = session.get(LearningMessage, turn.message_id)
+        assert tutor_message is not None and tutor_message.role == "tutor"
+        assert tutor_message.payload["turn_origin"] == "STUDIO_INTERACTION"
+        assert tutor_message.payload["student_interaction_id"] == str(interaction_id)
+        assert tutor_message.payload["source_studio_event_id"] == str(interaction.source_event_id)
+        assert session.scalar(select(func.count()).select_from(LearningMessage).where(LearningMessage.role == "student")) == 0
+        assert session.scalar(select(func.count()).select_from(CandidateEvent)) == 0
+        assert session.scalar(select(func.count()).select_from(LearningEvent)) == 0
+        assert session.scalar(select(func.count()).select_from(LearningEvidence)) == 0
+        observation = session.get(StudioTutorObservation, admission.observation_id)
+        assert observation is not None
+        assert observation.status == "COMMITTED"
+        assert observation.student_interaction_id == interaction_id
+
+
+def test_canvas_terminal_waits_on_learning_session_before_locking_runtime(
+    postgres_session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Catches Canvas terminal lock inversion against a Chat Student admission."""
+
+    from services.studio.interactions import StudioInteractionTutorService
+
+    student_id, session_id, runtime_id, _scene_id, interaction_id, engine = _triggering_interaction(
+        postgres_session_factory
+    )
+    provider = _StreamingStudioTutorProvider()
+    service = _studio_tutor_service(engine=engine, provider=provider)
+    admission = service.admit(
+        student_id=student_id,
+        learning_session_id=session_id,
+        runtime_id=runtime_id,
+        interaction_id=interaction_id,
+    )
+    terminal = None
+    for event in service.stream_admitted(admission=admission, student_id=student_id):
+        if isinstance(event, StreamComplete):
+            terminal = event.result
+    assert terminal is not None
+    runtime_locked_before_session = Event()
+    original_verify = StudioInteractionTutorService._verify_execution_provenance_in_session
+
+    def observe_runtime_lock(session: Session, **kwargs: object) -> None:
+        runtime_locked_before_session.set()
+        original_verify(session, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(
+        StudioInteractionTutorService,
+        "_verify_execution_provenance_in_session",
+        staticmethod(observe_runtime_lock),
+    )
+
+    def persist() -> object:
+        return service.persist_canvas_turn(admission=admission, result=terminal, student_id=student_id)
+
+    with postgres_session_factory() as chat_session:
+        transaction = chat_session.begin()
+        try:
+            chat_session.execute(
+                select(LearningSession)
+                .where(LearningSession.id == session_id)
+                .with_for_update()
+            ).scalar_one()
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(persist)
+                observed = runtime_locked_before_session.wait(timeout=0.5)
+                transaction.commit()
+                future.result(timeout=5)
+        finally:
+            if transaction.is_active:
+                transaction.rollback()
+
+    assert observed is False
+
+
+def test_canvas_provider_failure_keeps_interaction_nonfinal_and_records_gateway_failure(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """A failed provider attempt is durable operational provenance, never a completed Canvas turn."""
+
+    student_id, session_id, runtime_id, _scene_id, interaction_id, engine = _triggering_interaction(
+        postgres_session_factory
+    )
+    provider = _FailingStudioTutorProvider()
+    with pytest.raises(RuntimeError, match="fixture provider failure"):
+        _studio_tutor_service(engine=engine, provider=provider).execute(
+            student_id=student_id,
+            learning_session_id=session_id,
+            runtime_id=runtime_id,
+            interaction_id=interaction_id,
+        )
+
+    assert provider.calls == 1
+    with postgres_session_factory.begin() as session:
+        interaction = session.get(StudioStudentInteraction, interaction_id)
+        execution = session.scalar(
+            select(AIExecution).where(AIExecution.operation_id == interaction_id)
+        )
+        assert interaction is not None and interaction.status == "RUNNING"
+        assert interaction.completed_at is None
+        assert execution is not None
+        assert execution.task == ModelTask.TUTOR.value
+        assert execution.operation_type == "studio_interaction_tutor_turn"
+        assert execution.success is False
+        assert execution.failure_code == "RuntimeError"
+        assert execution.source_message_id is None
+        assert session.scalar(select(func.count()).select_from(LearningMessage)) == 0
+        assert session.scalar(select(func.count()).select_from(CandidateEvent)) == 0
+        assert session.scalar(select(func.count()).select_from(StudioTutorObservation)) == 0
+
+
+def test_canvas_interaction_rejects_a_tutor_v9_result_missing_workspace_intent(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """A missing v9 key is invalid; it is not the explicit nullable WorkspaceIntent value."""
+
+    from services.studio.interactions import StudioInteractionTutorOutputError
+
+    student_id, session_id, runtime_id, _scene_id, interaction_id, engine = _triggering_interaction(
+        postgres_session_factory
+    )
+    with pytest.raises(StudioInteractionTutorOutputError, match="workspace_intent"):
+        _studio_tutor_service(engine=engine, provider=_MissingWorkspaceIntentProvider()).execute(
+            student_id=student_id,
+            learning_session_id=session_id,
+            runtime_id=runtime_id,
+            interaction_id=interaction_id,
+        )
+
+    with postgres_session_factory.begin() as session:
+        interaction = session.get(StudioStudentInteraction, interaction_id)
+        execution = session.scalar(select(AIExecution).where(AIExecution.operation_id == interaction_id))
+        assert interaction is not None and interaction.status == "RUNNING"
+        assert execution is not None and execution.success is True
+        assert session.scalar(select(func.count()).select_from(LearningMessage)) == 0
+
+
+def test_paused_canvas_provider_does_not_hold_the_studio_runtime_lock(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """A record-only operation commits while an admitted Canvas provider call is paused."""
+
+    student_id, session_id, runtime_id, scene_id, interaction_id, engine = _triggering_interaction(
+        postgres_session_factory
+    )
+    provider = _PausedStudioTutorProvider()
+    service = _studio_tutor_service(engine=engine, provider=provider)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(
+            service.execute,
+            student_id=student_id,
+            learning_session_id=session_id,
+            runtime_id=runtime_id,
+            interaction_id=interaction_id,
+        )
+        assert provider.started.wait(timeout=5)
+        with postgres_session_factory.begin() as session:
+            student = session.get(Student, student_id)
+            learning_session = session.get(LearningSession, session_id)
+            scene = session.get(StudioScene, scene_id)
+            assert student is not None and learning_session is not None and scene is not None
+            record_only = StudioStateService(session).append_event(
+                _append_command(
+                    runtime_id,
+                    student,
+                    learning_session,
+                    event_kind="fixture.record",
+                    action_key="fixture.record",
+                    scene_id=scene_id,
+                    base_scene_version=scene.scene_version,
+                    actor=StudioActor.STUDENT,
+                    payload={"value": 7},
+                )
+            )
+            assert record_only.interaction is None
+        provider.release.set()
+        future.result(timeout=5)
+
+    with postgres_session_factory.begin() as session:
+        interaction = session.get(StudioStudentInteraction, interaction_id)
+        assert interaction is not None and interaction.status == "RUNNING"
+        assert session.scalar(select(func.count()).select_from(StudioStudentInteraction)) == 1
+
+
+def test_competing_canvas_execution_requests_admit_one_provider_call(
+    postgres_session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two synchronized database transactions race the real claim; one wins and one is rejected."""
+
+    from services.studio.interactions import StudioInteractionStateError, StudioInteractionTutorService
+
+    student_id, session_id, runtime_id, _scene_id, interaction_id, engine = _triggering_interaction(
+        postgres_session_factory
+    )
+    provider = _RecordingStudioTutorProvider()
+    barrier = Barrier(2)
+    original_claim_and_resolve = StudioInteractionTutorService._claim_and_resolve
+
+    def synchronized_claim_and_resolve(self: object, **kwargs: object):
+        barrier.wait(timeout=5)
+        return original_claim_and_resolve(self, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(StudioInteractionTutorService, "_claim_and_resolve", synchronized_claim_and_resolve)
+
+    def execute_once() -> object:
+        return _studio_tutor_service(engine=engine, provider=provider).execute(
+            student_id=student_id,
+            learning_session_id=session_id,
+            runtime_id=runtime_id,
+            interaction_id=interaction_id,
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(execute_once)
+        second = executor.submit(execute_once)
+        outcomes = [future.exception(timeout=5) for future in (first, second)]
+
+    assert sum(outcome is None for outcome in outcomes) == 1
+    assert sum(isinstance(outcome, StudioInteractionStateError) for outcome in outcomes) == 1
+    assert len(provider.payloads) == 1
+    with postgres_session_factory.begin() as session:
+        assert session.scalar(select(func.count()).select_from(AIExecution)) == 1
 
 
 def test_observation_and_specialist_are_dormant_scoped_persistence_seams(postgres_session_factory: sessionmaker[Session]) -> None:

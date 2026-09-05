@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 from uuid import UUID, uuid4
 
@@ -13,7 +14,16 @@ from sqlalchemy.orm import Session, sessionmaker
 from services.platform.auth import AuthenticatedPrincipal, UserRole
 from services.platform.auth.clerk import get_current_principal
 from services.platform.db.connection import normalize_database_url
-from services.platform.db.models import LearningSession, Student, User
+from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
+from services.platform.db.models import (
+    AIExecution,
+    LearningMessage,
+    LearningSession,
+    StudioStudentInteraction,
+    StudioTutorObservation,
+    Student,
+    User,
+)
 from services.platform.db.session import get_session
 from services.studio.contracts import CreateSceneCommand
 from services.studio.service import StudioStateService
@@ -153,6 +163,8 @@ def test_operation_derives_semantics_from_scene_contract_and_is_idempotent(
         result = client.post(f"/api/v1/student/studio/{runtime_id}/operations", json=payload)
         assert result.status_code == 200
         assert result.json()["replayed"] is False
+        assert result.json()["student_interaction_id"] is None
+        assert result.json()["student_interaction_status"] is None
 
         replay = client.post(f"/api/v1/student/studio/{runtime_id}/operations", json=payload)
         assert replay.status_code == 200
@@ -180,6 +192,239 @@ def test_operation_derives_semantics_from_scene_contract_and_is_idempotent(
             json={**payload, "idempotency_key": "operation-forbidden", "event_kind": "caller.event"},
         )
         assert forbidden.status_code == 422
+    finally:
+        app.dependency_overrides.pop(get_studio_subject_registry, None)
+        _clear_overrides()
+
+
+def test_triggering_operation_returns_the_contract_created_pending_interaction(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """The browser discovers an interaction; it never selects the trigger policy."""
+
+    from apps.api.main import app
+    from apps.api.routes.studio import get_studio_subject_registry
+
+    student_id, learning_session_id = _student_session(postgres_session_factory, subject="studio-triggering-operation")
+    registry = _studio_test_registry()
+    with postgres_session_factory.begin() as session:
+        state = StudioStateService(session, subject_registry=registry)
+        runtime = state.get_or_create_runtime(student_id=student_id, learning_session_id=learning_session_id)
+        scene = state.accept_scene(
+            CreateSceneCommand(
+                student_id=student_id,
+                learning_session_id=learning_session_id,
+                subject_key="MATH",
+                subject_profile_version="fixture-v1",
+                concept_keys=("fixture",),
+                activity_key="generic-workspace",
+                artifact_type="fixture",
+                renderer_key="native-react-svg",
+                renderer_version="1",
+                activity_contract_version="activity-v1",
+                payload_schema_version="scene-v1",
+                seed_payload={"value": 1},
+                accessibility_payload={"summary": "fixture"},
+                locale="en",
+                direction="ltr",
+            )
+        )
+        runtime_id, scene_id, scene_version = runtime.id, scene.id, scene.scene_version
+
+    app.dependency_overrides[get_studio_subject_registry] = lambda: registry
+    client = _client(postgres_session_factory, subject="studio-triggering-operation")
+    payload = {
+        "scene_id": str(scene_id),
+        "base_scene_version": scene_version,
+        "action_key": "fixture.submit",
+        "payload": {"value": 2},
+        "idempotency_key": "operation-submit-1",
+    }
+    try:
+        accepted = client.post(f"/api/v1/student/studio/{runtime_id}/operations", json=payload)
+        assert accepted.status_code == 200
+        body = accepted.json()
+        assert body["student_interaction_id"]
+        assert body["student_interaction_status"] == "PENDING"
+
+        replay = client.post(f"/api/v1/student/studio/{runtime_id}/operations", json=payload)
+        assert replay.status_code == 200
+        assert replay.json()["replayed"] is True
+        assert replay.json()["student_interaction_id"] == body["student_interaction_id"]
+        assert replay.json()["student_interaction_status"] == "PENDING"
+    finally:
+        app.dependency_overrides.pop(get_studio_subject_registry, None)
+        _clear_overrides()
+
+
+def test_canvas_tutor_stream_claims_once_and_persists_no_fake_student_message(
+    postgres_session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The public endpoint only starts a pre-created owned interaction once."""
+
+    from apps.api.main import app
+    from apps.api.routes import student as student_routes
+    from apps.api.routes.studio import get_studio_subject_registry
+    from services.platform.db.models import ModelTask
+
+    class StreamingProvider:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def stream(self, route: ModelRoute, payload: dict[str, object]):  # type: ignore[no-untyped-def]
+            assert route.model == "fixture-tutor"
+            assert "question" not in payload
+            self.calls += 1
+            yield StreamDelta("Canvas ")
+            yield StreamComplete(ModelResult(output={"text": "Tutor reply", "workspace_intent": None}))
+
+    student_id, learning_session_id = _student_session(postgres_session_factory, subject="studio-canvas-stream")
+    registry = _studio_test_registry()
+    with postgres_session_factory.begin() as session:
+        state = StudioStateService(session, subject_registry=registry)
+        runtime = state.get_or_create_runtime(student_id=student_id, learning_session_id=learning_session_id)
+        scene = state.accept_scene(
+            CreateSceneCommand(
+                student_id=student_id, learning_session_id=learning_session_id,
+                subject_key="MATH", subject_profile_version="fixture-v1", concept_keys=("fixture",),
+                activity_key="generic-workspace", artifact_type="fixture", renderer_key="native-react-svg",
+                renderer_version="1", activity_contract_version="activity-v1", payload_schema_version="scene-v1",
+                seed_payload={"value": 1}, accessibility_payload={"summary": "fixture"}, locale="en", direction="ltr",
+            )
+        )
+        runtime_id, scene_id, scene_version = runtime.id, scene.id, scene.scene_version
+    provider = StreamingProvider()
+    monkeypatch.setattr(
+        student_routes,
+        "create_studio_interaction_tutor_gateway",
+        lambda gateway_session: ModelGateway(
+            gateway_session,
+            routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")},
+            providers={"fixture": provider},
+        ),
+    )
+    app.dependency_overrides[get_studio_subject_registry] = lambda: registry
+    client = _client(postgres_session_factory, subject="studio-canvas-stream")
+    try:
+        operation = client.post(
+            f"/api/v1/student/studio/{runtime_id}/operations",
+            json={
+                "scene_id": str(scene_id), "base_scene_version": scene_version,
+                "action_key": "fixture.submit", "payload": {"value": 2}, "idempotency_key": "canvas-stream-1",
+            },
+        )
+        assert operation.status_code == 200
+        interaction_id = operation.json()["student_interaction_id"]
+
+        streamed = client.post(
+            f"/api/v1/student/studio/{runtime_id}/interactions/{interaction_id}/turn/stream"
+        )
+        assert streamed.status_code == 200
+        assert "event: delta" in streamed.text
+        assert "event: turn" in streamed.text
+        assert "interaction_id" not in streamed.text
+        assert provider.calls == 1
+
+        replay = client.post(
+            f"/api/v1/student/studio/{runtime_id}/interactions/{interaction_id}/turn/stream"
+        )
+        assert replay.status_code == 409
+        assert provider.calls == 1
+        with postgres_session_factory.begin() as session:
+            interaction = session.get(StudioStudentInteraction, UUID(interaction_id))
+            assert interaction is not None and interaction.status == "COMPLETED"
+            messages = session.query(LearningMessage).filter(LearningMessage.session_id == learning_session_id).all()
+            assert len(messages) == 1 and messages[0].role == "tutor"
+            assert messages[0].payload["turn_origin"] == "STUDIO_INTERACTION"
+    finally:
+        app.dependency_overrides.pop(get_studio_subject_registry, None)
+        _clear_overrides()
+
+
+def test_canvas_terminal_disconnect_cancels_running_interaction_but_preserves_tutor_truth(
+    postgres_session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Catches a terminal SSE close stranding a persisted Canvas turn in RUNNING."""
+
+    from apps.api.routes import student as student_routes
+    from apps.api.routes.studio import get_studio_subject_registry
+    from services.platform.db.models import ModelTask
+
+    class StreamingProvider:
+        def stream(self, route: ModelRoute, payload: dict[str, object]):  # type: ignore[no-untyped-def]
+            del route, payload
+            yield StreamDelta("Tutor ")
+            yield StreamComplete(ModelResult(output={"text": "Persisted Canvas Tutor reply", "workspace_intent": None}))
+
+    student_id, learning_session_id = _student_session(postgres_session_factory, subject="studio-disconnect")
+    registry = _studio_test_registry()
+    with postgres_session_factory.begin() as session:
+        state = StudioStateService(session, subject_registry=registry)
+        runtime = state.get_or_create_runtime(student_id=student_id, learning_session_id=learning_session_id)
+        scene = state.accept_scene(
+            CreateSceneCommand(
+                student_id=student_id, learning_session_id=learning_session_id,
+                subject_key="MATH", subject_profile_version="fixture-v1", concept_keys=("fixture",),
+                activity_key="generic-workspace", artifact_type="fixture", renderer_key="native-react-svg",
+                renderer_version="1", activity_contract_version="activity-v1", payload_schema_version="scene-v1",
+                seed_payload={"value": 1}, accessibility_payload={"summary": "fixture"}, locale="en", direction="ltr",
+            )
+        )
+        runtime_id, scene_id, scene_version = runtime.id, scene.id, scene.scene_version
+    monkeypatch.setattr(
+        student_routes,
+        "create_studio_interaction_tutor_gateway",
+        lambda gateway_session: ModelGateway(
+            gateway_session,
+            routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")},
+            providers={"fixture": StreamingProvider()},
+        ),
+    )
+    client = _client(postgres_session_factory, subject="studio-disconnect")
+    from apps.api.main import app
+
+    app.dependency_overrides[get_studio_subject_registry] = lambda: registry
+    try:
+        operation = client.post(
+            f"/api/v1/student/studio/{runtime_id}/operations",
+            json={
+                "scene_id": str(scene_id), "base_scene_version": scene_version,
+                "action_key": "fixture.submit", "payload": {"value": 2}, "idempotency_key": "canvas-disconnect-1",
+            },
+        )
+        interaction_id = UUID(operation.json()["student_interaction_id"])
+        principal = AuthenticatedPrincipal(
+            subject="studio-disconnect", role=UserRole.STUDENT, email="studio-disconnect@example.test"
+        )
+        with postgres_session_factory() as route_session:
+            response = student_routes.stream_canvas_interaction_tutor_turn(
+                runtime_id=runtime_id,
+                interaction_id=interaction_id,
+                principal=principal,
+                subject_registry=registry,
+                session=route_session,
+            )
+
+            async def consume_terminal_then_disconnect() -> None:
+                iterator = response.body_iterator
+                assert "event: delta" in str(await anext(iterator))
+                assert "event: turn" in str(await anext(iterator))
+                await iterator.aclose()
+
+            asyncio.run(consume_terminal_then_disconnect())
+        with postgres_session_factory.begin() as session:
+            interaction = session.get(StudioStudentInteraction, interaction_id)
+            observation = session.scalar(
+                session.query(StudioTutorObservation).filter_by(student_interaction_id=interaction_id).statement
+            )
+            assert interaction is not None
+            assert interaction.status == "CANCELLED"
+            assert interaction.tutor_message_id is None
+            assert session.query(LearningMessage).filter_by(session_id=learning_session_id, role="tutor").count() == 1
+            assert session.query(AIExecution).filter_by(operation_id=interaction_id, success=True).count() == 1
+            assert observation is not None and observation.status == "CANCELLED"
+            runtime = session.get(type(runtime), runtime_id)
+            assert runtime is not None and runtime.last_tutor_observation_sequence == 0
     finally:
         app.dependency_overrides.pop(get_studio_subject_registry, None)
         _clear_overrides()

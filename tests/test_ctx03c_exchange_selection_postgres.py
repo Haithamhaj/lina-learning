@@ -15,7 +15,12 @@ from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute
 from services.platform.db.models import AIExecution, LearningExchangeEmbedding, LearningMessage, LearningSegment, LearningSession, ModelTask, Student, User
 from services.retrieval.service import RetrievedBlock, RetrievalService
 from services.tutor.context import ContextBudget, TutorContextBuilder
-from services.tutor.exchanges import complete_exchanges_for_segment, persist_exchange_embedding, serialize_exchange
+from services.tutor.exchanges import (
+    complete_exchanges_for_segment,
+    immediate_exchange_for_current_turn,
+    persist_exchange_embedding,
+    serialize_exchange,
+)
 
 
 pytestmark = pytest.mark.skipif(
@@ -206,6 +211,55 @@ def test_immediate_exchange_preserves_tutor_only_session_history(
     assert context.immediate_exchange.message_ids == (tutor.id,)
     assert context.immediate_exchange.student_content is None
     assert context.immediate_exchange.tutor_content == tutor.content
+
+
+def test_canvas_tutor_continuity_never_pairs_it_with_an_earlier_chat_student(
+    factory: sessionmaker[Session],
+) -> None:
+    """Chat A stays an exact pair while Chat C sees Canvas B as Tutor-only continuity."""
+
+    with factory.begin() as session:
+        learning_session, segment = _session_and_segment(session)
+        base = datetime(2026, 9, 5, tzinfo=UTC)
+        chat_a = _student(session, learning_session, segment, "Chat Student A", base)
+        tutor_a = _tutor_for(session, learning_session, segment, chat_a, "Chat Tutor A", base + timedelta(seconds=1))
+        canvas_execution = AIExecution(
+            task=ModelTask.TUTOR.value,
+            provider="fixture",
+            model="fixture",
+            latency_ms=1,
+            success=True,
+            operation_type="studio_interaction_tutor_turn",
+            learning_session_id=learning_session.id,
+            source_message_id=None,
+        )
+        session.add(canvas_execution)
+        session.flush()
+        canvas_b = LearningMessage(
+            session_id=learning_session.id,
+            role="tutor",
+            content="Canvas Tutor B",
+            ai_execution_id=canvas_execution.id,
+            payload={"turn_origin": "STUDIO_INTERACTION", "student_interaction_id": str(uuid4())},
+            created_at=base + timedelta(seconds=2),
+        )
+        chat_c = _student(session, learning_session, segment, "Chat Student C", base + timedelta(seconds=3))
+        session.add_all([canvas_b, chat_c])
+        session.flush()
+
+        immediate = immediate_exchange_for_current_turn(
+            session,
+            learning_session=learning_session,
+            current_turn=chat_c,
+        )
+        exchanges = complete_exchanges_for_segment(session, learning_session=learning_session, segment=segment)
+
+    assert immediate is not None
+    assert immediate.tutor_message_id == canvas_b.id
+    assert immediate.student_message_id is None
+    assert immediate.student_content is None
+    assert immediate.tutor_content == "Canvas Tutor B"
+    assert [(item.student_message_id, item.tutor_message_id) for item in exchanges] == [(chat_a.id, tutor_a.id)]
 
 
 def test_context_batches_current_question_with_missing_older_exchange_embedding_once(

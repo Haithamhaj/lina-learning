@@ -22,7 +22,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-PROTOCOL-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-02 — DONE / ACCEPTED
-→ STUDIO-RUNTIME-03 — ONLY READY TASK
+→ STUDIO-RUNTIME-03 — DONE / ACCEPTED
 → STUDIO-ACT-MATH-01 — BLOCKED
 → STUDIO-ACT-SCI-01 — BLOCKED
 → STUDIO-ACT-EN-01 — BLOCKED
@@ -76,8 +76,27 @@ recovery, PostgreSQL wake-up seam, and web protocol/controller are implemented.
 current Studio Snapshot and exact unseen Event range, and successful completed
 Tutor consumption advances the durable Studio watermark. `STUDIO-RUNTIME-02`
 is `DONE / ACCEPTED`: its strict WorkspaceIntent and deterministic,
-non-mutating Workspace Router are implemented. `STUDIO-RUNTIME-03` is the only
-ready Studio task; all later Studio tasks remain blocked.
+non-mutating Workspace Router are implemented.
+
+`STUDIO-RUNTIME-03` is `DONE / ACCEPTED`: authenticated Canvas-originated
+Tutor streaming claims a declared StudentInteraction exclusively and uses one
+primary Tutor execution without creating a fake Student LearningMessage. Real
+Tutor messages retain exact Canvas provenance. The same call receives distinct
+current-interaction context and Runtime-01 Workspace Snapshot/unseen-Event
+context; continuity, observation/watermark finalization, causal supersession,
+and post-persistence disconnect cancellation are durable and
+PostgreSQL-authoritative. RECORD_ONLY does not supersede. This reuses the
+shared Safety/Parent Boundary and Runtime-02 parser/Router contracts and makes
+no direct Candidate, Evidence, Personal Facts, or Learning Intelligence
+writes. The accepted mock-provider verification was `168 passed in 10.44s`
+focused and `889 passed, 7 skipped in 41.52s` full; fresh independent review
+reported 0 Critical, 0 Important, and 0 Minor findings. The seven skips are
+the five opt-in cloud-writing S3 tests and two opt-in real-Luna tests, not
+passes. Student-authored free-form language remains Chat-only, including
+Voice-to-STT; Canvas uses bounded semantic controls and may display language.
+
+All later Studio tasks remain blocked. `STUDIO-ACT-MATH-01` is next in the
+approved sequence but is not promoted by this acceptance.
 `CURR-RENDER-MATH-01A` is **BLOCKED UNTIL THE GRADE 5 MATH RENDERER
 IMPLEMENTATION GATE**: it does not block Studio state, protocol, runtime,
 cross-subject foundation activities, or FE-02 Studio integration.

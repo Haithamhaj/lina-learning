@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, and `STUDIO-RUNTIME-02` are `DONE / ACCEPTED`. `STUDIO-RUNTIME-03` is the only ready task; all later Studio tasks remain dependency-ordered and blocked.
+**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, and `STUDIO-RUNTIME-03` are `DONE / ACCEPTED`. All later Studio tasks remain dependency-ordered and blocked pending explicit promotion.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -1370,10 +1370,37 @@ The existing Technology Reuse Catalog contains broad `ADOPT BASELINE` wording fo
 
 #### `STUDIO-RUNTIME-03 — Canvas-Originated Tutor Turns`
 
-**Status:** ONLY READY TASK.
+**Status:** DONE / ACCEPTED.
 **Purpose:** Route declared StudentInteractions to Tutor without fake Chat messages; implement record-only versus triggering behavior and supersession.
 **Verification:** submit/help triggers one Tutor turn; exploration does not; raw interaction persists; stale terminal result rejected.
 **Dependencies:** STUDIO-RUNTIME-01/02.
+
+**Accepted result:** authenticated Canvas-originated Tutor streaming claims a
+StudentInteraction exclusively and invokes one primary Tutor execution. It does
+not create a synthetic Student LearningMessage; persisted Tutor messages retain
+exact Canvas provenance. The current interaction remains distinct from the
+Runtime-01 current Snapshot and exact unseen Event range. Conversation
+continuity, observation/watermark finalization, causal terminal ordering,
+supersession, and cancellation after post-persistence disconnect preserve
+truthful history. RECORD_ONLY actions do not supersede. Shared Safety/Parent
+Boundary and Runtime-02 parser/Router behavior are reused. No direct Canvas
+Candidate, Evidence, Personal Facts, or Learning Intelligence write occurs.
+
+**Accepted evidence:** focused mock-provider regressions `168 passed in
+10.44s`; full isolated mock-provider suite `889 passed, 7 skipped in 41.52s`;
+`alembic check` found no upgrade operations and reported the existing
+`ai_executions` / `learning_messages` FK-cycle warning; fresh independent
+review of the full local Runtime-03 scope reported 0 Critical, 0 Important,
+and 0 Minor findings. The seven skipped tests are five opt-in cloud-writing S3
+integration tests and two opt-in real-Luna segment-review tests; they are not
+passing evidence. This backend acceptance does not prove production frontend
+integration, Activities/Renderers, browser behavior, live-model execution, or
+real Lina daily/longitudinal use.
+
+**Language boundary:** Student-authored free-form language belongs in Chat,
+including Voice-to-STT. Canvas accepts bounded semantic controls and may
+display language; it has no unrestricted language-input channel and no
+SafetyTextProjection.
 
 ### Phase 5 — Cross-subject production activities
 
@@ -1693,12 +1720,13 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-PROTOCOL-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-02 — DONE / ACCEPTED
-→ STUDIO-RUNTIME-03 — ONLY READY TASK
-→ Cross-subject production activities
-→ FE-02-STUDIO-01
-→ CURR-RENDER-MATH-01A — Grade 5 renderer correction gate
-→ Grade 5 renderer tasks
-→ STUDIO-ACCEPT-01
+→ STUDIO-RUNTIME-03 — DONE / ACCEPTED
+→ STUDIO-ACT-MATH-01 — BLOCKED pending explicit promotion
+→ Cross-subject production activities — BLOCKED
+→ FE-02-STUDIO-01 — BLOCKED
+→ CURR-RENDER-MATH-01A — BLOCKED pending Grade 5 renderer correction gate
+→ Grade 5 renderer tasks — BLOCKED
+→ STUDIO-ACCEPT-01 — BLOCKED
 ```
 
 No later task is implicitly authorized by the existence of this sequence.

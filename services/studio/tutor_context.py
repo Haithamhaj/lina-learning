@@ -11,7 +11,14 @@ from sqlalchemy import select
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.orm import Session
 
-from services.platform.db.models import StudioEvent, StudioRuntime, StudioScene, StudioSnapshot, StudioTutorObservation
+from services.platform.db.models import (
+    StudioEvent,
+    StudioRuntime,
+    StudioScene,
+    StudioSnapshot,
+    StudioStudentInteraction,
+    StudioTutorObservation,
+)
 from services.studio.service import StudioStateService, TUTOR_OBSERVATION_FAILURE_CODES
 from services.studio.subjects import production_subject_registry
 from services.studio.subjects.registry import SubjectCapabilityError
@@ -129,6 +136,7 @@ def select_studio_tutor_context(
     bind: Engine | Connection,
     student_id: UUID,
     learning_session_id: UUID,
+    student_interaction_id: UUID | None = None,
 ) -> StudioTutorContextSelection | None:
     """Capture Snapshot and unseen Events under a brief Runtime lock, then release it."""
 
@@ -145,6 +153,17 @@ def select_studio_tutor_context(
             ).scalar_one_or_none()
             if runtime is None:
                 return None
+            if student_interaction_id is not None:
+                interaction = selection_session.execute(
+                    select(StudioStudentInteraction).where(
+                        StudioStudentInteraction.id == student_interaction_id,
+                        StudioStudentInteraction.studio_runtime_id == runtime.id,
+                        StudioStudentInteraction.student_id == student_id,
+                        StudioStudentInteraction.learning_session_id == learning_session_id,
+                    )
+                ).scalar_one_or_none()
+                if interaction is None:
+                    raise RuntimeError("Studio Tutor observation interaction is outside the locked Runtime.")
             snapshot = selection_session.execute(
                 select(StudioSnapshot).where(
                     StudioSnapshot.studio_runtime_id == runtime.id,
@@ -197,6 +216,7 @@ def select_studio_tutor_context(
                     student_id=student_id,
                     from_event_sequence=previous_watermark + 1,
                     through_event_sequence=through_sequence,
+                    student_interaction_id=student_interaction_id,
                     status="SELECTED",
                 )
                 selection_session.add(observation)

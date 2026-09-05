@@ -18,6 +18,7 @@ PF-02 Personal Facts Pipeline       DONE / ACCEPTED
 PF-02A Existing-Fact-Aware Reuse    DONE / ACCEPTED
 PF-03 Tutor Personal Context        ACCEPTED / COMPLETED
 FE-01 Visual System + Reuse Record  ACCEPTED / COMPLETED
+STUDIO-RUNTIME-03 Canvas Tutor Turns DONE / ACCEPTED
 ```
 
 Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical ledger.
@@ -43,8 +44,8 @@ tree contains accepted production Studio State and Subject Capability
 foundations at Alembic head `c7d8e9f0a1b2`: code-owned MATH, SCIENCE, ENGLISH,
 and ARABIC profiles; exact-version contracts; persisted Subject profile and
 Action identity; typed validator/reducer dispatch; and bounded validation
-results. No Student-facing Studio Activity, Tutor/Studio orchestration,
-production renderer, or FE-02 production integration exists.
+results. No Student-facing Studio Activity, production renderer, or FE-02
+production integration exists.
 
 `STUDIO-PROTOCOL-01` and `STUDIO-RUNTIME-01` are `DONE / ACCEPTED`.
 The existing primary Tutor call now receives the current Studio Snapshot and
@@ -55,10 +56,18 @@ deferred because no provider-neutral Gateway tool-execution contract exists.
 `STUDIO-RUNTIME-02` is `DONE / ACCEPTED`: the same primary Tutor result may
 contain a strict bounded WorkspaceIntent, and a deterministic Studio-owned
 Router records a hidden non-mutating active-Scene/source/annotation/known-
-capability/custom-compose-eligibility decision. Production Activities,
-production Renderers, Canvas Specialist execution, Canvas-originated Tutor
-turns, and FE-02 production integration are not implemented. `STUDIO-RUNTIME-03`
-is the only ready task; all later Studio tasks remain blocked.
+capability/custom-compose-eligibility decision. `STUDIO-RUNTIME-03` is
+`DONE / ACCEPTED`: authenticated Canvas-originated Tutor streaming has one
+primary execution per exclusive StudentInteraction claim, real Tutor-message
+persistence with exact Canvas provenance, distinct interaction plus Workspace
+context, causal supersession, and cancellation after an interrupted
+post-persistence stream lifecycle. It makes no direct Candidate, Evidence,
+Personal Facts, or Learning Intelligence writes. Production Activities,
+production Renderers, Canvas Specialist execution, and FE-02 production
+integration remain unimplemented. Student-authored free-form language belongs
+in Chat, including Voice-to-STT; Canvas accepts bounded semantic controls and
+may display language, without SafetyTextProjection or unrestricted Canvas
+language input. All later Studio tasks remain blocked.
 `CURR-RENDER-MATH-01A` remains blocked until the Grade 5 Math renderer
 implementation gate. Real Lina longitudinal history has not started.
 
@@ -92,6 +101,14 @@ implementation gate. Real Lina longitudinal history has not started.
   The earlier `FE-02 is BLOCKED / NOT STARTED` status is preserved here as
   FE-01 historical context; it is superseded for current execution by the
   approved Studio track and its protected prototype boundary.
+- STUDIO-RUNTIME-03 is DONE / ACCEPTED on the current accepted closure tree:
+  focused mock-provider verification was `168 passed in 10.44s`; the full
+  isolated suite was `889 passed, 7 skipped in 41.52s`; and a fresh independent
+  review reported 0 Critical, 0 Important, and 0 Minor findings. The seven
+  skips were five opt-in cloud-writing S3 tests and two opt-in real-Luna tests,
+  not passes. No production frontend integration, Activity/Renderer,
+  browser-use, live-model path verification, or real Lina daily/longitudinal
+  use is implied by this backend acceptance.
 
 ---
 
@@ -163,7 +180,7 @@ Protected invariants:
 
 ## Active risks
 
-- **STUDIO-R1 — Studio state foundation is accepted; protocol, Tutor integration, subject capabilities, and frontend remain blocked — Criticality 4**
+- **STUDIO-R1 — Studio backend foundations through Runtime-03 are accepted; production Activities/Renderers, frontend integration, and later Studio tasks remain blocked — Criticality 4**
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**
 - **VISION-R1 — Durable Student Asset Hosting Required Before Daily Vision — Criticality 4**
 - **MATH-01 — Structured Math Readability — Criticality 4 / independent**
@@ -193,29 +210,36 @@ or Personal Facts behavior changed.
 
 ## Latest accepted task
 
-### FE-01 — Visual System + Library Capability + Reuse Decision Record
+### STUDIO-RUNTIME-03 — Canvas-Originated Tutor Turns
 
-**Status:** ACCEPTED / COMPLETED — DOCUMENTATION ONLY
-**Dependency:** PF-03 accepted
-**Goal:** establish the code-grounded Visual System + Library Capability +
-Learning Chat + Adaptive Learning Workspace record that constrains FE-02
-without implementing UI.
+**Status:** DONE / ACCEPTED — BACKEND ONLY
 
-**Acceptance:** Documentation commit
-`8601ed5f485ff29fdb467db7abfb8f7ad44711b0` accepted for learners roughly
-10–18, with Lina as the first private daily-use Student. No UI code,
-dependencies, tests, runtime behavior, or PF-03 behavior changed.
+**Acceptance:** authenticated Canvas-originated Tutor streaming uses an
+exclusive StudentInteraction claim and one primary Tutor execution; it does
+not synthesize a Student LearningMessage. Persisted Tutor messages retain
+exact Canvas provenance. Runtime-01 Workspace context and current-interaction
+context remain distinct; the observation/watermark lifecycle, causal terminal
+ordering and supersession, RECORD_ONLY behavior, and interrupted-stream
+cancellation preserve truthful durable history. Shared Safety/Parent Boundary
+and Runtime-02 parser/Router contracts are reused. Direct Canvas Candidate,
+Evidence, Personal Facts, and Learning Intelligence writes remain absent.
 
-**Boundary:** preserve the local Student session/SSE lifecycle, shadcn/Tailwind
-baseline, safety, Tutor, Personal Facts/PF-03, and all backend authorities. No
-UI code, dependencies, Voice, Vision, attachments, artifacts, or FE-02 work.
+**Evidence:** focused `168 passed in 10.44s`; isolated `889 passed, 7 skipped
+in 41.52s`; Alembic found no new upgrade operations (with the existing
+`ai_executions` / `learning_messages` FK-cycle warning); and fresh independent
+review found 0 Critical / 0 Important / 0 Minor. The skipped tests are opt-in
+external S3 or real-Luna checks, not accepted as passing runtime evidence.
+
+**Boundary:** this does not verify production frontend integration,
+Activities/Renderers, browser behavior, the live-model Canvas path, or real
+Lina daily/longitudinal use.
 
 ---
 
 ## Next recommended action
 
-`STUDIO-RUNTIME-03` is the only ready task and has not started. Keep frontend
-Studio integration, renderers, curriculum, Canvas-originated Tutor execution,
+Verify Runtime-03 closure/remote parity, then obtain explicit promotion of
+`STUDIO-ACT-MATH-01`. Keep frontend Studio integration, renderers, curriculum,
 and all later Studio work blocked until separately authorized.
 
 ---

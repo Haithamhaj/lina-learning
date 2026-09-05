@@ -76,8 +76,45 @@ Scene suitability before authorized source/annotation, known-capability, and
 CUSTOM_COMPOSE-eligibility routing. It adds no production Activities or
 Renderers and no Canvas-originated Tutor turns.
 
-`STUDIO-RUNTIME-03` is the only ready Studio task. All later Studio work remains
-blocked.
+## STUDIO-RUNTIME-03 — Canvas-Originated Tutor Turns
+**Status:** DONE / ACCEPTED
+**Accepted result:** authenticated Canvas-originated Tutor streaming through
+one primary Tutor execution per exclusive StudentInteraction claim; no fake
+Student LearningMessage; real Tutor-message persistence with exact Canvas
+provenance; distinct current-interaction and Runtime-01 Workspace context;
+provenance-aware continuity; observation/watermark lifecycle; causal terminal
+ordering and supersession; record-only operations do not supersede; and
+post-persistence stream-disconnect cancellation preserves durable Tutor and
+execution truth. It reuses the shared Safety/Parent Boundary and Runtime-02
+parser/Router contracts and writes no Canvas Candidate, Evidence, Personal
+Fact, or Learning Intelligence data.
+
+**Accepted verification:** closure regressions
+`test_canvas_stream_persists_one_real_tutor_message_then_finalizes`,
+`test_canvas_terminal_waits_on_learning_session_before_locking_runtime`, and
+`test_canvas_terminal_disconnect_cancels_running_interaction_but_preserves_tutor_truth`
+proved the three prior Critical corrections. The focused PostgreSQL/runtime
+suite was `168 passed in 10.44s`; the isolated mock-provider Python suite was
+`889 passed, 7 skipped in 41.52s`; `alembic check` found no new upgrade
+operations (with the existing `ai_executions` / `learning_messages` FK-cycle
+warning); and staged and unstaged diff checks passed. Fresh independent review
+of the full local scope, including untracked `services/studio/interactions.py`,
+reported 0 Critical, 0 Important, and 0 Minor findings. The seven skips were
+intentional and not treated as passes: cloud-write opt-in S3 tests
+`test_real_s3_round_trip_and_private_access`,
+`test_real_s3_collision_protection_preserves_original`,
+`test_real_s3_hmac_rejects_out_of_band_metadata_change`,
+`test_real_s3_delete_removes_object`, and
+`test_real_s3_secret_rotation_paginates_and_resumes`; plus the opt-in
+real-Luna tests `test_real_luna_segment_reviewer_representative_cases` and
+`test_real_luna_primary_tutor_call_keeps_provisional_subject_optional_and_single`.
+
+Student-authored free-form language belongs in Chat, including Voice-to-STT.
+Canvas accepts bounded semantic controls and may display language; it has no
+unrestricted language-input channel or SafetyTextProjection.
+
+All later Studio tasks remain blocked. `STUDIO-ACT-MATH-01` is next in the
+approved sequence but requires explicit promotion before any work begins.
 
 ---
 

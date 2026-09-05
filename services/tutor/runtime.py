@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
 import json
@@ -32,6 +32,7 @@ from services.studio.tutor_context import (
     mark_studio_tutor_observation_failed,
     select_studio_tutor_context,
 )
+from services.studio.interactions import StudioInteractionService
 from services.studio.router import (
     ActiveSceneCapability,
     WorkspaceAuthorityContext,
@@ -367,6 +368,7 @@ class TutorRuntime:
         suggested_action_source_tutor_message_id: UUID | None = None,
         guided_check_id: UUID | None = None,
         guided_check_source_tutor_message_id: UUID | None = None,
+        before_model_stream: Callable[[], None] | None = None,
     ) -> Iterator[TutorTextDelta | TutorTurn]:
         content = question.strip()
         if not content:
@@ -432,6 +434,16 @@ class TutorRuntime:
                 learning_session_id=learning_session.id,
             )
         )
+        # Canvas turns never invent Student prose.  Once the normal Chat
+        # Workspace selection has completed (and released its independent
+        # Runtime lock), this durable Student input becomes the causal
+        # successor of any running Canvas interaction.  Keeping this after
+        # selection avoids lock inversion with Runtime-01's short selector.
+        if callable(getattr(self._session, "execute", None)):
+            StudioInteractionService(self._session).supersede_running_for_new_chat_student_input(
+                student_id=learning_session.student_id,
+                learning_session_id=learning_session.id,
+            )
         context_arguments = {
             "learning_session": learning_session,
             "question": content,
@@ -490,6 +502,13 @@ class TutorRuntime:
                 source_message_id=student_message.id,
             ),
         )
+        # The authenticated API commits the durable Student-input admission at
+        # this precise boundary.  ModelGateway.stream is lazy, so no provider
+        # transport has begun and the LearningSession ordering lock is released
+        # before any slow network/model work.  Direct runtime callers retain
+        # their existing transaction ownership by omitting the callback.
+        if before_model_stream is not None:
+            before_model_stream()
         result: ModelResult | None = None
         buffered_deltas: list[str] = []
         parent_decision: ParentBoundaryDecision | None = None
@@ -658,6 +677,15 @@ class TutorRuntime:
         parent_resolution: ParentBoundaryResolution | None = None,
         capacity_lineage: TutorContextCapacityLineage | None = None,
     ) -> TutorTurn:
+        if (
+            context.studio_workspace is not None
+            and callable(getattr(self._session, "execute", None))
+        ):
+            StudioInteractionService(self._session).require_chat_terminal_current(
+                student_id=learning_session.student_id,
+                learning_session_id=learning_session.id,
+                through_event_sequence=context.studio_workspace.through_sequence,
+            )
         if parent_resolution is None:
             parent_decision = parse_parent_boundary_decision(result.output.get("parent_boundary"))
             parent_resolution = self._resolve_parent_boundary(

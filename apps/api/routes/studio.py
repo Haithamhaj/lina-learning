@@ -44,6 +44,8 @@ class StudioOperationResponse(BaseModel):
     event_id: UUID
     sequence: int
     replayed: bool
+    student_interaction_id: UUID | None
+    student_interaction_status: str | None
 
 
 def _student_id(session: Session, principal: AuthenticatedPrincipal) -> UUID:
@@ -126,6 +128,8 @@ def submit_studio_operation(
             event_id=result.event.id,
             sequence=result.event.sequence,
             replayed=result.replayed,
+            student_interaction_id=None if result.interaction is None else result.interaction.id,
+            student_interaction_status=None if result.interaction is None else result.interaction.status,
         )
         # Do not claim acceptance before Event/Snapshot/interaction commit.
         session.commit()

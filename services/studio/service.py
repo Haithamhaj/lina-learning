@@ -34,6 +34,7 @@ from services.studio.contracts import (
     CreateTutorObservationCommand,
     StudioEventResultStatus,
 )
+from services.studio.interactions import StudioInteractionService
 from services.studio.reducer import (
     CORE_EVENT_SCHEMA_VERSION,
     SNAPSHOT_SCHEMA_VERSION,
@@ -299,6 +300,10 @@ class StudioStateService:
             and action.interaction_policy.value == "TUTOR_TRIGGERING"
             and command.actor.value == "STUDENT"
         ):
+            StudioInteractionService(self.session).supersede_running_for_new_student_interaction(
+                student_id=runtime.student_id,
+                runtime_id=runtime.id,
+            )
             interaction = StudioStudentInteraction(
                 studio_runtime_id=runtime.id,
                 student_id=runtime.student_id,
