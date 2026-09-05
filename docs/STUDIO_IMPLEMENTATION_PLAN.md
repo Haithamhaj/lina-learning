@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, and `STUDIO-ACT-EN-01` are `DONE / ACCEPTED`. `STUDIO-ACT-AR-01`, `FE-02-STUDIO-01`, and every later Studio task remain dependency-ordered and blocked pending explicit Product Owner promotion.
+**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, and `STUDIO-ACT-EN-01` are `DONE / ACCEPTED`. `STUDIO-ACT-AR-01` is **DEFERRED — POST-FE-02 PRODUCT OWNER RE-EVALUATION**. `FE-02-STUDIO-01` is **READY — the only ready Studio task**. Every other later Studio task remains blocked, including `STUDIO-ACCEPT-01`.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -1527,9 +1527,23 @@ language channel; free-form language remains Chat or Voice-to-STT-to-Chat.
 
 #### `STUDIO-ACT-AR-01 — Arabic Sentence Annotation/Ordering`
 
-**Status:** BLOCKED pending explicit promotion.
+**Status:** DEFERRED — POST-FE-02 PRODUCT OWNER RE-EVALUATION.
 
-Production RTL academic-subject fixture with stable span/token identity.
+Production RTL academic-subject fixture with stable span/token identity. This
+task is neither accepted nor cancelled. English has already proved a bounded
+text-oriented Workspace, stable opaque token identity, record-only text-token
+manipulation, submit-triggered Runtime-03 continuation, English LTR inside
+Arabic RTL surrounding UI, mixed-direction keyboard/focus behavior, semantic
+mouse/touch/keyboard equivalence, and no free-form Canvas language channel.
+Arabic still has incremental value for Arabic as the academic subject, Arabic
+token/span identity inside an RTL academic lane, and Arabic-specific
+annotation/ordering semantics. That incremental proof is deliberately
+postponed until after real FE-02 integration.
+
+After FE-02 acceptance, the Product Owner must decide whether to implement
+Arabic, replace its proof with an explicitly approved alternative, or revise
+the final acceptance matrix. This deferral does not remove Arabic from the
+final acceptance requirement.
 
 Each task verifies accessibility, touch, keyboard, locale, semantic events, snapshot rebuild, validation, Tutor continuation, and no false Evidence.
 
@@ -1537,12 +1551,31 @@ Each task verifies accessibility, touch, keyboard, locale, semantic events, snap
 
 #### `FE-02-STUDIO-01 — Connect Real Studio to Daily Student App`
 
-**Status:** BLOCKED pending explicit promotion.
+**Status:** READY — ONLY READY STUDIO TASK.
 
-**Keep:** greenfield route, Chat/Workspace layout, stream controller patterns, responsive shell.
-**Replace:** prose/equation parsing, message-derived Canvas, duplicated placeholder cards, browser-only state.
-**Add:** Studio controller, snapshot load, feed resume, active-scene renderer host, optimistic operations, pending/error/reconnect states, cross-subject activity rendering.
-**Verification:** authenticated visual flows for empty, active, streaming, reconnect, error, RTL/LTR, narrow layout, keyboard.
+**Keep:** greenfield route, Chat/Workspace layout, stream controller patterns,
+responsive shell, and the existing Tutor/Safety/session authority.
+**Replace:** prototype prose/equation parsing, message-derived Canvas,
+duplicated placeholder cards, and browser-only Studio truth.
+**Add:** the existing project-owned Studio controller at the Daily App,
+initial Snapshot/load/resume behavior, an exact-contract active-Scene Renderer
+Host for accepted Math/Science/English Activities, optimistic-operation
+presentation, pending/error/reconnect states, and Runtime-03 continuation
+composition.
+**Boundary:** `/student/daily` is the production target. Do not import, wrap,
+extract from, restyle, modify, or route through `/student` or
+`StudentMathSession`; do not merge the preserved prototype. Browser state is
+presentation/optimistic only. Tutor SSE remains Chat authority and the
+dedicated Studio feed remains Workspace authority.
+**Execution record:** the current detailed executable task, exact reusable
+backend/web seams, pre-code checks, non-scope, and required authenticated
+verification are in `project-state/DAILY_USE_RELEASE_TASKS.md` under this task.
+**Verification:** authenticated production-intent Chat-only, Math, Science,
+English, streaming/concurrency, reconnect/recovery, server-rejection,
+desktop/narrow, RTL/LTR/mixed-direction, keyboard/focus, reduced-motion, and
+error flows; focused integration tests, web typecheck/build, relevant Python
+regressions, proportional full-suite regression, diff checks, and fresh
+independent review. Isolated review mounts are insufficient.
 
 ### Phase 7 — Grade 5 Math renderer batch
 
@@ -1572,7 +1605,13 @@ Each renderer receives its own independently reviewable task and validator suite
 
 #### `STUDIO-ACCEPT-01 — Full-System Studio Acceptance`
 
+**Status:** BLOCKED.
+
 Run the complete acceptance matrix in Section 22 on the Daily-Use runtime and a disposable test database. Do not create real Lina history until Product Owner authorizes a controlled real-use step.
+
+It remains blocked until FE-02 integration is implemented and accepted and the
+Product Owner has re-evaluated the deferred Arabic proof. Do not remove Arabic
+from Section 22.7 or waive its acceptance requirement in this promotion.
 
 ### Phase 9 — Optional specialist and reuse evaluations
 
@@ -1793,8 +1832,10 @@ accepted. The durable Studio state foundation is implemented at Alembic head
 
 ```text
 `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, and `STUDIO-ACT-EN-01` are DONE /
-ACCEPTED. `STUDIO-ACT-AR-01`, `FE-02-STUDIO-01`, and every later Studio task
-remain BLOCKED pending explicit Product Owner promotion.
+ACCEPTED. `STUDIO-ACT-AR-01` is **DEFERRED — POST-FE-02 PRODUCT OWNER
+RE-EVALUATION**; it remains a final-acceptance requirement. `FE-02-STUDIO-01`
+is **READY — the only ready Studio task**. `STUDIO-ACCEPT-01` and every other
+later Studio task remain BLOCKED.
 ```
 
 ### 27.2 Completed governance outcome
@@ -1837,8 +1878,8 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-ACT-MATH-01 — DONE / ACCEPTED
 → STUDIO-ACT-SCI-01 — DONE / ACCEPTED
 → STUDIO-ACT-EN-01 — DONE / ACCEPTED
-→ STUDIO-ACT-AR-01 — BLOCKED
-→ FE-02-STUDIO-01 — BLOCKED
+→ STUDIO-ACT-AR-01 — DEFERRED — POST-FE-02 PRODUCT OWNER RE-EVALUATION
+→ FE-02-STUDIO-01 — READY — ONLY READY STUDIO TASK
 → CURR-RENDER-MATH-01A — BLOCKED pending Grade 5 renderer correction gate
 → Grade 5 renderer tasks — BLOCKED
 → STUDIO-ACCEPT-01 — BLOCKED

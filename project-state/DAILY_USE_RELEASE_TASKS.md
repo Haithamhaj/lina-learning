@@ -26,8 +26,8 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-ACT-MATH-01 — DONE / ACCEPTED
 → STUDIO-ACT-SCI-01 — DONE / ACCEPTED
 → STUDIO-ACT-EN-01 — DONE / ACCEPTED
-→ STUDIO-ACT-AR-01 — BLOCKED
-→ FE-02-STUDIO-01 — BLOCKED
+→ STUDIO-ACT-AR-01 — DEFERRED — POST-FE-02 PRODUCT OWNER RE-EVALUATION
+→ FE-02-STUDIO-01 — READY — ONLY READY STUDIO TASK
 → CURR-RENDER-MATH-01A — BLOCKED UNTIL THE GRADE 5 MATH RENDERER IMPLEMENTATION GATE
 → independently reviewed Grade 5 renderer tasks — BLOCKED
 → STUDIO-ACCEPT-01 — BLOCKED
@@ -96,8 +96,14 @@ passes. Student-authored free-form language remains Chat-only, including
 Voice-to-STT; Canvas uses bounded semantic controls and may display language.
 
 `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, and `STUDIO-ACT-EN-01` are
-`DONE / ACCEPTED`. `STUDIO-ACT-AR-01`, `FE-02-STUDIO-01`, and all later Studio
-tasks remain blocked pending explicit Product Owner promotion.
+`DONE / ACCEPTED`. `STUDIO-ACT-AR-01` is **DEFERRED — POST-FE-02 PRODUCT
+OWNER RE-EVALUATION**; it is neither accepted nor cancelled. English supplied
+the bounded text-oriented/mixed-direction foundation proof, while Arabic still
+has incremental academic-subject, RTL token/span identity, and Arabic-specific
+annotation/ordering value. `FE-02-STUDIO-01` is **READY — the only ready Studio
+task**. `STUDIO-ACCEPT-01` remains blocked; FE-02 acceptance and the later
+Product Owner Arabic-proof decision are both still required. All other later
+Studio tasks remain blocked.
 `CURR-RENDER-MATH-01A` is **BLOCKED UNTIL THE GRADE 5 MATH RENDERER
 IMPLEMENTATION GATE**: it does not block Studio state, protocol, runtime,
 cross-subject foundation activities, or FE-02 Studio integration.
@@ -562,11 +568,226 @@ activation integration, PostgreSQL tests, renderer/model/component/review-mount
 source, implementation record, reproducible runner/README, and acceptance
 governance. Do not commit generated screenshots, traces, or `results.json`.
 
-**Next Product Owner gate:** evaluate whether `STUDIO-ACT-AR-01` provides
-material architectural proof beyond this accepted English text-oriented
-Workspace and mixed RTL/LTR evidence, or whether the sequence should proceed
-directly to `FE-02-STUDIO-01`. Neither Arabic nor FE-02 is promoted by this
-acceptance; both remain `BLOCKED`.
+**Sequence decision — 2026-09-06:** `STUDIO-ACT-AR-01` is deferred until after
+real FE-02 integration. It remains neither accepted nor cancelled. English has
+already proved a bounded text-oriented Workspace; stable opaque token identity;
+record-only text-token manipulation; submit-triggered Runtime-03 continuation;
+English academic LTR inside Arabic RTL surrounding UI; mixed-direction
+keyboard/focus behavior; mouse, emulated touch, and keyboard semantic
+equivalence; and no free-form Canvas language channel. Arabic remains valuable
+for Arabic as the academic subject, Arabic token/span identity inside an RTL
+academic lane, and Arabic-specific annotation/ordering semantics. After FE-02,
+the Product Owner must choose to implement Arabic, approve an explicit
+alternative proof, or revise the final acceptance matrix. Do not remove or
+waive Arabic from final Studio acceptance in the meantime.
+
+---
+
+## STUDIO-ACT-AR-01 — Arabic Sentence Annotation/Ordering
+
+**Status:** DEFERRED — POST-FE-02 PRODUCT OWNER RE-EVALUATION
+
+**Retained purpose and scope:** prove Arabic as the academic subject through a
+bounded RTL academic fixture with stable span/token identity, typed
+annotation/ordering semantics, accessible focus, and the same Studio Core,
+Event/Snapshot, feed, validation, and Runtime-03 boundaries. It remains a
+future acceptance requirement; this deferral does not weaken its scope or mark
+English as a replacement for Arabic academic semantics.
+
+**Reason for deferral:** the accepted English activity already proves the
+shared text-oriented Workspace and mixed-direction foundation listed above.
+Arabic's incremental proof is deliberately postponed until real FE-02 product
+integration has exposed which Arabic-specific evidence remains material.
+
+**Post-FE-02 decision gate:** only the Product Owner may decide whether to
+implement this task, replace its proof with an explicitly approved alternative,
+or revise the final Studio acceptance matrix. Until then, it is not executable.
+
+---
+
+## FE-02-STUDIO-01 — Connect Real Studio to Daily Student App
+
+**Status:** READY — ONLY READY STUDIO TASK
+
+**Purpose:** deliver the smallest complete production integration slice that
+connects accepted Studio Core and the accepted Math, Science, and English
+Activities to the real greenfield Daily Student App at `/student/daily`. This
+is real product integration, not another isolated activity review mount.
+
+**Dependencies and retained boundaries:** `STUDIO-RUNTIME-03`,
+`STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, and `STUDIO-ACT-EN-01` are
+`DONE / ACCEPTED`. `STUDIO-ACT-AR-01` is deferred and does not block this
+integration. `CURR-RENDER-MATH-01A` remains blocked and does not block this
+integration. The current `/student` page and `StudentMathSession` are protected
+legacy/experimental regression assets: do not import, wrap, extract from,
+restyle, modify, or route through them. The preserved FE-02 prototype is
+reference evidence only; do not merge it or make it production architecture.
+
+### Required production outputs
+
+1. **Greenfield Daily Student App.** Create/complete only `/student/daily` as
+   the production target: Learning Chat plus a conditional Adaptive Learning
+   Workspace. Chat occupies the available width when no actual active Studio
+   Scene exists. Workspace appears only for an active real Scene; it never
+   renders a permanent empty panel, fake capability, or placeholder card.
+2. **Production Studio controller.** Connect the existing web Studio contracts
+   and controller to authenticated runtime/session acquisition, initial
+   Snapshot load, active-Scene presentation, typed semantic operations,
+   dedicated Studio feed, reconnect/resume, and server-rejection
+   reconciliation. Browser state is presentation/optimistic state only; the
+   durable server Snapshot/Event history remains authoritative.
+3. **Application-owned renderer host.** Dispatch only registered, exact
+   Activity/Renderer contracts. Support the accepted Make-Ten, Science Process
+   Sequence, and English Sentence Ordering activities. Do not parse activity
+   prose, infer renderers from Tutor text, or create a generic arbitrary
+   artifact executor.
+4. **Tutor/Workspace composition.** Keep existing Tutor SSE as conversational
+   authority and the dedicated Studio feed as Workspace-state authority. Reuse
+   Runtime-03 for Canvas-originated continuation; do not create a second Tutor
+   or mix independent Studio lifecycle into Tutor delta text.
+5. **Real lifecycle presentation.** Cover Chat-only; active Workspace open;
+   interaction; optimistic pending; accepted update; stale/rejected
+   reconciliation; Tutor streaming while Studio follows accepted concurrency
+   rules; reconnect/feed resume; Scene/activity replacement; renderer/error
+   fallback; and close/empty Workspace where current contracts support it.
+   Do not simulate future functionality.
+
+### Confirmed reusable seams and exact version mapping
+
+**Backend/server authority to reuse:**
+
+- `apps/api/routes/studio.py`: authenticated Student-scoped runtime open,
+  Snapshot, typed operation, and SSE feed routes;
+  `services/studio/protocol.py`: `StudioProtocolService`, bounded protocol
+  frames, cursor validation, and server rejection contracts;
+  `services/studio/service.py`, `services/studio/reducer.py`, and
+  `services/studio/feed.py`: durable Event/Snapshot authority, reconstruction,
+  and sequenced resumable feed;
+- `services/studio/activity_activation.py` plus its three exact adapters, and
+  `services/studio/subjects/`: existing bounded activity activation and
+  immutable Subject Capability Registry; do not add an activation router;
+- `apps/api/routes/student.py` and `services/studio/interactions.py`: existing
+  Student session/auth/Safety/Tutor authority, normal Tutor stream, and
+  Runtime-03 Canvas-interaction stream/provenance/supersession lifecycle.
+
+**Web authority to reuse:**
+
+- `apps/web/lib/studio/contracts.ts`, `controller.ts`, and `sse.ts`: the
+  project-owned protocol parser, authenticated command client, cursor/feed
+  behavior, and SSE parser; do not create a second Studio client, event
+  reducer, or SSE abstraction without demonstrated need;
+- `apps/web/lib/tutor-stream-turn-protocol.ts` and
+  `tutor-stream-lifecycle-trace.ts`, plus the existing Student API contract:
+  preserve Tutor provisional `delta`, terminal `turn`, rollback, Safety/error,
+  and content-free lifecycle behavior without importing legacy presentation;
+- `apps/web/components/studio/*` and `apps/web/lib/studio/*` below: reuse the
+  accepted renderer components and state/operation readers, but never the
+  review-mount-only `applyMock*Operation` functions as production authority.
+
+| Subject/profile | Exact activity/renderer contract | Reuse in Renderer Host |
+| --- | --- | --- |
+| `MATH / subject-profile-v2` | `ten_frame_group_transfer / ten-frame-group-transfer-activity-v1`; `ten-frame-group-transfer / ten-frame-group-transfer-renderer-v1` | `TenFrameGroupTransfer`, `readMakeTenState`, and typed operation builders. |
+| `SCIENCE / subject-profile-v2` | `process_sequence_workspace / process-sequence-workspace-activity-v1`; `process-sequence-workspace / process-sequence-workspace-renderer-v1` | `ProcessSequenceWorkspace`, `readProcessSequenceState`, and typed operation builders. |
+| `ENGLISH / subject-profile-v2` | `sentence_ordering_workspace / sentence-ordering-workspace-activity-v1`; `sentence-ordering-workspace / sentence-ordering-workspace-renderer-v1` | `SentenceOrderingWorkspace`, `readSentenceOrderingState`, and typed operation builders. |
+
+### Required implementation checks before code
+
+Record the resolved result for each item in the implementation change/review;
+these are code-grounded checks, not Product Owner questions about internal
+function names:
+
+- The exact greenfield `/student/daily` baseline. At this promotion it is not
+  tracked on `codex/ctx-03`; the prototype branch is archival reference only.
+- The exact authenticated Chat transport/session/opening seam, including how
+  the new route uses the existing Student session and Tutor SSE contract
+  without importing `StudentMathSession` or creating another Chat runtime.
+- Studio runtime acquisition from that authenticated LearningSession, initial
+  Snapshot load, active Scene selection, and Studio SSE `after_sequence` /
+  `Last-Event-ID` resume semantics.
+- The renderer-host contract and exact persisted profile/activity/renderer
+  identity supplied to it. The current public Snapshot frame exposes scene,
+  active subject/activity, and state but not the full profile/activity/renderer
+  version tuple; resolve a server-authoritative exact-identity path before
+  dispatch. Do not infer a latest version or add a client-only registry guess.
+- The mapping above from each accepted exact Activity/Renderer to its component,
+  state reader, typed operations, fallback, locale, and direction behavior.
+- Ownership of optimistic projections, operation idempotency, server conflict
+  reconciliation, feed replay idempotency, and the prohibition on
+  activity-specific React persistence or `applyMock*Operation` truth.
+- Tutor-stream versus Studio-feed concurrency; record-only behavior during a
+  Tutor stream; one and only one Runtime-03 continuation for a
+  Tutor-triggering Activity action; superseded/cancelled provisional state.
+- Workspace open, close, replacement, reconnect, error/fallback, narrow/mobile
+  composition, keyboard/focus transition, reduced motion, and Arabic RTL /
+  English LTR / mixed-direction behavior.
+
+If a required safe contract extension or an unresolved lifecycle behavior
+requires a genuine Product decision, surface it before inventing behavior.
+
+### Protected product behavior
+
+- One Student-facing Tutor; no fake Student messages; free-form Student
+  language remains Chat or Voice-to-STT-to-Chat.
+- Canvas is bounded semantic interaction only: no direct Candidate, Evidence,
+  Personal Facts, Current State, Pattern, or Learning Intelligence writes; no
+  extra Canvas model call for known activities.
+- Server-owned durable state; Student isolation; Safety/Parent Boundaries;
+  exact-version Activity/Renderer resolution; Runtime-03 provenance and
+  supersession remain unchanged.
+- React + Tailwind + checked-in shadcn/ui remain the functional baseline.
+  assistant-ui remains rejected for runtime/session/stream architecture;
+  ThreeUI/Spline are visual references only. Add no frontend dependency by
+  default, no Three.js/R3F architecture, generic Artifact Engine, Canvas
+  Specialist, or generated-media expansion. Adapt the warm, intelligent, calm
+  visual character to the Daily App; do not copy an isolated review mount
+  wholesale.
+
+### Explicit non-scope
+
+`STUDIO-ACT-AR-01` implementation or its final proof decision;
+`CURR-RENDER-MATH-01A`; Grade 5 renderer batches; Canvas Specialist; generic
+Artifact Engine; attachments; image/PDF/generated-image/video/3D pipelines;
+new curriculum work; Voice/STT; Vision; deployment; Real-Lina production
+history; redesign of accepted Studio Core; or replacement of the Chat/Tutor
+backend.
+
+### Required future verification and independent-review gate
+
+Acceptance requires real authenticated `/student/daily` flows, not mock review
+mounts alone:
+
+1. **Chat-only:** full usable Chat width, no empty fake Workspace.
+2. **Math:** real accepted Make-Ten Scene via the Renderer Host; mouse,
+   emulated touch, and keyboard reach the real backend; Snapshot/feed update;
+   submit starts one Runtime-03 continuation.
+3. **Science:** real Process Sequence through the same host/protocol/state
+   architecture with no Math-specific frontend assumption.
+4. **English:** real text-oriented renderer through the same host; English LTR
+   tokens in Arabic RTL UI; no answer-key leakage or free-form Canvas input.
+5. **Persistence/recovery:** reload restores active Workspace; resume does not
+   duplicate; accepted operations survive reload; stale/rejected optimism
+   reconciles to server truth.
+6. **Concurrency:** record-only Canvas action during Tutor streaming follows
+   accepted Runtime rules; a Tutor-triggering action creates exactly one
+   continuation; superseded/cancelled state is truthful.
+7. **UX/accessibility:** desktop and narrow/mobile; Arabic RTL, English LTR,
+   mixed direction; keyboard focus and Workspace open/close transition;
+   reduced motion; loading, reconnect, and error states.
+8. **Architecture regression:** legacy `/student` and `StudentMathSession`
+   unchanged; prototype unchanged; no second state/runtime authority; known
+   Activities make zero Canvas Specialist calls.
+
+Run focused backend/web integration tests; authenticated production-intent
+browser tests; web typecheck/build; relevant Python regressions; the full
+isolated regression suite when shared source changes justify it; tracked and
+relevant-untracked diff checks; and a fresh independent review. Isolated
+activity review mounts are not FE-02 acceptance evidence.
+
+**Final Studio acceptance boundary:** `STUDIO-ACCEPT-01` remains **BLOCKED**.
+FE-02 must first be implemented and accepted, then the Product Owner must
+re-evaluate Arabic through implementation, an explicitly approved alternative
+proof, or an explicit final-matrix revision. This promotion does not waive or
+remove the Arabic acceptance requirement.
 
 ---
 

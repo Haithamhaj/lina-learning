@@ -166,6 +166,34 @@ only: no Student-authored sentence, explanation, reasoning, or free-form
 language channel. Detailed fixture, verification, and independent-review
 evidence is retained in `project-state/DAILY_USE_RELEASE_TASKS.md`.
 
+## STUDIO-ACT-AR-01 — Arabic Sentence Annotation/Ordering
+**Status:** DEFERRED — POST-FE-02 PRODUCT OWNER RE-EVALUATION
+**Retained scope:** a future bounded RTL Arabic academic-subject Activity with
+stable token/span identity and Arabic-specific annotation/ordering semantics.
+It is neither accepted nor cancelled. English proved shared text-oriented and
+mixed-direction Workspace foundations, not Arabic academic semantics. Arabic
+remains in final Studio acceptance unless the Product Owner later implements
+it, approves an explicit alternative proof, or explicitly revises the final
+acceptance matrix.
+
+## FE-02-STUDIO-01 — Connect Real Studio to Daily Student App
+**Status:** READY — ONLY READY STUDIO TASK
+**Purpose:** integrate accepted server-authoritative Studio Core and accepted
+Math, Science, and English Activities into the separate greenfield
+`/student/daily` Daily Student App. This is real authenticated product
+integration, not an isolated review mount.
+**Boundary:** preserve legacy `/student` and `StudentMathSession` unchanged;
+reuse current Studio protocol/controller/feed, Subject Capability/activation,
+Runtime-03, Tutor, session/auth, and Safety authorities; no duplicate Studio
+client/reducer/SSE/activation/Chat runtime, Tutor, or generic Artifact Engine.
+The renderer host dispatches only exact approved Activity/Renderer contracts;
+Tutor SSE and Studio feed remain separate authorities. Full executable scope,
+reusable seams, pre-code checks, non-scope, and acceptance gate are maintained
+in `project-state/DAILY_USE_RELEASE_TASKS.md`.
+
+**Final acceptance:** `STUDIO-ACCEPT-01` remains BLOCKED pending accepted
+FE-02 integration and the later Product Owner Arabic-proof re-evaluation.
+
 ---
 
 # Phase 0 — Repository & Runtime Foundation
