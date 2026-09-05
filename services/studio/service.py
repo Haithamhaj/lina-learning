@@ -229,7 +229,12 @@ class StudioStateService:
             source_message_id=command.source_message_id,
         )
         scene = self._scene_for_command(runtime, command)
-        action, validation = self._validate_event_capability(command, scene)
+        snapshot = self._snapshot_locked(runtime)
+        action, validation = self._validate_event_capability(
+            command,
+            scene,
+            activity_state=self.snapshot_projection(snapshot)["state_payload"],
+        )
         durable_event_kind = command.event_kind if action is None else action.event_kind
         durable_event_schema_version = command.event_schema_version if action is None else action.event_schema_version
         if durable_event_kind is None or durable_event_schema_version is None:
@@ -278,12 +283,14 @@ class StudioStateService:
             result_status=self._result_status_value(command.result_status),
             occurred_at=command.occurred_at or datetime.now(UTC),
         )
-        snapshot = self._snapshot_locked(runtime)
-        projection = reduce_snapshot(
-            self.snapshot_projection(snapshot),
-            self._reducer_event(event, scene),
-            subject_registry=self.subject_registry,
-        )
+        try:
+            projection = reduce_snapshot(
+                self.snapshot_projection(snapshot),
+                self._reducer_event(event, scene),
+                subject_registry=self.subject_registry,
+            )
+        except (SubjectCapabilityError, UnknownStudioEvent, ValueError) as error:
+            raise StudioStateError(f"Studio event reduction rejected the operation: {error}") from error
         self._validate_json_capacity(projection["state_payload"], MAX_SNAPSHOT_PAYLOAD_BYTES, "Snapshot payload")
         self._apply_scene_lifecycle(scene, command, durable_event_kind)
         if scene is not None:
@@ -674,6 +681,8 @@ class StudioStateService:
         self,
         command: AppendStudioEventCommand,
         scene: StudioScene | None,
+        *,
+        activity_state: Mapping[str, object] | None = None,
     ) -> tuple[ActivityActionContract | None, ValidationResult | None]:
         """Resolve a core lifecycle reducer or a fully typed subject action before mutation."""
 
@@ -705,6 +714,7 @@ class StudioStateService:
                 action_key=command.action_key,
                 payload_schema_version=command.payload_schema_version,
                 payload=command.payload,
+                activity_state=activity_state,
             )
         except SubjectCapabilityError as error:
             raise StudioStateError(str(error)) from error

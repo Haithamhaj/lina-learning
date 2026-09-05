@@ -81,7 +81,7 @@ def test_router_preserves_an_active_scene_for_no_change_without_state_mutation()
 
 
 def test_production_workspace_capability_context_is_honest_and_compact() -> None:
-    """The Tutor sees profile guidance and lack of activities, not a registry dump."""
+    """The Tutor sees compact current Make-Ten availability, not a registry dump."""
 
     from services.studio.workspace_capabilities import build_workspace_capability_context  # noqa: PLC0415 - RED contract
     from services.studio.tutor_context import StudioTutorWorkspaceContext
@@ -95,6 +95,6 @@ def test_production_workspace_capability_context_is_honest_and_compact() -> None
         authorized_source_references=("retrieval-1",),
     ).as_model_payload()
 
-    assert value["known_workspace_capabilities_available"] is False
+    assert value["known_workspace_capabilities_available"] is True
     assert value["authorized_source_references"] == ["retrieval-1"]
     assert "renderers" not in value

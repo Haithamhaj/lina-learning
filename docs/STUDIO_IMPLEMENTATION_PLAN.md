@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, and `STUDIO-RUNTIME-03` are `DONE / ACCEPTED`. `STUDIO-ACT-MATH-01` is the only `READY` Studio implementation task under the current execution overlay. Every subsequent Studio task remains dependency-ordered and blocked pending explicit promotion.
+**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, and `STUDIO-ACT-MATH-01` are `DONE / ACCEPTED`. No Studio implementation task is `READY`; every subsequent Studio task remains dependency-ordered and blocked pending explicit promotion.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -1406,22 +1406,35 @@ SafetyTextProjection.
 
 #### `STUDIO-ACT-MATH-01 — Make-Ten Group Transfer`
 
-**Status:** READY — only Studio implementation task explicitly promoted in the
-current execution overlay.
+**Status:** DONE / ACCEPTED.
 
 Production implementation of `ten_frame_group_transfer` and approved acceptance flow.
 It is a bounded cross-grade foundation activity and does not depend on the
 Grade 5 renderer research correction.
 
+**Accepted result:** exact-version Make-Ten `9 + 6 → 10 + 5`, exact
+Scene-identity activation, durable typed Event/Snapshot validation/rebuild,
+and minimal React/SVG renderer. Transfer is `RECORD_ONLY`; declared submit
+continues through one Runtime-03 Tutor turn without a fake Student message,
+direct learning-intelligence writes, or additional Canvas-model call. The
+isolated mock-labelled review mount is not `/student/daily`; Make-Ten remains
+outside the Grade 5 denominator.
+
 #### `STUDIO-ACT-SCI-01 — Process Sequence Workspace`
+
+**Status:** BLOCKED pending explicit promotion.
 
 Production generic process-ordering activity with Science fixture and validator.
 
 #### `STUDIO-ACT-EN-01 — English Sentence Ordering`
 
+**Status:** BLOCKED pending explicit promotion.
+
 Production text Workspace fixture using generic token/action contracts.
 
 #### `STUDIO-ACT-AR-01 — Arabic Sentence Annotation/Ordering`
+
+**Status:** BLOCKED pending explicit promotion.
 
 Production RTL academic-subject fixture with stable span/token identity.
 
@@ -1684,7 +1697,8 @@ accepted. The durable Studio state foundation is implemented at Alembic head
 ### 27.1 Only ready task
 
 ```text
-STUDIO-SUBJECT-01 — Subject Capability Layer
+No Studio implementation task is READY. `STUDIO-ACT-MATH-01` is DONE /
+ACCEPTED; every later Studio task remains BLOCKED pending explicit promotion.
 ```
 
 ### 27.2 Completed governance outcome
@@ -1724,7 +1738,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-02 — DONE / ACCEPTED
 → STUDIO-RUNTIME-03 — DONE / ACCEPTED
-→ STUDIO-ACT-MATH-01 — READY — ONLY READY STUDIO TASK
+→ STUDIO-ACT-MATH-01 — DONE / ACCEPTED
 → Cross-subject production activities — BLOCKED
 → FE-02-STUDIO-01 — BLOCKED
 → CURR-RENDER-MATH-01A — BLOCKED pending Grade 5 renderer correction gate

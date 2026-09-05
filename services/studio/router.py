@@ -201,6 +201,8 @@ def _known_activity_candidate(
 ) -> tuple[ActivityContract, RendererContract] | None:
     candidates: list[tuple[ActivityContract, RendererContract]] = []
     for activity in profile.activities:
+        if intent.activity_hint is None and activity.requires_explicit_hint:
+            continue
         if intent.activity_hint is not None and intent.activity_hint != activity.activity_key:
             continue
         if not _activity_is_current(activity, profile, context):

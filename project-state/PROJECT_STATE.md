@@ -19,7 +19,7 @@ PF-02A Existing-Fact-Aware Reuse    DONE / ACCEPTED
 PF-03 Tutor Personal Context        ACCEPTED / COMPLETED
 FE-01 Visual System + Reuse Record  ACCEPTED / COMPLETED
 STUDIO-RUNTIME-03 Canvas Tutor Turns DONE / ACCEPTED
-STUDIO-ACT-MATH-01 Make-Ten Transfer READY — only READY Studio task
+STUDIO-ACT-MATH-01 Make-Ten Transfer DONE / ACCEPTED
 ```
 
 Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical ledger.
@@ -45,8 +45,10 @@ tree contains accepted production Studio State and Subject Capability
 foundations at Alembic head `c7d8e9f0a1b2`: code-owned MATH, SCIENCE, ENGLISH,
 and ARABIC profiles; exact-version contracts; persisted Subject profile and
 Action identity; typed validator/reducer dispatch; and bounded validation
-results. No Student-facing Studio Activity, production renderer, or FE-02
-production integration exists.
+results. The historical foundation baseline had no Student-facing Studio
+Activity or production renderer. `STUDIO-ACT-MATH-01` now adds the accepted
+exact-version Make-Ten activity and minimal React/SVG renderer; FE-02
+production integration still does not exist.
 
 `STUDIO-PROTOCOL-01` and `STUDIO-RUNTIME-01` are `DONE / ACCEPTED`.
 The existing primary Tutor call now receives the current Studio Snapshot and
@@ -63,11 +65,14 @@ primary execution per exclusive StudentInteraction claim, real Tutor-message
 persistence with exact Canvas provenance, distinct interaction plus Workspace
 context, causal supersession, and cancellation after an interrupted
 post-persistence stream lifecycle. It makes no direct Candidate, Evidence,
-Personal Facts, or Learning Intelligence writes. Production Activities,
-production Renderers, Canvas Specialist execution, and FE-02 production
-integration remain unimplemented at this baseline. `STUDIO-ACT-MATH-01` is now
-the only `READY` Studio implementation task; its bounded Make-Ten production
-activity and minimal renderer are specified in the current execution overlay.
+Personal Facts, or Learning Intelligence writes. Canvas Specialist execution
+and FE-02 production integration remain unimplemented. `STUDIO-ACT-MATH-01`
+is `DONE / ACCEPTED`: its bounded exact-version Make-Ten Activity, durable
+typed operations/validation/rebuild, minimal React/SVG renderer, and Runtime-03
+submit continuation are accepted. `TRANSFER_ITEM` remains `RECORD_ONLY`;
+submit creates one Runtime-03 Tutor continuation without a fake Student message
+or direct learning-intelligence writes. The isolated mock-labelled review mount
+is not `/student/daily`.
 Student-authored free-form language belongs in Chat, including Voice-to-STT;
 Canvas accepts bounded semantic controls and may display language, without
 SafetyTextProjection or unrestricted Canvas language input. Every later Studio
@@ -113,6 +118,13 @@ implementation gate. Real Lina longitudinal history has not started.
   not passes. No production frontend integration, Activity/Renderer,
   browser-use, live-model path verification, or real Lina daily/longitudinal
   use is implied by this backend acceptance.
+- STUDIO-ACT-MATH-01 is DONE / ACCEPTED: the exact `9 + 6 → 10 + 5`
+  Make-Ten flow has durable Event/Snapshot state, exact reload/rebuild,
+  truthful invalid/stale handling, and bounded exact-Scene activation. The
+  known activity makes no additional Canvas-model call. Final browser evidence
+  covers mouse, emulated touch, keyboard, cancellation, rejection, RTL/narrow
+  layout, and reduced motion; detailed commands, skips, and review evidence
+  are in `project-state/DAILY_USE_RELEASE_TASKS.md`.
 
 ---
 
@@ -184,7 +196,7 @@ Protected invariants:
 
 ## Active risks
 
-- **STUDIO-R1 — Studio backend foundations through Runtime-03 are accepted; only bounded STUDIO-ACT-MATH-01 is READY, while full frontend integration and later Studio tasks remain blocked — Criticality 4**
+- **STUDIO-R1 — Studio backend foundations and bounded Make-Ten are accepted; full frontend integration and all later Studio tasks remain blocked — Criticality 4**
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**
 - **VISION-R1 — Durable Student Asset Hosting Required Before Daily Vision — Criticality 4**
 - **MATH-01 — Structured Math Readability — Criticality 4 / independent**
@@ -214,6 +226,26 @@ or Personal Facts behavior changed.
 
 ## Latest accepted task
 
+### STUDIO-ACT-MATH-01 — Make-Ten Group Transfer
+
+**Status:** DONE / ACCEPTED
+
+**Acceptance:** exact-version `ten_frame_group_transfer` implements the
+bounded `9 + 6 → 10 + 5` flow with exact Scene-identity activation, durable
+typed operations and Snapshot rebuild, truthful validation, and a minimal
+React/SVG renderer. `TRANSFER_ITEM` is `RECORD_ONLY`; only the declared submit
+uses one accepted Runtime-03 Tutor continuation, with no fake Student message,
+direct Candidate/Evidence/Personal Facts/Learning Intelligence write, Canvas
+Specialist, or additional Canvas model call.
+
+**Boundary:** the mock-labelled isolated review mount is not FE-02
+`/student/daily`; no other activity, Grade 5 coverage claim, deployment,
+live-model validation, or real-Lina use is accepted. Make-Ten remains outside
+the Grade 5 denominator. Detailed verification and independent-review evidence
+are retained in `project-state/DAILY_USE_RELEASE_TASKS.md`.
+
+---
+
 ### STUDIO-RUNTIME-03 — Canvas-Originated Tutor Turns
 
 **Status:** DONE / ACCEPTED — BACKEND ONLY
@@ -242,10 +274,10 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
-Execute only the explicitly promoted `STUDIO-ACT-MATH-01` bounded Make-Ten
-activity task. Keep full FE-02 `/student/daily` Studio integration,
-cross-subject activities, Grade 5 renderer work, Canvas Specialist work, and
-all later Studio work blocked until separately authorized.
+Verify Make-Ten closure/remote parity, then obtain explicit promotion of
+`STUDIO-ACT-SCI-01`. Keep full FE-02 `/student/daily` Studio integration,
+all other activities, Grade 5 renderer work, Canvas Specialist work, and all
+later Studio work blocked until separately authorized.
 
 ---
 

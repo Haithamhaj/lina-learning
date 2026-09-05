@@ -23,7 +23,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-02 — DONE / ACCEPTED
 → STUDIO-RUNTIME-03 — DONE / ACCEPTED
-→ STUDIO-ACT-MATH-01 — READY — ONLY READY STUDIO TASK
+→ STUDIO-ACT-MATH-01 — DONE / ACCEPTED
 → STUDIO-ACT-SCI-01 — BLOCKED
 → STUDIO-ACT-EN-01 — BLOCKED
 → STUDIO-ACT-AR-01 — BLOCKED
@@ -95,8 +95,8 @@ the five opt-in cloud-writing S3 tests and two opt-in real-Luna tests, not
 passes. Student-authored free-form language remains Chat-only, including
 Voice-to-STT; Canvas uses bounded semantic controls and may display language.
 
-`STUDIO-ACT-MATH-01` is the only `READY` Studio implementation task. All later
-Studio tasks remain blocked.
+`STUDIO-ACT-MATH-01` is `DONE / ACCEPTED`. All later Studio tasks remain
+blocked pending explicit promotion.
 `CURR-RENDER-MATH-01A` is **BLOCKED UNTIL THE GRADE 5 MATH RENDERER
 IMPLEMENTATION GATE**: it does not block Studio state, protocol, runtime,
 cross-subject foundation activities, or FE-02 Studio integration.
@@ -105,8 +105,7 @@ cross-subject foundation activities, or FE-02 Studio integration.
 
 ## STUDIO-ACT-MATH-01 — Make-Ten Group Transfer
 
-**Status:** READY — the only Studio implementation task authorized in this
-overlay.
+**Status:** DONE / ACCEPTED
 
 **Purpose:** Deliver the bounded, cross-grade production
 `ten_frame_group_transfer` activity and its minimal production renderer for the
@@ -119,7 +118,7 @@ not a Grade 5 curriculum claim or coverage item.
 block this foundation activity and Make-Ten remains outside the Grade 5
 coverage denominator.
 
-**Expected production outputs:**
+**Accepted production outputs:**
 
 - a code-owned exact-version MATH Activity, Renderer, payload-validator,
   semantic-validator, and reducer contract for `ten_frame_group_transfer`;
@@ -140,22 +139,20 @@ coverage denominator.
   Tutor-message provenance and no fake Student LearningMessage. The known
   activity uses no Canvas Specialist or additional Canvas model call.
 
-**Likely code areas, confirmed at promotion:**
+**Implemented code areas:**
 
-- `services/studio/subjects/__init__.py`, `contracts.py`, and `registry.py`
-  currently provide the production MATH profile and exact-version capability
-  registry, but contain no production Activities;
-- `services/studio/contracts.py`, `service.py`, `reducer.py`, and `protocol.py`
-  provide typed Scene/Event commands, atomic append/Snapshot reduction,
-  idempotency and stale-version handling, and the Student-scoped operation
-  boundary;
-- `services/studio/interactions.py`, `tutor_context.py`,
-  `workspace_capabilities.py`, and `router.py`, plus
-  `apps/api/routes/student.py`, provide the accepted Runtime-01/02/03 Tutor
-  continuity and interaction path; and
-- `apps/api/routes/studio.py` and `apps/web/lib/studio/{contracts,controller,sse}.ts`
-  provide the authenticated Studio protocol/feed client. No production activity
-  renderer host exists in `apps/web` at this baseline.
+- `services/studio/subjects/math_make_ten.py`, the subject registry/contracts,
+  activation adapter, reducer/service/interaction path, and Tutor runtime now
+  provide the exact activity, activation, durable operations, validation, and
+  Runtime-03 continuation;
+- `tests/test_studio_make_ten_postgres.py` and
+  `tests/test_studio_workspace_intent.py` provide the bounded persistence,
+  validation, activation, and source-truth regressions; and
+- `apps/web/app/studio/make-ten-review/page.tsx`,
+  `apps/web/components/studio/ten-frame-group-transfer.tsx`, and
+  `apps/web/lib/studio/make-ten.{ts,test.ts}` provide only the mock-labelled
+  isolated review mount and minimal React/SVG renderer, not a `/student/daily`
+  renderer host.
 
 **Existing contracts/services to reuse:** Use the project-owned Subject
 Capability Registry, `CreateSceneCommand` / `AppendStudioEventCommand`,
@@ -164,28 +161,42 @@ Studio feed, and Runtime-03 interaction lifecycle. Reuse the current web Studio
 protocol/controller only as a server-authoritative transport client. Do not
 replace these contracts with browser state, a chat runtime, or a new service.
 
-**Bounded code-grounded implementation checks:** Before implementation code,
-confirm the exact MATH contract versions, scene-seed payload, action payload,
-validator feedback codes, and scene-activation adapter. At promotion baseline,
-Runtime-02 routing is intentionally non-mutating and the production registry
-has no Activity; use the existing Scene/Event service boundaries and establish
-only the smallest activity-specific activation path proven necessary. Confirm
-the isolated renderer mounting/test seam without modifying or integrating
-`/student/daily`; full Daily Student App integration remains
-`FE-02-STUDIO-01`.
+**Confirmed implementation seams:** exact MATH contract/scene/action versions,
+scene seed, validator feedback, and the smallest activity-specific exact Scene
+activation adapter were confirmed. Activation is restricted to the full
+accepted Scene identity, not source reference alone. The isolated review seam
+was confirmed without `/student/daily` integration; full Daily Student App
+integration remains `FE-02-STUDIO-01`.
 
-**Verification and implementation acceptance gate:** Add focused contract,
-PostgreSQL, API/protocol, Runtime-03-continuation, and web renderer tests that
-prove Student isolation; exact Event/Snapshot reload and rebuild; idempotent
-replay; stale and invalid-operation truthfulness; `RECORD_ONLY` versus
-Tutor-triggering behavior; one primary Tutor call only when declared; no fake
-Student message; no additional Canvas/Specialist model call;
-keyboard/touch/button equivalence; locale/direction; accessibility; and reduced
-motion. Inspect the rendered
-activity in an appropriate isolated/authenticated review seam, run the changed
-task's relevant Python and web checks, and run `git diff --check`. Acceptance
-also requires fresh independent review of the implementation diff and its
-evidence; the accepted Runtime-03 review is not a substitute.
+**Verification and acceptance record:** The final browser matrix has 12 passes
+for mouse/touch numeral and edge transfer, keyboard, cancellation/retry,
+release-capture retry, mouse/touch outside retry, rejection, RTL/narrow layout,
+reduced motion, and explicit submit; see
+`output/playwright/make-ten-input-fixes-20260905/matrix-final/results.json`.
+The two renderer/model tests passed via compiled Node test output. Latest web
+`npm --prefix apps/web run typecheck` and `npm --prefix apps/web run build`
+passed; `git diff --check` passed. Previous unchanged-backend evidence was
+`895 passed, 7 skipped`; it was not re-run for the final frontend-only pointer
+correction. The skips were the opt-in cloud-write S3 tests
+`test_real_s3_round_trip_and_private_access`,
+`test_real_s3_collision_protection_preserves_original`,
+`test_real_s3_hmac_rejects_out_of_band_metadata_change`,
+`test_real_s3_delete_removes_object`, and
+`test_real_s3_secret_rotation_paginates_and_resumes`, plus opt-in real-Luna
+tests `test_real_luna_segment_reviewer_representative_cases` and
+`test_real_luna_primary_tutor_call_keeps_provisional_subject_optional_and_single`;
+they are not passes. The prior disposable-test-DB `alembic check` succeeded
+with no new upgrade operations (existing `ai_executions` / `learning_messages`
+FK-cycle warning). Exact redacted commands and focused evidence are retained
+under `output/playwright/make-ten-evidence-20260905/` and
+`output/playwright/make-ten-input-fixes-20260905/`.
+
+Final independent code/evidence inspection (not independent test re-execution)
+is recorded at
+`output/playwright/make-ten-input-fixes-20260905/independent-review.md` with
+0 Critical / 0 Important / 0 Minor. The reported source-truth issue was
+disproven for its stated scenario; the exact-activation and pointer/touch
+findings were corrected and covered by the final review/evidence.
 
 **Explicit non-scope:** No full FE-02 `/student/daily` integration; generic
 Artifact Engine or renderer catalog; Grade 5 curriculum/coverage work;
@@ -193,6 +204,11 @@ Science, English, or Arabic activities; Canvas Specialist; unrestricted Canvas
 language input; new frontend architecture; direct Candidate, Evidence,
 Personal Facts, or Learning Intelligence writes; package installation; schema
 change; dependency change; or a new Canvas model call.
+
+**Closure gate:** accepted only with the complete reviewed implementation,
+regression-test source, final browser runner, and this evidence record. The
+generated screenshots, logs, traces, and result files remain local evidence
+and are intentionally outside the source commit.
 
 ---
 

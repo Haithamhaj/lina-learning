@@ -707,7 +707,12 @@ class StudioInteractionTutorService:
         ).scalar_one_or_none()
         if snapshot is None or snapshot.latest_event_sequence != runtime.latest_event_sequence:
             raise StudioInteractionSourceError("Studio interaction runtime Snapshot is inconsistent.")
-        action_payload, validation = self._resolve_source_contract(event=event, scene=scene, interaction=interaction)
+        action_payload, validation = self._resolve_source_contract(
+            event=event,
+            scene=scene,
+            interaction=interaction,
+            activity_state=dict(snapshot.state_payload),
+        )
         return StudioInteractionTutorContext(
             interaction_id=interaction.id,
             runtime_id=runtime.id,
@@ -751,6 +756,7 @@ class StudioInteractionTutorService:
         event: StudioEvent,
         scene: StudioScene,
         interaction: StudioStudentInteraction,
+        activity_state: Mapping[str, object],
     ) -> tuple[dict[str, object], dict[str, object] | None]:
         if event.actor != "STUDENT" or event.action_key is None:
             raise StudioInteractionSourceError("Studio interaction source must be a Student Activity action.")
@@ -802,6 +808,7 @@ class StudioInteractionTutorService:
                 action_key=event.action_key,
                 payload_schema_version=event.payload_schema_version,
                 payload=action_payload,
+                activity_state=activity_state,
             )
         except SubjectCapabilityError as error:
             raise StudioInteractionSourceError(str(error)) from error

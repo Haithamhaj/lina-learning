@@ -1136,19 +1136,30 @@ class TutorRuntime:
                     "selected_event_sequences": list(context.debug.studio_selected_event_sequences),
                 },
             }
-        self._session.add(
-            LearningMessage(
-                session_id=learning_session.id,
-                role="tutor",
-                content=text,
-                payload=payload,
-                ai_execution_id=ai_execution_id,
-                segment_id=segment_id,
-                created_at=datetime.now(UTC),
-            )
+        message = LearningMessage(
+            session_id=learning_session.id,
+            role="tutor",
+            content=text,
+            payload=payload,
+            ai_execution_id=ai_execution_id,
+            segment_id=segment_id,
+            created_at=datetime.now(UTC),
         )
+        self._session.add(message)
         learning_session.last_activity_at = datetime.now(UTC)
         self._session.flush()
+        if workspace_audit is not None and callable(getattr(self._session, "execute", None)):
+            # This is deliberately a one-activity adapter after normal Tutor
+            # persistence, not a mutation capability of Runtime-02's Router.
+            from services.studio.make_ten_activation import activate_make_ten_from_workspace_decision
+
+            activate_make_ten_from_workspace_decision(
+                self._session,
+                learning_session=learning_session,
+                source_tutor_message=message,
+                source_segment_id=segment_id,
+                workspace_audit=workspace_audit,
+            )
         return TutorTurn(
             text,
             suggested_actions,

@@ -154,6 +154,11 @@ def reduce_snapshot(
         action_key=event.action_key,
         payload_schema_version=event.payload_schema_version or "",
         payload=event.payload,
+        activity_state=(
+            snapshot["state_payload"]
+            if isinstance(snapshot.get("state_payload"), dict)
+            else None
+        ),
     )
     del action, _validation
     activity = registry.resolve_activity(event.subject_key, event.subject_profile_version, event.activity_key, event.activity_contract_version)

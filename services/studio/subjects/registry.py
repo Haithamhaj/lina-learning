@@ -188,7 +188,10 @@ class SubjectCapabilityRegistry:
             (subject_key, profile_version, payload_validator_key, payload_schema_version),
             "Payload validator contract",
         )
-        contract.validator(payload)
+        try:
+            contract.validator(payload)
+        except (TypeError, ValueError) as error:
+            raise SubjectCapabilityError("Payload violates its registered exact contract.") from error
 
     def validate_scene(
         self,
@@ -235,6 +238,7 @@ class SubjectCapabilityRegistry:
         action_key: str,
         payload_schema_version: str,
         payload: Mapping[str, object],
+        activity_state: Mapping[str, object] | None = None,
     ) -> tuple[ActivityActionContract, ValidationResult | None]:
         action = self.resolve_action(
             subject_key,
@@ -254,7 +258,19 @@ class SubjectCapabilityRegistry:
                 (subject_key, subject_profile_version, action.validator_key, action.validator_version),
                 "Validator contract",
             )
-            result = validator.validator(payload)
+            if validator.requires_activity_state:
+                if activity_state is None:
+                    raise SubjectCapabilityError("Semantic validation requires the authoritative activity state.")
+                validator_payload: Mapping[str, object] = {
+                    "action": dict(payload),
+                    "activity_state": dict(activity_state),
+                }
+            else:
+                validator_payload = payload
+            try:
+                result = validator.validator(validator_payload)
+            except (TypeError, ValueError) as error:
+                raise SubjectCapabilityError("Semantic validation rejected the operation.") from error
             if not isinstance(result, ValidationResult):
                 raise SubjectCapabilityError("Semantic validators must return the registered ValidationResult contract.")
             activity_action_keys = {registered.action_key for registered in activity.actions}

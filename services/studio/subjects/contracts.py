@@ -158,6 +158,7 @@ class ActivityContract:
     accessibility: AccessibilityContract
     reducer_key: str
     reducer_version: str
+    requires_explicit_hint: bool = False
 
 
 @dataclass(frozen=True)
@@ -165,6 +166,7 @@ class ValidatorContract:
     validator_key: str
     validator_version: str
     validator: Validator
+    requires_activity_state: bool = False
 
 
 @dataclass(frozen=True)

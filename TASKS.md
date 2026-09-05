@@ -113,10 +113,17 @@ Student-authored free-form language belongs in Chat, including Voice-to-STT.
 Canvas accepts bounded semantic controls and may display language; it has no
 unrestricted language-input channel or SafetyTextProjection.
 
-`STUDIO-ACT-MATH-01` is now explicitly promoted as the only `READY` Studio
-implementation task in `project-state/DAILY_USE_RELEASE_TASKS.md`. All later
-Studio tasks remain blocked. This preserved historical ledger does not duplicate
-the executable task specification in the current overlay.
+## STUDIO-ACT-MATH-01 — Make-Ten Group Transfer
+**Status:** DONE / ACCEPTED
+**Accepted result:** exact-version bounded `ten_frame_group_transfer` and
+minimal React/SVG `9 + 6 → 10 + 5` activity; exact Scene activation; durable
+typed Event/Snapshot state, validation, reload/rebuild; `TRANSFER_ITEM` as
+RECORD_ONLY; and one Runtime-03 Tutor continuation only on declared submit.
+No fake Student message, direct learning-intelligence write, Canvas Specialist,
+or additional Canvas model call was introduced. The isolated mock-labelled
+review mount is not `/student/daily`; Make-Ten remains outside Grade 5
+coverage. Detailed acceptance evidence is retained in the current execution
+overlay. All later Studio tasks remain BLOCKED pending explicit promotion.
 
 ---
 
