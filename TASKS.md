@@ -143,8 +143,23 @@ fixture based on elementary scientific fact: the one server-owned
 `allow-water-to-filter` → `collect-filtered-water`, with no alternative valid
 order. It does not claim filtration makes arbitrary water safe or potable.
 Detailed verification, review, and evidence boundaries are retained in the
-current execution overlay. All subsequent Studio tasks remain BLOCKED pending
-explicit promotion.
+current execution overlay. The overlay owns subsequent readiness.
+
+## STUDIO-ACT-EN-01 — English Sentence Ordering
+**Status:** READY — only READY Studio task.
+**Scope:** one bounded, text-oriented English sentence-ordering Workspace with
+an exact new ENGLISH profile version, stable token IDs independent of display
+text, deterministic server-owned authored-answer validation, `REORDER_TOKEN`
+as `RECORD_ONLY`, and `SUBMIT_CONFIGURATION` as the sole
+`TUTOR_TRIGGERING` action. One Runtime-03 continuation receives exact
+submitted order and validation separately from later record-only current
+Workspace state. Canvas remains bounded controls only: no Student-authored
+sentence, explanation, reasoning, or other free-form language channel. Reuse
+the existing Registry, State/Protocol/command/reducer/feed/controller,
+Runtime-03, and exact-adapter activation seams; do not create a second Router
+or generic activation/drag-drop framework. The full executable contract,
+fixture/version checks, verification matrix, independent-review gate, and
+non-scope are in `project-state/DAILY_USE_RELEASE_TASKS.md`.
 
 ---
 

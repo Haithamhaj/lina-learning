@@ -21,6 +21,7 @@ FE-01 Visual System + Reuse Record  ACCEPTED / COMPLETED
 STUDIO-RUNTIME-03 Canvas Tutor Turns DONE / ACCEPTED
 STUDIO-ACT-MATH-01 Make-Ten Transfer DONE / ACCEPTED
 STUDIO-ACT-SCI-01 Process Sequence DONE / ACCEPTED
+STUDIO-ACT-EN-01 English Sentence Ordering READY
 ```
 
 Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical ledger.
@@ -79,8 +80,13 @@ Canvas accepts bounded semantic controls and may display language, without
 SafetyTextProjection or unrestricted Canvas language input.
 `STUDIO-ACT-SCI-01` is `DONE / ACCEPTED`: it adds one bounded Science
 `process_sequence_workspace` activity, not a generic Artifact Engine or
-Science curriculum. Every subsequent Studio task remains blocked pending
-explicit promotion.
+Science curriculum. `STUDIO-ACT-EN-01` is now the only `READY` Studio task:
+one bounded English sentence-ordering Workspace with stable token identities,
+server-owned deterministic validation, record-only reorder, and one
+submit-only Runtime-03 continuation. It does not authorize free-form Canvas
+language, a generic text/artifact system, or `/student/daily` integration.
+Arabic, FE-02, and every later Studio task remain blocked pending explicit
+promotion.
 `CURR-RENDER-MATH-01A` remains blocked until the Grade 5 Math renderer
 implementation gate. Real Lina longitudinal history has not started.
 
@@ -138,6 +144,15 @@ implementation gate. Real Lina longitudinal history has not started.
   The isolated mock-labelled renderer is not `/student/daily`. Detailed
   verification, provenance, and independent-review evidence are retained in
   `project-state/DAILY_USE_RELEASE_TASKS.md`.
+- STUDIO-ACT-EN-01 is the only READY Studio task. Its execution contract is
+  one bounded English sentence-ordering Workspace: a new exact ENGLISH profile
+  version preserves historical versions; stable token IDs and a server-owned
+  answer key support deterministic validation; reorder is record-only; and
+  only submit creates one Runtime-03 continuation. It retains submitted source
+  truth apart from later Workspace state and prohibits free-form Canvas
+  language, fake Student messages, direct intelligence/Personal Facts writes,
+  and extra Canvas calls. Its exact fixture/version choices and implementation
+  verification remain future task checks in the current execution overlay.
 
 ---
 
@@ -209,7 +224,7 @@ Protected invariants:
 
 ## Active risks
 
-- **STUDIO-R1 — Studio foundations, bounded Make-Ten, and bounded Science process activity are accepted; full frontend integration and every subsequent Studio task remain blocked — Criticality 4**
+- **STUDIO-R1 — Studio foundations, bounded Make-Ten, bounded Science process activity are accepted, and English Sentence Ordering is the only READY Studio task; full frontend integration and every later Studio task remain blocked — Criticality 4**
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**
 - **VISION-R1 — Durable Student Asset Hosting Required Before Daily Vision — Criticality 4**
 - **MATH-01 — Structured Math Readability — Criticality 4 / independent**
@@ -307,9 +322,10 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
-No Studio implementation task is `READY`. Keep full FE-02 `/student/daily`
-Studio integration, all other activities, Grade 5 renderer work, Canvas
-Specialist work, and all later Studio work blocked until separately authorized.
+Implement only `STUDIO-ACT-EN-01` in a separate explicitly authorized run.
+Keep full FE-02 `/student/daily` Studio integration, Arabic and all other
+activities, Grade 5 renderer work, Canvas Specialist work, and every later
+Studio task blocked until separately promoted.
 
 ---
 

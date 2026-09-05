@@ -25,7 +25,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-03 — DONE / ACCEPTED
 → STUDIO-ACT-MATH-01 — DONE / ACCEPTED
 → STUDIO-ACT-SCI-01 — DONE / ACCEPTED
-→ STUDIO-ACT-EN-01 — BLOCKED
+→ STUDIO-ACT-EN-01 — READY — ONLY READY STUDIO TASK
 → STUDIO-ACT-AR-01 — BLOCKED
 → FE-02-STUDIO-01 — BLOCKED
 → CURR-RENDER-MATH-01A — BLOCKED UNTIL THE GRADE 5 MATH RENDERER IMPLEMENTATION GATE
@@ -95,9 +95,9 @@ the five opt-in cloud-writing S3 tests and two opt-in real-Luna tests, not
 passes. Student-authored free-form language remains Chat-only, including
 Voice-to-STT; Canvas uses bounded semantic controls and may display language.
 
-`STUDIO-ACT-MATH-01` and `STUDIO-ACT-SCI-01` are `DONE / ACCEPTED`. No Studio
-implementation task is `READY`. All subsequent Studio tasks remain blocked
-pending explicit promotion.
+`STUDIO-ACT-MATH-01` and `STUDIO-ACT-SCI-01` are `DONE / ACCEPTED`.
+`STUDIO-ACT-EN-01` is the only `READY` Studio implementation task. All other
+subsequent Studio tasks remain blocked pending explicit promotion.
 `CURR-RENDER-MATH-01A` is **BLOCKED UNTIL THE GRADE 5 MATH RENDERER
 IMPLEMENTATION GATE**: it does not block Studio state, protocol, runtime,
 cross-subject foundation activities, or FE-02 Studio integration.
@@ -375,6 +375,121 @@ was source/evidence inspection, not an independent test re-run.
 record, and the reproducible browser runner/README. Retain generated browser
 screenshots, traces, logs, and `results.json` as local evidence; do not add the
 entire output directory.
+
+---
+
+## STUDIO-ACT-EN-01 — English Sentence Ordering
+
+**Status:** READY — the only READY Studio task.
+
+**Purpose:** Prove that the accepted Studio Core can support one bounded,
+text-oriented English Workspace with stable token identities and deterministic
+authored-answer validation. This is not unrestricted Student language input,
+a general text editor, a grammar-tutoring system, or English curriculum
+coverage. Canvas may display declared English tokens, let the Student reorder
+or select them through bounded controls, and submit that bounded ordered
+configuration. It must not collect a Student-written sentence, explanation,
+or reasoning. Free-form language remains in Chat, including Voice-to-STT-to-
+Chat.
+
+**Accepted dependencies:** `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`,
+`STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`,
+`STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, and `STUDIO-ACT-SCI-01` are
+`DONE / ACCEPTED`.
+
+**Required production outputs:**
+
+- add one exact new ENGLISH subject-profile extension while retaining every
+  persisted historical ENGLISH profile version with its existing meaning;
+  register one bounded sentence-ordering Activity, text-oriented Renderer,
+  typed token/action payloads, deterministic authored-answer validator, and
+  reducer through the Subject Capability Registry;
+- model each token with a stable typed identity independent of its display
+  label. The declared fixture may contain repeated visible words, so identity
+  must never be derived solely from text. The server-owned answer key, not the
+  browser-visible Scene seed, decides the permitted order;
+- admit only bounded `REORDER_TOKEN` operations and an explicit
+  `SUBMIT_CONFIGURATION` action. Reorder is `RECORD_ONLY`; only submit is
+  `TUTOR_TRIGGERING` and creates exactly one Runtime-03
+  `StudentInteraction` from a declared submitted ordered configuration;
+- preserve exact durable Event and Snapshot state, validation result, scene
+  identity, ownership, stale-operation rejection, idempotency, and
+  reload/rebuild behavior. A structurally valid but academically wrong order
+  must persist a truthful bounded validation result rather than fail as a
+  malformed request;
+- make the one Runtime-03 Tutor continuation receive the exact submitted token
+  IDs in submitted order and the deterministic validation result. If a later
+  record-only reorder changes the current Workspace, the Tutor context must
+  retain that source submission and expose the later current Workspace state
+  separately, without fabricating Student prose or a Student `LearningMessage`;
+- provide a minimal text-oriented renderer and mock-labelled isolated review
+  seam, not `/student/daily`. English academic tokens must render LTR even
+  when the surrounding Tutor/UI explanation is Arabic RTL; mixed direction
+  must preserve visual token sequence and keyboard focus order; and
+- make no direct Candidate, Evidence, Personal Facts, or Learning Intelligence
+  write; no additional Canvas/Specialist model call; and no change to the
+  existing Safety, Parent Boundary, ownership, provenance, Router, or
+  supersession rules.
+
+**Fixture boundary:** Fixture selection is an implementation check, not an
+implicit lesson approval. It must be project-authored or clearly rights-safe,
+one simple English sentence with stable token IDs, academically modest, and
+suited to deterministic validation. It uses one valid order unless an
+alternative-valid policy is explicitly justified and tested. Record fixture
+key/version/provenance and the exact token IDs plus visible labels before
+completion; do not claim curriculum or Grade coverage.
+
+**Confirmed reusable seams and likely implementation areas:**
+
+- reuse the Subject Capability Registry, `StudioStateService`,
+  `StudioProtocolService`, `CreateSceneCommand`, `AppendStudioEventCommand`,
+  reducer/rebuild path, dedicated Studio feed, Runtime-03 interaction
+  lifecycle, and existing web Studio controller/operation contracts;
+- inspect and extend the existing `services/studio/activity_activation.py`
+  entry point only where its exact-activity adapter pattern is genuinely
+  reusable. It currently dispatches bounded Make-Ten and Science adapters; an
+  English implementation may add one exact adapter there after verifying its
+  exact activation identity. Do not introduce a second activation framework,
+  generic plugin engine, generic drag/drop framework, browser-owned activity
+  truth, new Router, or Canvas-language safety subsystem; and
+- use the existing local React/Tailwind/shadcn and native React DOM/SVG
+  baseline where it fits. Do not add a dependency by default or transfer
+  `useChat`, `UIMessage`, transport, runtime, session, or safety ownership.
+
+**Bounded implementation checks before completion:** explicitly resolve and
+record the ENGLISH profile version; Activity and Renderer keys/versions; Scene,
+token, Action, Event, payload, validator, and reducer schema/versions; fixture
+key/version/provenance; exact stable IDs and visible labels; valid-order and
+duplicate-token policies; exact activation identity; and renderer interaction
+design. These are implementation checks, not Product Owner questions unless a
+genuine product decision appears.
+
+**Required implementation verification and independent-review gate:**
+
+- prove historical ENGLISH profile preservation and exact current-version
+  resolution; fixture seed and stable tokens; correct validation; a
+  structurally valid but academically wrong persisted result; malformed,
+  unknown, duplicate, missing, extra, stale, replay/idempotent, and
+  cross-Student rejection; exact reload/rebuild; record-only reorder; one
+  submit-only `StudentInteraction`; exactly one Runtime-03 Tutor execution;
+  submitted order remaining source truth after later record-only reorder; no
+  fake message/direct intelligence or Personal Facts write; and zero extra
+  Canvas calls;
+- independently inspect the isolated renderer with pointer/mouse reorder,
+  Chromium-emulated touch, keyboard/button equivalent, cancellation/retry,
+  outside release, rejection reconciliation, one explicit submit, English LTR
+  token correctness, Arabic surrounding UI, mixed direction, narrow viewport,
+  accessible focus/live status, and reduced motion; and
+- obtain a fresh independent review of the final implementation diff. Math or
+  Science tests and evidence do not count as fresh English verification.
+
+**Explicit non-scope:** free-form Canvas sentence composition, paragraph
+writing, explanation/reasoning textboxes, grammar tutoring, full English
+curriculum, Grade coverage, vocabulary platform, generic text editor, generic
+Artifact Engine, Canvas Specialist, a new model call or `SafetyTextProjection`,
+full `/student/daily` integration, Arabic academic activity, schema/dependency
+installation by default, deployment, or real-Lina execution. All later Studio
+tasks remain `BLOCKED`.
 
 ---
 
