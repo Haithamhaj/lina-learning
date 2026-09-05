@@ -19,11 +19,12 @@ PF-02A Existing-Fact-Aware Reuse    DONE / ACCEPTED
 PF-03 Tutor Personal Context        ACCEPTED / COMPLETED
 FE-01 Visual System + Reuse Record  ACCEPTED / COMPLETED
 STUDIO-RUNTIME-03 Canvas Tutor Turns DONE / ACCEPTED
+STUDIO-ACT-MATH-01 Make-Ten Transfer READY — only READY Studio task
 ```
 
 Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical ledger.
 
-### Studio governance status — 2026-09-02
+### Studio readiness — 2026-09-05
 
 `STUDIO-GOV-01` and `FE-02-PRESERVE-01` are `DONE / ACCEPTED`; repository
 verification, governing promotion, and prototype preservation are complete.
@@ -64,10 +65,13 @@ context, causal supersession, and cancellation after an interrupted
 post-persistence stream lifecycle. It makes no direct Candidate, Evidence,
 Personal Facts, or Learning Intelligence writes. Production Activities,
 production Renderers, Canvas Specialist execution, and FE-02 production
-integration remain unimplemented. Student-authored free-form language belongs
-in Chat, including Voice-to-STT; Canvas accepts bounded semantic controls and
-may display language, without SafetyTextProjection or unrestricted Canvas
-language input. All later Studio tasks remain blocked.
+integration remain unimplemented at this baseline. `STUDIO-ACT-MATH-01` is now
+the only `READY` Studio implementation task; its bounded Make-Ten production
+activity and minimal renderer are specified in the current execution overlay.
+Student-authored free-form language belongs in Chat, including Voice-to-STT;
+Canvas accepts bounded semantic controls and may display language, without
+SafetyTextProjection or unrestricted Canvas language input. Every later Studio
+task remains blocked.
 `CURR-RENDER-MATH-01A` remains blocked until the Grade 5 Math renderer
 implementation gate. Real Lina longitudinal history has not started.
 
@@ -180,7 +184,7 @@ Protected invariants:
 
 ## Active risks
 
-- **STUDIO-R1 — Studio backend foundations through Runtime-03 are accepted; production Activities/Renderers, frontend integration, and later Studio tasks remain blocked — Criticality 4**
+- **STUDIO-R1 — Studio backend foundations through Runtime-03 are accepted; only bounded STUDIO-ACT-MATH-01 is READY, while full frontend integration and later Studio tasks remain blocked — Criticality 4**
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**
 - **VISION-R1 — Durable Student Asset Hosting Required Before Daily Vision — Criticality 4**
 - **MATH-01 — Structured Math Readability — Criticality 4 / independent**
@@ -238,9 +242,10 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
-Verify Runtime-03 closure/remote parity, then obtain explicit promotion of
-`STUDIO-ACT-MATH-01`. Keep frontend Studio integration, renderers, curriculum,
-and all later Studio work blocked until separately authorized.
+Execute only the explicitly promoted `STUDIO-ACT-MATH-01` bounded Make-Ten
+activity task. Keep full FE-02 `/student/daily` Studio integration,
+cross-subject activities, Grade 5 renderer work, Canvas Specialist work, and
+all later Studio work blocked until separately authorized.
 
 ---
 

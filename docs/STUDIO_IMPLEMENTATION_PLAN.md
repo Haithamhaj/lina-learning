@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, and `STUDIO-RUNTIME-03` are `DONE / ACCEPTED`. All later Studio tasks remain dependency-ordered and blocked pending explicit promotion.
+**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, and `STUDIO-RUNTIME-03` are `DONE / ACCEPTED`. `STUDIO-ACT-MATH-01` is the only `READY` Studio implementation task under the current execution overlay. Every subsequent Studio task remains dependency-ordered and blocked pending explicit promotion.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -1406,6 +1406,9 @@ SafetyTextProjection.
 
 #### `STUDIO-ACT-MATH-01 — Make-Ten Group Transfer`
 
+**Status:** READY — only Studio implementation task explicitly promoted in the
+current execution overlay.
+
 Production implementation of `ten_frame_group_transfer` and approved acceptance flow.
 It is a bounded cross-grade foundation activity and does not depend on the
 Grade 5 renderer research correction.
@@ -1721,7 +1724,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-02 — DONE / ACCEPTED
 → STUDIO-RUNTIME-03 — DONE / ACCEPTED
-→ STUDIO-ACT-MATH-01 — BLOCKED pending explicit promotion
+→ STUDIO-ACT-MATH-01 — READY — ONLY READY STUDIO TASK
 → Cross-subject production activities — BLOCKED
 → FE-02-STUDIO-01 — BLOCKED
 → CURR-RENDER-MATH-01A — BLOCKED pending Grade 5 renderer correction gate

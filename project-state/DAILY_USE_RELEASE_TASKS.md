@@ -23,7 +23,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-02 — DONE / ACCEPTED
 → STUDIO-RUNTIME-03 — DONE / ACCEPTED
-→ STUDIO-ACT-MATH-01 — BLOCKED
+→ STUDIO-ACT-MATH-01 — READY — ONLY READY STUDIO TASK
 → STUDIO-ACT-SCI-01 — BLOCKED
 → STUDIO-ACT-EN-01 — BLOCKED
 → STUDIO-ACT-AR-01 — BLOCKED
@@ -95,11 +95,104 @@ the five opt-in cloud-writing S3 tests and two opt-in real-Luna tests, not
 passes. Student-authored free-form language remains Chat-only, including
 Voice-to-STT; Canvas uses bounded semantic controls and may display language.
 
-All later Studio tasks remain blocked. `STUDIO-ACT-MATH-01` is next in the
-approved sequence but is not promoted by this acceptance.
+`STUDIO-ACT-MATH-01` is the only `READY` Studio implementation task. All later
+Studio tasks remain blocked.
 `CURR-RENDER-MATH-01A` is **BLOCKED UNTIL THE GRADE 5 MATH RENDERER
 IMPLEMENTATION GATE**: it does not block Studio state, protocol, runtime,
 cross-subject foundation activities, or FE-02 Studio integration.
+
+---
+
+## STUDIO-ACT-MATH-01 — Make-Ten Group Transfer
+
+**Status:** READY — the only Studio implementation task authorized in this
+overlay.
+
+**Purpose:** Deliver the bounded, cross-grade production
+`ten_frame_group_transfer` activity and its minimal production renderer for the
+accepted `9 + 6 → 10 + 5` flow. It proves bidirectional Studio behavior; it is
+not a Grade 5 curriculum claim or coverage item.
+
+**Accepted dependencies:** `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`,
+`STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, and
+`STUDIO-RUNTIME-03` are `DONE / ACCEPTED`. `CURR-RENDER-MATH-01A` does not
+block this foundation activity and Make-Ten remains outside the Grade 5
+coverage denominator.
+
+**Expected production outputs:**
+
+- a code-owned exact-version MATH Activity, Renderer, payload-validator,
+  semantic-validator, and reducer contract for `ten_frame_group_transfer`;
+- the typed `TRANSFER_ITEM` semantic operation and a contract-declared bounded
+  submit/step-completion action. Exploration remains `RECORD_ONLY`; only the
+  declared submit/step-completion action creates a Tutor-triggering
+  `StudentInteraction`;
+- a deterministic ten-frame/group-count reducer and validator that reach
+  `10 + 5`, return bounded truthful validation results, and preserve
+  authoritative invalid, duplicate, and stale-operation handling;
+- a minimal production native React/SVG renderer with equivalent drag, touch,
+  and keyboard/button interaction; accessible text/control equivalents;
+  Arabic, English, and mixed-direction presentation; and a complete
+  reduced-motion/static experience;
+- durable typed Event/Snapshot state whose reload and rebuild exactly reproduce
+  the accepted activity state; and
+- Canvas-originated Tutor continuation through accepted Runtime-03 with real
+  Tutor-message provenance and no fake Student LearningMessage. The known
+  activity uses no Canvas Specialist or additional Canvas model call.
+
+**Likely code areas, confirmed at promotion:**
+
+- `services/studio/subjects/__init__.py`, `contracts.py`, and `registry.py`
+  currently provide the production MATH profile and exact-version capability
+  registry, but contain no production Activities;
+- `services/studio/contracts.py`, `service.py`, `reducer.py`, and `protocol.py`
+  provide typed Scene/Event commands, atomic append/Snapshot reduction,
+  idempotency and stale-version handling, and the Student-scoped operation
+  boundary;
+- `services/studio/interactions.py`, `tutor_context.py`,
+  `workspace_capabilities.py`, and `router.py`, plus
+  `apps/api/routes/student.py`, provide the accepted Runtime-01/02/03 Tutor
+  continuity and interaction path; and
+- `apps/api/routes/studio.py` and `apps/web/lib/studio/{contracts,controller,sse}.ts`
+  provide the authenticated Studio protocol/feed client. No production activity
+  renderer host exists in `apps/web` at this baseline.
+
+**Existing contracts/services to reuse:** Use the project-owned Subject
+Capability Registry, `CreateSceneCommand` / `AppendStudioEventCommand`,
+`StudioStateService`, `StudioProtocolService`, reducer/rebuild path, dedicated
+Studio feed, and Runtime-03 interaction lifecycle. Reuse the current web Studio
+protocol/controller only as a server-authoritative transport client. Do not
+replace these contracts with browser state, a chat runtime, or a new service.
+
+**Bounded code-grounded implementation checks:** Before implementation code,
+confirm the exact MATH contract versions, scene-seed payload, action payload,
+validator feedback codes, and scene-activation adapter. At promotion baseline,
+Runtime-02 routing is intentionally non-mutating and the production registry
+has no Activity; use the existing Scene/Event service boundaries and establish
+only the smallest activity-specific activation path proven necessary. Confirm
+the isolated renderer mounting/test seam without modifying or integrating
+`/student/daily`; full Daily Student App integration remains
+`FE-02-STUDIO-01`.
+
+**Verification and implementation acceptance gate:** Add focused contract,
+PostgreSQL, API/protocol, Runtime-03-continuation, and web renderer tests that
+prove Student isolation; exact Event/Snapshot reload and rebuild; idempotent
+replay; stale and invalid-operation truthfulness; `RECORD_ONLY` versus
+Tutor-triggering behavior; one primary Tutor call only when declared; no fake
+Student message; no additional Canvas/Specialist model call;
+keyboard/touch/button equivalence; locale/direction; accessibility; and reduced
+motion. Inspect the rendered
+activity in an appropriate isolated/authenticated review seam, run the changed
+task's relevant Python and web checks, and run `git diff --check`. Acceptance
+also requires fresh independent review of the implementation diff and its
+evidence; the accepted Runtime-03 review is not a substitute.
+
+**Explicit non-scope:** No full FE-02 `/student/daily` integration; generic
+Artifact Engine or renderer catalog; Grade 5 curriculum/coverage work;
+Science, English, or Arabic activities; Canvas Specialist; unrestricted Canvas
+language input; new frontend architecture; direct Candidate, Evidence,
+Personal Facts, or Learning Intelligence writes; package installation; schema
+change; dependency change; or a new Canvas model call.
 
 ---
 

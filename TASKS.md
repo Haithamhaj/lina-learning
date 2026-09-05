@@ -113,8 +113,10 @@ Student-authored free-form language belongs in Chat, including Voice-to-STT.
 Canvas accepts bounded semantic controls and may display language; it has no
 unrestricted language-input channel or SafetyTextProjection.
 
-All later Studio tasks remain blocked. `STUDIO-ACT-MATH-01` is next in the
-approved sequence but requires explicit promotion before any work begins.
+`STUDIO-ACT-MATH-01` is now explicitly promoted as the only `READY` Studio
+implementation task in `project-state/DAILY_USE_RELEASE_TASKS.md`. All later
+Studio tasks remain blocked. This preserved historical ledger does not duplicate
+the executable task specification in the current overlay.
 
 ---
 
