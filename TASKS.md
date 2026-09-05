@@ -126,18 +126,25 @@ coverage. Detailed acceptance evidence is retained in the current execution
 overlay.
 
 ## STUDIO-ACT-SCI-01 — Process Sequence Workspace
-**Status:** READY
+**Status:** DONE / ACCEPTED
 **Scope:** one bounded production `process_sequence_workspace` Science fixture
 with exact contracts, stable stage identities, server-owned deterministic
 validation/rebuild, record-only reorder, one contract-declared submitted-
 configuration Runtime-03 continuation, and an isolated accessible review seam.
 The current empty `SCIENCE / subject-profile-v1` remains historical/replay
-truth; the new exact contract versions, fixture, payloads, order rule, and
-activation policy are implementation checks in the current execution overlay.
+truth; current `SCIENCE / subject-profile-v2` resolves the accepted exact
+contract versions, fixture, payloads, order rule, and activation policy.
 No generic Artifact Engine, full Science curriculum, FE-02 integration,
 Canvas Specialist, direct learning-intelligence write, or additional Canvas
-model call is authorized. It is the only READY Studio task; all subsequent
-Studio tasks remain BLOCKED.
+model call is accepted. The fixture is a project-authored bounded instructional
+fixture based on elementary scientific fact: the one server-owned
+`sand_water_filtration / sand-water-filtration-fixture-v1` sequence is only
+`prepare-filter-funnel` → `pour-sand-water-mixture` →
+`allow-water-to-filter` → `collect-filtered-water`, with no alternative valid
+order. It does not claim filtration makes arbitrary water safe or potable.
+Detailed verification, review, and evidence boundaries are retained in the
+current execution overlay. All subsequent Studio tasks remain BLOCKED pending
+explicit promotion.
 
 ---
 

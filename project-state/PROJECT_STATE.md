@@ -20,7 +20,7 @@ PF-03 Tutor Personal Context        ACCEPTED / COMPLETED
 FE-01 Visual System + Reuse Record  ACCEPTED / COMPLETED
 STUDIO-RUNTIME-03 Canvas Tutor Turns DONE / ACCEPTED
 STUDIO-ACT-MATH-01 Make-Ten Transfer DONE / ACCEPTED
-STUDIO-ACT-SCI-01 Process Sequence READY
+STUDIO-ACT-SCI-01 Process Sequence DONE / ACCEPTED
 ```
 
 Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical ledger.
@@ -77,10 +77,10 @@ is not `/student/daily`.
 Student-authored free-form language belongs in Chat, including Voice-to-STT;
 Canvas accepts bounded semantic controls and may display language, without
 SafetyTextProjection or unrestricted Canvas language input.
-`STUDIO-ACT-SCI-01` is the only `READY` Studio implementation task: it will
-add one bounded Science `process_sequence_workspace` activity, not a generic
-Artifact Engine or Science curriculum. Every subsequent Studio task remains
-blocked.
+`STUDIO-ACT-SCI-01` is `DONE / ACCEPTED`: it adds one bounded Science
+`process_sequence_workspace` activity, not a generic Artifact Engine or
+Science curriculum. Every subsequent Studio task remains blocked pending
+explicit promotion.
 `CURR-RENDER-MATH-01A` remains blocked until the Grade 5 Math renderer
 implementation gate. Real Lina longitudinal history has not started.
 
@@ -129,13 +129,15 @@ implementation gate. Real Lina longitudinal history has not started.
   covers mouse, emulated touch, keyboard, cancellation, rejection, RTL/narrow
   layout, and reduced motion; detailed commands, skips, and review evidence
   are in `project-state/DAILY_USE_RELEASE_TASKS.md`.
-- STUDIO-ACT-SCI-01 is the only READY Studio task. Its bounded executable
-  contract is in `project-state/DAILY_USE_RELEASE_TASKS.md`: exact new Science
-  contracts and fixture identity remain implementation checks, while the
-  accepted dependencies, server-owned state/rebuild, record-only reorder,
-  submitted-configuration continuation, isolated review seam, and review gate
-  are fixed. No Science activity or renderer code has been written by this
-  promotion.
+- STUDIO-ACT-SCI-01 is DONE / ACCEPTED: the exact-version Science v2
+  `process_sequence_workspace` preserves historical empty Science v1, keeps
+  the deterministic sand/water filtration answer order server-owned, and
+  retains the submitted configuration independently from later record-only
+  reorders. One Runtime-03 continuation occurs only on submit; no fake Student
+  message, direct intelligence write, or additional Canvas model call exists.
+  The isolated mock-labelled renderer is not `/student/daily`. Detailed
+  verification, provenance, and independent-review evidence are retained in
+  `project-state/DAILY_USE_RELEASE_TASKS.md`.
 
 ---
 
@@ -207,7 +209,7 @@ Protected invariants:
 
 ## Active risks
 
-- **STUDIO-R1 — Studio foundations and bounded Make-Ten are accepted; only the bounded Science process activity is READY, while full frontend integration and every subsequent Studio task remain blocked — Criticality 4**
+- **STUDIO-R1 — Studio foundations, bounded Make-Ten, and bounded Science process activity are accepted; full frontend integration and every subsequent Studio task remain blocked — Criticality 4**
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**
 - **VISION-R1 — Durable Student Asset Hosting Required Before Daily Vision — Criticality 4**
 - **MATH-01 — Structured Math Readability — Criticality 4 / independent**
@@ -236,6 +238,26 @@ or Personal Facts behavior changed.
 ---
 
 ## Latest accepted task
+
+### STUDIO-ACT-SCI-01 — Process Sequence Workspace
+
+**Status:** DONE / ACCEPTED
+
+**Acceptance:** exact-version `SCIENCE / subject-profile-v2` adds the bounded
+`sand_water_filtration` fixture (`sand-water-filtration-fixture-v1`) while
+preserving empty `SCIENCE / subject-profile-v1` for replay. Its one
+server-owned accepted order models only the narrow sand-and-water filtration
+sequence; it does not claim filtration alone makes arbitrary water safe or
+potable, and it makes no Grade 5 Science coverage claim. Reorder is
+`RECORD_ONLY`; submit persists the exact configuration and creates one
+Runtime-03 Tutor continuation without a fake Student message, direct
+Candidate/Evidence/Personal Facts/Learning Intelligence write, or an
+additional Canvas model call.
+
+**Boundary:** the reviewed route is a mock-labelled isolated renderer, not
+FE-02 `/student/daily`; no later Studio task is promoted.
+
+---
 
 ### STUDIO-ACT-MATH-01 — Make-Ten Group Transfer
 
@@ -285,10 +307,9 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
-Implement only `STUDIO-ACT-SCI-01 — Process Sequence Workspace` from its
-bounded current-execution entry. Keep full FE-02 `/student/daily` Studio
-integration, all other activities, Grade 5 renderer work, Canvas Specialist
-work, and all later Studio work blocked until separately authorized.
+No Studio implementation task is `READY`. Keep full FE-02 `/student/daily`
+Studio integration, all other activities, Grade 5 renderer work, Canvas
+Specialist work, and all later Studio work blocked until separately authorized.
 
 ---
 

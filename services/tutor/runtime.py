@@ -1149,11 +1149,12 @@ class TutorRuntime:
         learning_session.last_activity_at = datetime.now(UTC)
         self._session.flush()
         if workspace_audit is not None and callable(getattr(self._session, "execute", None)):
-            # This is deliberately a one-activity adapter after normal Tutor
-            # persistence, not a mutation capability of Runtime-02's Router.
-            from services.studio.make_ten_activation import activate_make_ten_from_workspace_decision
+            # This runs only after normal Tutor persistence. Exact activity
+            # adapters validate their own supported audit; Runtime-03 does not
+            # branch on a subject or add another Tutor/model decision.
+            from services.studio.activity_activation import activate_known_workspace_activity
 
-            activate_make_ten_from_workspace_decision(
+            activate_known_workspace_activity(
                 self._session,
                 learning_session=learning_session,
                 source_tutor_message=message,

@@ -24,7 +24,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-02 — DONE / ACCEPTED
 → STUDIO-RUNTIME-03 — DONE / ACCEPTED
 → STUDIO-ACT-MATH-01 — DONE / ACCEPTED
-→ STUDIO-ACT-SCI-01 — READY
+→ STUDIO-ACT-SCI-01 — DONE / ACCEPTED
 → STUDIO-ACT-EN-01 — BLOCKED
 → STUDIO-ACT-AR-01 — BLOCKED
 → FE-02-STUDIO-01 — BLOCKED
@@ -95,9 +95,9 @@ the five opt-in cloud-writing S3 tests and two opt-in real-Luna tests, not
 passes. Student-authored free-form language remains Chat-only, including
 Voice-to-STT; Canvas uses bounded semantic controls and may display language.
 
-`STUDIO-ACT-MATH-01` is `DONE / ACCEPTED`. `STUDIO-ACT-SCI-01` is the only
-`READY` Studio task. All subsequent Studio tasks remain blocked pending
-explicit promotion.
+`STUDIO-ACT-MATH-01` and `STUDIO-ACT-SCI-01` are `DONE / ACCEPTED`. No Studio
+implementation task is `READY`. All subsequent Studio tasks remain blocked
+pending explicit promotion.
 `CURR-RENDER-MATH-01A` is **BLOCKED UNTIL THE GRADE 5 MATH RENDERER
 IMPLEMENTATION GATE**: it does not block Studio state, protocol, runtime,
 cross-subject foundation activities, or FE-02 Studio integration.
@@ -215,10 +215,10 @@ and are intentionally outside the source commit.
 
 ## STUDIO-ACT-SCI-01 — Process Sequence Workspace
 
-**Status:** READY
+**Status:** DONE / ACCEPTED
 
 **Purpose:** Deliver one production `process_sequence_workspace` Science
-activity using bounded authored/trusted fixture content. It proves the same
+activity using a bounded project-authored fixture. It proves the same
 Studio architecture with stable Science stage identities and deterministic
 sequence/relationship validation; it is not a water-cycle-only component,
 generic ordering framework, Grade 5 Science curriculum claim, or replacement
@@ -306,6 +306,75 @@ English/Arabic activity; Canvas Specialist; free-form Canvas language or
 SafetyTextProjection; schema/dependency installation by default; deployment;
 live-model/real-Lina execution; or implementation of any subsequent Studio
 task.
+
+### Accepted result — 2026-09-05
+
+The exact-version `SCIENCE / subject-profile-v2` profile is current while the
+empty `SCIENCE / subject-profile-v1` remains historical/replay truth. The
+accepted bounded fixture is **project-authored bounded instructional fixture
+based on elementary scientific fact**; it is not adapted from a named external
+source and is not model-generated content.
+
+| Fixture field | Accepted value |
+| --- | --- |
+| Fixture key | `sand_water_filtration` |
+| Fixture version | `sand-water-filtration-fixture-v1` |
+| Scientific proposition | A sand-and-water mixture can be separated by passing it through filter paper in a funnel and then collecting the filtered water. |
+| Scope boundary | This is only the bounded filtration sequence used to test the architecture. It does not claim filtration alone makes arbitrary water safe or potable, and it makes no Grade 5 Science coverage claim. |
+
+| Stable stage ID | Learner-visible English text | Learner-visible Arabic text |
+| --- | --- | --- |
+| `prepare-filter-funnel` | Set the filter paper in the funnel | جهّز القمع وورق الترشيح |
+| `pour-sand-water-mixture` | Pour the sand-and-water mixture | اسكب خليط الرمل والماء |
+| `allow-water-to-filter` | Let the water pass through the filter | اترك الماء يمر عبر المرشح |
+| `collect-filtered-water` | Collect the filtered water | اجمع الماء المُرشَّح |
+
+The only accepted order is, exactly: `prepare-filter-funnel` →
+`pour-sand-water-mixture` → `allow-water-to-filter` →
+`collect-filtered-water`. No alternative valid order exists in v1. The answer
+is server-owned and absent from the browser-visible Scene seed. Submission
+requires exactly one of every declared stable ID, exact agreement with the
+authoritative current Snapshot, and then exact equality with that one accepted
+order. The correct order returns `FILTRATION_SEQUENCE_COMPLETE`; a structurally
+valid but scientifically wrong order persists a bounded invalid result,
+`FILTRATION_SEQUENCE_NEEDS_REORDERING`, rather than a system error. This
+intentionally narrow deterministic order represents the physical dependency of
+preparing the filter, pouring the mixture, allowing filtration, and collecting
+the output; it is not a general water-purification lesson.
+
+`REORDER_STAGE` is `RECORD_ONLY`; `SUBMIT_CONFIGURATION` alone creates one
+Runtime-03 Tutor continuation from the persisted submitted configuration.
+Later record-only reorders can change the current Snapshot without changing
+that source submission. Tests cover exact v1 preservation/v2 resolution,
+fixture and operation validation, invalid-but-persisted scientific result,
+reload/rebuild, idempotency, stale and cross-Student rejection, and the one
+submit-only continuation. They also prove no fake Student message, direct
+Candidate/Evidence/Personal Facts/Learning Intelligence write, or additional
+Canvas model call.
+
+**Recorded verification (not rerun during closure):** focused Science
+PostgreSQL/Runtime tests `5 passed`; related Studio/Make-Ten/Runtime suite
+`91 passed`; disposable full Python suite `900 passed, 7 skipped`; renderer
+model tests `2 passed`; root TypeScript typecheck and production build passed;
+the isolated real-Chromium review matrix passed all 12 cases (native mouse,
+Chromium-emulated touch, keyboard, cancellation/capture/outside recovery,
+rejection, Arabic RTL narrow layout, and reduced motion); Alembic check and
+tracked/untracked diff checks passed. The seven skips are existing opt-in
+checks, not passes: five cloud-writing S3 tests and two real-Luna tests, as
+listed in the accepted `STUDIO-RUNTIME-03` record.
+
+**Independent review:** the initial read-only review reported the Minor
+localization finding that the renderer had an English-only eyebrow and an
+English-only live-drag stage label. The final localization-only independent
+source/evidence addendum inspected the post-fix lines at
+`apps/web/components/studio/process-sequence-workspace.tsx:37`, `:83`, `:168`,
+and `:201` and reported `0 Critical / 0 Important / 0 Minor`. That final review
+was source/evidence inspection, not an independent test re-run.
+
+**Committed evidence boundary:** commit the production/test source, this task
+record, and the reproducible browser runner/README. Retain generated browser
+screenshots, traces, logs, and `results.json` as local evidence; do not add the
+entire output directory.
 
 ---
 

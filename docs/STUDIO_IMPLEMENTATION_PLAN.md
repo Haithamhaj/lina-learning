@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, and `STUDIO-ACT-MATH-01` are `DONE / ACCEPTED`. `STUDIO-ACT-SCI-01` is the only `READY` Studio implementation task; every subsequent Studio task remains dependency-ordered and blocked pending explicit promotion.
+**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, and `STUDIO-ACT-SCI-01` are `DONE / ACCEPTED`. No Studio implementation task is `READY`; every subsequent Studio task remains dependency-ordered and blocked pending explicit promotion.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -1422,11 +1422,12 @@ outside the Grade 5 denominator.
 
 #### `STUDIO-ACT-SCI-01 — Process Sequence Workspace`
 
-**Status:** READY.
+**Status:** DONE / ACCEPTED.
 **Purpose:** implement the bounded, production `process_sequence_workspace`
-Science activity with authored/trusted fixture content. It is generic to the
-fixture's scientific process, not a one-off water-cycle component; water cycle
-remains permitted rather than selected.
+Science activity with a project-authored bounded instructional fixture based on
+elementary scientific fact. It represents only its narrow filtration process,
+not a one-off water-cycle component, a claim that arbitrary water is potable,
+or a Grade 5 Science coverage item.
 **Dependencies:** accepted `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`,
 `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`,
 `STUDIO-RUNTIME-03`, and `STUDIO-ACT-MATH-01`.
@@ -1456,6 +1457,17 @@ and reduced-motion review. Independent review is required before acceptance.
 Canvas Specialist, unrestricted Canvas language/SafetyTextProjection, FE-02
 integration, dependency installation by default, deployment, or real-Lina
 execution.
+
+**Accepted result:** current `SCIENCE / subject-profile-v2` retains historical
+empty `SCIENCE / subject-profile-v1` and resolves the one server-owned
+`sand_water_filtration / sand-water-filtration-fixture-v1` sequence:
+`prepare-filter-funnel` → `pour-sand-water-mixture` →
+`allow-water-to-filter` → `collect-filtered-water`. There are no alternative
+valid orders. `REORDER_STAGE` is record-only; only submit persists the exact
+configuration and makes one Runtime-03 continuation. The accepted test,
+browser, Alembic, diff, and final independent source/evidence review record is
+in `project-state/DAILY_USE_RELEASE_TASKS.md`; later Studio tasks remain
+blocked.
 
 #### `STUDIO-ACT-EN-01 — English Sentence Ordering`
 
@@ -1728,8 +1740,8 @@ accepted. The durable Studio state foundation is implemented at Alembic head
 ### 27.1 Only ready task
 
 ```text
-`STUDIO-ACT-MATH-01` is DONE / ACCEPTED. `STUDIO-ACT-SCI-01` is the only
-READY Studio implementation task; every subsequent Studio task remains BLOCKED
+`STUDIO-ACT-MATH-01` and `STUDIO-ACT-SCI-01` are DONE / ACCEPTED. No Studio
+implementation task is READY; every subsequent Studio task remains BLOCKED
 pending explicit promotion.
 ```
 
@@ -1771,7 +1783,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-02 — DONE / ACCEPTED
 → STUDIO-RUNTIME-03 — DONE / ACCEPTED
 → STUDIO-ACT-MATH-01 — DONE / ACCEPTED
-→ STUDIO-ACT-SCI-01 — READY
+→ STUDIO-ACT-SCI-01 — DONE / ACCEPTED
 → all subsequent cross-subject production activities — BLOCKED
 → FE-02-STUDIO-01 — BLOCKED
 → CURR-RENDER-MATH-01A — BLOCKED pending Grade 5 renderer correction gate
