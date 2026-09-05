@@ -25,7 +25,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-03 — DONE / ACCEPTED
 → STUDIO-ACT-MATH-01 — DONE / ACCEPTED
 → STUDIO-ACT-SCI-01 — DONE / ACCEPTED
-→ STUDIO-ACT-EN-01 — READY — ONLY READY STUDIO TASK
+→ STUDIO-ACT-EN-01 — DONE / ACCEPTED
 → STUDIO-ACT-AR-01 — BLOCKED
 → FE-02-STUDIO-01 — BLOCKED
 → CURR-RENDER-MATH-01A — BLOCKED UNTIL THE GRADE 5 MATH RENDERER IMPLEMENTATION GATE
@@ -95,9 +95,9 @@ the five opt-in cloud-writing S3 tests and two opt-in real-Luna tests, not
 passes. Student-authored free-form language remains Chat-only, including
 Voice-to-STT; Canvas uses bounded semantic controls and may display language.
 
-`STUDIO-ACT-MATH-01` and `STUDIO-ACT-SCI-01` are `DONE / ACCEPTED`.
-`STUDIO-ACT-EN-01` is the only `READY` Studio implementation task. All other
-subsequent Studio tasks remain blocked pending explicit promotion.
+`STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, and `STUDIO-ACT-EN-01` are
+`DONE / ACCEPTED`. `STUDIO-ACT-AR-01`, `FE-02-STUDIO-01`, and all later Studio
+tasks remain blocked pending explicit Product Owner promotion.
 `CURR-RENDER-MATH-01A` is **BLOCKED UNTIL THE GRADE 5 MATH RENDERER
 IMPLEMENTATION GATE**: it does not block Studio state, protocol, runtime,
 cross-subject foundation activities, or FE-02 Studio integration.
@@ -380,7 +380,7 @@ entire output directory.
 
 ## STUDIO-ACT-EN-01 — English Sentence Ordering
 
-**Status:** READY — the only READY Studio task.
+**Status:** DONE / ACCEPTED
 
 **Purpose:** Prove that the accepted Studio Core can support one bounded,
 text-oriented English Workspace with stable token identities and deterministic
@@ -490,6 +490,83 @@ Artifact Engine, Canvas Specialist, a new model call or `SafetyTextProjection`,
 full `/student/daily` integration, Arabic academic activity, schema/dependency
 installation by default, deployment, or real-Lina execution. All later Studio
 tasks remain `BLOCKED`.
+
+### Accepted result — 2026-09-05
+
+The current exact-version `ENGLISH / subject-profile-v2` profile resolves the
+bounded `sentence_ordering_workspace` while prior English profile versions
+remain unchanged for historical/replay truth. The fixture is a project-authored,
+rights-safe architecture activity, not an English curriculum or coverage claim.
+
+| Fixture field | Accepted value |
+| --- | --- |
+| Fixture key | `english_sentence_ordering_fixture_slate` |
+| Fixture version | `english-sentence-ordering-fixture-slate-v1` |
+| Canonical authority | Server-owned only; no browser answer/order metadata |
+| Server-only canonical order | `tok-c820 → tok-43bd → tok-7f2c → tok-a91e` |
+| Browser catalogue order | `tok-7f2c → tok-a91e → tok-43bd → tok-c820` |
+| Browser initial/current order | `tok-a91e → tok-c820 → tok-7f2c → tok-43bd` |
+
+| Stable opaque token ID | Learner-visible label |
+| --- | --- |
+| `tok-c820` | `Birds` |
+| `tok-43bd` | `fly` |
+| `tok-7f2c` | `over` |
+| `tok-a91e` | `clouds` |
+
+The IDs are fixture-owned opaque stable identities: they encode neither visible
+labels nor canonical positions, remain deterministic across reload and Event
+rebuild, and keep duplicate labels representable as different semantic objects.
+Visible words are presentation data. The Scene seed/catalog/current order and
+renderer metadata expose no canonical answer field; neither catalogue order nor
+initial/current order equals the server-owned order.
+
+`REORDER_TOKEN` remains `RECORD_ONLY`; `SUBMIT_CONFIGURATION` alone is
+`TUTOR_TRIGGERING`. Exact activation identity and idempotent reuse, durable
+Event/Snapshot state, exact rebuild/reload, bounded wrong-order feedback,
+malformed/unknown/duplicate/missing/extra rejection without mutation, stale and
+cross-Student rejection, and submitted-source truth after later record-only
+reorder are accepted. The sole submission creates one Runtime-03 Tutor
+execution and one real Tutor LearningMessage, with no fake Student message,
+direct Candidate/Evidence/Personal Facts/Learning Intelligence write, or
+additional Canvas/Specialist model call.
+
+Academic English token order stays LTR while surrounding instructions can be
+Arabic RTL or mixed direction; focus traversal is visible and usable. Native
+mouse, Chromium-emulated touch, and keyboard/button paths emit equivalent
+bounded `REORDER_TOKEN` intent, and explicit Submit remains a distinct
+once-only action. Canvas contains no free-form Student-authored language,
+contenteditable, composition field, explanation/reasoning field, or second
+Student language channel: free-form language remains Chat or Voice-to-STT-to-
+Chat.
+
+**Recorded verification (not rerun during closure):** focused English
+PostgreSQL/activation/rebuild/Runtime-03 tests `6 passed`; renderer/model tests
+`4 passed`; the isolated Chromium matrix passed `16/16` cases, including
+Chromium-emulated touch and Arabic RTL/English LTR keyboard-focus evidence; the
+full isolated Python suite passed `906 passed, 7 skipped`; TypeScript typecheck
+and production build passed; Alembic found no new upgrade operations; and
+tracked/relevant-untracked whitespace checks passed. The seven skips remain the
+five opt-in cloud-writing S3 tests and two opt-in real-Luna tests already
+documented above, not passes.
+
+**Final independent review:** the focused final source/evidence inspection
+reported `0 Critical / 0 Important / 0 Minor`; it was not independent test
+re-execution. The authoritative reproducible runner and README describe the
+16-case matrix. Generated screenshots, traces, and `results.json` remain local
+evidence; the historical generated `results.json` descriptive label was
+intentionally not normalized.
+
+**Committed evidence boundary:** commit the English production source,
+activation integration, PostgreSQL tests, renderer/model/component/review-mount
+source, implementation record, reproducible runner/README, and acceptance
+governance. Do not commit generated screenshots, traces, or `results.json`.
+
+**Next Product Owner gate:** evaluate whether `STUDIO-ACT-AR-01` provides
+material architectural proof beyond this accepted English text-oriented
+Workspace and mixed RTL/LTR evidence, or whether the sequence should proceed
+directly to `FE-02-STUDIO-01`. Neither Arabic nor FE-02 is promoted by this
+acceptance; both remain `BLOCKED`.
 
 ---
 

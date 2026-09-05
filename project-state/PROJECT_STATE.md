@@ -21,7 +21,7 @@ FE-01 Visual System + Reuse Record  ACCEPTED / COMPLETED
 STUDIO-RUNTIME-03 Canvas Tutor Turns DONE / ACCEPTED
 STUDIO-ACT-MATH-01 Make-Ten Transfer DONE / ACCEPTED
 STUDIO-ACT-SCI-01 Process Sequence DONE / ACCEPTED
-STUDIO-ACT-EN-01 English Sentence Ordering READY
+STUDIO-ACT-EN-01 English Sentence Ordering DONE / ACCEPTED
 ```
 
 Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical ledger.
@@ -80,8 +80,11 @@ Canvas accepts bounded semantic controls and may display language, without
 SafetyTextProjection or unrestricted Canvas language input.
 `STUDIO-ACT-SCI-01` is `DONE / ACCEPTED`: it adds one bounded Science
 `process_sequence_workspace` activity, not a generic Artifact Engine or
-Science curriculum. `STUDIO-ACT-EN-01` is now the only `READY` Studio task:
-one bounded English sentence-ordering Workspace with stable token identities,
+Science curriculum. `STUDIO-ACT-EN-01` is `DONE / ACCEPTED`: exact-version
+`ENGLISH / subject-profile-v2` preserves historical English profiles and adds
+the bounded `sentence_ordering_workspace`. Its project-authored
+`english_sentence_ordering_fixture_slate /
+english-sentence-ordering-fixture-slate-v1` uses stable opaque identities,
 server-owned deterministic validation, record-only reorder, and one
 submit-only Runtime-03 continuation. It does not authorize free-form Canvas
 language, a generic text/artifact system, or `/student/daily` integration.
@@ -144,15 +147,22 @@ implementation gate. Real Lina longitudinal history has not started.
   The isolated mock-labelled renderer is not `/student/daily`. Detailed
   verification, provenance, and independent-review evidence are retained in
   `project-state/DAILY_USE_RELEASE_TASKS.md`.
-- STUDIO-ACT-EN-01 is the only READY Studio task. Its execution contract is
-  one bounded English sentence-ordering Workspace: a new exact ENGLISH profile
-  version preserves historical versions; stable token IDs and a server-owned
-  answer key support deterministic validation; reorder is record-only; and
-  only submit creates one Runtime-03 continuation. It retains submitted source
-  truth apart from later Workspace state and prohibits free-form Canvas
-  language, fake Student messages, direct intelligence/Personal Facts writes,
-  and extra Canvas calls. Its exact fixture/version choices and implementation
-  verification remain future task checks in the current execution overlay.
+- STUDIO-ACT-EN-01 is DONE / ACCEPTED: exact `ENGLISH /
+  subject-profile-v2` keeps historical English profiles unchanged and resolves
+  the bounded `sentence_ordering_workspace` fixture
+  `english_sentence_ordering_fixture_slate /
+  english-sentence-ordering-fixture-slate-v1`. The server-only canonical order
+  is `tok-c820 → tok-43bd → tok-7f2c → tok-a91e`; the browser catalogue is
+  `tok-7f2c → tok-a91e → tok-43bd → tok-c820` and its deterministic initial
+  order is `tok-a91e → tok-c820 → tok-7f2c → tok-43bd`. Opaque fixture IDs do
+  not encode labels or canonical positions; duplicate visible labels remain
+  separately representable. `REORDER_TOKEN` remains record-only; only submit
+  creates one Runtime-03 continuation. The submitted configuration remains
+  source truth after later reorders. No fake Student message, direct Candidate,
+  Evidence, Personal Facts, or Learning Intelligence write, extra
+  Canvas/Specialist call, free-form Canvas language channel, or FE-02
+  integration was accepted. Detailed verification and final review evidence are
+  in `project-state/DAILY_USE_RELEASE_TASKS.md`.
 
 ---
 
@@ -224,7 +234,7 @@ Protected invariants:
 
 ## Active risks
 
-- **STUDIO-R1 — Studio foundations, bounded Make-Ten, bounded Science process activity are accepted, and English Sentence Ordering is the only READY Studio task; full frontend integration and every later Studio task remain blocked — Criticality 4**
+- **STUDIO-R1 — Studio foundations plus bounded Make-Ten, Science process, and English sentence-ordering activities are accepted; Arabic, FE-02 integration, and every later Studio task remain blocked — Criticality 4**
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**
 - **VISION-R1 — Durable Student Asset Hosting Required Before Daily Vision — Criticality 4**
 - **MATH-01 — Structured Math Readability — Criticality 4 / independent**
@@ -253,6 +263,52 @@ or Personal Facts behavior changed.
 ---
 
 ## Latest accepted task
+
+### STUDIO-ACT-EN-01 — English Sentence Ordering
+
+**Status:** DONE / ACCEPTED
+
+**Acceptance:** exact-version `ENGLISH / subject-profile-v2` preserves
+historical English profile versions and adds the bounded
+`sentence_ordering_workspace`. The project-authored fixture is
+`english_sentence_ordering_fixture_slate`
+(`english-sentence-ordering-fixture-slate-v1`): `tok-c820 = Birds`,
+`tok-43bd = fly`, `tok-7f2c = over`, and `tok-a91e = clouds`. The canonical
+answer remains server-only (`tok-c820 → tok-43bd → tok-7f2c → tok-a91e`), while
+the browser receives a noncanonical catalogue and deterministic noncanonical
+current order. Token identity is opaque and independent of visible text and
+canonical position; duplicate labels remain distinct semantic objects.
+
+`REORDER_TOKEN` is `RECORD_ONLY`; `SUBMIT_CONFIGURATION` alone is
+`TUTOR_TRIGGERING`. Durable Event/Snapshot state retains exact activation,
+idempotency, rebuild/reload, stale and ownership rejection, and the submitted
+configuration as source truth after later record-only reorders. Submit creates
+one Runtime-03 Tutor execution and one real Tutor LearningMessage, without a
+fake Student message, direct Candidate/Evidence/Personal Facts/Learning
+Intelligence write, or extra Canvas/Specialist model call. The isolated review
+mount is not FE-02 `/student/daily`.
+
+**Language boundary:** academic English tokens remain LTR inside Arabic RTL or
+mixed-direction surrounding UI. Visible keyboard focus and mouse,
+Chromium-emulated touch, and keyboard/button paths emit equivalent bounded
+semantic reorder intent. Canvas has no contenteditable, sentence-composition,
+explanation, reasoning, or other unrestricted Student language channel;
+Student-authored free-form language remains Chat or Voice-to-STT-to-Chat.
+
+**Evidence:** 6 focused English PostgreSQL/activation/rebuild/Runtime-03 tests
+passed; 4 renderer/model tests passed; the isolated Chromium matrix passed
+16/16 cases; the full isolated Python suite passed 906 with 7 skipped; web
+typecheck and production build passed; Alembic found no new upgrade operations;
+and tracked/relevant-untracked whitespace checks passed. The final independent
+source/evidence review reported 0 Critical / 0 Important / 0 Minor and did not
+independently re-execute tests. The seven skips remain the documented opt-in
+cloud-writing S3 and real-Luna checks, not passes.
+
+**Boundary:** generated browser screenshots, traces, and `results.json` remain
+local evidence; its historical descriptive label was intentionally not rewritten.
+No Arabic or FE-02 promotion occurred.
+
+---
 
 ### STUDIO-ACT-SCI-01 — Process Sequence Workspace
 
@@ -322,10 +378,11 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
-Implement only `STUDIO-ACT-EN-01` in a separate explicitly authorized run.
-Keep full FE-02 `/student/daily` Studio integration, Arabic and all other
-activities, Grade 5 renderer work, Canvas Specialist work, and every later
-Studio task blocked until separately promoted.
+Evaluate whether `STUDIO-ACT-AR-01` provides material architectural proof
+beyond the accepted English text-oriented Workspace and mixed RTL/LTR evidence,
+or whether the execution sequence should proceed directly to
+`FE-02-STUDIO-01`. Arabic, FE-02 `/student/daily` Studio integration, and every
+later Studio task remain blocked pending explicit Product Owner promotion.
 
 ---
 

@@ -146,20 +146,25 @@ Detailed verification, review, and evidence boundaries are retained in the
 current execution overlay. The overlay owns subsequent readiness.
 
 ## STUDIO-ACT-EN-01 — English Sentence Ordering
-**Status:** READY — only READY Studio task.
-**Scope:** one bounded, text-oriented English sentence-ordering Workspace with
-an exact new ENGLISH profile version, stable token IDs independent of display
-text, deterministic server-owned authored-answer validation, `REORDER_TOKEN`
-as `RECORD_ONLY`, and `SUBMIT_CONFIGURATION` as the sole
-`TUTOR_TRIGGERING` action. One Runtime-03 continuation receives exact
-submitted order and validation separately from later record-only current
-Workspace state. Canvas remains bounded controls only: no Student-authored
-sentence, explanation, reasoning, or other free-form language channel. Reuse
-the existing Registry, State/Protocol/command/reducer/feed/controller,
-Runtime-03, and exact-adapter activation seams; do not create a second Router
-or generic activation/drag-drop framework. The full executable contract,
-fixture/version checks, verification matrix, independent-review gate, and
-non-scope are in `project-state/DAILY_USE_RELEASE_TASKS.md`.
+**Status:** DONE / ACCEPTED
+**Accepted result:** exact-version `ENGLISH / subject-profile-v2` preserves
+historical English profile versions and adds the bounded
+`sentence_ordering_workspace`. The project-authored
+`english_sentence_ordering_fixture_slate /
+english-sentence-ordering-fixture-slate-v1` has opaque stable token identities
+independent of labels and canonical position; the canonical answer is
+server-owned and absent from browser seed/catalog/current order and renderer
+metadata. `REORDER_TOKEN` is `RECORD_ONLY`; `SUBMIT_CONFIGURATION` alone is
+`TUTOR_TRIGGERING`. Durable Event/Snapshot activation, idempotency,
+rebuild/reload, rejection, ownership, and submitted-source-truth semantics are
+accepted, as is one Runtime-03 Tutor execution with one real Tutor
+LearningMessage and no fake Student message, direct Candidate/Evidence/Personal
+Facts/Learning Intelligence write, or additional Canvas/Specialist model call.
+The isolated review mount is not `/student/daily`. Academic English tokens stay
+LTR in Arabic RTL/mixed surrounding UI, and Canvas remains bounded controls
+only: no Student-authored sentence, explanation, reasoning, or free-form
+language channel. Detailed fixture, verification, and independent-review
+evidence is retained in `project-state/DAILY_USE_RELEASE_TASKS.md`.
 
 ---
 

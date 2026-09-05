@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, and `STUDIO-ACT-SCI-01` are `DONE / ACCEPTED`. `STUDIO-ACT-EN-01` is the only `READY` Studio implementation task; every later Studio task remains dependency-ordered and blocked pending explicit promotion.
+**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, and `STUDIO-ACT-EN-01` are `DONE / ACCEPTED`. `STUDIO-ACT-AR-01`, `FE-02-STUDIO-01`, and every later Studio task remain dependency-ordered and blocked pending explicit Product Owner promotion.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -1466,18 +1466,18 @@ empty `SCIENCE / subject-profile-v1` and resolves the one server-owned
 valid orders. `REORDER_STAGE` is record-only; only submit persists the exact
 configuration and makes one Runtime-03 continuation. The accepted test,
 browser, Alembic, diff, and final independent source/evidence review record is
-in `project-state/DAILY_USE_RELEASE_TASKS.md`. `STUDIO-ACT-EN-01` is now
-separately READY; all other later Studio tasks remain blocked.
+in `project-state/DAILY_USE_RELEASE_TASKS.md`. `STUDIO-ACT-EN-01` is also
+`DONE / ACCEPTED`; all later Studio tasks remain blocked.
 
 #### `STUDIO-ACT-EN-01 — English Sentence Ordering`
 
-**Status:** READY — the only READY Studio task.
+**Status:** DONE / ACCEPTED.
 **Purpose:** implement one bounded text-oriented English Workspace that proves
 stable token identity and deterministic sentence-order validation without
 introducing a second Student language-input channel. Canvas displays and
 reorders declared tokens only; free-form Student prose, explanation, and
 reasoning remain in Chat or Voice-to-STT-to-Chat.
-**Output:** a new exact-version ENGLISH profile extension that preserves
+**Accepted output:** the current `ENGLISH / subject-profile-v2` extension preserves
 historical profile meanings; one Activity/Renderer/validator/reducer and
 fixture contract; stable token IDs independent of visible labels; bounded
 `REORDER_TOKEN` as `RECORD_ONLY`; and `SUBMIT_CONFIGURATION` as the one
@@ -1485,8 +1485,16 @@ fixture contract; stable token IDs independent of visible labels; bounded
 order. Runtime-03 receives both exact submitted order plus validation and,
 when applicable, later current Workspace state separately. No fake Student
 message, direct intelligence/Personal Facts write, or additional Canvas model
-call is permitted.
-**Reuse and implementation checks:** reuse the Subject Capability Registry,
+call is accepted. The exact project-authored fixture is
+`english_sentence_ordering_fixture_slate /
+english-sentence-ordering-fixture-slate-v1`: `tok-c820 = Birds`,
+`tok-43bd = fly`, `tok-7f2c = over`, `tok-a91e = clouds`. Its server-only
+canonical order is `tok-c820 → tok-43bd → tok-7f2c → tok-a91e`; the browser
+catalogue and deterministic initial order are respectively
+`tok-7f2c → tok-a91e → tok-43bd → tok-c820` and
+`tok-a91e → tok-c820 → tok-7f2c → tok-43bd`. IDs encode neither labels nor
+canonical positions, and duplicate labels remain separately representable.
+**Accepted implementation boundaries:** reuse the Subject Capability Registry,
 State/Protocol/command/reducer/feed/controller contracts, Runtime-03 lifecycle,
 and the existing exact-adapter activation entry point; do not create another
 Router, activation framework, generic drag/drop framework, browser-owned
@@ -1494,7 +1502,7 @@ truth, or Canvas language-safety system. Resolve exact profile/activity/
 renderer/scene/token/action/event/payload/validator/reducer/fixture versions,
 fixture provenance, duplicate-token and valid-order policy, activation
 identity, and renderer interaction design in implementation.
-**Verification:** prove historical-version preservation, exact resolution,
+**Accepted verification:** historical-version preservation, exact resolution,
 authoritative fixture/token validation, invalid-but-persisted order,
 malformed/unknown/duplicate/missing/extra/stale/cross-Student rejection,
 idempotency, rebuild/reload, record-only versus submit-only Runtime-03
@@ -1503,13 +1511,19 @@ writes/extra Canvas call. Fresh browser review covers pointer, touch,
 keyboard/button, cancellation/retry/outside release, rejection reconciliation,
 English LTR tokens with Arabic RTL surrounding UI, mixed direction, narrow
 layout, focus/live status, and reduced motion. A fresh independent final-diff
-review is required; Math and Science evidence is not English evidence. The
-current executable specification is in
+review reported 0 Critical / 0 Important / 0 Minor; Math and Science evidence
+was not treated as English evidence. The final evidence record is in
 `project-state/DAILY_USE_RELEASE_TASKS.md`.
 **Non-scope:** unrestricted Canvas language, generic text/editor or Artifact
 infrastructure, grammar/curriculum/vocabulary platform, Canvas Specialist,
 new model call or `SafetyTextProjection`, FE-02 integration, Arabic academic
 activity, default schema/dependency work, deployment, or real-Lina execution.
+
+**Language boundary:** English academic tokens remain LTR in Arabic RTL or
+mixed-direction surrounding UI; visible keyboard focus and mouse,
+Chromium-emulated touch, and keyboard/button interaction produce equivalent
+bounded semantic reorder intent. Canvas has no unrestricted Student-authored
+language channel; free-form language remains Chat or Voice-to-STT-to-Chat.
 
 #### `STUDIO-ACT-AR-01 — Arabic Sentence Annotation/Ordering`
 
@@ -1522,6 +1536,8 @@ Each task verifies accessibility, touch, keyboard, locale, semantic events, snap
 ### Phase 6 — FE-02 product integration
 
 #### `FE-02-STUDIO-01 — Connect Real Studio to Daily Student App`
+
+**Status:** BLOCKED pending explicit promotion.
 
 **Keep:** greenfield route, Chat/Workspace layout, stream controller patterns, responsive shell.
 **Replace:** prose/equation parsing, message-derived Canvas, duplicated placeholder cards, browser-only state.
@@ -1776,10 +1792,9 @@ accepted. The durable Studio state foundation is implemented at Alembic head
 ### 27.1 Only ready task
 
 ```text
-`STUDIO-ACT-MATH-01` and `STUDIO-ACT-SCI-01` are DONE / ACCEPTED.
-`STUDIO-ACT-EN-01` is the only Studio implementation task that is READY.
-`STUDIO-ACT-AR-01`, `FE-02-STUDIO-01`, and every later Studio task remain
-BLOCKED pending explicit promotion.
+`STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, and `STUDIO-ACT-EN-01` are DONE /
+ACCEPTED. `STUDIO-ACT-AR-01`, `FE-02-STUDIO-01`, and every later Studio task
+remain BLOCKED pending explicit Product Owner promotion.
 ```
 
 ### 27.2 Completed governance outcome
@@ -1821,7 +1836,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-RUNTIME-03 — DONE / ACCEPTED
 → STUDIO-ACT-MATH-01 — DONE / ACCEPTED
 → STUDIO-ACT-SCI-01 — DONE / ACCEPTED
-→ STUDIO-ACT-EN-01 — READY — ONLY READY STUDIO TASK
+→ STUDIO-ACT-EN-01 — DONE / ACCEPTED
 → STUDIO-ACT-AR-01 — BLOCKED
 → FE-02-STUDIO-01 — BLOCKED
 → CURR-RENDER-MATH-01A — BLOCKED pending Grade 5 renderer correction gate
