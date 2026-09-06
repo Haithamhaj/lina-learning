@@ -3,6 +3,7 @@ import type { StudioActiveSceneContract } from "./contracts";
 export type ApprovedStudioRenderer =
   | "MATH_MAKE_TEN"
   | "MATH_DECIMAL_NUMBER_LINE"
+  | "MATH_DECIMAL_PLACE_VALUE"
   | "SCIENCE_PROCESS_SEQUENCE"
   | "ENGLISH_SENTENCE_ORDERING"
   | "ARABIC_SENTENCE_ORDERING";
@@ -12,6 +13,21 @@ type ApprovedContract = Omit<StudioActiveSceneContract, "scene_id" | "scene_vers
 };
 
 const approvedContracts: readonly ApprovedContract[] = [
+  {
+    renderer: 'MATH_DECIMAL_PLACE_VALUE', subject_key:'MATH', subject_profile_version:'subject-profile-v4',
+    activity_key:'decimal_place_value', activity_contract_version:'decimal-place-value-activity-v1',
+    renderer_key:'decimal-place-value', renderer_version:'decimal-place-value-renderer-v1', payload_schema_version:'decimal-place-value-scene-v1',
+  },
+  {
+    renderer:'MATH_DECIMAL_NUMBER_LINE', subject_key:'MATH', subject_profile_version:'subject-profile-v4',
+    activity_key:'decimal_number_line', activity_contract_version:'decimal-number-line-activity-v1',
+    renderer_key:'decimal-number-line', renderer_version:'decimal-number-line-renderer-v1', payload_schema_version:'decimal-number-line-scene-v1',
+  },
+  {
+    renderer:'MATH_MAKE_TEN', subject_key:'MATH', subject_profile_version:'subject-profile-v4',
+    activity_key:'ten_frame_group_transfer', activity_contract_version:'ten-frame-group-transfer-activity-v1',
+    renderer_key:'ten-frame-group-transfer', renderer_version:'ten-frame-group-transfer-renderer-v1', payload_schema_version:'ten-frame-group-transfer-scene-v1',
+  },
   {
     renderer: "MATH_DECIMAL_NUMBER_LINE", subject_key: "MATH", subject_profile_version: "subject-profile-v3",
     activity_key: "decimal_number_line", activity_contract_version: "decimal-number-line-activity-v1",

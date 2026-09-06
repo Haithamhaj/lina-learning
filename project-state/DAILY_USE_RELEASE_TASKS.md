@@ -31,7 +31,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → CURR-RENDER-MATH-01A — DONE / ACCEPTED
 → MATH-RENDER-BATCH-01 — UMBRELLA / NOT ACCEPTED
   → MATH-RENDER-NUMBER-LINE-01 — DONE / ACCEPTED (bounded child only)
-  → MATH-RENDER-PLACE-VALUE-01 — READY (bounded child only; only READY implementation task)
+  → MATH-RENDER-PLACE-VALUE-01 — DONE / ACCEPTED (bounded child only)
 → STUDIO-ACCEPT-01 — BLOCKED
 → optional STUDIO-SPECIALIST-01 / STUDIO-REUSE-01 — BLOCKED
 → production deployment gate — BLOCKED
@@ -114,9 +114,9 @@ four-family recommendation, and implemented Grade 5 capability coverage of
 
 `MATH-RENDER-BATCH-01` is an unaccepted umbrella, not a release task that
 authorizes all four families. `MATH-RENDER-NUMBER-LINE-01` is DONE / ACCEPTED
-as one bounded child. `MATH-RENDER-PLACE-VALUE-01` is the only separately
-promoted `READY` implementation child. No other number-line mode, renderer
-family, coverage count, acceptance gate, or deployment work is promoted.
+as one bounded child. `MATH-RENDER-PLACE-VALUE-01` is DONE / ACCEPTED as one
+separately promoted bounded child. No other number-line mode, renderer family,
+coverage count, acceptance gate, or deployment work is promoted.
 
 ---
 
@@ -273,10 +273,11 @@ history, full-system acceptance, or other task promotion is in scope.
 
 ## MATH-RENDER-PLACE-VALUE-01 — Decimal Addition and Subtraction
 
-**Status:** READY — the only executable implementation task. This is one
-bounded child of `MATH-RENDER-BATCH-01`; the parent remains **UMBRELLA / NOT
-ACCEPTED**. It does not complete `place_value_workspace`, the renderer batch,
-or the planning pack's implemented-capability count.
+**Status:** DONE / ACCEPTED — one bounded child of
+`MATH-RENDER-BATCH-01`; the parent remains **UMBRELLA / NOT ACCEPTED**. It
+does not complete `place_value_workspace`, the renderer batch, or the planning
+pack's implemented-capability count. The accepted contract, verification, and
+evidence limits are in `docs/MATH_RENDER_PLACE_VALUE_01_ACCEPTANCE_CLOSURE.md`.
 
 **Purpose:** support `G5-NBT-DECIMAL-ADD-SUBTRACT` only: add and subtract
 nonnegative decimals to hundredths using fixed server-owned operands, typed

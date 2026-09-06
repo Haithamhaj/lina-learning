@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`, `FE-02-STUDIO-01`, `STUDIO-ACT-AR-01`, `CURR-RENDER-MATH-01A`, and the bounded child `MATH-RENDER-NUMBER-LINE-01` are `DONE / ACCEPTED`. `MATH-RENDER-PLACE-VALUE-01` is the only `READY` implementation task. `MATH-RENDER-BATCH-01` remains its unaccepted umbrella, and every remaining later Studio task, including `STUDIO-ACCEPT-01`, remains BLOCKED / NOT PROMOTED.
+**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`, `FE-02-STUDIO-01`, `STUDIO-ACT-AR-01`, `CURR-RENDER-MATH-01A`, and the bounded children `MATH-RENDER-NUMBER-LINE-01` and `MATH-RENDER-PLACE-VALUE-01` are `DONE / ACCEPTED`. `MATH-RENDER-BATCH-01` remains its unaccepted umbrella, and every remaining later Studio task, including `STUDIO-ACCEPT-01`, remains BLOCKED / NOT PROMOTED.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -1098,8 +1098,8 @@ PROMOTED.
 
 #### 14.4.2 Second promoted child — `MATH-RENDER-PLACE-VALUE-01`
 
-**Status:** READY — the only executable implementation task. This separately
-promoted child leaves `MATH-RENDER-BATCH-01` **UMBRELLA / NOT ACCEPTED** and
+**Status:** DONE / ACCEPTED. This separately promoted child leaves
+`MATH-RENDER-BATCH-01` **UMBRELLA / NOT ACCEPTED** and
 does not complete `place_value_workspace` or change planning-pack coverage.
 It is bounded to `G5-NBT-DECIMAL-ADD-SUBTRACT`: ADD and SUBTRACT of
 nonnegative decimals to hundredths, with subtraction `a >= b`, fixed
@@ -1145,8 +1145,10 @@ activity regressions. Authenticated `/student/daily` browser acceptance
 correlates input, durable state, rendered result, wrong-then-correct, Tutor
 continuation, and reload. Preflight actual API/database and authorized Student
 before mutating browser requests; no no-ID discovery or account/data changes.
-Require focused/affected tests, typecheck/build, proportional full suite, and
-independent review. This governance promotion performs none of those tests.
+Focused/full verification, typecheck/build, Alembic/whitespace checks, and
+independent review are accepted as recorded in
+`docs/MATH_RENDER_PLACE_VALUE_01_ACCEPTANCE_CLOSURE.md`; this bounded closure
+does not accept a family, coverage change, deployment, or real-Lina claim.
 
 Full read/write/number-name/exponent modes, decimal multiplication/division,
 other place-value capabilities, fraction/division families, `STUDIO-ACCEPT-01`,
@@ -1789,7 +1791,7 @@ questions remain disclosed in `research/curr-render-math-01/`.
 protocol, runtime, bounded Math/Science/English/Arabic foundation activities,
 or FE-02 Studio integration. Its planning prerequisite is satisfied; only
 `MATH-RENDER-NUMBER-LINE-01` received later acceptance and
-`MATH-RENDER-PLACE-VALUE-01` received separate bounded READY promotion.
+`MATH-RENDER-PLACE-VALUE-01` received separate bounded acceptance.
 **Implementation boundary:** no renderer, runtime, schema, dependency, or
 accepted-contract implementation occurs in this correction task.
 
@@ -1797,7 +1799,7 @@ accepted-contract implementation occurs in this correction task.
 
 **Status:** UMBRELLA / NOT ACCEPTED — the `CURR-RENDER-MATH-01A` planning
 prerequisite is satisfied. `MATH-RENDER-NUMBER-LINE-01` is an accepted child;
-`MATH-RENDER-PLACE-VALUE-01` is the only READY implementation child. All
+`MATH-RENDER-PLACE-VALUE-01` is an accepted bounded child. All
 remaining family scope still requires separate approval and promotion.
 
 Implement, after corrected research approval:
@@ -2047,7 +2049,7 @@ accepted. The durable Studio state foundation is implemented at Alembic head
 a recorded Section 22.7 prerequisite, now satisfied. `CURR-RENDER-MATH-01A`
 is DONE / ACCEPTED as a planning correction only.
 `MATH-RENDER-NUMBER-LINE-01` is DONE / ACCEPTED as one bounded child.
-`MATH-RENDER-PLACE-VALUE-01` is the only READY implementation child.
+`MATH-RENDER-PLACE-VALUE-01` is an accepted bounded child.
 `MATH-RENDER-BATCH-01` is an unaccepted umbrella; `STUDIO-ACCEPT-01` and every
 other later Studio task remain BLOCKED / NOT PROMOTED; full-system acceptance
 is not promoted.
@@ -2098,7 +2100,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → CURR-RENDER-MATH-01A — DONE / ACCEPTED
 → MATH-RENDER-BATCH-01 — UMBRELLA / NOT ACCEPTED
   → MATH-RENDER-NUMBER-LINE-01 — DONE / ACCEPTED (bounded child only)
-  → MATH-RENDER-PLACE-VALUE-01 — READY (bounded child only; only READY implementation task)
+  → MATH-RENDER-PLACE-VALUE-01 — DONE / ACCEPTED (bounded child only)
 → STUDIO-ACCEPT-01 — BLOCKED
 ```
 

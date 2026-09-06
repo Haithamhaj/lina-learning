@@ -26,11 +26,13 @@ def activate_known_workspace_activity(
 
     from services.studio.make_ten_activation import activate_make_ten_from_workspace_decision
     from services.studio.decimal_number_line_activation import activate_decimal_number_line
+    from services.studio.decimal_place_value_activation import activate_decimal_place_value
     from services.studio.arabic_sentence_ordering_activation import activate_arabic_sentence_ordering_from_workspace_decision
     from services.studio.process_sequence_activation import activate_process_sequence_from_workspace_decision
     from services.studio.sentence_ordering_activation import activate_sentence_ordering_from_workspace_decision
 
     for adapter in (
+        activate_decimal_place_value,
         activate_decimal_number_line,
         activate_make_ten_from_workspace_decision,
         activate_process_sequence_from_workspace_decision,

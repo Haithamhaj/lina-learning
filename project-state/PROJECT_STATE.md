@@ -26,7 +26,7 @@ FE-02-STUDIO-01 Real Studio + Daily App DONE / ACCEPTED
 STUDIO-ACT-AR-01 Arabic Academic Activity DONE / ACCEPTED
 CURR-RENDER-MATH-01A            DONE / ACCEPTED
 MATH-RENDER-NUMBER-LINE-01      DONE / ACCEPTED
-MATH-RENDER-PLACE-VALUE-01      READY
+MATH-RENDER-PLACE-VALUE-01      DONE / ACCEPTED
 STUDIO-ACCEPT-01                BLOCKED
 ```
 
@@ -131,17 +131,19 @@ for its bounded decimal comparison and rounding slice; its sanitized closure rec
 `docs/MATH_RENDER_NUMBER_LINE_01_ACCEPTANCE_CLOSURE.md`. Powers-of-ten,
 estimation, fraction modes, and every other number-line or batch family
 capability remain NOT PROMOTED. This acceptance does not change the research
-coverage calculation or accept the umbrella. The only `READY` implementation
-task is `MATH-RENDER-PLACE-VALUE-01`, a separately promoted bounded
-`place_value_workspace` child for `G5-NBT-DECIMAL-ADD-SUBTRACT`: add and
-subtract nonnegative decimals to hundredths with fixed server-owned operands,
-typed place counts, value-preserving exchanges, a bounded written result, and
-explicit submission. Its eventual implementation must support both operations
-across multiple authored configurations; subtraction requires `a >= b`.
-It must retain original operands and attempted model, reuse the accepted
-Studio/Host/Runtime-03 seams, and keep exploration/result editing `RECORD_ONLY`
-until explicit submission. The task remains governance-promoted only; no
-implementation or acceptance evidence is claimed here.
+coverage calculation or accept the umbrella. `MATH-RENDER-PLACE-VALUE-01` is
+now **DONE / ACCEPTED** as one separately promoted bounded
+`place_value_workspace` child for `G5-NBT-DECIMAL-ADD-SUBTRACT`. It delivers
+12 server-owned ADD/SUBTRACT configurations using exact integer hundredths,
+five fixed place columns, conserved mutable representations distinct from
+immutable source configuration, explicit submission, and the existing
+`/student/daily` Host/Runtime-03 path. Exploration and result editing remain
+`RECORD_ONLY`; each accepted submission has one source-linked continuation,
+with original submitted state distinct from later Workspace state and no fake
+Student message or direct Canvas intelligence/Personal Facts write. The
+accepted contract and bounded evidence are recorded in
+`docs/MATH_RENDER_PLACE_VALUE_01_ACCEPTANCE_CLOSURE.md`. Historical profiles,
+Number-Line, and Make-Ten compatibility remain preserved.
 `STUDIO-ACCEPT-01` is also BLOCKED / NOT PROMOTED. Real Lina longitudinal
 history has not started.
 
@@ -457,13 +459,14 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
-Execute only `MATH-RENDER-PLACE-VALUE-01`. Before production code, document
-its finite hundredths domain, exact integer representation/serialization,
-columns, result syntax/locale, mutable model versus immutable operands,
-exchange/combine/removal/completion rules, valid non-normalized count bounds,
-equivalent-form equality, and configuration/activation provenance. The
-umbrella's remaining families/modes, `STUDIO-ACCEPT-01`, Replit, deployment,
-real-Lina, and all other later Studio work remain unpromoted.
+No next renderer task is promoted. The later production-serving/deployment
+readiness check remains OPEN: production-mode serving was blocked in this
+environment by a reported missing Clerk secret, while the production build and
+authenticated browser acceptance passed. This is not a claim about all Clerk
+configuration and authorizes neither remediation nor deployment. The umbrella's
+remaining families/modes, `STUDIO-ACCEPT-01`, Replit, deployment, real-Lina,
+and all other later Studio work remain unpromoted pending separate Product Owner
+authorization.
 
 ---
 
@@ -473,6 +476,7 @@ real-Lina, and all other later Studio work remain unpromoted.
 - `docs/PERSONAL_FACTS_SPEC.md`
 - `docs/FE-01_VISUAL_SYSTEM_LIBRARY_DECISION.md`
 - `docs/STUDIO_IMPLEMENTATION_PLAN.md`
+- `docs/MATH_RENDER_PLACE_VALUE_01_ACCEPTANCE_CLOSURE.md`
 - `research/curr-render-math-01/10_CORRECTION_RECORD.md`
 - `docs/DAILY_USE_RELEASE_DECISIONS.md`
 - `project-state/DAILY_USE_RELEASE_TASKS.md`

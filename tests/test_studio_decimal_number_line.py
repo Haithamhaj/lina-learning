@@ -62,7 +62,8 @@ def test_profile_dispatch_preserves_make_ten_and_rebuilds_original_submission():
     m = module()
     registry = production_subject_registry()
     profile = registry.resolve_profile('MATH', PRODUCTION_CURRENT_PROFILE_VERSIONS['MATH'])
-    assert {a.activity_key for a in profile.activities} == {'ten_frame_group_transfer', m.ACTIVITY_KEY}
+    assert {a.activity_key for a in profile.activities} == {'ten_frame_group_transfer', m.ACTIVITY_KEY, 'decimal_place_value'}
+    assert {a.activity_key for a in registry.resolve_profile('MATH','subject-profile-v3').activities} == {'ten_frame_group_transfer',m.ACTIVITY_KEY}
     assert registry.resolve_profile('MATH', 'subject-profile-v2').activities[0].activity_key == 'ten_frame_group_transfer'
     snapshot = {'latest_event_sequence': 2, 'state_payload': {'scene_seed': m.scene_seed('decimal-line:v1:compare-less')}}
     events = [('PLACE_POINT', {'point_id': 'a', 'from_value': None, 'value': 444}),
@@ -132,5 +133,7 @@ def test_first_scene_sources_use_explicit_current_subject_not_a_default():
     from services.studio.workspace_capabilities import build_workspace_capability_context
     from services.studio.tutor_context import StudioTutorWorkspaceContext
     ctx=StudioTutorWorkspaceContext(runtime_id='r',snapshot_sequence=0,snapshot_schema_version='studio-snapshot-v1',through_sequence=0,current_scene_id=None,current_scene_version=None,active_subject_key=None,active_activity_key=None,state_payload={},unseen_events=(),observation_id=None)
-    assert len(build_workspace_capability_context(ctx,authorized_source_references=(),current_subject_key='MATH').authored_problem_sources)==11
+    sources=build_workspace_capability_context(ctx,authorized_source_references=(),current_subject_key='MATH').authored_problem_sources
+    assert len([s for s in sources if s['activity_hint']=='decimal_number_line'])==11
+    assert len([s for s in sources if s['activity_hint']=='decimal_place_value'])==12
     assert build_workspace_capability_context(ctx,authorized_source_references=(),current_subject_key=None).authored_problem_sources==()

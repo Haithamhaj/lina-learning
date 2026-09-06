@@ -500,7 +500,7 @@ def test_make_ten_is_the_current_exact_math_capability_without_rewriting_math_v1
     )
 
     registry = production_subject_registry()
-    assert PRODUCTION_CURRENT_PROFILE_VERSIONS["MATH"] == 'subject-profile-v3'
+    assert PRODUCTION_CURRENT_PROFILE_VERSIONS["MATH"] == 'subject-profile-v4'
     assert registry.resolve_activity('MATH', 'subject-profile-v3', ACTIVITY_KEY, ACTIVITY_VERSION) == registry.resolve_activity('MATH', MATH_PROFILE_VERSION, ACTIVITY_KEY, ACTIVITY_VERSION)
     assert registry.activities_for_profile("MATH", "subject-profile-v1") == ()
     activity = registry.resolve_activity("MATH", MATH_PROFILE_VERSION, ACTIVITY_KEY, ACTIVITY_VERSION)

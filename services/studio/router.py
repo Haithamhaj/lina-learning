@@ -116,7 +116,21 @@ def _route_workspace_intent(intent: WorkspaceIntent, context: WorkspaceAuthority
             else _no_change("NO_ACTIVE_SCENE")
         )
     from services.studio.subjects.decimal_number_line import ACTIVITY_KEY as DECIMAL_ACTIVITY, problem_for
+    from services.studio.subjects.decimal_place_value import ACTIVITY_KEY as PLACE_ACTIVITY, problem_for as place_problem
     decimal_source = None
+    if any(ref.startswith('decimal-place:') for ref in intent.source_references) and (
+        intent.activity_hint != PLACE_ACTIVITY or intent.action.value != 'OPEN_ACTIVITY' or intent.representation_need.value != 'INTERACTIVE'
+    ):
+        return _fallback('AUTHORED_PROBLEM_IS_NOT_AN_ASSET')
+    if intent.activity_hint == PLACE_ACTIVITY:
+        if intent.subject_key != 'MATH' or len(intent.source_references) != 1:
+            return _fallback('EXACT_AUTHORED_PROBLEM_REQUIRED')
+        try:
+            decimal_source = place_problem(intent.source_references[0]).source_ref
+        except ValueError:
+            return _fallback('UNSUPPORTED_AUTHORED_PROBLEM')
+        if not _references_are_authorized(intent, context):
+            return _fallback('UNAUTHORIZED_SOURCE_REFERENCE')
     if any(ref.startswith('decimal-line:') for ref in intent.source_references) and (
         intent.activity_hint != DECIMAL_ACTIVITY or intent.action.value != 'OPEN_ACTIVITY' or intent.representation_need.value != 'INTERACTIVE'
     ):
@@ -190,7 +204,7 @@ def _active_scene_is_suitable(intent: WorkspaceIntent, context: WorkspaceAuthori
     scene = context.active_scene
     if scene is None or context.registry is None:
         return False
-    if scene.activity_key == 'decimal_number_line' and tuple(intent.source_references) != scene.source_references:
+    if scene.activity_key in ('decimal_number_line', 'decimal_place_value') and tuple(intent.source_references) != scene.source_references:
         return False
     if intent.subject_key is not None and intent.subject_key != scene.subject_key:
         return False

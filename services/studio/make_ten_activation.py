@@ -26,7 +26,7 @@ from services.studio.subjects.math_make_ten import (
 
 
 logger = logging.getLogger(__name__)
-SUPPORTED_MATH_PROFILES = (MATH_PROFILE_VERSION, 'subject-profile-v3')
+SUPPORTED_MATH_PROFILES = (MATH_PROFILE_VERSION, 'subject-profile-v3', 'subject-profile-v4')
 
 
 def activate_make_ten_from_workspace_decision(

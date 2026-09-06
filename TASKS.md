@@ -129,7 +129,8 @@ other number-line modes; every other renderer family; coverage changes;
 deployment, real-Lina history, and all other task promotion.
 
 ## MATH-RENDER-PLACE-VALUE-01 — Decimal Addition and Subtraction
-**Status:** READY — the only executable implementation task.
+**Status:** DONE / ACCEPTED — bounded acceptance recorded in
+`docs/MATH_RENDER_PLACE_VALUE_01_ACCEPTANCE_CLOSURE.md`.
 **Parent:** `MATH-RENDER-BATCH-01` remains **UMBRELLA / NOT ACCEPTED**. This
 bounded child does not complete the `place_value_workspace` family, the batch,
 or the research coverage calculation.

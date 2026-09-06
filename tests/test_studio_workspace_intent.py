@@ -98,5 +98,6 @@ def test_production_workspace_capability_context_is_honest_and_compact() -> None
     assert value["known_workspace_capabilities_available"] is True
     assert value["authorized_source_references"][0] == "retrieval-1"
     assert set(value["authorized_source_references"][1:]) == {p['source_ref'] for p in value['authored_problem_sources']}
-    assert len(value['authored_problem_sources']) == 11
+    assert len([p for p in value['authored_problem_sources'] if p['activity_hint']=='decimal_number_line']) == 11
+    assert len([p for p in value['authored_problem_sources'] if p['activity_hint']=='decimal_place_value']) == 12
     assert "renderers" not in value
