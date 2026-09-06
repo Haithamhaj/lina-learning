@@ -146,6 +146,16 @@ def reduce_snapshot(
             f"Unsupported Studio event contract: {event.event_kind!r} / {event.event_schema_version!r}."
         )
     registry = subject_registry or production_subject_registry()
+    if event.scene_id is not None:
+        if event.scene_id != snapshot["current_scene_id"]:
+            raise ValueError("A subject event must target the current Scene; lifecycle events own selection.")
+        if (
+            event.base_scene_version != snapshot["current_scene_version"]
+            or event.resulting_scene_version is None
+            or event.base_scene_version is None
+            or event.resulting_scene_version != event.base_scene_version + 1
+        ):
+            raise ValueError("A subject event must advance the current Scene version exactly once.")
     action, _validation = registry.validate_subject_event(
         subject_key=event.subject_key,
         subject_profile_version=event.subject_profile_version,
@@ -163,4 +173,11 @@ def reduce_snapshot(
     del action, _validation
     activity = registry.resolve_activity(event.subject_key, event.subject_profile_version, event.activity_key, event.activity_contract_version)
     reducer = registry.resolve_reducer(event.subject_key, event.subject_profile_version, activity.reducer_key, activity.reducer_version)
-    return reducer.reducer(snapshot, event)
+    next_snapshot = reducer.reducer(snapshot, event)
+    if event.scene_id is not None:
+        if next_snapshot["current_scene_id"] != snapshot["current_scene_id"]:
+            raise ValueError("A subject reducer cannot change current Scene selection.")
+        # Generic cursor metadata belongs to Core, not every Activity reducer.
+        # Append and replay both pass through this exact boundary.
+        next_snapshot["current_scene_version"] = event.resulting_scene_version
+    return next_snapshot

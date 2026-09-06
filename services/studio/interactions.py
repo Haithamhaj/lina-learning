@@ -19,6 +19,7 @@ from services.model_gateway.gateway import (
     ModelStreamEvent,
     StreamComplete,
 )
+from services.intelligence.subjects import studio_subject_to_broad_subject
 from services.platform.config import get_settings
 from services.platform.db.models import (
     AIExecution,
@@ -720,6 +721,11 @@ class StudioInteractionTutorService:
             source={
                 "turn_origin": "CANVAS_INTERACTION",
                 "interaction_kind": interaction.interaction_kind,
+                "live_subject": {
+                    "broad_subject": studio_subject_to_broad_subject(scene.subject_key),
+                    "origin": "CANVAS_SCENE",
+                    "source_scene_id": str(scene.id),
+                },
                 "event": {
                     "sequence": event.sequence,
                     "event_kind": event.event_kind,

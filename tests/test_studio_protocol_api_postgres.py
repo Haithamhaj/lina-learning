@@ -19,13 +19,16 @@ from services.platform.db.models import (
     AIExecution,
     LearningMessage,
     LearningSession,
+    StudioScene,
     StudioStudentInteraction,
     StudioTutorObservation,
     Student,
     User,
 )
 from services.platform.db.session import get_session
-from services.studio.contracts import CreateSceneCommand
+from services.studio.contracts import AppendStudioEventCommand, CreateSceneCommand, StudioActor
+from services.studio.feed import StudioEventFeed
+from services.studio.reducer import CORE_EVENT_SCHEMA_VERSION
 from services.studio.service import StudioStateService
 from tests.test_studio_state_postgres import _studio_test_registry
 
@@ -111,6 +114,448 @@ def test_open_and_snapshot_are_student_owned_and_do_not_create_a_scene(
         assert other.get(f"/api/v1/student/studio/{runtime_id}/snapshot").status_code == 404
     finally:
         _clear_overrides()
+
+
+def test_snapshot_without_an_active_scene_exposes_a_null_scene_contract(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """A client can distinguish real Chat-only state from a missing Workspace projection."""
+
+    _student_id, learning_session_id = _student_session(
+        postgres_session_factory,
+        subject="studio-empty-scene-contract",
+    )
+    client = _client(postgres_session_factory, subject="studio-empty-scene-contract")
+    try:
+        opened = client.post(f"/api/v1/student/studio/session/{learning_session_id}/open")
+        assert opened.status_code == 200
+
+        snapshot = client.get(f"/api/v1/student/studio/{opened.json()['runtime_id']}/snapshot")
+
+        assert snapshot.status_code == 200
+        assert snapshot.json()["active_scene_contract"] is None
+    finally:
+        _clear_overrides()
+
+
+def test_snapshot_exposes_the_exact_persisted_math_scene_contract(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """The public Workspace identity comes from the active persisted Scene, never inferred."""
+
+    from services.studio.subjects.math_make_ten import (  # noqa: PLC0415 - test reads the accepted contract
+        ACTIVITY_KEY,
+        ACTIVITY_VERSION,
+        ACCESSIBILITY_PAYLOAD,
+        MATH_PROFILE_VERSION,
+        RENDERER_KEY,
+        RENDERER_VERSION,
+        SCENE_PAYLOAD_SCHEMA_VERSION,
+        make_ten_scene_seed,
+    )
+
+    student_id, learning_session_id = _student_session(
+        postgres_session_factory,
+        subject="studio-math-scene-contract",
+    )
+    with postgres_session_factory.begin() as session:
+        state = StudioStateService(session)
+        runtime = state.get_or_create_runtime(
+            student_id=student_id,
+            learning_session_id=learning_session_id,
+        )
+        scene = state.accept_scene(
+            CreateSceneCommand(
+                student_id=student_id,
+                learning_session_id=learning_session_id,
+                subject_key="MATH",
+                subject_profile_version=MATH_PROFILE_VERSION,
+                concept_keys=("make-ten",),
+                activity_key=ACTIVITY_KEY,
+                artifact_type="interactive-activity",
+                renderer_key=RENDERER_KEY,
+                renderer_version=RENDERER_VERSION,
+                activity_contract_version=ACTIVITY_VERSION,
+                payload_schema_version=SCENE_PAYLOAD_SCHEMA_VERSION,
+                seed_payload=make_ten_scene_seed(),
+                accessibility_payload=ACCESSIBILITY_PAYLOAD,
+                locale="en",
+                direction="auto",
+            )
+        )
+        state.append_event(
+            AppendStudioEventCommand(
+                runtime_id=runtime.id,
+                student_id=student_id,
+                learning_session_id=learning_session_id,
+                event_kind="studio.scene.activated",
+                event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+                actor=StudioActor.SYSTEM,
+                payload_schema_version="studio-scene-activated-v1",
+                payload={},
+                scene_id=scene.id,
+                base_scene_version=scene.scene_version,
+                idempotency_key=f"activate:{scene.id}",
+            )
+        )
+        expected_scene_id = str(scene.id)
+        expected_scene_version = scene.scene_version
+        runtime_id = runtime.id
+
+    client = _client(postgres_session_factory, subject="studio-math-scene-contract")
+    try:
+        response = client.get(f"/api/v1/student/studio/{runtime_id}/snapshot")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["active_scene_contract"] == {
+            "scene_id": expected_scene_id,
+            "scene_version": expected_scene_version,
+            "subject_key": "MATH",
+            "subject_profile_version": MATH_PROFILE_VERSION,
+            "activity_key": ACTIVITY_KEY,
+            "activity_contract_version": ACTIVITY_VERSION,
+            "renderer_key": RENDERER_KEY,
+            "renderer_version": RENDERER_VERSION,
+            "payload_schema_version": SCENE_PAYLOAD_SCHEMA_VERSION,
+            "locale": "en",
+            "direction": "auto",
+        }
+        assert body["active_scene_seed"] == make_ten_scene_seed()
+        assert body["current_scene_id"] == expected_scene_id
+        assert body["current_scene_version"] == expected_scene_version
+    finally:
+        _clear_overrides()
+
+
+def test_snapshot_exposes_exact_persisted_science_and_english_scene_contracts(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Every accepted non-Math renderer receives its identity from its persisted Scene."""
+
+    from services.studio.subjects.process_sequence import (  # noqa: PLC0415 - accepted contract fixtures
+        ACCESSIBILITY_PAYLOAD as SCIENCE_ACCESSIBILITY,
+        ACTIVITY_KEY as SCIENCE_ACTIVITY,
+        ACTIVITY_VERSION as SCIENCE_ACTIVITY_VERSION,
+        process_sequence_scene_seed,
+        RENDERER_KEY as SCIENCE_RENDERER,
+        RENDERER_VERSION as SCIENCE_RENDERER_VERSION,
+        SCIENCE_PROFILE_VERSION,
+        SCENE_PAYLOAD_SCHEMA_VERSION as SCIENCE_PAYLOAD_SCHEMA,
+    )
+    from services.studio.subjects.sentence_ordering import (  # noqa: PLC0415 - accepted contract fixtures
+        ACCESSIBILITY_PAYLOAD as ENGLISH_ACCESSIBILITY,
+        ACTIVITY_KEY as ENGLISH_ACTIVITY,
+        ACTIVITY_VERSION as ENGLISH_ACTIVITY_VERSION,
+        ENGLISH_PROFILE_VERSION,
+        RENDERER_KEY as ENGLISH_RENDERER,
+        RENDERER_VERSION as ENGLISH_RENDERER_VERSION,
+        SCENE_PAYLOAD_SCHEMA_VERSION as ENGLISH_PAYLOAD_SCHEMA,
+        sentence_ordering_scene_seed,
+    )
+
+    accepted = (
+        {
+            "student_subject": "studio-science-scene-contract",
+            "subject_key": "SCIENCE",
+            "profile": SCIENCE_PROFILE_VERSION,
+            "activity": SCIENCE_ACTIVITY,
+            "activity_version": SCIENCE_ACTIVITY_VERSION,
+            "renderer": SCIENCE_RENDERER,
+            "renderer_version": SCIENCE_RENDERER_VERSION,
+            "payload_schema": SCIENCE_PAYLOAD_SCHEMA,
+            "seed": process_sequence_scene_seed,
+            "accessibility": SCIENCE_ACCESSIBILITY,
+            "locale": "ar",
+            "direction": "rtl",
+        },
+        {
+            "student_subject": "studio-english-scene-contract",
+            "subject_key": "ENGLISH",
+            "profile": ENGLISH_PROFILE_VERSION,
+            "activity": ENGLISH_ACTIVITY,
+            "activity_version": ENGLISH_ACTIVITY_VERSION,
+            "renderer": ENGLISH_RENDERER,
+            "renderer_version": ENGLISH_RENDERER_VERSION,
+            "payload_schema": ENGLISH_PAYLOAD_SCHEMA,
+            "seed": sentence_ordering_scene_seed,
+            "accessibility": ENGLISH_ACCESSIBILITY,
+            "locale": "en",
+            "direction": "ltr",
+        },
+    )
+    required_keys = {
+        "scene_id", "scene_version", "subject_key", "subject_profile_version",
+        "activity_key", "activity_contract_version", "renderer_key", "renderer_version",
+        "payload_schema_version", "locale", "direction",
+    }
+
+    for spec in accepted:
+        student_id, learning_session_id = _student_session(
+            postgres_session_factory,
+            subject=str(spec["student_subject"]),
+        )
+        with postgres_session_factory.begin() as session:
+            state = StudioStateService(session)
+            runtime = state.get_or_create_runtime(
+                student_id=student_id,
+                learning_session_id=learning_session_id,
+            )
+            scene = state.accept_scene(
+                CreateSceneCommand(
+                    student_id=student_id,
+                    learning_session_id=learning_session_id,
+                    subject_key=str(spec["subject_key"]),
+                    subject_profile_version=str(spec["profile"]),
+                    concept_keys=(str(spec["activity"]),),
+                    activity_key=str(spec["activity"]),
+                    artifact_type="interactive-activity",
+                    renderer_key=str(spec["renderer"]),
+                    renderer_version=str(spec["renderer_version"]),
+                    activity_contract_version=str(spec["activity_version"]),
+                    payload_schema_version=str(spec["payload_schema"]),
+                    seed_payload=spec["seed"](),
+                    accessibility_payload=dict(spec["accessibility"]),
+                    locale=str(spec["locale"]),
+                    direction=str(spec["direction"]),
+                )
+            )
+            state.append_event(
+                AppendStudioEventCommand(
+                    runtime_id=runtime.id,
+                    student_id=student_id,
+                    learning_session_id=learning_session_id,
+                    event_kind="studio.scene.activated",
+                    event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+                    actor=StudioActor.SYSTEM,
+                    payload_schema_version="studio-scene-activated-v1",
+                    payload={},
+                    scene_id=scene.id,
+                    base_scene_version=scene.scene_version,
+                    idempotency_key=f"activate:{scene.id}",
+                )
+            )
+            runtime_id = runtime.id
+            scene_id = str(scene.id)
+            scene_version = scene.scene_version
+
+        client = _client(postgres_session_factory, subject=str(spec["student_subject"]))
+        try:
+            response = client.get(f"/api/v1/student/studio/{runtime_id}/snapshot")
+            assert response.status_code == 200
+            body = response.json()
+            descriptor = body["active_scene_contract"]
+        finally:
+            _clear_overrides()
+
+        assert set(descriptor) == required_keys
+        assert descriptor == {
+            "scene_id": scene_id,
+            "scene_version": scene_version,
+            "subject_key": spec["subject_key"],
+            "subject_profile_version": spec["profile"],
+            "activity_key": spec["activity"],
+            "activity_contract_version": spec["activity_version"],
+            "renderer_key": spec["renderer"],
+            "renderer_version": spec["renderer_version"],
+            "payload_schema_version": spec["payload_schema"],
+            "locale": spec["locale"],
+            "direction": spec["direction"],
+        }
+        assert body["active_scene_seed"] == spec["seed"]()
+        assert not any("answer" in key.lower() or "valid" in key.lower() for key in body["active_scene_seed"])
+
+
+def test_feed_snapshot_carries_the_same_active_scene_contract(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """A catch-up Snapshot must not lose the exact Workspace identity seen by direct reads."""
+
+    from services.studio.subjects.math_make_ten import (  # noqa: PLC0415 - test reads the accepted contract
+        ACTIVITY_KEY,
+        ACTIVITY_VERSION,
+        ACCESSIBILITY_PAYLOAD,
+        MATH_PROFILE_VERSION,
+        RENDERER_KEY,
+        RENDERER_VERSION,
+        SCENE_PAYLOAD_SCHEMA_VERSION,
+        make_ten_scene_seed,
+    )
+
+    student_id, learning_session_id = _student_session(
+        postgres_session_factory,
+        subject="studio-feed-scene-contract",
+    )
+    with postgres_session_factory.begin() as session:
+        state = StudioStateService(session)
+        runtime = state.get_or_create_runtime(
+            student_id=student_id,
+            learning_session_id=learning_session_id,
+        )
+        scene = state.accept_scene(
+            CreateSceneCommand(
+                student_id=student_id,
+                learning_session_id=learning_session_id,
+                subject_key="MATH",
+                subject_profile_version=MATH_PROFILE_VERSION,
+                concept_keys=("make-ten",),
+                activity_key=ACTIVITY_KEY,
+                artifact_type="interactive-activity",
+                renderer_key=RENDERER_KEY,
+                renderer_version=RENDERER_VERSION,
+                activity_contract_version=ACTIVITY_VERSION,
+                payload_schema_version=SCENE_PAYLOAD_SCHEMA_VERSION,
+                seed_payload=make_ten_scene_seed(),
+                accessibility_payload=ACCESSIBILITY_PAYLOAD,
+                locale="en",
+                direction="auto",
+            )
+        )
+        state.append_event(
+            AppendStudioEventCommand(
+                runtime_id=runtime.id,
+                student_id=student_id,
+                learning_session_id=learning_session_id,
+                event_kind="studio.scene.activated",
+                event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+                actor=StudioActor.SYSTEM,
+                payload_schema_version="studio-scene-activated-v1",
+                payload={},
+                scene_id=scene.id,
+                base_scene_version=scene.scene_version,
+                idempotency_key=f"activate:{scene.id}",
+            )
+        )
+        runtime_id = runtime.id
+        expected_scene_id = str(scene.id)
+
+    _latest, _events, frame = StudioEventFeed(
+        session_factory=postgres_session_factory,
+    )._snapshot_and_events(
+        student_id=student_id,
+        runtime_id=runtime_id,
+        after_sequence=None,
+    )
+
+    assert frame["active_scene_contract"] is not None
+    assert frame["active_scene_contract"]["scene_id"] == expected_scene_id
+    assert frame["active_scene_contract"]["renderer_key"] == RENDERER_KEY
+    assert frame["active_scene_contract"]["renderer_version"] == RENDERER_VERSION
+    assert frame["active_scene_seed"] == make_ten_scene_seed()
+    client = _client(postgres_session_factory, subject="studio-feed-scene-contract")
+    try:
+        direct = client.get(f"/api/v1/student/studio/{runtime_id}/snapshot")
+    finally:
+        _clear_overrides()
+    assert direct.status_code == 200
+    assert direct.json()["active_scene_contract"] == frame["active_scene_contract"]
+    assert direct.json()["active_scene_seed"] == frame["active_scene_seed"]
+
+
+def test_accepted_but_inactive_scene_has_no_daily_workspace_projection(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """A current accepted Scene is reconstruction state, not learner-visible Workspace state."""
+
+    from services.studio.subjects.math_make_ten import (  # noqa: PLC0415 - accepted contract fixture
+        ACCESSIBILITY_PAYLOAD,
+        ACTIVITY_KEY,
+        ACTIVITY_VERSION,
+        MATH_PROFILE_VERSION,
+        RENDERER_KEY,
+        RENDERER_VERSION,
+        SCENE_PAYLOAD_SCHEMA_VERSION,
+        make_ten_scene_seed,
+    )
+
+    student_id, learning_session_id = _student_session(
+        postgres_session_factory,
+        subject="studio-accepted-not-active",
+    )
+    with postgres_session_factory.begin() as session:
+        state = StudioStateService(session)
+        runtime = state.get_or_create_runtime(student_id=student_id, learning_session_id=learning_session_id)
+        scene = state.accept_scene(
+            CreateSceneCommand(
+                student_id=student_id,
+                learning_session_id=learning_session_id,
+                subject_key="MATH",
+                subject_profile_version=MATH_PROFILE_VERSION,
+                concept_keys=("make-ten",),
+                activity_key=ACTIVITY_KEY,
+                artifact_type="interactive-activity",
+                renderer_key=RENDERER_KEY,
+                renderer_version=RENDERER_VERSION,
+                activity_contract_version=ACTIVITY_VERSION,
+                payload_schema_version=SCENE_PAYLOAD_SCHEMA_VERSION,
+                seed_payload=make_ten_scene_seed(),
+                accessibility_payload=ACCESSIBILITY_PAYLOAD,
+                locale="en",
+                direction="auto",
+            )
+        )
+        runtime_id = runtime.id
+
+    client = _client(postgres_session_factory, subject="studio-accepted-not-active")
+    try:
+        response = client.get(f"/api/v1/student/studio/{runtime_id}/snapshot")
+
+        assert response.status_code == 200
+        assert response.json()["current_scene_id"] == str(scene.id)
+        assert response.json()["active_scene_contract"] is None
+        assert response.json()["active_scene_seed"] is None
+
+        with postgres_session_factory.begin() as session:
+            persisted_scene = session.get(StudioScene, scene.id)
+            assert persisted_scene is not None
+            StudioStateService(session).append_event(
+                AppendStudioEventCommand(
+                    runtime_id=runtime_id,
+                    student_id=student_id,
+                    learning_session_id=learning_session_id,
+                    event_kind="studio.scene.activated",
+                    event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+                    actor=StudioActor.SYSTEM,
+                    payload_schema_version="studio-scene-activated-v1",
+                    payload={},
+                    scene_id=persisted_scene.id,
+                    base_scene_version=persisted_scene.scene_version,
+                    idempotency_key=f"activate:{persisted_scene.id}",
+                )
+            )
+
+        activated = client.get(f"/api/v1/student/studio/{runtime_id}/snapshot")
+        assert activated.status_code == 200
+        assert activated.json()["active_scene_contract"] is not None
+        assert activated.json()["active_scene_seed"] == make_ten_scene_seed()
+
+        with postgres_session_factory.begin() as session:
+            persisted_scene = session.get(StudioScene, scene.id)
+            assert persisted_scene is not None
+            StudioStateService(session).append_event(
+                AppendStudioEventCommand(
+                    runtime_id=runtime_id,
+                    student_id=student_id,
+                    learning_session_id=learning_session_id,
+                    event_kind="studio.scene.status_changed",
+                    event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+                    actor=StudioActor.SYSTEM,
+                    payload_schema_version="studio-scene-status-changed-v1",
+                    payload={"status": "SUPERSEDED"},
+                    scene_id=persisted_scene.id,
+                    base_scene_version=persisted_scene.scene_version,
+                    idempotency_key=f"supersede:{persisted_scene.id}",
+                )
+            )
+
+        superseded = client.get(f"/api/v1/student/studio/{runtime_id}/snapshot")
+    finally:
+        _clear_overrides()
+
+    assert superseded.status_code == 200
+    assert superseded.json()["current_scene_id"] == str(scene.id)
+    assert superseded.json()["active_scene_contract"] is None
+    assert superseded.json()["active_scene_seed"] is None
 
 
 def test_operation_derives_semantics_from_scene_contract_and_is_idempotent(

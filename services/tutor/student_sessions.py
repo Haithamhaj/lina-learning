@@ -24,6 +24,14 @@ from services.tutor.session_lifecycle import (
 )
 
 
+class DailySessionNotFound(ValueError):
+    """The requested exact session is unavailable to this Student."""
+
+
+class DailySessionNotResumable(ValueError):
+    """The owned session has ended under the existing lifecycle policy."""
+
+
 @dataclass(frozen=True)
 class ResolvedSuggestedAction:
     """A server-validated action and the exact Tutor message that offered it."""
@@ -49,6 +57,60 @@ def open_or_resume_math_session(
 ) -> LearningSession:
     """Resume an eligible Math session or close-and-replace an expired one."""
 
+    return _open_or_resume_student_session(
+        session,
+        student_id=student_id,
+        session_subject="MATH",
+        now=now,
+        lifecycle_policy=lifecycle_policy,
+    )
+
+
+def open_or_resume_daily_session(
+    session: Session,
+    *,
+    student_id: UUID,
+    learning_session_id: UUID | None = None,
+    now: datetime | None = None,
+    lifecycle_policy: SessionLifecyclePolicy | None = None,
+) -> LearningSession:
+    """Create without a reference, or resume only the exact Student-owned ID."""
+
+    session.execute(select(Student.id).where(Student.id == student_id).with_for_update()).scalar_one()
+    current = now or datetime.now(UTC)
+    if learning_session_id is None:
+        # Keep the model's compatibility default, never a route-kind subject.
+        learning_session = LearningSession(student_id=student_id, status="OPEN", opened_at=current, last_activity_at=current)
+        session.add(learning_session)
+    else:
+        learning_session = session.execute(
+            select(LearningSession).where(
+                LearningSession.id == learning_session_id,
+                LearningSession.student_id == student_id,
+            ).with_for_update()
+        ).scalar_one_or_none()
+        if learning_session is None:
+            raise DailySessionNotFound("Daily session not found.")
+        if learning_session.status != "OPEN" or close_session_if_eligible(
+            session, learning_session=learning_session, now=current,
+            policy=lifecycle_policy or session_lifecycle_policy(),
+        ):
+            raise DailySessionNotResumable("This learning session has ended. Start a new session to continue.")
+        learning_session.last_activity_at = current
+    session.flush()
+    return learning_session
+
+
+def _open_or_resume_student_session(
+    session: Session,
+    *,
+    student_id: UUID,
+    session_subject: str,
+    now: datetime | None,
+    lifecycle_policy: SessionLifecyclePolicy | None,
+) -> LearningSession:
+    """Shared technical lifecycle; entry contracts choose their own identity."""
+
     # Locking the Student row serializes simultaneous first/open requests for
     # this Student without imposing a global session constraint.
     session.execute(select(Student.id).where(Student.id == student_id).with_for_update()).scalar_one()
@@ -58,7 +120,7 @@ def open_or_resume_math_session(
         select(LearningSession)
         .where(
             LearningSession.student_id == student_id,
-            LearningSession.subject == "MATH",
+            LearningSession.subject == session_subject,
             LearningSession.status == "OPEN",
         )
         .order_by(LearningSession.last_activity_at.desc(), LearningSession.opened_at.desc())
@@ -75,7 +137,7 @@ def open_or_resume_math_session(
     if learning_session is None:
         learning_session = LearningSession(
             student_id=student_id,
-            subject="MATH",
+            subject=session_subject,
             status="OPEN",
             opened_at=current,
             last_activity_at=current,
@@ -97,12 +159,50 @@ def owned_open_math_session(
 ) -> LearningSession | None:
     """Look up an open Math session within the authenticated Student boundary."""
 
+    return _owned_open_student_session(
+        session,
+        student_id=student_id,
+        session_id=session_id,
+        session_subject="MATH",
+        lock=lock,
+    )
+
+
+def owned_open_daily_session(
+    session: Session,
+    *,
+    student_id: UUID,
+    session_id: UUID,
+    lock: bool = False,
+) -> LearningSession | None:
+    """Resolve the exact owned Daily technical session, never a Math fallback."""
+
+    return _owned_open_student_session(
+        session,
+        student_id=student_id,
+        session_id=session_id,
+        session_subject=None,
+        lock=lock,
+    )
+
+
+def _owned_open_student_session(
+    session: Session,
+    *,
+    student_id: UUID,
+    session_id: UUID,
+    session_subject: str | None,
+    lock: bool,
+) -> LearningSession | None:
+    """Resolve one exact open technical session inside its Student boundary."""
+
     statement = select(LearningSession).where(
         LearningSession.id == session_id,
         LearningSession.student_id == student_id,
-        LearningSession.subject == "MATH",
         LearningSession.status == "OPEN",
     )
+    if session_subject is not None:
+        statement = statement.where(LearningSession.subject == session_subject)
     if lock:
         statement = statement.with_for_update()
     return session.execute(statement).scalar_one_or_none()

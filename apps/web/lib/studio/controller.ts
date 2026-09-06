@@ -1,4 +1,10 @@
-import { StudioFrame, StudioOperation, StudioProtocolParseError } from "./contracts";
+import {
+  parseStudioFrame,
+  StudioFrame,
+  StudioOperation,
+  StudioProtocolParseError,
+  StudioSnapshotFrame,
+} from "./contracts";
 import { StudioSseParser } from "./sse";
 
 type RuntimeOpen = {
@@ -6,6 +12,14 @@ type RuntimeOpen = {
   learning_session_id: string;
   status: string;
   latest_event_sequence: number;
+};
+
+export type StudioOperationResult = {
+  event_id: string;
+  sequence: number;
+  replayed: boolean;
+  student_interaction_id: string | null;
+  student_interaction_status: string | null;
 };
 
 type ControllerOptions = {
@@ -18,8 +32,8 @@ type ControllerOptions = {
 
 export type StudioController = {
   open: (learningSessionId: string) => Promise<RuntimeOpen>;
-  snapshot: (runtimeId: string) => Promise<unknown>;
-  submit: (runtimeId: string, operation: StudioOperation) => Promise<unknown>;
+  snapshot: (runtimeId: string) => Promise<StudioSnapshotFrame>;
+  submit: (runtimeId: string, operation: StudioOperation) => Promise<StudioOperationResult>;
   connect: (runtimeId: string) => { close: () => void; done: Promise<void> };
   latestSequence: () => number;
 };
@@ -30,6 +44,10 @@ function endpoint(base: string, path: string): string {
 
 function protocolError(response: Response): Error {
   return new Error(`Studio request failed (${response.status}).`);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -56,7 +74,7 @@ export function createStudioController(options: ControllerOptions): StudioContro
 
   return {
     async open(learningSessionId) {
-      const response = await request(`/api/v1/student/studio/session/${encodeURIComponent(learningSessionId)}/open`, {
+      const response = await request(`/v1/student/studio/session/${encodeURIComponent(learningSessionId)}/open`, {
         method: "POST",
       });
       const payload = await response.json() as RuntimeOpen;
@@ -68,24 +86,40 @@ export function createStudioController(options: ControllerOptions): StudioContro
     },
 
     async snapshot(runtimeId) {
-      const response = await request(`/api/v1/student/studio/${encodeURIComponent(runtimeId)}/snapshot`);
-      return response.json();
+      const response = await request(`/v1/student/studio/${encodeURIComponent(runtimeId)}/snapshot`);
+      const frame = parseStudioFrame(await response.json());
+      if (frame.type !== "STUDIO_SNAPSHOT") {
+        throw new StudioProtocolParseError("Studio snapshot endpoint returned a non-snapshot frame.");
+      }
+      sequence = Math.max(sequence, frame.latest_event_sequence);
+      return frame;
     },
 
     async submit(runtimeId, operation) {
-      const response = await request(`/api/v1/student/studio/${encodeURIComponent(runtimeId)}/operations`, {
+      const response = await request(`/v1/student/studio/${encodeURIComponent(runtimeId)}/operations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(operation),
       });
-      return response.json();
+      const payload = await response.json() as unknown;
+      if (
+        !isRecord(payload)
+        || typeof payload.event_id !== "string"
+        || !Number.isInteger(payload.sequence)
+        || typeof payload.replayed !== "boolean"
+        || (payload.student_interaction_id !== null && typeof payload.student_interaction_id !== "string")
+        || (payload.student_interaction_status !== null && typeof payload.student_interaction_status !== "string")
+      ) {
+        throw new StudioProtocolParseError("Invalid Studio operation response.");
+      }
+      return payload as StudioOperationResult;
     },
 
     connect(runtimeId) {
       const abort = new AbortController();
       const done = (async () => {
         const response = await request(
-          `/api/v1/student/studio/${encodeURIComponent(runtimeId)}/events/stream?after_sequence=${sequence}`,
+          `/v1/student/studio/${encodeURIComponent(runtimeId)}/events/stream?after_sequence=${sequence}`,
           { signal: abort.signal },
         );
         if (!response.body) throw new StudioProtocolParseError("Studio stream has no body.");

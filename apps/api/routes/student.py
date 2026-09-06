@@ -6,10 +6,10 @@ from datetime import datetime
 from uuid import UUID
 
 import json
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -37,16 +37,21 @@ from services.tutor.candidate_events import (
     persisted_guided_learning_check,
 )
 from services.tutor.student_sessions import (
+    DailySessionNotFound,
+    DailySessionNotResumable,
     append_student_message,
     latest_tutor_guided_check_choice,
     latest_tutor_suggested_action,
+    open_or_resume_daily_session,
     open_or_resume_math_session,
     ordered_messages,
+    owned_open_daily_session,
     owned_open_math_session,
 )
-from services.tutor.runtime import TutorModelStreamFailure, TutorTextDelta, TutorTurn, create_tutor_runtime
+from services.tutor.runtime import LocalTutorProvider, TutorModelStreamFailure, TutorTextDelta, TutorTurn, create_tutor_runtime
 from services.tutor.parent_boundaries import parse_parent_boundary_decision
 from services.tutor.capacity import TutorContextCapacityExceeded
+from services.tutor.context import LiveSubjectContext, legacy_math_live_subject, unknown_live_subject
 
 
 router = APIRouter(prefix="/api/v1/student", tags=["student"])
@@ -55,7 +60,7 @@ router = APIRouter(prefix="/api/v1/student", tags=["student"])
 def create_studio_interaction_tutor_gateway(session: Session):
     """Small test seam for the existing provider-neutral Tutor gateway."""
 
-    return create_tutor_gateway(session)
+    return create_tutor_gateway(session, local_provider=LocalTutorProvider())
 
 
 class StudentMessageRequest(BaseModel):
@@ -94,10 +99,32 @@ class StudentSessionResponse(BaseModel):
     messages: list[StudentMessageResponse]
 
 
+class DailySessionRequest(BaseModel):
+    learning_session_id: UUID | None = None
+
+
+class DailySessionResponse(BaseModel):
+    learning_session_id: UUID
+    status: str
+    opened_at: datetime
+    last_activity_at: datetime
+    messages: list[StudentMessageResponse]
+
+
 def _response(session: Session, learning_session: LearningSession) -> StudentSessionResponse:
     return StudentSessionResponse(
         id=learning_session.id,
         subject=learning_session.subject,
+        status=learning_session.status,
+        opened_at=learning_session.opened_at,
+        last_activity_at=learning_session.last_activity_at,
+        messages=[StudentMessageResponse.from_model(message) for message in ordered_messages(session, learning_session=learning_session)],
+    )
+
+
+def _daily_response(session: Session, learning_session: LearningSession) -> DailySessionResponse:
+    return DailySessionResponse(
+        learning_session_id=learning_session.id,
         status=learning_session.status,
         opened_at=learning_session.opened_at,
         last_activity_at=learning_session.last_activity_at,
@@ -129,6 +156,34 @@ def start_or_resume_math_session(
     return _response(session, open_or_resume_math_session(session, student_id=student.id))
 
 
+@router.post("/daily/session", response_model=DailySessionResponse)
+def start_or_resume_daily_session(
+    request: DailySessionRequest | None = None,
+    principal: AuthenticatedPrincipal = Depends(require_role(UserRole.STUDENT)),
+    session: Session = Depends(get_session),
+) -> DailySessionResponse | JSONResponse:
+    """Open the existing technical session lifecycle for the greenfield Daily entry.
+
+    Daily has its own technical session identity. Present-tense subject
+    attribution is supplied per turn from a live Studio Scene or is explicitly
+    UNKNOWN; it is never derived from this lifecycle identity.
+    """
+
+    student = _student_for_principal(session, principal)
+    try:
+        learning_session = open_or_resume_daily_session(
+            session, student_id=student.id,
+            learning_session_id=None if request is None else request.learning_session_id,
+        )
+    except DailySessionNotFound as error:
+        raise HTTPException(status_code=404, detail=str(error)) from None
+    except DailySessionNotResumable as error:
+        # A normal response commits any policy-driven closure. Raising an HTTP
+        # exception here would roll that durable lifecycle transition back.
+        return JSONResponse(status_code=409, content={"code": "DAILY_SESSION_NOT_RESUMABLE", "detail": str(error)})
+    return _daily_response(session, learning_session)
+
+
 @router.get("/math/session/{session_id}", response_model=StudentSessionResponse)
 def get_math_session(
     session_id: UUID,
@@ -140,6 +195,19 @@ def get_math_session(
     if learning_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Open Math session not found.")
     return _response(session, learning_session)
+
+
+@router.get("/daily/session/{session_id}", response_model=DailySessionResponse)
+def get_daily_session(
+    session_id: UUID,
+    principal: AuthenticatedPrincipal = Depends(require_role(UserRole.STUDENT)),
+    session: Session = Depends(get_session),
+) -> DailySessionResponse:
+    student = _student_for_principal(session, principal)
+    learning_session = owned_open_daily_session(session, student_id=student.id, session_id=session_id)
+    if learning_session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Open Daily session not found.")
+    return _daily_response(session, learning_session)
 
 
 @router.post("/math/session/{session_id}/messages", response_model=StudentMessageResponse)
@@ -163,19 +231,23 @@ def post_math_message(
     )
 
 
-@router.post("/math/session/{session_id}/turn/stream")
-def stream_math_tutor_turn(
+def _stream_student_tutor_turn(
     session_id: UUID,
     request: StudentMessageRequest,
-    principal: AuthenticatedPrincipal = Depends(require_role(UserRole.STUDENT)),
-    session: Session = Depends(get_session),
+    principal: AuthenticatedPrincipal,
+    session: Session,
+    *,
+    live_subject_context: LiveSubjectContext,
+    not_found_detail: str,
+    session_resolver: Callable[..., LearningSession | None] = owned_open_math_session,
+    admit_before_response: bool = False,
 ) -> StreamingResponse:
     """Forward provider-produced Tutor deltas over the authenticated Student SSE path."""
 
     student = _student_for_principal(session, principal)
-    learning_session = owned_open_math_session(session, student_id=student.id, session_id=session_id)
+    learning_session = session_resolver(session, student_id=student.id, session_id=session_id)
     if learning_session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Open Math session not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=not_found_detail)
     content = request.content.strip()
     if not content:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Message content is required.")
@@ -213,8 +285,23 @@ def stream_math_tutor_turn(
         selected_guided_check.source_tutor_message_id if selected_guided_check is not None else None
     )
     bind = session.get_bind()
+    admitted_student_message_id: UUID | None = None
+    if admit_before_response:
+        try:
+            admitted_student_message_id = create_tutor_runtime(session).admit_turn(
+                learning_session=learning_session,
+                question=content,
+                suggested_action_kind=selected_action_kind,
+                suggested_action_source_tutor_message_id=selected_action_source_tutor_message_id,
+                guided_check_id=guided_check_id,
+                guided_check_source_tutor_message_id=guided_check_source_tutor_message_id,
+            ).id
+        except ValueError as error:
+            session.rollback()
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)) from None
     # The generator owns a separate transaction. Finish all authenticated
-    # request-side work before it persists SafetyAudit rows for this Student.
+    # request-side work. Daily commits its raw Student admission before SSE
+    # response headers; legacy Math retains its established lazy stream path.
     session.commit()
 
     def events() -> Iterator[str]:
@@ -223,7 +310,7 @@ def stream_math_tutor_turn(
         final_turn: TutorTurn | None = None
         committed = False
         try:
-            owned_session = owned_open_math_session(
+            owned_session = session_resolver(
                 stream_session, student_id=student_id, session_id=session_id, lock=True
             )
             if owned_session is None:
@@ -236,7 +323,9 @@ def stream_math_tutor_turn(
                 suggested_action_source_tutor_message_id=selected_action_source_tutor_message_id,
                 guided_check_id=guided_check_id,
                 guided_check_source_tutor_message_id=guided_check_source_tutor_message_id,
+                live_subject_context=live_subject_context,
                 before_model_stream=stream_session.commit,
+                admitted_student_message_id=admitted_student_message_id,
             )
             for event in turn_stream:
                 if isinstance(event, TutorTextDelta):
@@ -270,10 +359,53 @@ def stream_math_tutor_turn(
         finally:
             stream_session.close()
 
+    headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    if admitted_student_message_id is not None:
+        headers["X-Lina-Student-Message-ID"] = str(admitted_student_message_id)
     return StreamingResponse(
         events(),
         media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        headers=headers,
+    )
+
+
+@router.post("/math/session/{session_id}/turn/stream")
+def stream_math_tutor_turn(
+    session_id: UUID,
+    request: StudentMessageRequest,
+    principal: AuthenticatedPrincipal = Depends(require_role(UserRole.STUDENT)),
+    session: Session = Depends(get_session),
+) -> StreamingResponse:
+    """Keep the protected legacy Math entry explicitly Math-scoped."""
+
+    return _stream_student_tutor_turn(
+        session_id,
+        request,
+        principal,
+        session,
+        live_subject_context=legacy_math_live_subject(),
+        not_found_detail="Open Math session not found.",
+    )
+
+
+@router.post("/daily/session/{session_id}/turn/stream")
+def stream_daily_tutor_turn(
+    session_id: UUID,
+    request: StudentMessageRequest,
+    principal: AuthenticatedPrincipal = Depends(require_role(UserRole.STUDENT)),
+    session: Session = Depends(get_session),
+) -> StreamingResponse:
+    """Stream Daily Chat without deriving current scope from session history."""
+
+    return _stream_student_tutor_turn(
+        session_id,
+        request,
+        principal,
+        session,
+        live_subject_context=unknown_live_subject(),
+        not_found_detail="Open Daily session not found.",
+        session_resolver=owned_open_daily_session,
+        admit_before_response=True,
     )
 
 

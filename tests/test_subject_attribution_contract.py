@@ -4,6 +4,7 @@ import pytest
 from types import SimpleNamespace
 from uuid import UUID
 
+import services.intelligence.subjects as subject_registry
 from services.intelligence.segment_reviews import (
     LEGACY_SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
     SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
@@ -13,6 +14,16 @@ from services.intelligence.segment_reviews import (
     SegmentReviewValidationError,
     validate_live_segment_review_output,
 )
+
+
+def test_studio_subjects_map_to_controlled_broad_subjects_or_fail_closed() -> None:
+    """Catches Studio keys leaking into Broad-Subject consumers or unknown keys being guessed."""
+
+    assert subject_registry.studio_subject_to_broad_subject("MATH") == "MATH"
+    assert subject_registry.studio_subject_to_broad_subject("SCIENCE") == "SCIENCE"
+    assert subject_registry.studio_subject_to_broad_subject("ENGLISH") == "LANGUAGE_ARTS"
+    assert subject_registry.studio_subject_to_broad_subject("ARABIC") == "LANGUAGE_ARTS"
+    assert subject_registry.studio_subject_to_broad_subject("UNKNOWN") is None
 
 
 def test_v3_learning_review_has_one_primary_broad_subject_and_finding_concepts() -> None:

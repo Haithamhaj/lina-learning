@@ -71,6 +71,7 @@ class StudioTutorSceneCapability:
     renderer_version: str
     allowed_action_keys: tuple[str, ...]
     source_references: tuple[str, ...]
+    source_message_id: UUID | None = None
     capability_status: str = "RESOLVED"
 
     def as_model_payload(self) -> dict[str, object]:
@@ -286,6 +287,7 @@ def _selected_scene_capability(
         renderer_version=scene.renderer_version,
         allowed_action_keys=action_keys,
         source_references=tuple(scene.source_asset_refs),
+        source_message_id=scene.source_message_id,
         capability_status=status,
     )
 

@@ -23,7 +23,7 @@ STUDIO-ACT-MATH-01 Make-Ten Transfer DONE / ACCEPTED
 STUDIO-ACT-SCI-01 Process Sequence DONE / ACCEPTED
 STUDIO-ACT-EN-01 English Sentence Ordering DONE / ACCEPTED
 STUDIO-ACT-AR-01 Arabic Academic Activity DEFERRED — POST-FE-02 PRODUCT OWNER RE-EVALUATION
-FE-02-STUDIO-01 Real Studio + Daily App READY — ONLY READY STUDIO TASK
+FE-02-STUDIO-01 Real Studio + Daily App DONE / ACCEPTED
 CURR-RENDER-MATH-01A            BLOCKED
 STUDIO-ACCEPT-01                BLOCKED
 ```
@@ -53,8 +53,8 @@ and ARABIC profiles; exact-version contracts; persisted Subject profile and
 Action identity; typed validator/reducer dispatch; and bounded validation
 results. The historical foundation baseline had no Student-facing Studio
 Activity or production renderer. `STUDIO-ACT-MATH-01` now adds the accepted
-exact-version Make-Ten activity and minimal React/SVG renderer; FE-02
-production integration still does not exist.
+exact-version Make-Ten activity and minimal React/SVG renderer; the accepted
+FE-02 production integration is separate at `/student/daily`.
 
 `STUDIO-PROTOCOL-01` and `STUDIO-RUNTIME-01` are `DONE / ACCEPTED`.
 The existing primary Tutor call now receives the current Studio Snapshot and
@@ -72,7 +72,7 @@ persistence with exact Canvas provenance, distinct interaction plus Workspace
 context, causal supersession, and cancellation after an interrupted
 post-persistence stream lifecycle. It makes no direct Candidate, Evidence,
 Personal Facts, or Learning Intelligence writes. Canvas Specialist execution
-and FE-02 production integration remain unimplemented. `STUDIO-ACT-MATH-01`
+remains unimplemented. `STUDIO-ACT-MATH-01`
 is `DONE / ACCEPTED`: its bounded exact-version Make-Ten Activity, durable
 typed operations/validation/rebuild, minimal React/SVG renderer, and Runtime-03
 submit continuation are accepted. `TRANSFER_ITEM` remains `RECORD_ONLY`;
@@ -100,12 +100,15 @@ mixed-direction focus/input equivalence, and no free-form Canvas language.
 Arabic retains incremental value for Arabic as the academic subject, RTL
 academic token/span identity, and Arabic-specific annotation/ordering
 semantics; that proof is intentionally postponed until after FE-02.
-`FE-02-STUDIO-01` is now **READY — the only ready Studio task**. It connects
-real Studio state to the greenfield `/student/daily` surface in a separate,
-explicitly authorized implementation run. `STUDIO-ACCEPT-01` remains blocked:
-FE-02 must be implemented and accepted first, then the Product Owner must
-re-evaluate the deferred Arabic proof without removing it from final Studio
-acceptance. All other later Studio work remains blocked.
+`FE-02-STUDIO-01` is **DONE / ACCEPTED**. The real authenticated greenfield
+`/student/daily` route retains one Student-owned LearningSession across Chat
+and Studio, with exact `?session=` resume; it uses server-authoritative active
+Scene/seed, exact Math/Science/English Renderer Host dispatch, reconciled
+operations/feed/reload, and the accepted Runtime-03/admission boundary. It
+does not import or alter legacy `/student` or `StudentMathSession`.
+`STUDIO-ACCEPT-01` remains blocked until the Product Owner re-evaluates the
+deferred Arabic proof without removing it from final Studio acceptance. All
+other later Studio work remains blocked.
 `CURR-RENDER-MATH-01A` remains blocked until the Grade 5 Math renderer
 implementation gate. Real Lina longitudinal history has not started.
 
@@ -185,11 +188,11 @@ implementation gate. Real Lina longitudinal history has not started.
   proof. The deferred Arabic activity remains a final-acceptance requirement
   unless the Product Owner later explicitly implements it, approves an
   alternative proof, or revises the final acceptance matrix.
-- `FE-02-STUDIO-01` is **READY — the only ready Studio task**. The current
-  `codex/ctx-03` tree has no tracked `/student/daily` route; the preserved
-  prototype remains reference-only. Future work must integrate real Studio
-  Runtime/Snapshot/Event authority, not port prototype-local state or
-  Tutor-prose parsing. `STUDIO-ACCEPT-01` remains blocked.
+- `FE-02-STUDIO-01` is **DONE / ACCEPTED**. The tracked greenfield
+  `/student/daily` integration reuses real Studio Runtime/Snapshot/Event and
+  Tutor authorities; the preserved prototype remains reference-only. Its final
+  matrix is 37 PASS: one new Chromium/CDP-emulated touch case and 36 applicable
+  reused cases. `STUDIO-ACCEPT-01` remains blocked.
 
 ---
 
@@ -200,15 +203,15 @@ implementation gate. Real Lina longitudinal history has not started.
 The existing /student page and StudentMathSession are protected experimental/legacy functional shell and behavioral-regression-harness assets. FE-02 must build the separate greenfield Daily Student App at /student/daily, reusing backend/session/SSE/Tutor/Safety/PF-03 contracts but not the existing UI implementation. It must not import, wrap, extract from, restyle, modify, or route through the legacy Student components.
 
 The historical FE-02 implementation task remains superseded by the approved
-Studio execution track. `FE-02-STUDIO-01` is now the only `READY` Studio task;
-this governance promotion does not authorize implementation in this run. The
+Studio execution track. `FE-02-STUDIO-01` is DONE / ACCEPTED; this closure does
+not authorize a later Studio task. The
 assistant-ui presentation-primitives
 fit check is complete with REJECT for FE-02: runtime-bound behavior or an
 adapter/state bridge is not safe as presentation-only use in this slice. The
 first-screen visual brief remains mandatory implementation input; if the real
 Studio composition needs a material change to it, return to the Product Owner
-before implementation. Separate explicit FE-02 implementation authorization is
-still required. FE-CHAT-UI-01 is complete:
+before implementation. Separate Product Owner authorization is required for
+later Studio work. FE-CHAT-UI-01 is complete:
 local React/Tailwind/shadcn patterns are adopted, official shadcn chat patterns
 are partially adopted, AI Elements/VLLNT/shadcn.io are UX references, and
 21st.dev Agent Elements is rejected. This clarification supersedes only the
@@ -409,13 +412,10 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
-In a separately authorized implementation run, execute only
-`FE-02-STUDIO-01 — Connect Real Studio to Daily Student App`. It must use the
-real server-authoritative Studio Runtime/Snapshot/feed and the accepted
-Math/Science/English contracts at `/student/daily`; it must not touch legacy
-`/student` or `StudentMathSession`. After FE-02 acceptance, return to the
-Product Owner for the deferred Arabic-proof decision. No other Studio task is
-ready.
+Product Owner review of the deferred Arabic-proof decision and separate
+authorization for the bounded operational/live-Tutor rehearsal required before
+first private use. Do not execute either from this closure. `STUDIO-ACCEPT-01`
+and all later Studio tasks remain blocked.
 
 ---
 

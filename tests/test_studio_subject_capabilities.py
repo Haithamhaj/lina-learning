@@ -286,6 +286,22 @@ def test_fixture_subject_registers_and_reduces_exact_typed_action_deterministica
         empty_snapshot(), event, subject_registry=registry
     )
 
+    from dataclasses import replace
+    from uuid import uuid4
+
+    scene_id = uuid4()
+    scene_event = replace(event, scene_id=scene_id, base_scene_version=2, resulting_scene_version=3)
+    with pytest.raises(ValueError, match="current Scene"):
+        reduce_snapshot(empty_snapshot(), scene_event, subject_registry=registry)
+    active = {**empty_snapshot(), "current_scene_id": scene_id, "current_scene_version": 2}
+    reduced = reduce_snapshot(active, scene_event, subject_registry=registry)
+    assert reduced["current_scene_id"] == scene_id
+    assert reduced["current_scene_version"] == 3
+    assert active["current_scene_version"] == 2
+    for invalid in (replace(scene_event, base_scene_version=1), replace(scene_event, resulting_scene_version=None)):
+        with pytest.raises(ValueError, match="version"):
+            reduce_snapshot(active, invalid, subject_registry=registry)
+
 
 def test_registry_rejects_unknown_version_duplicate_profile_and_untyped_fixture_event() -> None:
     """Catch silent latest-version fallback, duplicate registration, or untyped event acceptance."""

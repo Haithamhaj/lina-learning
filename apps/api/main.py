@@ -24,6 +24,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["Authorization", "Content-Type", "Last-Event-ID"],
+    expose_headers=["X-Lina-Student-Message-ID"],
 )
 app.include_router(auth_router)
 app.include_router(content_router)

@@ -130,7 +130,7 @@ def test_same_call_candidate_persists_raw_source_and_never_creates_derived_intel
         assert provider.calls == 1
         assert source is not None and source.role == "student"
         assert candidate.session_id == learning_session.id
-        assert candidate.payload["subject"] == "MATH"
+        assert "subject" not in candidate.payload
         assert candidate.payload["source_message_ids"] == [str(source.id)]
         assert candidate.payload["model_route"] == {"provider": "fixture", "model": "fixture-tutor"}
         assert tutor_message.payload["candidate_metadata_status"] == "persisted"

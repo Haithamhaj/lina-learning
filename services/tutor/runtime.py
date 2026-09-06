@@ -52,7 +52,14 @@ from services.tutor.capacity import (
     TutorContextCapacityLineage,
     apply_context_capacity_guardrail,
 )
-from services.tutor.context import SessionContextMessage, TutorContext, TutorContextBuilder
+from services.tutor.context import (
+    LiveSubjectContext,
+    LiveSubjectOrigin,
+    SessionContextMessage,
+    TutorContext,
+    TutorContextBuilder,
+    linked_scene_live_subject,
+)
 from services.tutor.candidate_events import (
     CandidateEventContractError,
     CandidateEventMetadata,
@@ -137,6 +144,15 @@ class TutorTurn:
 
 
 @dataclass(frozen=True)
+class _TutorTurnInput:
+    content: str
+    action_kind: SuggestedActionKind | None
+    suggested_action_source: LearningMessage | None
+    guided_check_source: LearningMessage | None
+    interaction_payload: dict[str, object] | None
+
+
+@dataclass(frozen=True)
 class _ResolvedSegmentRelation:
     segment: LearningSegment
     relation: str | None
@@ -152,9 +168,16 @@ class LocalTutorProvider:
 
     def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
         del route
+        if "question" not in payload and isinstance(payload.get("studio_interaction_context"), dict):
+            # Development-only acknowledgement of a bounded Canvas submission.
+            # Never turn internal context into a fabricated Student question or
+            # expose serialized context in learner-visible text.
+            text = "Development Tutor: your saved Workspace submission was received."
+        else:
+            text = f"Let’s work on this step by step. {payload['question']}"
         return ModelResult(
             output={
-                "text": f"Let’s work on this step by step. {payload['question']}",
+                "text": text,
                 "suggested_actions": [],
                 "guided_check": None,
                 "teaching_mode": None,
@@ -359,6 +382,34 @@ class TutorRuntime:
         self._safety_policy = safety_policy
         self._gateway = gateway
 
+    def admit_turn(
+        self,
+        *,
+        learning_session: LearningSession,
+        question: str,
+        suggested_action_kind: SuggestedActionKind | str | None = None,
+        suggested_action_source_tutor_message_id: UUID | None = None,
+        guided_check_id: UUID | None = None,
+        guided_check_source_tutor_message_id: UUID | None = None,
+    ) -> LearningMessage:
+        """Persist one validated Student turn before a streaming response begins."""
+
+        turn_input = self._resolve_turn_input(
+            learning_session=learning_session,
+            question=question,
+            suggested_action_kind=suggested_action_kind,
+            suggested_action_source_tutor_message_id=suggested_action_source_tutor_message_id,
+            guided_check_id=guided_check_id,
+            guided_check_source_tutor_message_id=guided_check_source_tutor_message_id,
+        )
+        learning_session.last_activity_at = datetime.now(UTC)
+        return append_student_message(
+            self._session,
+            learning_session=learning_session,
+            content=turn_input.content,
+            interaction_payload=turn_input.interaction_payload,
+        )
+
     def stream_turn(
         self,
         *,
@@ -368,41 +419,33 @@ class TutorRuntime:
         suggested_action_source_tutor_message_id: UUID | None = None,
         guided_check_id: UUID | None = None,
         guided_check_source_tutor_message_id: UUID | None = None,
+        live_subject_context: LiveSubjectContext | None = None,
         before_model_stream: Callable[[], None] | None = None,
+        admitted_student_message_id: UUID | None = None,
     ) -> Iterator[TutorTextDelta | TutorTurn]:
-        content = question.strip()
-        if not content:
-            raise ValueError("A current Student question is required.")
-        learning_session.last_activity_at = datetime.now(UTC)
-        action_kind = SuggestedActionKind(suggested_action_kind) if suggested_action_kind is not None else None
-        suggested_action_source = self._suggested_action_source(
+        turn_input = self._resolve_turn_input(
             learning_session=learning_session,
-            source_tutor_message_id=suggested_action_source_tutor_message_id,
-        )
-        guided_check_source = self._guided_check_source(
-            learning_session=learning_session,
-            content=content,
+            question=question,
+            suggested_action_kind=suggested_action_kind,
+            suggested_action_source_tutor_message_id=suggested_action_source_tutor_message_id,
             guided_check_id=guided_check_id,
-            source_tutor_message_id=guided_check_source_tutor_message_id,
+            guided_check_source_tutor_message_id=guided_check_source_tutor_message_id,
         )
-        if action_kind is not None and guided_check_source is not None:
-            raise ValueError("A Student interaction cannot be both a suggested action and a guided check choice.")
-        interaction_payload = None
-        if guided_check_source is not None and guided_check_id is not None:
-            interaction_payload = {
-                "input_kind": "guided_learning_check_answer",
-                "guided_check_id": str(guided_check_id),
-                "guided_check_source_tutor_message_id": str(guided_check_source.id),
-            }
-        elif action_kind is not None:
-            interaction_payload = {"input_kind": "suggested_action"}
-            if suggested_action_source is not None:
-                interaction_payload["suggested_action_source_tutor_message_id"] = str(suggested_action_source.id)
-        student_message = append_student_message(
-            self._session,
-            learning_session=learning_session,
-            content=content,
-            interaction_payload=interaction_payload,
+        content = turn_input.content
+        learning_session.last_activity_at = datetime.now(UTC)
+        student_message = (
+            self._admitted_student_message(
+                learning_session=learning_session,
+                message_id=admitted_student_message_id,
+                content=content,
+            )
+            if admitted_student_message_id is not None
+            else append_student_message(
+                self._session,
+                learning_session=learning_session,
+                content=content,
+                interaction_payload=turn_input.interaction_payload,
+            )
         )
         decision = self._safety_policy.evaluate(student_id=learning_session.student_id, text=content, interaction_ref=str(learning_session.id))
         safety = consume_safety_decision(decision)
@@ -455,6 +498,24 @@ class TutorRuntime:
         # Runtime) compatible with the ordinary Tutor path.
         if studio_selection is not None:
             context_arguments["studio_context"] = studio_selection.context
+        if live_subject_context is not None:
+            effective_live_subject = live_subject_context
+            if live_subject_context.origin is not LiveSubjectOrigin.LEGACY_MATH_ENTRY:
+                linked_live_subject = linked_scene_live_subject(
+                    studio_context=None if studio_selection is None else studio_selection.context,
+                    source_tutor_message_id=(
+                        turn_input.guided_check_source.id
+                        if turn_input.guided_check_source is not None
+                        else (
+                            None
+                            if turn_input.suggested_action_source is None
+                            else turn_input.suggested_action_source.id
+                        )
+                    ),
+                )
+                if linked_live_subject.origin is LiveSubjectOrigin.CHAT_LINKED_SCENE:
+                    effective_live_subject = linked_live_subject
+            context_arguments["live_subject_context"] = effective_live_subject
         context = self._context_builder.build(**context_arguments)
         latest_segment = latest_segment_for_session(self._session, session_id=learning_session.id)
         latest_segment_state = latest_valid_structured_segment_state(
@@ -471,7 +532,7 @@ class TutorRuntime:
                     safety=safety,
                     candidate_source_message_id=student_message.id,
                     prior_method=prior_method,
-                    suggested_action_source=guided_check_source or suggested_action_source,
+                    suggested_action_source=turn_input.guided_check_source or turn_input.suggested_action_source,
                     latest_segment_state=latest_segment_state,
                     effective_parent_boundaries=effective_parent_boundaries,
                 ),
@@ -615,6 +676,68 @@ class TutorRuntime:
         for buffered in deferred_deltas:
             yield TutorTextDelta(buffered)
         yield turn
+
+    def _resolve_turn_input(
+        self,
+        *,
+        learning_session: LearningSession,
+        question: str,
+        suggested_action_kind: SuggestedActionKind | str | None,
+        suggested_action_source_tutor_message_id: UUID | None,
+        guided_check_id: UUID | None,
+        guided_check_source_tutor_message_id: UUID | None,
+    ) -> _TutorTurnInput:
+        content = question.strip()
+        if not content:
+            raise ValueError("A current Student question is required.")
+        action_kind = SuggestedActionKind(suggested_action_kind) if suggested_action_kind is not None else None
+        suggested_action_source = self._suggested_action_source(
+            learning_session=learning_session,
+            source_tutor_message_id=suggested_action_source_tutor_message_id,
+        )
+        guided_check_source = self._guided_check_source(
+            learning_session=learning_session,
+            content=content,
+            guided_check_id=guided_check_id,
+            source_tutor_message_id=guided_check_source_tutor_message_id,
+        )
+        if action_kind is not None and guided_check_source is not None:
+            raise ValueError("A Student interaction cannot be both a suggested action and a guided check choice.")
+        interaction_payload = None
+        if guided_check_source is not None and guided_check_id is not None:
+            interaction_payload = {
+                "input_kind": "guided_learning_check_answer",
+                "guided_check_id": str(guided_check_id),
+                "guided_check_source_tutor_message_id": str(guided_check_source.id),
+            }
+        elif action_kind is not None:
+            interaction_payload = {"input_kind": "suggested_action"}
+            if suggested_action_source is not None:
+                interaction_payload["suggested_action_source_tutor_message_id"] = str(suggested_action_source.id)
+        return _TutorTurnInput(
+            content=content,
+            action_kind=action_kind,
+            suggested_action_source=suggested_action_source,
+            guided_check_source=guided_check_source,
+            interaction_payload=interaction_payload,
+        )
+
+    def _admitted_student_message(
+        self,
+        *,
+        learning_session: LearningSession,
+        message_id: UUID,
+        content: str,
+    ) -> LearningMessage:
+        message = self._session.get(LearningMessage, message_id)
+        if (
+            not isinstance(message, LearningMessage)
+            or message.session_id != learning_session.id
+            or message.role != "student"
+            or message.content != content
+        ):
+            raise ValueError("Admitted Student message is unavailable for this learning session.")
+        return message
 
     def _suggested_action_source(
         self,
@@ -1019,7 +1142,6 @@ class TutorRuntime:
                 "summary": candidate.summary,
                 "school_or_extended": candidate.school_or_extended,
                 "source_message_ids": [str(identifier) for identifier in candidate.source_message_ids],
-                "subject": learning_session.subject,
                 "observed_student_outcome": candidate.observed_student_outcome,
                 "model_route": {"provider": route.provider, "model": route.model},
             }

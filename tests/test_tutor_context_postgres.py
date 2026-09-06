@@ -29,7 +29,7 @@ from services.platform.db.models import (
 )
 from services.platform.safety import SafetyAction, SafetyDecision
 from services.retrieval.service import CurrentFocus, RetrievedBlock
-from services.tutor.context import ContextBudget, TutorContextBuilder
+from services.tutor.context import ContextBudget, TutorContextBuilder, unknown_live_subject
 from services.tutor.runtime import TutorRuntime, build_tutor_model_payload
 import services.tutor.context as tutor_context_module
 
@@ -166,6 +166,31 @@ def test_context_keeps_current_question_bounds_history_and_uses_task014_retrieva
         }
     ]
     assert context.character_count <= len(context.question) + 100 + 100
+
+
+def test_unknown_live_subject_withholds_subject_scoped_retrieval_and_intelligence(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches a Daily free-form turn inheriting the MATH entry/default scope."""
+
+    retrieval = RecordingRetrieval()
+    with factory.begin() as session:
+        student, learning_session, _ = _seed(session)
+        context = TutorContextBuilder(
+            session,
+            retrieval_service=retrieval,  # type: ignore[arg-type]
+        ).build(
+            learning_session=learning_session,
+            question="Why do stars shine?",
+            live_subject_context=unknown_live_subject(),
+        )
+
+    assert context.retrieval == ()
+    assert context.intelligence == ()
+    assert retrieval.calls == []
+    assert context.debug.live_broad_subject is None
+    assert context.debug.retrieval_status == "WITHHELD_UNKNOWN_SUBJECT"
+    assert context.debug.intelligence_card_status == "WITHHELD_UNKNOWN_SUBJECT"
 
 
 def test_context_projects_only_the_current_students_effective_core_profile(

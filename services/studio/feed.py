@@ -8,6 +8,7 @@ session, so notification loss or coalescing cannot change Studio truth.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
+from copy import deepcopy
 import json
 from typing import Protocol
 from uuid import UUID
@@ -98,7 +99,11 @@ class StudioEventFeed:
             # an Event that was committed between two independent reads.
             session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
             protocol = StudioProtocolService(session)
-            snapshot = protocol.snapshot(student_id=student_id, runtime_id=runtime_id)
+            projection = protocol.snapshot_projection(
+                student_id=student_id,
+                runtime_id=runtime_id,
+            )
+            snapshot = projection.snapshot
             latest = snapshot.latest_event_sequence
             if after_sequence is not None and after_sequence > latest:
                 raise StudioCursorConflict("Resume sequence is ahead of committed Studio history.")
@@ -109,9 +114,17 @@ class StudioEventFeed:
             )
             # The query above may see no later state than the same transaction's
             # snapshot.  Bound it explicitly to the snapshot watermark.
-            frames = [event_frame(event) for event in events if event.sequence <= latest]
+            frames = deepcopy([event_frame(event) for event in events if event.sequence <= latest])
+            prepared_snapshot = deepcopy(snapshot_frame(
+                snapshot,
+                active_scene_contract=projection.active_scene_contract,
+                active_scene_seed=projection.active_scene_seed,
+            ))
+            # Commit expires ORM attributes. Finish every frame (including owned
+            # nested JSON) in this read window, before any post-commit refresh
+            # could mix a newer Snapshot with its captured descriptor and seed.
             session.commit()
-            return latest, frames, snapshot_frame(snapshot)
+            return latest, frames, prepared_snapshot
         except Exception:
             session.rollback()
             raise

@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, and `STUDIO-ACT-EN-01` are `DONE / ACCEPTED`. `STUDIO-ACT-AR-01` is **DEFERRED — POST-FE-02 PRODUCT OWNER RE-EVALUATION**. `FE-02-STUDIO-01` is **READY — the only ready Studio task**. Every other later Studio task remains blocked, including `STUDIO-ACCEPT-01`.
+**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`, and `FE-02-STUDIO-01` are `DONE / ACCEPTED`. `STUDIO-ACT-AR-01` is **DEFERRED — POST-FE-02 PRODUCT OWNER RE-EVALUATION**. Every later Studio task remains blocked, including `STUDIO-ACCEPT-01`.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -1551,7 +1551,7 @@ Each task verifies accessibility, touch, keyboard, locale, semantic events, snap
 
 #### `FE-02-STUDIO-01 — Connect Real Studio to Daily Student App`
 
-**Status:** READY — ONLY READY STUDIO TASK.
+**Status:** DONE / ACCEPTED.
 
 **Keep:** greenfield route, Chat/Workspace layout, stream controller patterns,
 responsive shell, and the existing Tutor/Safety/session authority.
@@ -1831,11 +1831,11 @@ accepted. The durable Studio state foundation is implemented at Alembic head
 ### 27.1 Only ready task
 
 ```text
-`STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, and `STUDIO-ACT-EN-01` are DONE /
-ACCEPTED. `STUDIO-ACT-AR-01` is **DEFERRED — POST-FE-02 PRODUCT OWNER
-RE-EVALUATION**; it remains a final-acceptance requirement. `FE-02-STUDIO-01`
-is **READY — the only ready Studio task**. `STUDIO-ACCEPT-01` and every other
-later Studio task remain BLOCKED.
+`STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`, and
+`FE-02-STUDIO-01` are DONE / ACCEPTED. `STUDIO-ACT-AR-01` is **DEFERRED —
+POST-FE-02 PRODUCT OWNER RE-EVALUATION**; it remains a final-acceptance
+requirement. `STUDIO-ACCEPT-01` and every other later Studio task remain
+BLOCKED.
 ```
 
 ### 27.2 Completed governance outcome
@@ -1879,7 +1879,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-ACT-SCI-01 — DONE / ACCEPTED
 → STUDIO-ACT-EN-01 — DONE / ACCEPTED
 → STUDIO-ACT-AR-01 — DEFERRED — POST-FE-02 PRODUCT OWNER RE-EVALUATION
-→ FE-02-STUDIO-01 — READY — ONLY READY STUDIO TASK
+→ FE-02-STUDIO-01 — DONE / ACCEPTED
 → CURR-RENDER-MATH-01A — BLOCKED pending Grade 5 renderer correction gate
 → Grade 5 renderer tasks — BLOCKED
 → STUDIO-ACCEPT-01 — BLOCKED

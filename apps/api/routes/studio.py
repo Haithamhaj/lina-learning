@@ -104,7 +104,15 @@ def get_studio_snapshot(
 ) -> dict[str, object]:
     student_id = _student_id(session, principal)
     try:
-        return snapshot_frame(StudioProtocolService(session).snapshot(student_id=student_id, runtime_id=runtime_id))
+        projection = StudioProtocolService(session).snapshot_projection(
+            student_id=student_id,
+            runtime_id=runtime_id,
+        )
+        return snapshot_frame(
+            projection.snapshot,
+            active_scene_contract=projection.active_scene_contract,
+            active_scene_seed=projection.active_scene_seed,
+        )
     except StudioResourceNotFound as error:
         raise _not_found(error) from None
 

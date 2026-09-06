@@ -8,7 +8,7 @@ import os
 from types import SimpleNamespace
 from threading import Event, Thread
 from time import monotonic
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -41,11 +41,12 @@ from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute
 from services.platform.db.models import ModelTask
 from services.platform.safety import SafetyPolicyService
 from services.retrieval.service import RetrievalService
-from services.studio.contracts import AppendStudioEventCommand, StudioActor
+from services.studio.contracts import AppendStudioEventCommand, CreateSceneCommand, StudioActor
 from services.studio.reducer import CORE_EVENT_SCHEMA_VERSION
 from services.studio.service import StudioStateService
 from services.tutor.capacity import TutorContextCapacityExceeded, TutorContextCapacityLineage
 from services.tutor.context import TutorContextBuilder
+from services.tutor.context import LiveSubjectOrigin
 from services.tutor.candidate_events import SuggestedAction
 from services.tutor.runtime import TutorRuntime, TutorTextDelta, TutorTurn
 from services.tutor.student_sessions import latest_tutor_suggested_action
@@ -400,6 +401,387 @@ def test_first_authenticated_student_visit_creates_their_owned_math_session_with
         ).one()
         student = session.query(Student).filter_by(user_id=user.id).one()
         assert session.query(LearningSession).filter_by(student_id=student.id).count() == 1
+
+
+def test_daily_student_session_returns_its_authoritative_learning_session_id_without_claiming_math_scope(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Daily may retain the compatibility session value, but it is not an attribution decision."""
+
+    client = _client(postgres_session_factory, subject="daily-student")
+    try:
+        first = client.post("/api/v1/student/daily/session")
+        second = client.post("/api/v1/student/daily/session", json={"learning_session_id": first.json()["learning_session_id"]})
+        restored = client.get(f"/api/v1/student/daily/session/{first.json()['learning_session_id']}")
+        fresh = client.post("/api/v1/student/daily/session")
+        exact_after_newer = client.post("/api/v1/student/daily/session", json={"learning_session_id": first.json()["learning_session_id"]})
+    finally:
+        _clear_overrides()
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert restored.status_code == 200
+    assert first.json()["learning_session_id"] == second.json()["learning_session_id"]
+    assert first.json()["learning_session_id"] == restored.json()["learning_session_id"]
+    assert "subject" not in first.json()
+    assert fresh.status_code == 200
+    assert fresh.json()["learning_session_id"] != first.json()["learning_session_id"]
+    assert exact_after_newer.status_code == 200
+    assert exact_after_newer.json()["learning_session_id"] == first.json()["learning_session_id"]
+    with postgres_session_factory() as session:
+        assert session.get(LearningSession, UUID(first.json()["learning_session_id"])).subject == "MATH"
+        assert session.query(LearningSession).count() == 2
+
+
+@pytest.mark.parametrize("case,expected_status", [("unknown", 404), ("other_student", 404), ("closed", 409), ("expired", 409)])
+def test_daily_exact_resume_fails_closed_without_creating_a_replacement(
+    postgres_session_factory: sessionmaker[Session], case: str, expected_status: int,
+) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    with postgres_session_factory.begin() as session:
+        owner = _student(session, "daily-exact-owner")
+        other = _student(session, "daily-exact-other")
+        target = LearningSession(
+            student_id=other.id if case == "other_student" else owner.id,
+            subject="MATH", status="CLOSED" if case == "closed" else "OPEN",
+            last_activity_at=datetime.now(UTC) - timedelta(days=2) if case == "expired" else datetime.now(UTC),
+        )
+        session.add(target)
+        session.flush()
+        target_id = uuid4() if case == "unknown" else target.id
+    client = _client(postgres_session_factory, subject="daily-exact-owner")
+    try:
+        response = client.post("/api/v1/student/daily/session", json={"learning_session_id": str(target_id)})
+        assert response.status_code == expected_status
+        with postgres_session_factory() as session:
+            assert session.query(LearningSession).count() == 1
+            if case == "expired":
+                assert session.get(LearningSession, target_id).status == "CLOSED"
+        if expected_status == 409:
+            assert response.json()["code"] == "DAILY_SESSION_NOT_RESUMABLE"
+            replacement = client.post("/api/v1/student/daily/session")
+            assert replacement.status_code == 200
+            assert replacement.json()["learning_session_id"] != str(target_id)
+    finally:
+        _clear_overrides()
+
+
+def test_daily_turn_passes_unknown_live_subject_scope_to_the_existing_tutor_runtime(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A free-form Daily message must not acquire Math scope from its technical session."""
+
+    captured: list[object] = []
+
+    class _ScopeRecordingRuntime:
+        def admit_turn(self, **_: object):
+            return SimpleNamespace(id=uuid4())
+
+        def stream_turn(self, *, learning_session: LearningSession, question: str, **kwargs: object):
+            del learning_session, question
+            captured.append(kwargs["live_subject_context"])
+            yield TutorTurn("Tutor reply", [], [], [], None, None, {})
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "daily-scope")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    from apps.api.routes import student as student_routes
+
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", lambda _: _ScopeRecordingRuntime())
+    client = _client(postgres_session_factory, subject="daily-scope")
+    try:
+        response = client.post(
+            f"/api/v1/student/daily/session/{session_id}/turn/stream",
+            json={"content": "Can you help me think this through?"},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert len(captured) == 1
+    live_subject = captured[0]
+    assert getattr(live_subject, "broad_subject") is None
+    assert getattr(live_subject, "origin") is LiveSubjectOrigin.UNKNOWN
+
+
+def test_daily_turn_rejects_before_admission_without_persisting_or_leaving_a_retry_duplicate(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A Daily validation rejection creates no raw message; the retry admits exactly one."""
+
+    from apps.api.routes import student as student_routes
+
+    provider = _ImmediateSuccessfulTutorProvider()
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    client = _client(postgres_session_factory, subject="daily-pre-admission")
+    try:
+        daily = client.post("/api/v1/student/daily/session")
+        learning_session_id = UUID(daily.json()["learning_session_id"])
+        rejected = client.post(
+            f"/api/v1/student/daily/session/{learning_session_id}/turn/stream",
+            json={"content": "B) 3", "guided_check_id": str(UUID(int=73))},
+        )
+        retried = client.post(
+            f"/api/v1/student/daily/session/{learning_session_id}/turn/stream",
+            json={"content": "Let me retry that thought."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert rejected.status_code == 422
+    assert retried.status_code == 200
+    assert retried.headers["X-Lina-Student-Message-ID"]
+    with postgres_session_factory() as session:
+        messages = session.query(LearningMessage).filter_by(session_id=learning_session_id).order_by(LearningMessage.created_at).all()
+        assert [(message.role, message.content) for message in messages[:1]] == [
+            ("student", "Let me retry that thought."),
+        ]
+        assert len(messages) == 2
+        assert messages[1].role == "tutor"
+        assert str(messages[0].id) == retried.headers["X-Lina-Student-Message-ID"]
+
+
+def test_daily_turn_rejects_another_students_session_before_admission(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """A cross-Student Daily session ID fails closed before a raw message can exist."""
+
+    owner = _client(postgres_session_factory, subject="daily-owner")
+    try:
+        daily = owner.post("/api/v1/student/daily/session")
+        learning_session_id = UUID(daily.json()["learning_session_id"])
+    finally:
+        _clear_overrides()
+    other = _client(postgres_session_factory, subject="daily-other")
+    try:
+        read = other.get(f"/api/v1/student/daily/session/{learning_session_id}")
+        rejected = other.post(
+            f"/api/v1/student/daily/session/{learning_session_id}/turn/stream",
+            json={"content": "This must not be accepted."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert read.status_code == 404
+    assert rejected.status_code == 404
+    with postgres_session_factory() as session:
+        assert session.query(LearningMessage).filter_by(session_id=learning_session_id).count() == 0
+
+
+def test_daily_admitted_provider_failure_retains_the_durable_student_message(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Daily exposes its durable admission ID before a later provider stream failure."""
+
+    from apps.api.routes import student as student_routes
+
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _delta_then_failure_runtime)
+    client = _client(postgres_session_factory, subject="daily-admitted-failure", raise_server_exceptions=False)
+    try:
+        daily = client.post("/api/v1/student/daily/session")
+        learning_session_id = UUID(daily.json()["learning_session_id"])
+        failed = client.post(
+            f"/api/v1/student/daily/session/{learning_session_id}/turn/stream",
+            json={"content": "I need help after this partial response."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert failed.status_code == 200
+    assert "event: turn" not in failed.text
+    assert failed.headers["X-Lina-Student-Message-ID"]
+    with postgres_session_factory() as session:
+        message = session.query(LearningMessage).filter_by(session_id=learning_session_id, role="student").one()
+        assert str(message.id) == failed.headers["X-Lina-Student-Message-ID"]
+        assert message.content == "I need help after this partial response."
+
+
+def test_cross_origin_daily_admission_exposes_the_durable_student_message_id(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A trusted cross-origin browser may read Daily's admitted Student identity."""
+
+    from apps.api.main import app
+    from apps.api.routes import student as student_routes
+
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _delta_then_failure_runtime)
+    trusted_web_origin = app.state.settings.allowed_origins[0]
+    client = _client(postgres_session_factory, subject="daily-cors-admission", raise_server_exceptions=False)
+    try:
+        daily = client.post("/api/v1/student/daily/session")
+        learning_session_id = UUID(daily.json()["learning_session_id"])
+        failed = client.post(
+            f"/api/v1/student/daily/session/{learning_session_id}/turn/stream",
+            headers={"Origin": trusted_web_origin},
+            json={"content": "Keep my durable identity after this stream fails."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert failed.status_code == 200
+    assert failed.headers["X-Lina-Student-Message-ID"]
+    exposed_headers = {value.strip().lower() for value in failed.headers["access-control-expose-headers"].split(",")}
+    assert "x-lina-student-message-id" in exposed_headers
+    with postgres_session_factory() as session:
+        message = session.query(LearningMessage).filter_by(session_id=learning_session_id, role="student").one()
+        assert str(message.id) == failed.headers["X-Lina-Student-Message-ID"]
+
+
+@pytest.mark.parametrize(
+    ("subject_key", "profile", "activity", "activity_version", "renderer", "renderer_version", "payload_schema", "seed", "accessibility", "locale", "direction"),
+    [
+        pytest.param(
+            "SCIENCE",
+            "subject-profile-v2",
+            "process_sequence_workspace",
+            "process-sequence-workspace-activity-v1",
+            "process-sequence-workspace",
+            "process-sequence-workspace-renderer-v1",
+            "process-sequence-workspace-scene-v1",
+            "process_sequence",
+            "process_sequence",
+            "ar",
+            "rtl",
+            id="science",
+        ),
+        pytest.param(
+            "ENGLISH",
+            "subject-profile-v2",
+            "sentence_ordering_workspace",
+            "sentence-ordering-workspace-activity-v1",
+            "sentence-ordering-workspace",
+            "sentence-ordering-workspace-renderer-v1",
+            "sentence-ordering-workspace-scene-v1",
+            "sentence_ordering",
+            "sentence_ordering",
+            "en",
+            "ltr",
+            id="english",
+        ),
+    ],
+)
+def test_daily_chat_and_active_studio_scene_share_one_exact_learning_session(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    subject_key: str,
+    profile: str,
+    activity: str,
+    activity_version: str,
+    renderer: str,
+    renderer_version: str,
+    payload_schema: str,
+    seed: str,
+    accessibility: str,
+    locale: str,
+    direction: str,
+) -> None:
+    """Daily never replaces an existing subject Scene with a separate Math runtime."""
+
+    from services.studio.subjects.process_sequence import (  # noqa: PLC0415 - accepted contract fixture
+        ACCESSIBILITY_PAYLOAD as PROCESS_SEQUENCE_ACCESSIBILITY,
+        process_sequence_scene_seed,
+    )
+    from services.studio.subjects.sentence_ordering import (  # noqa: PLC0415 - accepted contract fixture
+        ACCESSIBILITY_PAYLOAD as SENTENCE_ORDERING_ACCESSIBILITY,
+        sentence_ordering_scene_seed,
+    )
+    from apps.api.routes import student as student_routes
+
+    seeds = {
+        "process_sequence": process_sequence_scene_seed,
+        "sentence_ordering": sentence_ordering_scene_seed,
+    }
+    accessibilities = {
+        "process_sequence": PROCESS_SEQUENCE_ACCESSIBILITY,
+        "sentence_ordering": SENTENCE_ORDERING_ACCESSIBILITY,
+    }
+    provider = _ImmediateSuccessfulTutorProvider()
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    client = _client(postgres_session_factory, subject=f"daily-session-{subject_key.lower()}")
+    try:
+        daily = client.post("/api/v1/student/daily/session")
+        learning_session_id = UUID(daily.json()["learning_session_id"])
+        with postgres_session_factory.begin() as session:
+            learning_session = session.get(LearningSession, learning_session_id)
+            assert learning_session is not None
+            assert learning_session.subject == "MATH"
+            state = StudioStateService(session)
+            runtime = state.get_or_create_runtime(
+                student_id=learning_session.student_id,
+                learning_session_id=learning_session.id,
+            )
+            scene = state.accept_scene(
+                CreateSceneCommand(
+                    student_id=learning_session.student_id,
+                    learning_session_id=learning_session.id,
+                    subject_key=subject_key,
+                    subject_profile_version=profile,
+                    concept_keys=(activity,),
+                    activity_key=activity,
+                    artifact_type="interactive-activity",
+                    renderer_key=renderer,
+                    renderer_version=renderer_version,
+                    activity_contract_version=activity_version,
+                    payload_schema_version=payload_schema,
+                    seed_payload=seeds[seed](),
+                    accessibility_payload=accessibilities[accessibility],
+                    locale=locale,
+                    direction=direction,
+                )
+            )
+            state.append_event(
+                AppendStudioEventCommand(
+                    runtime_id=runtime.id,
+                    student_id=learning_session.student_id,
+                    learning_session_id=learning_session.id,
+                    event_kind="studio.scene.activated",
+                    event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+                    actor=StudioActor.SYSTEM,
+                    payload_schema_version="studio-scene-activated-v1",
+                    payload={},
+                    scene_id=scene.id,
+                    base_scene_version=scene.scene_version,
+                    idempotency_key=f"daily-activate:{scene.id}",
+                )
+            )
+            runtime_id = runtime.id
+
+        opened = client.post(f"/api/v1/student/studio/session/{learning_session_id}/open")
+        chat = client.post(
+            f"/api/v1/student/daily/session/{learning_session_id}/turn/stream",
+            json={"content": "Can you help me with this scene?"},
+        )
+        snapshot = client.get(f"/api/v1/student/studio/{runtime_id}/snapshot")
+        resumed = client.post("/api/v1/student/daily/session", json={"learning_session_id": str(learning_session_id)})
+        reopened = client.post(f"/api/v1/student/studio/session/{learning_session_id}/open")
+    finally:
+        _clear_overrides()
+
+    assert daily.status_code == 200
+    assert opened.status_code == 200
+    assert opened.json()["learning_session_id"] == str(learning_session_id)
+    assert chat.status_code == 200
+    assert snapshot.status_code == 200
+    assert snapshot.json()["active_scene_contract"]["subject_key"] == subject_key
+    assert resumed.status_code == 200
+    assert resumed.json()["learning_session_id"] == str(learning_session_id)
+    assert len(resumed.json()["messages"]) == 2
+    assert reopened.json()["runtime_id"] == str(runtime_id)
+    with postgres_session_factory() as session:
+        assert session.query(StudioRuntime).filter_by(id=runtime_id, learning_session_id=learning_session_id).one()
+        assert [message.session_id for message in session.query(LearningMessage).filter_by(session_id=learning_session_id)] == [
+            learning_session_id,
+            learning_session_id,
+        ]
 
 
 def test_zero_content_math_session_accepts_a_persisted_student_message(

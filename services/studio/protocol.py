@@ -7,10 +7,11 @@ Scene's immutable capability contract derives every durable event detail.
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
 from services.platform.db.models import LearningSession, StudioEvent, StudioRuntime, StudioScene, StudioSnapshot
@@ -54,6 +55,15 @@ class StudioOperationRequest(BaseModel):
     action_key: str = Field(min_length=1, max_length=128)
     payload: dict[str, object]
     idempotency_key: str = Field(min_length=1, max_length=255)
+
+
+@dataclass(frozen=True)
+class StudioSnapshotProjection:
+    """One atomic public Snapshot read plus its exact active Scene identity."""
+
+    snapshot: StudioSnapshot
+    active_scene_contract: dict[str, object] | None
+    active_scene_seed: dict[str, object] | None
 
 
 def parse_resume_cursor(*, last_event_id: str | None, after_sequence: int | None) -> int | None:
@@ -113,6 +123,35 @@ class StudioProtocolService:
         if snapshot is None:
             raise StudioProtocolError("Studio runtime is missing its required Snapshot.")
         return snapshot
+
+    def snapshot_projection(self, *, student_id: UUID, runtime_id: UUID) -> StudioSnapshotProjection:
+        """Read a Snapshot and its current Scene in one authoritative SQL statement."""
+
+        runtime = self.runtime(student_id=student_id, runtime_id=runtime_id)
+        row = self.session.execute(
+            select(StudioSnapshot, StudioScene)
+            .outerjoin(
+                StudioScene,
+                and_(
+                    StudioScene.id == StudioSnapshot.current_scene_id,
+                    StudioScene.studio_runtime_id == StudioSnapshot.studio_runtime_id,
+                    StudioScene.student_id == StudioSnapshot.student_id,
+                ),
+            )
+            .where(
+                StudioSnapshot.studio_runtime_id == runtime.id,
+                StudioSnapshot.student_id == student_id,
+            )
+        ).one_or_none()
+        if row is None:
+            raise StudioProtocolError("Studio runtime is missing its required Snapshot.")
+        snapshot, scene = row
+        active_scene_contract, active_scene_seed = _active_scene_projection(snapshot=snapshot, scene=scene)
+        return StudioSnapshotProjection(
+            snapshot=snapshot,
+            active_scene_contract=active_scene_contract,
+            active_scene_seed=active_scene_seed,
+        )
 
     def events_after(self, *, student_id: UUID, runtime_id: UUID, after_sequence: int) -> list[StudioEvent]:
         runtime = self.runtime(student_id=student_id, runtime_id=runtime_id)
@@ -174,7 +213,12 @@ class StudioProtocolService:
             raise StudioProtocolError(str(error)) from error
 
 
-def snapshot_frame(snapshot: StudioSnapshot) -> dict[str, object]:
+def snapshot_frame(
+    snapshot: StudioSnapshot,
+    *,
+    active_scene_contract: Mapping[str, object] | None = None,
+    active_scene_seed: Mapping[str, object] | None = None,
+) -> dict[str, object]:
     """Return the bounded client-safe snapshot representation for protocol v1."""
 
     return {
@@ -187,8 +231,49 @@ def snapshot_frame(snapshot: StudioSnapshot) -> dict[str, object]:
         "active_subject_key": snapshot.active_subject_key,
         "active_activity_key": snapshot.active_activity_key,
         "active_step_key": snapshot.active_step_key,
+        "active_scene_contract": (
+            None if active_scene_contract is None else dict(active_scene_contract)
+        ),
+        "active_scene_seed": None if active_scene_seed is None else dict(active_scene_seed),
         "state_payload": dict(snapshot.state_payload),
     }
+
+
+def _active_scene_projection(
+    *,
+    snapshot: StudioSnapshot,
+    scene: StudioScene | None,
+) -> tuple[dict[str, object] | None, dict[str, object] | None]:
+    """Project one learner-visible current Scene identity and safe seed atomically."""
+
+    if snapshot.current_scene_id is None:
+        if scene is not None:
+            raise StudioProtocolError("Studio Snapshot has an unexpected active Scene.")
+        return None, None
+    if scene is None:
+        raise StudioProtocolError("Studio Snapshot current Scene is unavailable.")
+    if scene.id != snapshot.current_scene_id or scene.scene_version != snapshot.current_scene_version:
+        raise StudioProtocolError("Studio Snapshot current Scene identity is inconsistent.")
+    if scene.subject_key != snapshot.active_subject_key or scene.activity_key != snapshot.active_activity_key:
+        raise StudioProtocolError("Studio Snapshot active capability identity is inconsistent.")
+    if scene.status != "ACTIVE":
+        return None, None
+    return (
+        {
+            "scene_id": str(scene.id),
+            "scene_version": scene.scene_version,
+            "subject_key": scene.subject_key,
+            "subject_profile_version": scene.subject_profile_version,
+            "activity_key": scene.activity_key,
+            "activity_contract_version": scene.activity_contract_version,
+            "renderer_key": scene.renderer_key,
+            "renderer_version": scene.renderer_version,
+            "payload_schema_version": scene.payload_schema_version,
+            "locale": scene.locale,
+            "direction": scene.direction,
+        },
+        dict(scene.seed_payload),
+    )
 
 
 def event_frame(event: StudioEvent) -> dict[str, object]:

@@ -27,7 +27,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-ACT-SCI-01 — DONE / ACCEPTED
 → STUDIO-ACT-EN-01 — DONE / ACCEPTED
 → STUDIO-ACT-AR-01 — DEFERRED — POST-FE-02 PRODUCT OWNER RE-EVALUATION
-→ FE-02-STUDIO-01 — READY — ONLY READY STUDIO TASK
+→ FE-02-STUDIO-01 — DONE / ACCEPTED
 → CURR-RENDER-MATH-01A — BLOCKED UNTIL THE GRADE 5 MATH RENDERER IMPLEMENTATION GATE
 → independently reviewed Grade 5 renderer tasks — BLOCKED
 → STUDIO-ACCEPT-01 — BLOCKED
@@ -100,10 +100,9 @@ Voice-to-STT; Canvas uses bounded semantic controls and may display language.
 OWNER RE-EVALUATION**; it is neither accepted nor cancelled. English supplied
 the bounded text-oriented/mixed-direction foundation proof, while Arabic still
 has incremental academic-subject, RTL token/span identity, and Arabic-specific
-annotation/ordering value. `FE-02-STUDIO-01` is **READY — the only ready Studio
-task**. `STUDIO-ACCEPT-01` remains blocked; FE-02 acceptance and the later
-Product Owner Arabic-proof decision are both still required. All other later
-Studio tasks remain blocked.
+annotation/ordering value. `FE-02-STUDIO-01` is **DONE / ACCEPTED**.
+`STUDIO-ACCEPT-01` remains blocked pending the later Product Owner Arabic-proof
+decision. All other later Studio tasks remain blocked.
 `CURR-RENDER-MATH-01A` is **BLOCKED UNTIL THE GRADE 5 MATH RENDERER
 IMPLEMENTATION GATE**: it does not block Studio state, protocol, runtime,
 cross-subject foundation activities, or FE-02 Studio integration.
@@ -607,7 +606,35 @@ or revise the final Studio acceptance matrix. Until then, it is not executable.
 
 ## FE-02-STUDIO-01 — Connect Real Studio to Daily Student App
 
-**Status:** READY — ONLY READY STUDIO TASK
+**Status:** DONE / ACCEPTED
+
+**Accepted result:** real authenticated `/student/daily` is separate from
+protected legacy `/student`. One Student-owned LearningSession identity is
+shared by Chat and Studio, retained as `?session=`, and resumed only by that
+exact ID; new Daily sessions use only the no-ID request. The accepted surface
+uses the server-authoritative active Scene contract plus answer-safe seed and
+exact Math/Science/English Renderer Host dispatch. It reconciles operations,
+Snapshots, feed resume, reload, and server rejection without a second Studio
+client, reducer, feed, activation router, or Tutor. Free-form Student language
+remains Chat; Canvas creates neither fake Student messages nor direct
+Candidate/Evidence/Personal Facts writes.
+
+Unknown or cross-Student IDs fail closed; closed/non-resumable IDs receive the
+implemented bounded response and require an explicit no-ID new-session request.
+There is no `DAILY` academic-subject discriminator: `LiveSubjectContext` and
+reviewed-Segment authority remain independent of the technical session.
+
+**Acceptance evidence and limits:** 37 PASS is one NEW Chromium/CDP-emulated
+touch case plus 36 REUSED applicable cases, not 37 freshly rerun cases. The
+new trace proves trusted `ones-group-06` touch → one accepted `TRANSFER_ITEM`
+→ 9+6 to 10+5 → version 2 to 3 → same OPEN-session reload, with no Submit or
+additional Tutor execution. Full isolated Python was 941 passed / 7 skipped;
+web tests 28 passed; typecheck/build/Alembic evidence is recorded with its
+source applicability. The two recovered historical 401 episodes remain OPEN
+OBSERVATIONS with unknown cause; the old expiry 409 is separate; neither
+recurred during the final touch test. Acceptance does not establish live-model
+pedagogical quality, physical-device coverage, deployment, unrestricted daily
+use, Real-Lina history, or final Studio acceptance.
 
 **Purpose:** deliver the smallest complete production integration slice that
 connects accepted Studio Core and the accepted Math, Science, and English
@@ -623,7 +650,7 @@ legacy/experimental regression assets: do not import, wrap, extract from,
 restyle, modify, or route through them. The preserved FE-02 prototype is
 reference evidence only; do not merge it or make it production architecture.
 
-### Required production outputs
+### Accepted production outputs
 
 1. **Greenfield Daily Student App.** Create/complete only `/student/daily` as
    the production target: Learning Chat plus a conditional Adaptive Learning
@@ -784,8 +811,8 @@ relevant-untracked diff checks; and a fresh independent review. Isolated
 activity review mounts are not FE-02 acceptance evidence.
 
 **Final Studio acceptance boundary:** `STUDIO-ACCEPT-01` remains **BLOCKED**.
-FE-02 must first be implemented and accepted, then the Product Owner must
-re-evaluate Arabic through implementation, an explicitly approved alternative
+FE-02 is accepted; the Product Owner must next re-evaluate Arabic through
+implementation, an explicitly approved alternative
 proof, or an explicit final-matrix revision. This promotion does not waive or
 remove the Arabic acceptance requirement.
 

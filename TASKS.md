@@ -177,7 +177,7 @@ it, approves an explicit alternative proof, or explicitly revises the final
 acceptance matrix.
 
 ## FE-02-STUDIO-01 — Connect Real Studio to Daily Student App
-**Status:** READY — ONLY READY STUDIO TASK
+**Status:** DONE / ACCEPTED
 **Purpose:** integrate accepted server-authoritative Studio Core and accepted
 Math, Science, and English Activities into the separate greenfield
 `/student/daily` Daily Student App. This is real authenticated product
@@ -187,12 +187,18 @@ reuse current Studio protocol/controller/feed, Subject Capability/activation,
 Runtime-03, Tutor, session/auth, and Safety authorities; no duplicate Studio
 client/reducer/SSE/activation/Chat runtime, Tutor, or generic Artifact Engine.
 The renderer host dispatches only exact approved Activity/Renderer contracts;
-Tutor SSE and Studio feed remain separate authorities. Full executable scope,
-reusable seams, pre-code checks, non-scope, and acceptance gate are maintained
-in `project-state/DAILY_USE_RELEASE_TASKS.md`.
+Tutor SSE and Studio feed remain separate authorities. The accepted
+implementation uses the exact Student-owned Daily session ID for Chat/Studio
+and `?session=` resume, server-authoritative active Scene/seed, exact
+Math/Science/English Renderer Host dispatch, dedicated Studio
+feed/reconciliation, and the retained Runtime-03 boundary. Final evidence is
+37 PASS: one new Chromium/CDP-emulated touch case and 36 reused applicable
+cases, not 37 freshly rerun cases. Scope, reusable seams, limits, and evidence
+references are maintained in `project-state/DAILY_USE_RELEASE_TASKS.md`.
 
-**Final acceptance:** `STUDIO-ACCEPT-01` remains BLOCKED pending accepted
-FE-02 integration and the later Product Owner Arabic-proof re-evaluation.
+**Final acceptance:** `STUDIO-ACCEPT-01` remains BLOCKED pending the later
+Product Owner Arabic-proof re-evaluation. FE-02 acceptance does not waive or
+replace Arabic academic proof.
 
 ---
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from enum import Enum
 import logging
 from uuid import UUID
 
@@ -13,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from services.intelligence.card import CardBudget, build_learner_intelligence_card
 from services.intelligence.selection import RelevantIntelligence
+from services.intelligence.subjects import studio_subject_to_broad_subject
 from services.model_gateway.factory import create_embedding_gateway
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
 from services.personal_facts.memory_document import format_current_personal_memory_card
@@ -25,6 +27,72 @@ from services.tutor.segments import latest_segment_for_session, latest_valid_str
 
 
 logger = logging.getLogger(__name__)
+
+
+class LiveSubjectOrigin(str, Enum):
+    """Non-durable provenance for one Tutor turn's optional Broad Subject scope."""
+
+    LEGACY_MATH_ENTRY = "LEGACY_MATH_ENTRY"
+    CANVAS_SCENE = "CANVAS_SCENE"
+    CHAT_LINKED_SCENE = "CHAT_LINKED_SCENE"
+    UNKNOWN = "UNKNOWN"
+
+
+@dataclass(frozen=True)
+class LiveSubjectContext:
+    """Server-owned live scope; Segment Review remains durable subject authority."""
+
+    broad_subject: str | None
+    origin: LiveSubjectOrigin
+    source_scene_id: UUID | None = None
+
+
+def legacy_math_live_subject() -> LiveSubjectContext:
+    """Preserve the deterministic legacy Math product entry without session inference."""
+
+    return LiveSubjectContext("MATH", LiveSubjectOrigin.LEGACY_MATH_ENTRY)
+
+
+def unknown_live_subject() -> LiveSubjectContext:
+    """Represent a turn whose academic scope cannot be established before Tutor execution."""
+
+    return LiveSubjectContext(None, LiveSubjectOrigin.UNKNOWN)
+
+
+def studio_scene_live_subject(
+    *,
+    subject_key: str,
+    origin: LiveSubjectOrigin,
+    source_scene_id: UUID | None = None,
+) -> LiveSubjectContext:
+    """Map an exact trusted Studio Scene key to an optional Broad Subject scope."""
+
+    broad_subject = studio_subject_to_broad_subject(subject_key)
+    if broad_subject is None:
+        return unknown_live_subject()
+    return LiveSubjectContext(broad_subject, origin, source_scene_id)
+
+
+def linked_scene_live_subject(
+    *,
+    studio_context: StudioTutorWorkspaceContext | None,
+    source_tutor_message_id: UUID | None,
+) -> LiveSubjectContext:
+    """Use a Scene scope for Chat only when server-persisted lineage proves it."""
+
+    scene = None if studio_context is None else studio_context.current_scene_capability
+    if (
+        scene is None
+        or scene.capability_status != "RESOLVED"
+        or source_tutor_message_id is None
+        or scene.source_message_id != source_tutor_message_id
+    ):
+        return unknown_live_subject()
+    return studio_scene_live_subject(
+        subject_key=scene.subject_key,
+        origin=LiveSubjectOrigin.CHAT_LINKED_SCENE,
+        source_scene_id=scene.scene_id,
+    )
 
 
 @dataclass(frozen=True)
@@ -66,12 +134,16 @@ class TutorContextDebug:
     studio_from_sequence: int | None = None
     studio_through_sequence: int | None = None
     studio_selected_event_sequences: tuple[int, ...] = ()
+    live_broad_subject: str | None = None
+    live_subject_origin: str = LiveSubjectOrigin.UNKNOWN.value
+    retrieval_status: str = "NOT_REQUESTED"
+    intelligence_card_status: str = "NOT_REQUESTED"
 
 
 @dataclass(frozen=True)
 class TutorContext:
     question: str
-    subject: str
+    subject: str | None
     grade_level: int
     focus: CurrentFocus | None
     session_messages: tuple[SessionContextMessage, ...]
@@ -131,6 +203,7 @@ class TutorContextBuilder:
         grade_level: int = 5,
         focus: CurrentFocus | None = None,
         studio_context: StudioTutorWorkspaceContext | None = None,
+        live_subject_context: LiveSubjectContext | None = None,
     ) -> TutorContext:
         question = question.strip()
         if not question:
@@ -180,41 +253,53 @@ class TutorContextBuilder:
             student_id=learning_session.student_id,
             as_of=date.today(),
         )
-        retrieval_kwargs: dict[str, object] = {
-            "student_id": learning_session.student_id,
-            "question": question,
-            "grade_level": core_context.grade_level if core_context.grade_level is not None else grade_level,
-            "subject": learning_session.subject,
-            "focus": effective_focus,
-            "character_budget": self._budget.retrieval_characters,
-        }
-        if not shared_query.allows_generation:
-            retrieval_kwargs["query_embedding"] = shared_query
-        retrieval = tuple(self._retrieval.retrieve(**retrieval_kwargs))
-        card = build_learner_intelligence_card(
-            self._session,
-            student_id=learning_session.student_id,
-            subject=learning_session.subject,
-            question=question,
-            focus=effective_focus,
-            budget=self._card_budget(),
-        )
-        intelligence = tuple(
-            RelevantIntelligence(
-                source_kind=entry.source_kind,
-                source_id=entry.source_id,
-                text=entry.text,
-                concept_ref=entry.concept_ref,
-                priority=entry.priority,
+        live_subject = live_subject_context or legacy_math_live_subject()
+        retrieval: tuple[RetrievedBlock, ...] = ()
+        intelligence: tuple[RelevantIntelligence, ...] = ()
+        retrieval_status = "WITHHELD_UNKNOWN_SUBJECT"
+        intelligence_card_status = "WITHHELD_UNKNOWN_SUBJECT"
+        card_schema_version = "withheld-unknown-subject"
+        card_policy_version = "withheld-unknown-subject"
+        if live_subject.broad_subject is not None:
+            retrieval_kwargs: dict[str, object] = {
+                "student_id": learning_session.student_id,
+                "question": question,
+                "grade_level": core_context.grade_level if core_context.grade_level is not None else grade_level,
+                "subject": live_subject.broad_subject,
+                "focus": effective_focus,
+                "character_budget": self._budget.retrieval_characters,
+            }
+            if not shared_query.allows_generation:
+                retrieval_kwargs["query_embedding"] = shared_query
+            retrieval = tuple(self._retrieval.retrieve(**retrieval_kwargs))
+            card = build_learner_intelligence_card(
+                self._session,
+                student_id=learning_session.student_id,
+                subject=live_subject.broad_subject,
+                question=question,
+                focus=effective_focus,
+                budget=self._card_budget(),
             )
-            for entry in card.entries
-        )
+            intelligence = tuple(
+                RelevantIntelligence(
+                    source_kind=entry.source_kind,
+                    source_id=entry.source_id,
+                    text=entry.text,
+                    concept_ref=entry.concept_ref,
+                    priority=entry.priority,
+                )
+                for entry in card.entries
+            )
+            retrieval_status = "SELECTED"
+            intelligence_card_status = "SELECTED"
+            card_schema_version = card.schema_version
+            card_policy_version = card.policy_version
         personal_memory, personal_memory_status = self._personal_memory(
             learning_session=learning_session,
         )
         return TutorContext(
             question=question,
-            subject=learning_session.subject,
+            subject=live_subject.broad_subject,
             grade_level=grade_level,
             focus=effective_focus,
             immediate_exchange=immediate_exchange,
@@ -235,8 +320,8 @@ class TutorContextBuilder:
                 retrieval_source_refs=tuple(block.source_ref for block in retrieval),
                 intelligence_source_ids=tuple(item.source_id for item in intelligence),
                 intelligence_source_kinds=tuple(item.source_kind for item in intelligence),
-                intelligence_card_schema_version=card.schema_version,
-                intelligence_card_policy_version=card.policy_version,
+                intelligence_card_schema_version=card_schema_version,
+                intelligence_card_policy_version=card_policy_version,
                 current_turn_message_id=current_turn.id if current_turn is not None else None,
                 immediate_exchange_message_ids=immediate_exchange.message_ids if immediate_exchange is not None else (),
                 older_continuity_message_ids=tuple(message_id for exchange in (*recent_exchanges, *semantic_recall) for message_id in exchange.message_ids),
@@ -255,6 +340,10 @@ class TutorContextBuilder:
                 studio_selected_event_sequences=(
                     () if studio_context is None else tuple(event.sequence for event in studio_context.unseen_events)
                 ),
+                live_broad_subject=live_subject.broad_subject,
+                live_subject_origin=live_subject.origin.value,
+                retrieval_status=retrieval_status,
+                intelligence_card_status=intelligence_card_status,
             ),
         )
 

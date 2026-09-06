@@ -402,6 +402,8 @@ def test_sentence_ordering_persists_token_identity_rebuilds_and_rejects_invalid_
             idempotency_key="sentence-ordering-reorder-birds",
         )
         first = service.append_event(first_command)
+        assert first.event.resulting_scene_version == scene.scene_version == 3
+        assert service.runtime_state(runtime_id=runtime.id, student_id=student.id)["snapshot"]["current_scene_version"] == 3
         assert first.interaction is None
         assert first.event.payload == {"action": {"token_id": BIRDS_TOKEN_ID, "from_index": 1, "to_index": 0}}
         replay = service.append_event(first_command)
@@ -434,6 +436,7 @@ def test_sentence_ordering_persists_token_identity_rebuilds_and_rejects_invalid_
         )
         assert third.interaction is None
         projection = service.runtime_state(runtime_id=runtime.id, student_id=student.id)["snapshot"]
+        assert projection["current_scene_version"] == scene.scene_version == third.event.resulting_scene_version == 5
         valid_token_ids = [BIRDS_TOKEN_ID, FLY_TOKEN_ID, OVER_TOKEN_ID, CLOUDS_TOKEN_ID]
         assert projection["state_payload"][ACTIVITY_KEY]["token_ids"] == valid_token_ids
         assert service.rebuild_snapshot(runtime_id=runtime.id, student_id=student.id) == projection
@@ -703,11 +706,17 @@ def test_sentence_submission_keeps_source_truth_after_later_record_only_reorder(
             del route
             self.calls += 1
             source_event = payload["studio_interaction_context"]["source"]["event"]
+            live_subject = payload["studio_interaction_context"]["source"]["live_subject"]
             source_state = source_event["action_payload"]
             source_validation = source_event["validation"]
             current_state = payload["studio_interaction_context"]["workspace"]["state"]["sentence_ordering_workspace"]
             selected_state = payload["studio_workspace_context"]["snapshot"]["state"]["sentence_ordering_workspace"]
             assert source_state == {"token_ids": valid_token_ids}
+            assert live_subject == {
+                "broad_subject": "LANGUAGE_ARTS",
+                "origin": "CANVAS_SCENE",
+                "source_scene_id": source_event["scene_id"],
+            }
             assert source_validation == {
                 "status": "VALID",
                 "feedback_code": "SENTENCE_ORDER_COMPLETE",

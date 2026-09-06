@@ -14,7 +14,12 @@ from services.model_gateway.openai_provider import OpenAIResponsesProvider
 from services.platform.db.models import CandidateEvent, LearningMessage, ModelTask
 from services.platform.safety import ParentBoundaryResolution, SafetyAction, SafetyDecision
 from services.retrieval.service import RetrievedBlock
-from services.tutor.context import SessionContextMessage, TutorContext, TutorContextDebug
+from services.tutor.context import (
+    SessionContextMessage,
+    TutorContext,
+    TutorContextDebug,
+    unknown_live_subject,
+)
 from services.tutor.exchanges import ConversationExchangeContext
 from services.tutor.capacity import TutorContextCapacityExceeded
 from services.tutor.runtime import TutorModelStreamFailure, TutorRuntime, TutorTextDelta, TutorTurn, _compose_parent_redirect
@@ -54,6 +59,7 @@ class _ContextBuilder:
     def __init__(self, immediate_exchange: ConversationExchangeContext | None = None) -> None:
         self.calls = 0
         self.immediate_exchange = immediate_exchange
+        self.live_subject_contexts: list[object] = []
 
     def build(
         self,
@@ -61,9 +67,12 @@ class _ContextBuilder:
         learning_session: object,
         question: str,
         current_turn_message_id: object | None = None,
+        live_subject_context: object | None = None,
+        studio_context: object | None = None,
     ) -> TutorContext:
-        del learning_session
+        del learning_session, studio_context
         self.calls += 1
+        self.live_subject_contexts.append(live_subject_context)
         message_id = current_turn_message_id if current_turn_message_id is not None else uuid4()
         block = RetrievedBlock(
             text="Equivalent fractions name the same amount.", source_ref="book#page=12", page_number=12,
@@ -203,6 +212,24 @@ def test_arbitrary_literal_message_persists_luna_semantic_decision_without_runti
     assert tutor_message.payload["teaching_decision_status"] == "prior_method_relation_without_prior"
     assert turn.sources == [{"source_ref": "book#page=12", "page_number": 12, "block_type": "EXERCISE"}]
     assert context.calls == 1
+    assert provider.calls == 1
+
+
+def test_runtime_forwards_explicit_unknown_daily_scope_without_a_second_model_call() -> None:
+    """Catches a Daily free-form turn falling back to legacy Math before context assembly."""
+
+    runtime, context_builder, provider, _session = _runtime(_decision())
+
+    events = list(
+        runtime.stream_turn(
+            learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), last_activity_at=None),
+            question="Why do stars shine?",
+            live_subject_context=unknown_live_subject(),
+        )
+    )
+
+    assert isinstance(events[-1], TutorTurn)
+    assert context_builder.live_subject_contexts == [unknown_live_subject()]
     assert provider.calls == 1
 
 
@@ -1304,7 +1331,7 @@ def test_valid_same_call_candidate_metadata_is_persisted_with_raw_source_linkage
     assert candidate.session_id == student_message.session_id
     assert candidate.message_id == student_message.id
     assert candidate.event_type == event_type
-    assert candidate.payload["subject"] == "MATH"
+    assert "subject" not in candidate.payload
     assert candidate.payload["source_message_ids"] == [str(student_message.id)]
     assert tutor_message.payload["candidate_metadata_status"] == "persisted"
 

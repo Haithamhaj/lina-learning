@@ -367,6 +367,8 @@ def test_process_sequence_reorder_and_submit_are_durable_rebuildable_and_bounded
             idempotency_key="process-sequence-reorder-prepare",
         )
         first = service.append_event(first_reorder)
+        assert first.event.resulting_scene_version == scene.scene_version == 3
+        assert service.runtime_state(runtime_id=runtime.id, student_id=student.id)["snapshot"]["current_scene_version"] == 3
         assert first.interaction is None
         assert first.event.payload == {
             "action": {"stage_id": PREPARE_FILTER_STAGE_ID, "from_index": 1, "to_index": 0}
@@ -388,6 +390,7 @@ def test_process_sequence_reorder_and_submit_are_durable_rebuildable_and_bounded
         )
         assert second.interaction is None
         projection = service.runtime_state(runtime_id=runtime.id, student_id=student.id)["snapshot"]
+        assert projection["current_scene_version"] == scene.scene_version == second.event.resulting_scene_version == 4
         assert projection["state_payload"][ACTIVITY_KEY]["stage_ids"] == [
             PREPARE_FILTER_STAGE_ID,
             POUR_MIXTURE_STAGE_ID,
@@ -681,11 +684,17 @@ def test_process_sequence_submission_uses_original_source_after_later_record_onl
             del route
             self.calls += 1
             source_event = payload["studio_interaction_context"]["source"]["event"]
+            live_subject = payload["studio_interaction_context"]["source"]["live_subject"]
             source_state = source_event["action_payload"]
             source_validation = source_event["validation"]
             current_state = payload["studio_interaction_context"]["workspace"]["state"]["process_sequence_workspace"]
             selected_state = payload["studio_workspace_context"]["snapshot"]["state"]["process_sequence_workspace"]
             assert source_state == {"stage_ids": valid_stage_ids}
+            assert live_subject == {
+                "broad_subject": "SCIENCE",
+                "origin": "CANVAS_SCENE",
+                "source_scene_id": source_event["scene_id"],
+            }
             assert source_validation == {
                 "status": "VALID",
                 "feedback_code": "FILTRATION_SEQUENCE_COMPLETE",

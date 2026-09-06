@@ -262,6 +262,232 @@ def _submit_command(
     )
 
 
+def test_make_ten_transfer_commits_the_same_scene_and_snapshot_version(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """An accepted transfer must not make the strict Snapshot projection unreadable."""
+    from services.studio.subjects.math_make_ten import make_ten_scene_seed
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "make-ten-version-invariant")
+        learning_session = _learning_session(session, student)
+        service = StudioStateService(session)
+        runtime = service.get_or_create_runtime(student_id=student.id, learning_session_id=learning_session.id)
+        scene = service.accept_scene(_make_ten_scene_command(student, learning_session))
+        _activate(service, runtime_id=runtime.id, student=student, learning_session=learning_session, scene=scene)
+        before = service.runtime_state(runtime_id=runtime.id, student_id=student.id)["snapshot"]
+        assert scene.scene_version == before["current_scene_version"] == 2
+        result = service.append_event(_transfer_command(
+            runtime_id=runtime.id,
+            student=student,
+            learning_session=learning_session,
+            scene=scene,
+            item_id=make_ten_scene_seed()["groups"]["ones-group"]["item_ids"][0],
+        ))
+        student_id, runtime_id, scene_id, event_id = student.id, runtime.id, scene.id, result.event.id
+
+    with postgres_session_factory() as session:
+        scene = session.get(StudioScene, scene_id)
+        event = session.get(StudioEvent, event_id)
+        snapshot = StudioStateService(session).runtime_state(runtime_id=runtime_id, student_id=student_id)["snapshot"]
+        assert event.resulting_scene_version == scene.scene_version == 3
+        assert snapshot["current_scene_version"] == 3
+
+    from services.studio.feed import StudioEventFeed
+
+    sequence, events, frame = StudioEventFeed(session_factory=postgres_session_factory)._snapshot_and_events(
+        student_id=student_id, runtime_id=runtime_id, after_sequence=2,
+    )
+    assert sequence == 3
+    assert len(events) == 1
+    assert frame["current_scene_version"] == frame["active_scene_contract"]["scene_version"] == 3
+    client = _client(postgres_session_factory, subject="make-ten-version-invariant")
+    try:
+        response = client.get(f"/api/v1/student/studio/{runtime_id}/snapshot")
+        assert response.status_code == 200
+        assert response.json()["current_scene_version"] == response.json()["active_scene_contract"]["scene_version"] == 3
+    finally:
+        _clear_overrides()
+
+
+@pytest.mark.parametrize("mutation", ["transfer", "activation", "replacement"])
+def test_feed_materializes_one_owned_window_before_expiring_commit(
+    postgres_session_factory: sessionmaker[Session], mutation: str,
+) -> None:
+    """Post-commit ORM refresh must not mix a later writer with the captured window."""
+    import json
+    from concurrent.futures import ThreadPoolExecutor
+    from copy import deepcopy
+    from threading import Event
+
+    import psycopg
+    from sqlalchemy import event as sqlalchemy_event
+
+    from services.platform.db.models import StudioSnapshot
+    from services.studio.feed import StudioEventFeed, format_sse_frame
+    from services.studio.subjects import process_sequence as science
+    from services.studio.subjects.math_make_ten import make_ten_scene_seed
+
+    engine = postgres_session_factory.kw["bind"]
+    # Unlike the surrounding legacy fixture factory, every Session in this
+    # regression retains production's default expire_on_commit=True.
+    with Session(engine) as session:
+        student = _student(session, f"feed-window-{mutation}")
+        learning_session = _learning_session(session, student)
+        service = StudioStateService(session)
+        runtime = service.get_or_create_runtime(student_id=student.id, learning_session_id=learning_session.id)
+        service.append_event(AppendStudioEventCommand(
+            runtime_id=runtime.id, student_id=student.id, learning_session_id=learning_session.id,
+            event_kind="studio.runtime.initialized", event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+            actor=StudioActor.SYSTEM, payload_schema_version="studio-runtime-initialized-v1",
+            payload={}, idempotency_key="offset-runtime-counter",
+        ))
+        scene = service.accept_scene(_make_ten_scene_command(student, learning_session))
+        if mutation != "activation":
+            _activate(service, runtime_id=runtime.id, student=student, learning_session=learning_session, scene=scene)
+        student_id, session_id, runtime_id, scene_id = student.id, learning_session.id, runtime.id, scene.id
+        session.commit()
+
+    reader_committed, writer_done = Event(), Event()
+    post_commit_sql: list[str] = []
+    payload_references: list[dict] = []
+    captured_objects: list[object] = []
+    old_version, watermark = (1, 2) if mutation == "activation" else (2, 3)
+    assert old_version != watermark  # Runtime sequence is not a Scene version.
+
+    class BarrierSession(Session):
+        def commit(self) -> None:
+            assert self.expire_on_commit is True
+            for obj in captured_objects:
+                for key in ("seed_payload", "state_payload", "payload"):
+                    value = obj.__dict__.get(key)
+                    if isinstance(value, dict):
+                        payload_references.append(value)
+            super().commit()
+            reader_committed.set()
+            assert writer_done.wait(10), "Writer did not finish the synchronized commit"
+
+    # Hold distinct physical PostgreSQL connections throughout the race.
+    with engine.connect() as reader_connection, engine.connect() as writer_connection:
+        assert reader_connection.execute(text("select pg_backend_pid()")).scalar_one() != writer_connection.execute(text("select pg_backend_pid()")).scalar_one()
+        reader_connection.rollback()
+        writer_connection.rollback()
+        reader = BarrierSession(reader_connection)
+        sqlalchemy_event.listen(reader, "loaded_as_persistent", lambda _session, obj: captured_objects.append(obj))
+
+        def observe_sql(_connection, _cursor, statement, _parameters, _context, _many):
+            if reader_committed.is_set():
+                post_commit_sql.append(statement)
+
+        sqlalchemy_event.listen(reader_connection, "before_cursor_execute", observe_sql)
+
+        def write_later_window():
+            try:
+                assert reader_committed.wait(10), "Reader did not capture and commit its window"
+                with Session(writer_connection) as session:
+                    service = StudioStateService(session)
+                    student = session.get(Student, student_id)
+                    learning_session = session.get(LearningSession, session_id)
+                    scene = session.get(StudioScene, scene_id)
+                    if mutation == "transfer":
+                        service.append_event(_transfer_command(
+                            runtime_id=runtime_id, student=student, learning_session=learning_session,
+                            scene=scene, item_id=make_ten_scene_seed()["groups"]["ones-group"]["item_ids"][0],
+                        ))
+                    elif mutation == "activation":
+                        _activate(service, runtime_id=runtime_id, student=student, learning_session=learning_session, scene=scene)
+                    else:
+                        service.append_event(AppendStudioEventCommand(
+                            runtime_id=runtime_id, student_id=student_id, learning_session_id=session_id,
+                            event_kind="studio.scene.status_changed", event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+                            actor=StudioActor.SYSTEM, payload_schema_version="studio-scene-status-v1",
+                            payload={"status": "SUPERSEDED"}, scene_id=scene.id,
+                            base_scene_version=scene.scene_version, idempotency_key="replace-old-scene",
+                        ))
+                        scene = service.accept_scene(CreateSceneCommand(
+                            student_id=student_id, learning_session_id=session_id,
+                            subject_key="SCIENCE", subject_profile_version=science.SCIENCE_PROFILE_VERSION,
+                            concept_keys=("filtration-sequence",), activity_key=science.ACTIVITY_KEY,
+                            artifact_type="interactive-activity", renderer_key=science.RENDERER_KEY,
+                            renderer_version=science.RENDERER_VERSION, activity_contract_version=science.ACTIVITY_VERSION,
+                            payload_schema_version=science.SCENE_PAYLOAD_SCHEMA_VERSION,
+                            seed_payload=science.process_sequence_scene_seed(), accessibility_payload=science.ACCESSIBILITY_PAYLOAD,
+                            locale="ar", direction="rtl",
+                        ))
+                        _activate(service, runtime_id=runtime_id, student=student, learning_session=learning_session, scene=scene)
+                    snapshot = session.scalar(select(StudioSnapshot).where(StudioSnapshot.studio_runtime_id == runtime_id))
+                    assert snapshot.current_scene_version == scene.scene_version
+                    assert snapshot.latest_event_sequence > watermark
+                    new_identity = (str(scene.id), scene.scene_version, snapshot.latest_event_sequence)
+                    session.commit()
+                    return new_identity
+            finally:
+                writer_done.set()
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            writer = executor.submit(write_later_window)
+            result = StudioEventFeed(session_factory=lambda: reader)._snapshot_and_events(
+                student_id=student_id, runtime_id=runtime_id, after_sequence=0,
+            )
+            new_scene_id, new_version, new_watermark = writer.result(timeout=10)
+        latest, frames, frame = result
+        assert latest == frame["latest_event_sequence"] == watermark
+        assert frame["current_scene_id"] == str(scene_id)
+        assert frame["current_scene_version"] == old_version
+        assert [event["sequence"] for event in frames] == list(range(1, watermark + 1))
+        if mutation == "activation":
+            assert frame["active_scene_contract"] is frame["active_scene_seed"] is None
+        else:
+            assert frame["active_scene_contract"]["scene_id"] == str(scene_id)
+            assert frame["active_scene_contract"]["scene_version"] == 2
+            assert frame["active_scene_seed"] == make_ten_scene_seed()
+        assert post_commit_sql == [], "Serialization reopened a read after commit"
+        assert not reader.in_transaction()
+        # Mutating retained ORM JSON containers must not change returned owned
+        # data, including nested Snapshot, Scene seed, and event payloads.
+        frozen = deepcopy(result)
+        def mutate_nested(value):
+            if isinstance(value, dict):
+                for child in value.values():
+                    mutate_nested(child)
+            elif isinstance(value, list):
+                value.append("test-only-detached-mutation")
+        for payload in payload_references:
+            mutate_nested(payload)
+        assert result == frozen
+        encoded = format_sse_frame(frame)
+        assert json.loads(encoded.split("data: ", 1)[1]) == frame
+        assert post_commit_sql == []
+
+    # A later explicit window catches every committed event exactly once by
+    # cursor; it does not apply a semantic action a second time.
+    feed = StudioEventFeed(session_factory=lambda: Session(engine))
+    newest, catchup, snapshot = feed._snapshot_and_events(student_id=student_id, runtime_id=runtime_id, after_sequence=watermark)
+    assert newest == snapshot["latest_event_sequence"] == new_watermark
+    assert [event["sequence"] for event in catchup] == list(range(watermark + 1, newest + 1))
+    assert snapshot["current_scene_id"] == snapshot["active_scene_contract"]["scene_id"] == new_scene_id
+    assert snapshot["current_scene_version"] == snapshot["active_scene_contract"]["scene_version"] == new_version
+    if mutation == "transfer":
+        assert new_version == 3 and newest == 4
+    if mutation == "replacement":
+        assert new_scene_id != str(scene_id)
+        assert snapshot["active_scene_contract"]["subject_key"] == "SCIENCE"
+        assert snapshot["active_scene_seed"] == science.process_sequence_scene_seed()
+    again = feed._snapshot_and_events(student_id=student_id, runtime_id=runtime_id, after_sequence=newest)
+    assert again == (newest, [], snapshot)
+
+    # Exercise the actual stream formatter/cursor with a real LISTEN connection.
+    listener_url = os.environ["DATABASE_URL"].replace("postgresql+psycopg://", "postgresql://", 1)
+    feed = StudioEventFeed(session_factory=lambda: Session(engine), listener_factory=lambda: psycopg.connect(listener_url, autocommit=True))
+    stream = feed.stream(student_id=student_id, runtime_id=runtime_id, after_sequence=watermark)
+    try:
+        for expected in catchup:
+            assert next(stream) == format_sse_frame(expected, event_id=expected["sequence"])
+        assert next(stream) == format_sse_frame(snapshot)
+    finally:
+        stream.close()
+
+
 def test_make_ten_is_the_current_exact_math_capability_without_rewriting_math_v1() -> None:
     from services.studio.subjects.math_make_ten import (  # noqa: PLC0415 - RED contract
         ACTIVITY_KEY,
@@ -332,6 +558,8 @@ def test_make_ten_transfer_and_submit_are_durable_rebuildable_and_truthful(
         replay = service.append_event(transfer_command)
         assert replay.replayed is True
         assert replay.event.id == transfer.event.id
+        assert scene.scene_version == 3
+        assert service.runtime_state(runtime_id=runtime.id, student_id=student.id)["snapshot"]["current_scene_version"] == 3
 
         before_invalid = service.runtime_state(runtime_id=runtime.id, student_id=student.id)
         with pytest.raises(StudioStateError, match="Payload|Item"):
@@ -391,6 +619,8 @@ def test_make_ten_transfer_and_submit_are_durable_rebuildable_and_truthful(
             )
         )
         assert correct.interaction is not None
+        assert correct.event.resulting_scene_version == scene.scene_version == 5
+        assert service.runtime_state(runtime_id=runtime.id, student_id=student.id)["snapshot"]["current_scene_version"] == 5
         assert correct.event.payload["validation"] == {
             "status": "VALID",
             "feedback_code": "MAKE_TEN_COMPLETE",
@@ -454,12 +684,16 @@ def test_make_ten_submission_continues_with_original_truth_after_later_record_on
             del route
             self.calls += 1
             source_event = payload["studio_interaction_context"]["source"]["event"]
+            live_subject = payload["studio_interaction_context"]["source"]["live_subject"]
             source_groups = source_event["action_payload"]
             source_validation = source_event["validation"]
             current_groups = payload["studio_interaction_context"]["workspace"]["state"]["ten_frame_group_transfer"]["groups"]
             selected_groups = payload["studio_workspace_context"]["snapshot"]["state"]["ten_frame_group_transfer"]["groups"]
             assert len(source_groups["ten_frame_item_ids"]) == 10
             assert len(source_groups["ones_group_item_ids"]) == 5
+            assert live_subject["broad_subject"] == "MATH"
+            assert live_subject["origin"] == "CANVAS_SCENE"
+            assert live_subject["source_scene_id"] == source_event["scene_id"]
             assert source_validation == {
                 "status": "VALID",
                 "feedback_code": "MAKE_TEN_COMPLETE",
