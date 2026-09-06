@@ -28,8 +28,8 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-ACT-EN-01 — DONE / ACCEPTED
 → FE-02-STUDIO-01 — DONE / ACCEPTED
 → STUDIO-ACT-AR-01 — DONE / ACCEPTED
-→ CURR-RENDER-MATH-01A — BLOCKED UNTIL THE GRADE 5 MATH RENDERER IMPLEMENTATION GATE
-→ independently reviewed Grade 5 renderer tasks — BLOCKED
+→ CURR-RENDER-MATH-01A — READY
+→ MATH-RENDER-BATCH-01 — BLOCKED / NOT PROMOTED
 → STUDIO-ACCEPT-01 — BLOCKED
 → optional STUDIO-SPECIALIST-01 / STUDIO-REUSE-01 — BLOCKED
 → production deployment gate — BLOCKED
@@ -103,9 +103,54 @@ activity supplies bounded academic-subject RTL proof. `STUDIO-ACCEPT-01`
 remains BLOCKED / NOT PROMOTED because full-system acceptance has not been
 performed or separately authorized. All other later Studio and deployment tasks
 remain blocked.
-`CURR-RENDER-MATH-01A` is **BLOCKED UNTIL THE GRADE 5 MATH RENDERER
-IMPLEMENTATION GATE**: it does not block Studio state, protocol, runtime,
-cross-subject foundation activities, or FE-02 Studio integration.
+`CURR-RENDER-MATH-01A` is **READY** and is the only ready task in the
+Studio/Math track. It does not reopen the accepted activities or FE-02, and it
+does not authorize renderer implementation.
+
+---
+
+## CURR-RENDER-MATH-01A — Correct Math Planning Pack
+
+**Status:** READY
+**Dependencies:** `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`,
+`STUDIO-ACT-EN-01`, `STUDIO-ACT-AR-01`, and `FE-02-STUDIO-01` are
+DONE / ACCEPTED.
+**Purpose:** Correct the existing Grade 5 Math planning pack before any
+renderer implementation; this is not a new unrestricted curriculum-research
+project.
+**Inputs:** `research/curr-render-math-01/00_RESEARCH_BRIEF.md`,
+`01_GRADE5_CONCEPT_MAP.md`, `02_CONCEPT_REPRESENTATION_MATRIX.md`,
+`03_RENDERER_CATALOG.md`, `04_INTERACTION_PATTERNS.md`,
+`05_VALIDATOR_MAP.md`, `06_COVERAGE_AND_PRIORITY.md`,
+`07_SOURCE_LICENSE_MANIFEST.md`, `08_MCGRAW_ALIGNMENT_PLACEHOLDER.md`, and
+`09_OPEN_QUESTIONS.md`.
+**Required correction:** (1) add decimal addition/subtraction under
+`5.NBT.B.7`; (2) map numerical-expression interpretation/writing across
+`5.OA.A.1–2`; (3) replace the top-level `long_division_workspace` planning
+recommendation with `division_workspace` or an equivalently broad contract;
+(4) resolve the `measurement_data_workspace` shell versus split decision;
+(5) record `ten_frame_group_transfer` as an accepted cross-grade foundation
+outside the Grade 5 denominator; (6) recalculate the concept count,
+denominator, Core coverage, and recommended batch; and (7) preserve the
+source/license provenance manifest. The historical 35 nodes and eight Core
+families are baselines, not targets to preserve.
+**Expected outputs:** a corrected concept-to-representation/interaction/
+validator mapping; explicit reproducible coverage calculations; an old-to-new
+renderer recommendation record with reasons; a bounded batch recommendation
+and dependencies; retained source/rights provenance; and explicit separation
+of planned from implemented coverage. The current Batch 1 recommendation is
+`number_line`, `place_value_workspace`, `fraction_model_workspace`, and
+`division_workspace`, subject to the correction results and per-renderer
+approval.
+**Future verification/review gate:** compare the named standards against
+authoritative educational sources; trace each substantive correction; reproduce
+the coverage calculations; obtain independent review of the corrected planning
+outputs; and disclose unresolved source, rights, or coverage questions.
+**Boundary:** no renderer, application/runtime/frontend/test/schema/dependency
+change; no accepted contract or persisted-data rename; no full-system
+acceptance, deployment, Replit, or real-Lina work. `MATH-RENDER-BATCH-01` is
+BLOCKED / NOT PROMOTED until correction acceptance; `STUDIO-ACCEPT-01` remains
+BLOCKED / NOT PROMOTED.
 
 ---
 
@@ -727,7 +772,7 @@ is real product integration, not another isolated activity review mount.
 `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, and `STUDIO-ACT-EN-01` are
 `DONE / ACCEPTED`. `STUDIO-ACT-AR-01` is DONE / ACCEPTED after FE-02 acceptance
 and does not reopen this accepted integration; its accepted implementation extends
-the same exact Renderer Host. `CURR-RENDER-MATH-01A` remains blocked and does
+the same exact Renderer Host. `CURR-RENDER-MATH-01A` was then blocked and did
 not block this integration. The current `/student` page and `StudentMathSession` are protected
 legacy/experimental regression assets: do not import, wrap, extract from,
 restyle, modify, or route through them. The preserved FE-02 prototype is

@@ -24,7 +24,7 @@ STUDIO-ACT-SCI-01 Process Sequence DONE / ACCEPTED
 STUDIO-ACT-EN-01 English Sentence Ordering DONE / ACCEPTED
 FE-02-STUDIO-01 Real Studio + Daily App DONE / ACCEPTED
 STUDIO-ACT-AR-01 Arabic Academic Activity DONE / ACCEPTED
-CURR-RENDER-MATH-01A            BLOCKED
+CURR-RENDER-MATH-01A            READY (only Studio/Math READY task)
 STUDIO-ACCEPT-01                BLOCKED
 ```
 
@@ -116,8 +116,14 @@ same host; it does not reopen FE-02 or alter legacy `/student` or
 `StudentMathSession`. `STUDIO-ACCEPT-01` remains blocked because full-system
 acceptance has not been performed or separately authorized; all other later
 Studio and deployment work remains blocked.
-`CURR-RENDER-MATH-01A` remains blocked until the Grade 5 Math renderer
-implementation gate. Real Lina longitudinal history has not started.
+`CURR-RENDER-MATH-01A` is READY as the only Studio/Math ready task. It is the
+bounded correction of the existing ten-file
+`research/curr-render-math-01/` planning pack, not renderer implementation or
+new unrestricted research. The seven Section 14.2 corrections, reproducible
+coverage recalculation, provenance preservation, and independent planning
+review are required before any renderer batch. `MATH-RENDER-BATCH-01` remains
+BLOCKED / NOT PROMOTED pending correction acceptance; `STUDIO-ACCEPT-01` is
+also BLOCKED / NOT PROMOTED. Real Lina longitudinal history has not started.
 
 ---
 
@@ -431,11 +437,11 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
-The next recommended action is not implementation: `STUDIO-ACCEPT-01` remains
-BLOCKED / NOT PROMOTED until a full-system acceptance run is separately
-authorized. Replit remains deferred until the agreed remaining project scope is
-complete. All later Studio work, including real-Lina and live-model work,
-remains unpromoted.
+Within the Studio/Math track, execute only `CURR-RENDER-MATH-01A` as the
+bounded planning-correction task. It must pass the recorded source,
+calculation, disclosure, and independent-review gate before any renderer task
+can be promoted. `STUDIO-ACCEPT-01` remains BLOCKED / NOT PROMOTED; Replit,
+deployment, real-Lina, and all other later Studio work remain unpromoted.
 
 ---
 
