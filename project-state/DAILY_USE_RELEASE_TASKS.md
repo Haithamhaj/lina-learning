@@ -27,7 +27,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-ACT-SCI-01 — DONE / ACCEPTED
 → STUDIO-ACT-EN-01 — DONE / ACCEPTED
 → FE-02-STUDIO-01 — DONE / ACCEPTED
-→ STUDIO-ACT-AR-01 — READY — ONLY READY STUDIO IMPLEMENTATION TASK
+→ STUDIO-ACT-AR-01 — DONE / ACCEPTED
 → CURR-RENDER-MATH-01A — BLOCKED UNTIL THE GRADE 5 MATH RENDERER IMPLEMENTATION GATE
 → independently reviewed Grade 5 renderer tasks — BLOCKED
 → STUDIO-ACCEPT-01 — BLOCKED
@@ -95,15 +95,14 @@ the five opt-in cloud-writing S3 tests and two opt-in real-Luna tests, not
 passes. Student-authored free-form language remains Chat-only, including
 Voice-to-STT; Canvas uses bounded semantic controls and may display language.
 
-`STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`, and
-`FE-02-STUDIO-01` are `DONE / ACCEPTED`. `STUDIO-ACT-AR-01` is **READY — ONLY
-READY STUDIO IMPLEMENTATION TASK**. Its earlier deferral was intentional and
-ended through explicit Product Owner approval after FE-02 acceptance; it is not
-implemented or accepted. English remains shared text-oriented/mixed-direction
-foundation evidence, while Arabic provides the required academic-subject, RTL
-token/span, and Arabic-specific annotation/ordering proof. `STUDIO-ACCEPT-01`
-remains blocked pending accepted Arabic implementation. All other later Studio
-and deployment tasks remain blocked.
+`STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`,
+`FE-02-STUDIO-01`, and `STUDIO-ACT-AR-01` are `DONE / ACCEPTED`. Arabic's
+earlier deferral is preserved as history; English remains shared
+text-oriented/mixed-direction foundation evidence, while the accepted Arabic
+activity supplies bounded academic-subject RTL proof. `STUDIO-ACCEPT-01`
+remains BLOCKED / NOT PROMOTED because full-system acceptance has not been
+performed or separately authorized. All other later Studio and deployment tasks
+remain blocked.
 `CURR-RENDER-MATH-01A` is **BLOCKED UNTIL THE GRADE 5 MATH RENDERER
 IMPLEMENTATION GATE**: it does not block Studio state, protocol, runtime,
 cross-subject foundation activities, or FE-02 Studio integration.
@@ -584,12 +583,12 @@ implemented or accepted.
 
 ## STUDIO-ACT-AR-01 — Arabic Sentence Annotation/Ordering
 
-**Status:** READY — ONLY READY STUDIO IMPLEMENTATION TASK
+**Status:** DONE / ACCEPTED
 
-**Promotion boundary:** the intentional post-FE-02 deferral ended through
-explicit Product Owner approval. This is governance-only promotion: no Arabic
-implementation, acceptance, test result, runtime/schema/dependency change, or
-Replit work is implied.
+**Historical decision:** the intentional post-FE-02 deferral ended through
+explicit Product Owner promotion. It remains history. The bounded implementation
+and final acceptance below are current; no later Studio task, schema/dependency
+work, deployment, or Replit work is implied.
 
 **Purpose:** prove Arabic as an academic subject, not merely Arabic surrounding
 UI, with one bounded RTL sentence annotation/ordering Activity. It must use
@@ -597,7 +596,24 @@ stable token/span identities and Arabic-specific academic interaction. It must
 not become a grammar engine, Arabic curriculum, text editor, or multiple
 independent Activity family.
 
-**Required resolution during implementation:** record one project-authored or
+**Accepted implementation:** the project-authored fixture
+`arabic_sentence_ordering_fixture_orchid /
+arabic-sentence-ordering-fixture-orchid-v1` uses `ARABIC /
+subject-profile-v2`, `arabic_sentence_ordering_workspace /
+arabic-sentence-ordering-workspace-activity-v1`,
+`arabic-sentence-ordering-workspace /
+arabic-sentence-ordering-workspace-renderer-v1`,
+`arabic-sentence-ordering-workspace-scene-v1`, and
+`arabic-sentence-ordering-token-v1`; historical Arabic profiles are unchanged.
+Its opaque `tok-6d3a`, `tok-f18c`, and `tok-2b7e` identities preserve
+`تكتبُ`, `الطالبةُ`, and `الدرسَ` respectively, separate from position and
+display. The safe catalog's deterministic initial order is subject/object/verb.
+The server-only policy accepts both case-marked verb-initial answers
+`تكتبُ الطالبةُ الدرسَ` and `تكتبُ الدرسَ الطالبةُ`; it does not claim other
+Arabic constructions are generally ungrammatical. Browser parsing strictly
+checks exact catalogue/state identity but does not contain academic correctness.
+
+**Recorded contract and boundaries:** one project-authored or
 rights-safe Arabic fixture and provenance; exact learner-visible text and
 linguistic validity; the selected bounded annotation/ordering interaction and
 why it satisfies Section 22.7; stable token/span IDs independent of display
@@ -610,7 +626,7 @@ as a completed approved contract. Preserve existing `ARABIC` profile meanings
 through exact versioning, and keep the answer key server-owned and absent from
 browser seed/catalog/renderer metadata.
 
-**Required reuse and bounded integration:** reuse the Subject Capability
+**Accepted reuse and bounded integration:** the Subject Capability
 Registry; Studio state, Event/Snapshot, protocol, feed, and rebuild authority;
 the existing exact activation seam; Runtime-03 continuation/provenance; and the
 accepted Student-owned Daily session with Chat/Workspace composition. Make the
@@ -621,7 +637,7 @@ session type, generic drag framework, broad FE-02 refactor, direct Canvas
 Candidate/Evidence/Personal Facts/Intelligence write, or free-form Canvas
 language channel. Preserve `ARABIC → LANGUAGE_ARTS` and `LiveSubjectContext`.
 
-**Interaction and truth:** exploration/rearrangement/label selection is
+**Accepted interaction and truth:** exploration/rearrangement/label selection is
 contract-defined `RECORD_ONLY`; one explicit contract-owned submitted
 configuration is the only Tutor-triggering action. Preserve submitted
 configuration as source truth independently from later current Snapshot state.
@@ -631,7 +647,7 @@ semantic/visual order, narrow layout, and relevant mixed-direction content are
 part of the Activity contract. Free-form explanation stays in Chat or
 Voice-to-STT-to-Chat; Voice/STT is not implemented here.
 
-**Required implementation acceptance gate:**
+**Accepted verification:**
 
 - backend evidence: exact versions and historical-profile preservation;
   fixture/answer validity with browser answer-key non-disclosure; stable
@@ -653,7 +669,15 @@ Voice-to-STT-to-Chat; Voice/STT is not implemented here.
   proportional full-suite verification, and fresh independent review of the
   final implementation diff. Keep physical-device, emulated-touch,
   mock-provider, and live-model evidence distinct. Prior English or FE-02 passes
-  are not new Arabic evidence.
+  are not new Arabic evidence. Final isolated Python was 953 passed / 7 skipped
+  / 0 failures/errors (pytest and wrapper exit 0); focused 66 passed overlaps
+  that suite; web was 34 passed; typecheck, production build, Alembic and
+  whitespace passed. Fresh independent review found 0 Critical / 0 Important /
+  0 Minor. The authenticated prepared-Scene test scenario recorded 14 Events,
+  three completed submissions, one original Student message and four Tutor
+  messages including the initial Chat response. Evidence and limits are in
+  `docs/STUDIO_ACT_AR_01_IMPLEMENTATION_RECORD.md` and the local retained
+  Arabic acceptance evidence directory.
 
 **Explicit non-scope:** generic Artifact/text/editor/drag infrastructure; full
 Arabic curriculum, grammar, or vocabulary platform; Canvas Specialist; new
@@ -701,8 +725,8 @@ is real product integration, not another isolated activity review mount.
 
 **Dependencies and retained boundaries:** `STUDIO-RUNTIME-03`,
 `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, and `STUDIO-ACT-EN-01` are
-`DONE / ACCEPTED`. `STUDIO-ACT-AR-01` is now READY after FE-02 acceptance and
-does not reopen this accepted integration; its later implementation must extend
+`DONE / ACCEPTED`. `STUDIO-ACT-AR-01` is DONE / ACCEPTED after FE-02 acceptance
+and does not reopen this accepted integration; its accepted implementation extends
 the same exact Renderer Host. `CURR-RENDER-MATH-01A` remains blocked and does
 not block this integration. The current `/student` page and `StudentMathSession` are protected
 legacy/experimental regression assets: do not import, wrap, extract from,
@@ -869,11 +893,9 @@ isolated regression suite when shared source changes justify it; tracked and
 relevant-untracked diff checks; and a fresh independent review. Isolated
 activity review mounts are not FE-02 acceptance evidence.
 
-**Final Studio acceptance boundary:** `STUDIO-ACCEPT-01` remains **BLOCKED**.
-FE-02 is accepted; the original bounded Arabic activity is the sole READY
-Studio implementation task and must be implemented and accepted before final
-Studio acceptance. This promotion does not waive or remove the Arabic
-acceptance requirement.
+**Final Studio acceptance boundary:** `STUDIO-ACCEPT-01` remains **BLOCKED /
+NOT PROMOTED**. FE-02 and the original bounded Arabic activity are accepted.
+Full-system Studio acceptance has not been performed or separately authorized.
 
 ---
 

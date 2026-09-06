@@ -55,6 +55,7 @@ def prepare_submission(client, factory, subject):
         "MATH": ("math_make_ten", "make_ten_scene_seed"),
         "SCIENCE": ("process_sequence", "process_sequence_scene_seed"),
         "ENGLISH": ("sentence_ordering", "sentence_ordering_scene_seed"),
+        "ARABIC": ("arabic_sentence_ordering", "arabic_sentence_ordering_scene_seed"),
     }[subject]
     activity = importlib.import_module("services.studio.subjects." + module_name)
     seed = getattr(activity, seed_name)()
@@ -103,7 +104,7 @@ def protected_counts(session):
     return [session.scalar(select(func.count()).select_from(model)) for model in models]
 
 
-@pytest.mark.parametrize("subject", ["MATH", "SCIENCE", "ENGLISH"])
+@pytest.mark.parametrize("subject", ["MATH", "SCIENCE", "ENGLISH", "ARABIC"])
 def test_real_application_mock_gateway_completes_canvas_without_chat_question(application, monkeypatch, subject):
     """Neither Gateway factory nor Gateway is replaced: construction and execution are real."""
     from services.tutor.runtime import LocalTutorProvider

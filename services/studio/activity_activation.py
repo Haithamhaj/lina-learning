@@ -25,6 +25,7 @@ def activate_known_workspace_activity(
     """
 
     from services.studio.make_ten_activation import activate_make_ten_from_workspace_decision
+    from services.studio.arabic_sentence_ordering_activation import activate_arabic_sentence_ordering_from_workspace_decision
     from services.studio.process_sequence_activation import activate_process_sequence_from_workspace_decision
     from services.studio.sentence_ordering_activation import activate_sentence_ordering_from_workspace_decision
 
@@ -32,6 +33,7 @@ def activate_known_workspace_activity(
         activate_make_ten_from_workspace_decision,
         activate_process_sequence_from_workspace_decision,
         activate_sentence_ordering_from_workspace_decision,
+        activate_arabic_sentence_ordering_from_workspace_decision,
     ):
         scene = adapter(
             session,

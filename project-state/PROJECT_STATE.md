@@ -23,14 +23,14 @@ STUDIO-ACT-MATH-01 Make-Ten Transfer DONE / ACCEPTED
 STUDIO-ACT-SCI-01 Process Sequence DONE / ACCEPTED
 STUDIO-ACT-EN-01 English Sentence Ordering DONE / ACCEPTED
 FE-02-STUDIO-01 Real Studio + Daily App DONE / ACCEPTED
-STUDIO-ACT-AR-01 Arabic Academic Activity READY — ONLY READY STUDIO IMPLEMENTATION TASK
+STUDIO-ACT-AR-01 Arabic Academic Activity DONE / ACCEPTED
 CURR-RENDER-MATH-01A            BLOCKED
 STUDIO-ACCEPT-01                BLOCKED
 ```
 
 Current execution overlay is `project-state/DAILY_USE_RELEASE_TASKS.md`. `TASKS.md` remains the preserved historical ledger.
 
-### Studio readiness — 2026-09-05
+### Studio readiness — 2026-09-06
 
 `STUDIO-GOV-01` and `FE-02-PRESERVE-01` are `DONE / ACCEPTED`; repository
 verification, governing promotion, and prototype preservation are complete.
@@ -92,28 +92,30 @@ english-sentence-ordering-fixture-slate-v1` uses stable opaque identities,
 server-owned deterministic validation, record-only reorder, and one
 submit-only Runtime-03 continuation. It does not authorize free-form Canvas
 language, a generic text/artifact system, or `/student/daily` integration.
-`STUDIO-ACT-AR-01` is **READY — ONLY READY STUDIO IMPLEMENTATION TASK**.
-Its earlier post-FE-02 deferral was intentional and is preserved as history; it
-ended through explicit Product Owner approval after `FE-02-STUDIO-01`
-acceptance. Arabic is not implemented or accepted. Its bounded implementation
-must prove Arabic as an academic subject with a project-authored or rights-safe
-fixture, stable token/span identities, an academically valid bounded
-annotation/ordering interaction, RTL focus/keyboard semantics, server-owned
-validation, and the existing Studio/Daily authorities. It must explicitly
-resolve exact versions, fixture provenance and visible text, duplicate-label
-and alternative-answer policy, activation identity, and browser-safe Scene seed
-before completion. English remains shared foundation evidence, not Arabic
-academic-subject evidence.
+`STUDIO-ACT-AR-01` is **DONE / ACCEPTED**. Its intentional post-FE-02 deferral
+is retained as history. The accepted bounded Arabic sentence-ordering activity
+uses `ARABIC / subject-profile-v2`,
+`arabic-sentence-ordering-workspace-activity-v1`,
+`arabic-sentence-ordering-workspace-renderer-v1`, and
+`arabic-sentence-ordering-workspace-scene-v1`, while preserving historical
+Arabic profiles. Its project-authored case-marked fixture has opaque token IDs,
+preserves Arabic words/diacritics, strictly parses browser-safe catalog/state,
+and keeps deterministic academic validation server-owned. The accepted answers
+are `تكتبُ الطالبةُ الدرسَ` and `تكتبُ الدرسَ الطالبةُ`; this bounded policy
+does not classify other Arabic constructions generally. Reordering is
+`RECORD_ONLY`; explicit submission alone triggers one Runtime-03 continuation.
+The exact activation extends the accepted `/student/daily` Renderer Host without
+reopening FE-02 or modifying protected `/student`/`StudentMathSession`.
 `FE-02-STUDIO-01` is **DONE / ACCEPTED**. The real authenticated greenfield
 `/student/daily` route retains one Student-owned LearningSession across Chat
 and Studio, with exact `?session=` resume; it uses server-authoritative active
 Scene/seed, exact Math/Science/English Renderer Host dispatch, reconciled
 operations/feed/reload, and the accepted Runtime-03/admission boundary. The
-later Arabic activity must make the smallest exact-contract extension to that
+accepted Arabic activity makes the smallest exact-contract extension to that
 same host; it does not reopen FE-02 or alter legacy `/student` or
-`StudentMathSession`. `STUDIO-ACCEPT-01` remains blocked until Arabic is
-implemented and accepted; all other later Studio and deployment work remains
-blocked.
+`StudentMathSession`. `STUDIO-ACCEPT-01` remains blocked because full-system
+acceptance has not been performed or separately authorized; all other later
+Studio and deployment work remains blocked.
 `CURR-RENDER-MATH-01A` remains blocked until the Grade 5 Math renderer
 implementation gate. Real Lina longitudinal history has not started.
 
@@ -187,18 +189,22 @@ implementation gate. Real Lina longitudinal history has not started.
   Canvas/Specialist call, free-form Canvas language channel, or FE-02
   integration was accepted. Detailed verification and final review evidence are
   in `project-state/DAILY_USE_RELEASE_TASKS.md`.
-- `STUDIO-ACT-AR-01` is **READY — ONLY READY STUDIO IMPLEMENTATION TASK**.
-  The prior intentional deferral ended through explicit Product Owner approval
-  after FE-02 acceptance. English does not replace Arabic academic-subject
-  semantics; it remains only shared text-oriented/mixed-direction foundation
-  evidence. Arabic remains a final-acceptance requirement and is not yet
-  implemented or accepted.
+- `STUDIO-ACT-AR-01` is **DONE / ACCEPTED**. The accepted Arabic activity
+  preserves Student ownership, rejection/idempotency, Event/Scene/Snapshot
+  persistence and rebuild, and the original submitted configuration/validation
+  separately from later Workspace state in configured mock-Gateway input. Each
+  accepted submission has one interaction and Tutor continuation, with no fake
+  Student message or direct Canvas intelligence/Personal-Facts write. ARABIC →
+  LANGUAGE_ARTS and LiveSubjectContext remain unchanged. Authenticated evidence
+  covers pointer, browser-emulated touch, keyboard/focus, RTL, reconciliation,
+  reload, narrow layout and reduced motion; it is not live-provider, physical
+  device, natural activity-selection, deployment, or real-Lina proof.
 - `FE-02-STUDIO-01` is **DONE / ACCEPTED**. The tracked greenfield
   `/student/daily` integration reuses real Studio Runtime/Snapshot/Event and
   Tutor authorities; the preserved prototype remains reference-only. Its final
   matrix is 37 PASS: one new Chromium/CDP-emulated touch case and 36 applicable
-  reused cases. `STUDIO-ACCEPT-01` remains blocked pending accepted Arabic
-  implementation.
+  reused cases. `STUDIO-ACCEPT-01` remains blocked pending a separately
+  authorized full-system acceptance run.
 
 ---
 
@@ -279,9 +285,9 @@ Protected invariants:
 ## Active risks
 
 - **STUDIO-R1 — Studio foundations plus bounded Make-Ten, Science process,
-  English sentence-ordering, and FE-02 integration are accepted; Arabic is the
-  only READY Studio implementation task, and final Studio acceptance remains
-  blocked pending its accepted implementation — Criticality 4**
+  English and Arabic sentence-ordering, and FE-02 integration are accepted;
+  final Studio acceptance remains BLOCKED / NOT PROMOTED until separately
+  authorized and performed — Criticality 4**
 - **UX-R1 — Daily-Use Experience Not Yet Ready — Criticality 4**
 - **VISION-R1 — Durable Student Asset Hosting Required Before Daily Vision — Criticality 4**
 - **MATH-01 — Structured Math Readability — Criticality 4 / independent**
@@ -425,11 +431,11 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
-The next explicit instruction may begin `STUDIO-ACT-AR-01`, the only READY
-Studio implementation task. This governance promotion did not implement it.
-The separate bounded operational/live-Tutor rehearsal remains unauthorized.
-`STUDIO-ACCEPT-01`, Replit work, and all other later Studio tasks remain
-blocked.
+The next recommended action is not implementation: `STUDIO-ACCEPT-01` remains
+BLOCKED / NOT PROMOTED until a full-system acceptance run is separately
+authorized. Replit remains deferred until the agreed remaining project scope is
+complete. All later Studio work, including real-Lina and live-model work,
+remains unpromoted.
 
 ---
 

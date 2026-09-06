@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`, and `FE-02-STUDIO-01` are `DONE / ACCEPTED`. `STUDIO-ACT-AR-01` is **READY — ONLY READY STUDIO IMPLEMENTATION TASK**. Every later Studio task remains blocked, including `STUDIO-ACCEPT-01`.
+**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`, `FE-02-STUDIO-01`, and `STUDIO-ACT-AR-01` are `DONE / ACCEPTED`. Every later Studio task remains blocked, including `STUDIO-ACCEPT-01`, which is not promoted because full-system acceptance has not been separately authorized.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -1527,13 +1527,24 @@ language channel; free-form language remains Chat or Voice-to-STT-to-Chat.
 
 #### `STUDIO-ACT-AR-01 — Arabic Sentence Annotation/Ordering`
 
-**Status:** READY — ONLY READY STUDIO IMPLEMENTATION TASK.
+**Status:** DONE / ACCEPTED.
 
 **Historical decision:** its earlier post-FE-02 deferral was intentional: English
 proved the shared text-oriented/mixed-direction Workspace foundation, but not
 Arabic academic-subject semantics. That deferral ended through explicit Product
-Owner approval after `FE-02-STUDIO-01` acceptance. This promotion neither
-implements nor accepts Arabic.
+Owner approval after `FE-02-STUDIO-01` acceptance and is retained as history.
+
+**Accepted result:** one bounded project-authored Arabic sentence-ordering
+activity: `ARABIC / subject-profile-v2`,
+`arabic-sentence-ordering-workspace-activity-v1`,
+`arabic-sentence-ordering-workspace-renderer-v1`, and
+`arabic-sentence-ordering-workspace-scene-v1`, preserving historical ARABIC
+profiles. The opaque tokens retain the case-marked text `تكتبُ`, `الطالبةُ`,
+and `الدرسَ`; strict browser-safe catalog/state parsing remains separate from
+server-owned validation. The instruction supports two valid verb-initial
+answers: `تكتبُ الطالبةُ الدرسَ` and `تكتبُ الدرسَ الطالبةُ`. This does not
+classify other Arabic constructions generally. Reordering is `RECORD_ONLY`;
+explicit submission is the only Tutor-triggering action.
 
 **Purpose:** prove Arabic as an academic subject, rather than Arabic surrounding
 UI, through one bounded RTL sentence annotation/ordering Activity. The Activity
@@ -1669,8 +1680,9 @@ Each renderer receives its own independently reviewable task and validator suite
 
 Run the complete acceptance matrix in Section 22 on the Daily-Use runtime and a disposable test database. Do not create real Lina history until Product Owner authorizes a controlled real-use step.
 
-It remains blocked until the READY Arabic activity is implemented and accepted.
-Do not remove Arabic from Section 22.7 or waive its acceptance requirement.
+The Arabic prerequisite is satisfied, but full-system acceptance has not been
+performed or separately authorized. Do not remove Arabic from Section 22.7 or
+infer that this task is READY or accepted.
 
 ### Phase 9 — Optional specialist and reuse evaluations
 
@@ -1892,11 +1904,11 @@ accepted. The durable Studio state foundation is implemented at Alembic head
 ### 27.1 Only ready task
 
 ```text
-`STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`, and
-`FE-02-STUDIO-01` are DONE / ACCEPTED. `STUDIO-ACT-AR-01` is **READY — ONLY
-READY STUDIO IMPLEMENTATION TASK**; it remains a final-acceptance requirement
-and is not implemented or accepted. `STUDIO-ACCEPT-01` and every other later
-Studio task remain BLOCKED.
+`STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`,
+`FE-02-STUDIO-01`, and `STUDIO-ACT-AR-01` are DONE / ACCEPTED. Arabic remains
+a recorded Section 22.7 prerequisite, now satisfied. `STUDIO-ACCEPT-01` and
+every other later Studio task remain BLOCKED; full-system acceptance is not
+promoted.
 ```
 
 ### 27.2 Completed governance outcome
@@ -1940,7 +1952,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-ACT-SCI-01 — DONE / ACCEPTED
 → STUDIO-ACT-EN-01 — DONE / ACCEPTED
 → FE-02-STUDIO-01 — DONE / ACCEPTED
-→ STUDIO-ACT-AR-01 — READY — ONLY READY STUDIO IMPLEMENTATION TASK
+→ STUDIO-ACT-AR-01 — DONE / ACCEPTED
 → CURR-RENDER-MATH-01A — BLOCKED pending Grade 5 renderer correction gate
 → Grade 5 renderer tasks — BLOCKED
 → STUDIO-ACCEPT-01 — BLOCKED

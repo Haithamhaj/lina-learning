@@ -1,10 +1,12 @@
 "use client";
 
 import { ProcessSequenceWorkspace } from "@/components/studio/process-sequence-workspace";
+import { ArabicSentenceOrderingWorkspace } from "@/components/studio/arabic-sentence-ordering-workspace";
 import { SentenceOrderingWorkspace } from "@/components/studio/sentence-ordering-workspace";
 import { TenFrameGroupTransfer } from "@/components/studio/ten-frame-group-transfer";
 import type { StudioOperation, StudioSnapshotFrame } from "@/lib/studio/contracts";
 import { readMakeTenState } from "@/lib/studio/make-ten";
+import { readArabicSentenceOrderingState } from "@/lib/studio/arabic-sentence-ordering";
 import { readProcessSequenceState } from "@/lib/studio/process-sequence";
 import { activeSceneRendererState, resolveApprovedStudioRenderer } from "@/lib/studio/renderer-host";
 import { readSentenceOrderingState } from "@/lib/studio/sentence-ordering";
@@ -46,6 +48,9 @@ export function StudioRendererHost({ snapshot, operationPending, onOperation, on
   }
   if (renderer === "SCIENCE_PROCESS_SEQUENCE") {
     return <ProcessSequenceWorkspace sceneId={scene.scene_id} sceneVersion={scene.scene_version} state={readProcessSequenceState(state)} locale={scene.locale} direction={scene.direction} onOperation={onApprovedOperation} />;
+  }
+  if (renderer === "ARABIC_SENTENCE_ORDERING") {
+    return <ArabicSentenceOrderingWorkspace sceneId={scene.scene_id} sceneVersion={scene.scene_version} state={readArabicSentenceOrderingState(state)} onOperation={onApprovedOperation} />;
   }
   return <SentenceOrderingWorkspace sceneId={scene.scene_id} sceneVersion={scene.scene_version} state={readSentenceOrderingState(state)} locale={scene.locale} direction={scene.direction} onOperation={onApprovedOperation} />;
 }

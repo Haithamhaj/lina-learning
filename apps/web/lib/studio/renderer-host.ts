@@ -3,7 +3,8 @@ import type { StudioActiveSceneContract } from "./contracts";
 export type ApprovedStudioRenderer =
   | "MATH_MAKE_TEN"
   | "SCIENCE_PROCESS_SEQUENCE"
-  | "ENGLISH_SENTENCE_ORDERING";
+  | "ENGLISH_SENTENCE_ORDERING"
+  | "ARABIC_SENTENCE_ORDERING";
 
 type ApprovedContract = Omit<StudioActiveSceneContract, "scene_id" | "scene_version" | "locale" | "direction"> & {
   renderer: ApprovedStudioRenderer;
@@ -39,6 +40,16 @@ const approvedContracts: readonly ApprovedContract[] = [
     renderer_key: "sentence-ordering-workspace",
     renderer_version: "sentence-ordering-workspace-renderer-v1",
     payload_schema_version: "sentence-ordering-workspace-scene-v1",
+  },
+  {
+    renderer: "ARABIC_SENTENCE_ORDERING",
+    subject_key: "ARABIC",
+    subject_profile_version: "subject-profile-v2",
+    activity_key: "arabic_sentence_ordering_workspace",
+    activity_contract_version: "arabic-sentence-ordering-workspace-activity-v1",
+    renderer_key: "arabic-sentence-ordering-workspace",
+    renderer_version: "arabic-sentence-ordering-workspace-renderer-v1",
+    payload_schema_version: "arabic-sentence-ordering-workspace-scene-v1",
   },
 ];
 

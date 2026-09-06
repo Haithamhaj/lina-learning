@@ -44,6 +44,21 @@ test("the renderer host resolves the accepted exact Math and Science contracts",
   }), "SCIENCE_PROCESS_SEQUENCE");
 });
 
+test("the renderer host resolves only the exact Arabic sentence-ordering contract", () => {
+  assert.equal(resolveApprovedStudioRenderer({
+    ...englishScene,
+    subject_key: "ARABIC",
+    subject_profile_version: "subject-profile-v2",
+    activity_key: "arabic_sentence_ordering_workspace",
+    activity_contract_version: "arabic-sentence-ordering-workspace-activity-v1",
+    renderer_key: "arabic-sentence-ordering-workspace",
+    renderer_version: "arabic-sentence-ordering-workspace-renderer-v1",
+    payload_schema_version: "arabic-sentence-ordering-workspace-scene-v1",
+    locale: "ar",
+    direction: "rtl",
+  }), "ARABIC_SENTENCE_ORDERING");
+});
+
 test("the renderer host fails closed when an otherwise familiar activity has a new renderer version", () => {
   assert.equal(
     resolveApprovedStudioRenderer({
