@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`, `FE-02-STUDIO-01`, `STUDIO-ACT-AR-01`, and `CURR-RENDER-MATH-01A` are `DONE / ACCEPTED`. Every later Studio task, including `MATH-RENDER-BATCH-01` and `STUDIO-ACCEPT-01`, remains BLOCKED / NOT PROMOTED.
+**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`, `FE-02-STUDIO-01`, `STUDIO-ACT-AR-01`, and `CURR-RENDER-MATH-01A` are `DONE / ACCEPTED`. `MATH-RENDER-NUMBER-LINE-01` is the only `READY` implementation task; `MATH-RENDER-BATCH-01` is its unaccepted umbrella, and every remaining later Studio task, including `STUDIO-ACCEPT-01`, remains BLOCKED / NOT PROMOTED.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -1009,8 +1009,9 @@ integration.
 nodes (34 Grade 5 targets plus two bridges), 11 proposed families, 9 Core
 families, reproducible qualified coverage, and the retained proposed initial
 batch: `number_line`, `place_value_workspace`, `fraction_model_workspace`, and
-`division_workspace`. This satisfied planning prerequisite does not promote a
-renderer or change the status of `MATH-RENDER-BATCH-01`.
+`division_workspace`. The correction itself did not promote a renderer; the
+later separately authorized `MATH-RENDER-NUMBER-LINE-01` child promotion is
+recorded in Section 14.4.1.
 
 ### 14.3 Cross-grade production foundation activity
 
@@ -1043,6 +1044,50 @@ After the correction gate, the preferred initial Grade 5 batch is:
 This batch covers materially different state models: continuous magnitude, place-value structure, whole/partition invariants, and multi-step algorithm/strategy state.
 
 Approval of this plan authorizes these as the default implementation recommendation, subject to the corrected coverage report and per-renderer task review.
+
+#### 14.4.1 First promoted child — `MATH-RENDER-NUMBER-LINE-01`
+
+**Status:** READY — the only implementation task. The Product Owner promoted
+only this child of the unaccepted `MATH-RENDER-BATCH-01` umbrella. It delivers
+bounded `number_line` support for comparing two nonnegative decimals to
+thousandths and rounding to an authored place (`G5-NBT-DECIMAL-COMPARE`,
+`G5-NBT-DECIMAL-ROUND`). It is not family completion and does not change the
+accepted planning-pack implemented-coverage count of 0/36.
+
+The later implementation must resolve the exact profile/activity/renderer/
+seed/action/event/validator/reducer versions; finite numerical domain and
+precision; exact representation/serialization/comparison; midpoint/tie policy;
+grid endpoints, snapping, equality and boundaries; equivalent decimal forms;
+initial/pending/submitted completeness; safe configuration/feedback projection;
+and the existing server-owned fixture/configuration activation path. It must
+use server-authored exact operands, scales, point identities and endpoints;
+declared-grid placement/movement or selection; bounded relation/rounding
+selection; and explicit submission. Pixel coordinates only identify candidate
+grid positions; server validation decides exact mathematical state. Numeric
+order stays LTR inside RTL surrounding prose. Free-form explanation remains
+Chat.
+
+Use the accepted exact-version Subject Capability Registry, activation/safe
+seed, Event/Snapshot/rebuild, protocol/controller/feed, `/student/daily`
+Renderer Host and Runtime-03 provenance. Exploration is `RECORD_ONLY`; only
+the declared submission triggers one Tutor continuation. Preserve source-linked
+StudentInteraction, original submission, identity/ownership/Safety/
+LiveSubjectContext and version/feed invariants; no direct Canvas intelligence
+writes. Reject malformed, out-of-domain, stale, cross-Student and state-
+mismatched requests without mutation; record bounded truthful feedback for
+structurally valid but incorrect submissions. Do not add a generic generator,
+extra model call, Router, generic artifact engine, browser durable reducer,
+session kind, Canvas Specialist, second Tutor, FE-02 refactor, dependency,
+schema, or migration by default.
+
+Acceptance later requires varied exact-domain backend cases and authenticated
+`/student/daily` pointer, evidenced browser-emulated touch and keyboard/button
+flows; correction/reconciliation/reload; accessibility, Arabic/English,
+narrow-layout and reduced-motion evidence; focused/affected regressions, web
+typecheck/build, proportional full suite and fresh independent review. Direct
+API calls and isolated mounts are insufficient. Powers-of-ten, estimates,
+fraction modes and all other number-line or renderer-family scope remain NOT
+PROMOTED.
 
 ### 14.5 Later Grade 5 renderer waves
 
@@ -1678,16 +1723,17 @@ rights manifest restrictions remain; independent review reported 0 Critical /
 questions remain disclosed in `research/curr-render-math-01/`.
 **Dependency boundary:** this gate does not block Studio state, subject,
 protocol, runtime, bounded Math/Science/English/Arabic foundation activities,
-or FE-02 Studio integration. Its planning prerequisite is satisfied, but
-`MATH-RENDER-BATCH-01` still requires separate per-renderer approval.
+or FE-02 Studio integration. Its planning prerequisite is satisfied; only
+`MATH-RENDER-NUMBER-LINE-01` received later separate per-renderer approval.
 **Implementation boundary:** no renderer, runtime, schema, dependency, or
 accepted-contract implementation occurs in this correction task.
 
 #### `MATH-RENDER-BATCH-01`
 
-**Status:** BLOCKED / NOT PROMOTED — the `CURR-RENDER-MATH-01A` planning
-prerequisite is satisfied; separate per-renderer approval and promotion remain
-required.
+**Status:** UMBRELLA / NOT ACCEPTED — the `CURR-RENDER-MATH-01A` planning
+prerequisite is satisfied. `MATH-RENDER-NUMBER-LINE-01` is the only promoted
+child and only `READY` implementation task; all remaining family scope still
+requires separate approval and promotion.
 
 Implement, after corrected research approval:
 
@@ -1935,8 +1981,10 @@ accepted. The durable Studio state foundation is implemented at Alembic head
 `FE-02-STUDIO-01`, and `STUDIO-ACT-AR-01` are DONE / ACCEPTED. Arabic remains
 a recorded Section 22.7 prerequisite, now satisfied. `CURR-RENDER-MATH-01A`
 is DONE / ACCEPTED as a planning correction only.
-`MATH-RENDER-BATCH-01`, `STUDIO-ACCEPT-01`, and every other later Studio task
-remain BLOCKED / NOT PROMOTED; full-system acceptance is not promoted.
+`MATH-RENDER-NUMBER-LINE-01` is the only READY implementation task.
+`MATH-RENDER-BATCH-01` is an unaccepted umbrella; `STUDIO-ACCEPT-01` and every
+other later Studio task remain BLOCKED / NOT PROMOTED; full-system acceptance
+is not promoted.
 ```
 
 ### 27.2 Completed governance outcome
@@ -1982,7 +2030,8 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → FE-02-STUDIO-01 — DONE / ACCEPTED
 → STUDIO-ACT-AR-01 — DONE / ACCEPTED
 → CURR-RENDER-MATH-01A — DONE / ACCEPTED
-→ MATH-RENDER-BATCH-01 — BLOCKED / NOT PROMOTED
+→ MATH-RENDER-BATCH-01 — UMBRELLA / NOT ACCEPTED
+  → MATH-RENDER-NUMBER-LINE-01 — READY (only implementation task)
 → STUDIO-ACCEPT-01 — BLOCKED
 ```
 

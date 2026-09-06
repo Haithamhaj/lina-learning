@@ -86,9 +86,45 @@ source/rights/coverage questions remain disclosed.
 **Boundary:** no renderer, application, test, schema, dependency, runtime,
 full-system acceptance, deployment, Replit, or real-Lina work. Existing
 accepted contracts and historical persisted data are not renamed or rewritten.
-The planning-correction prerequisite for `MATH-RENDER-BATCH-01` is satisfied,
-but it remains BLOCKED / NOT PROMOTED pending separate per-renderer approval;
-`STUDIO-ACCEPT-01` remains BLOCKED / NOT PROMOTED.
+The planning-correction prerequisite for `MATH-RENDER-BATCH-01` is satisfied.
+It is now an unaccepted umbrella with only its separately approved
+`MATH-RENDER-NUMBER-LINE-01` child promoted; all remaining renderer scope and
+`STUDIO-ACCEPT-01` remain BLOCKED / NOT PROMOTED.
+
+## MATH-RENDER-NUMBER-LINE-01 — Decimal Comparison and Rounding
+**Status:** READY — the only implementation task in the current Studio overlay.
+**Parent:** `MATH-RENDER-BATCH-01` is an unaccepted umbrella; this promotion
+does not authorize the whole batch or complete the `number_line` family.
+**Purpose:** production `number_line` support for comparing two nonnegative
+decimals to thousandths and rounding to an authored place
+(`G5-NBT-DECIMAL-COMPARE`, `G5-NBT-DECIMAL-ROUND`).
+**Required boundary:** exact server-authored, bounded configuration and exact
+mathematical state; declared-grid placement/movement or selection; bounded
+relation/rounding-endpoint selection; explicit submit; no pixel or hidden
+floating-point correctness; record-only exploration and submit-only Runtime-03
+continuation. The future implementation resolves the exact subject/activity/
+renderer/seed/action/event/validator/reducer versions, numeric domain,
+serialization, rounding tie policy, problem provenance/activation, and safe
+browser data before code. It reuses the accepted Subject Capability, activation,
+Event/Snapshot/rebuild, protocol/feed, `/student/daily` Renderer Host, and
+Runtime-03 seams; it adds no generic generator, extra model call, Router,
+artifact engine, browser durable reducer, second Tutor, broad FE-02 refactor,
+dependency, schema, or migration by default.
+**Validation/acceptance:** reject malformed, out-of-domain, stale,
+cross-Student, and state-mismatched requests without mutation; persist truthful
+bounded feedback for academically wrong but structurally valid attempts. Require
+varied exact-domain backend cases plus authenticated `/student/daily` pointer,
+evidenced emulated-touch, keyboard/button, reconciliation, correction, reload,
+accessibility, Arabic/English, narrow-layout and reduced-motion evidence;
+focused/affected tests, web typecheck/build, proportional full suite, and fresh
+independent review. Direct API calls and isolated mounts do not substitute for
+browser acceptance. Preserve one source-linked interaction/Tutor continuation,
+original submitted state, exact identity/ownership/Safety/LiveSubjectContext,
+and no direct Canvas intelligence writes.
+**Non-scope:** powers-of-ten, estimation, fraction-equivalence/scaling and all
+other number-line modes; every other renderer family; coverage changes;
+`STUDIO-ACCEPT-01`, Voice/Vision, image annotation, NotebookLM, Replit,
+deployment, real-Lina history, and all other task promotion.
 
 ## STUDIO-RUNTIME-01 — Tutor Studio Context and Watermark
 **Status:** DONE / ACCEPTED

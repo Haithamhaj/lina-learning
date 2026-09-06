@@ -29,7 +29,8 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → FE-02-STUDIO-01 — DONE / ACCEPTED
 → STUDIO-ACT-AR-01 — DONE / ACCEPTED
 → CURR-RENDER-MATH-01A — DONE / ACCEPTED
-→ MATH-RENDER-BATCH-01 — BLOCKED / NOT PROMOTED
+→ MATH-RENDER-BATCH-01 — UMBRELLA / NOT ACCEPTED
+  → MATH-RENDER-NUMBER-LINE-01 — READY (only implementation task)
 → STUDIO-ACCEPT-01 — BLOCKED
 → optional STUDIO-SPECIALIST-01 / STUDIO-REUSE-01 — BLOCKED
 → production deployment gate — BLOCKED
@@ -110,6 +111,12 @@ targets plus two bridges), 11 proposed families, 9 Core families, the retained
 four-family recommendation, and implemented Grade 5 capability coverage of
 0/36; see `research/curr-render-math-01/10_CORRECTION_RECORD.md`.
 
+`MATH-RENDER-BATCH-01` is an unaccepted umbrella, not a release task that
+authorizes all four families. Its only promoted child is
+`MATH-RENDER-NUMBER-LINE-01`, which is the sole `READY` implementation task.
+No other number-line mode, renderer family, coverage count, acceptance gate,
+or deployment work is promoted.
+
 ---
 
 ## CURR-RENDER-MATH-01A — Correct Math Planning Pack
@@ -152,9 +159,99 @@ remain disclosed in the pack.
 **Boundary:** no renderer, application/runtime/frontend/test/schema/dependency
 change; no accepted contract or persisted-data rename; no full-system
 acceptance, deployment, Replit, or real-Lina work. The planning prerequisite
-for `MATH-RENDER-BATCH-01` is satisfied, but it remains BLOCKED / NOT PROMOTED
-pending separate per-renderer scope and promotion; `STUDIO-ACCEPT-01` remains
-BLOCKED / NOT PROMOTED.
+for `MATH-RENDER-BATCH-01` is satisfied. The parent is now an unaccepted
+umbrella with only its separately approved number-line child promoted; all
+remaining renderer scope and `STUDIO-ACCEPT-01` remain BLOCKED / NOT PROMOTED.
+
+---
+
+## MATH-RENDER-NUMBER-LINE-01 — Decimal Comparison and Rounding
+
+**Status:** READY — the only implementation task.
+
+**Parent/status boundary:** This is the first scoped child of
+`MATH-RENDER-BATCH-01`. The parent is **UMBRELLA / NOT ACCEPTED**, with no
+blanket implementation authorization. This task neither completes the
+`number_line` family nor changes the accepted planning-pack result or its
+implemented Grade 5 capability count of 0/36.
+
+**Purpose:** Deliver one bounded production `number_line` capability for
+`G5-NBT-DECIMAL-COMPARE` and `G5-NBT-DECIMAL-ROUND`: compare two nonnegative
+decimals to thousandths and round to an authored target place. It must support
+multiple valid configurations within a declared numerical domain, not one
+hard-coded example or an arbitrary problem generator.
+
+**Before production code:** record and resolve, in the implementation work,
+the exact profile, activity, renderer, seed, action, event, validator and
+reducer versions; the finite numerical range; supported precision; exact
+numeric representation, serialization and comparison; permitted rounding
+places and midpoint/tie rule; grid endpoints, snapping, equality and boundary
+behavior; equivalent decimal forms; initial/pending/submitted/completeness
+rules; the server-owned problem-configuration/fixture provenance and activation
+linkage; server feedback versus learner-visible instructional data; renderer
+fallback, focus, narrow layout and input equivalence. These are ordinary
+implementation decisions unless they expose a genuine product-policy conflict.
+Do not invent names, versions, a new generic generator, an extra model call,
+or an answer key in browser metadata.
+
+**Required product direction:** use a server-authored bounded configuration
+with exact domain/scale, operands, point identities and interval endpoints.
+Provide declared-grid point placement/movement or selection, bounded
+relation/rounding-endpoint selection, and explicit configuration submission.
+Visible operands, scale and endpoints needed to understand the problem are
+legitimate instructional data. Pointer coordinates may nominate a grid
+position, but the server validates exact submitted mathematical state; no
+arithmetic correctness may depend on pixel position or an undocumented
+floating-point tolerance. Numeric direction remains mathematical LTR even in
+Arabic or RTL surrounding prose. Canvas uses bounded semantic controls only;
+free-form explanations remain Chat.
+
+**Reuse and invariant boundary:** use the exact-version Subject Capability
+Registry and activity contracts; existing activation and safe Scene seed;
+Studio Event/Snapshot authority and rebuild; existing protocol/controller/feed
+reconciliation; the accepted `/student/daily` Renderer Host; and Runtime-03
+submission/provenance. Exploration is contract-defined `RECORD_ONLY`; only an
+explicit declared submission triggers the one Tutor continuation. Preserve one
+source-linked StudentInteraction and Tutor continuation, no fabricated Student
+message, original submitted state distinct from later Snapshot, no direct
+Canvas Candidate/Evidence/Personal-Facts/Intelligence writes, exact session
+identity/ownership/Safety/LiveSubjectContext, and Scene/Snapshot version plus
+transaction-consistent feed invariants. Do not add a Router, generic artifact
+engine, browser durable reducer, session kind, Canvas Specialist, second Tutor,
+broad FE-02 refactor, dependency, schema, or migration by default.
+
+**Validation semantics:** reject malformed, out-of-domain, stale,
+cross-Student, state-mismatched or otherwise invalid requests without mutation.
+Persist truthful bounded feedback for a structurally valid but academically
+wrong submitted attempt. Preserve equivalent decimal values without inventing
+different values. The accepted server-owned configuration/fixture path must be
+resolved before implementation; it must not become an answer-key leak.
+
+**Required future verification:** focused backend coverage must vary comparison
+and rounding configurations across the declared domain, including equality,
+boundaries, midpoint/tie cases, exact validation, academically wrong valid
+attempts, malformed/stale/cross-Student/state-mismatch rejection,
+replay/idempotency, reload/rebuild, Scene/Snapshot consistency, activation/safe
+seed, `RECORD_ONLY` versus one Runtime-03 continuation, original submission
+versus later state, and accepted shared Math/activity regressions. Browser
+acceptance must be authenticated `/student/daily`, using pointer, genuinely
+evidenced browser-emulated touch, and keyboard/button paths with equal semantic
+results; cancellation/outside release/retry and rejection reconciliation; wrong
+attempt then correction; separate submit and persisted Tutor continuation;
+same-session reload; scale/labels, visible focus and accessible text/status;
+Arabic/English surrounding UI, narrow layout and reduced motion. Direct APIs
+and isolated review mounts are not browser acceptance. Reuse the approved
+Clerk/browser/CDP approach without an auth bypass; distinguish prepared Scene,
+mock-provider, live-provider, and physical/emulated-input evidence. Run focused
+and affected regressions, web typecheck/build, proportional full suite, and a
+fresh independent review before any acceptance.
+
+**Remaining scope — NOT PROMOTED:** powers-of-ten support, product-estimation
+support, fraction-equivalence/scaling modes, all other `number_line` family
+capabilities, and every other proposed renderer family remain later separate
+decisions. Do not mark `MATH-RENDER-BATCH-01` DONE or `STUDIO-ACCEPT-01` READY.
+No Voice/Vision, image annotation, NotebookLM, Replit, deployment, real-Lina
+history, full-system acceptance, or other task promotion is in scope.
 
 ---
 
