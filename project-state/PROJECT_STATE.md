@@ -24,7 +24,7 @@ STUDIO-ACT-SCI-01 Process Sequence DONE / ACCEPTED
 STUDIO-ACT-EN-01 English Sentence Ordering DONE / ACCEPTED
 FE-02-STUDIO-01 Real Studio + Daily App DONE / ACCEPTED
 STUDIO-ACT-AR-01 Arabic Academic Activity DONE / ACCEPTED
-CURR-RENDER-MATH-01A            READY (only Studio/Math READY task)
+CURR-RENDER-MATH-01A            DONE / ACCEPTED
 STUDIO-ACCEPT-01                BLOCKED
 ```
 
@@ -116,14 +116,17 @@ same host; it does not reopen FE-02 or alter legacy `/student` or
 `StudentMathSession`. `STUDIO-ACCEPT-01` remains blocked because full-system
 acceptance has not been performed or separately authorized; all other later
 Studio and deployment work remains blocked.
-`CURR-RENDER-MATH-01A` is READY as the only Studio/Math ready task. It is the
-bounded correction of the existing ten-file
-`research/curr-render-math-01/` planning pack, not renderer implementation or
-new unrestricted research. The seven Section 14.2 corrections, reproducible
-coverage recalculation, provenance preservation, and independent planning
-review are required before any renderer batch. `MATH-RENDER-BATCH-01` remains
-BLOCKED / NOT PROMOTED pending correction acceptance; `STUDIO-ACCEPT-01` is
-also BLOCKED / NOT PROMOTED. Real Lina longitudinal history has not started.
+`CURR-RENDER-MATH-01A` is DONE / ACCEPTED as a bounded planning correction,
+not renderer implementation. The accepted pack at
+`research/curr-render-math-01/` records the seven Section 14.2 corrections,
+the reproducible 36-node coverage calculation, retained provenance limits, and
+an independent review with 0 Critical / 0 Important / 0 new Minor findings.
+The corrected planning basis has 11 proposed families, 9 Core and the same
+four-family initial recommendation; actual implemented Grade 5 capability
+coverage remains 0/36. `MATH-RENDER-BATCH-01` remains BLOCKED / NOT PROMOTED:
+the satisfied planning prerequisite does not authorize any renderer.
+`STUDIO-ACCEPT-01` is also BLOCKED / NOT PROMOTED. Real Lina longitudinal
+history has not started.
 
 ---
 
@@ -437,10 +440,9 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
-Within the Studio/Math track, execute only `CURR-RENDER-MATH-01A` as the
-bounded planning-correction task. It must pass the recorded source,
-calculation, disclosure, and independent-review gate before any renderer task
-can be promoted. `STUDIO-ACCEPT-01` remains BLOCKED / NOT PROMOTED; Replit,
+`CURR-RENDER-MATH-01A` is accepted planning evidence, not an executable
+renderer task. A future renderer requires separately approved per-renderer
+scope and promotion. `MATH-RENDER-BATCH-01`, `STUDIO-ACCEPT-01`, Replit,
 deployment, real-Lina, and all other later Studio work remain unpromoted.
 
 ---
@@ -451,6 +453,7 @@ deployment, real-Lina, and all other later Studio work remain unpromoted.
 - `docs/PERSONAL_FACTS_SPEC.md`
 - `docs/FE-01_VISUAL_SYSTEM_LIBRARY_DECISION.md`
 - `docs/STUDIO_IMPLEMENTATION_PLAN.md`
+- `research/curr-render-math-01/10_CORRECTION_RECORD.md`
 - `docs/DAILY_USE_RELEASE_DECISIONS.md`
 - `project-state/DAILY_USE_RELEASE_TASKS.md`
 - `docs/CHILD_SAFETY_POLICY.md`

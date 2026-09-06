@@ -58,15 +58,20 @@ is complete and accepted.
 Studio Core dependency.
 
 ## CURR-RENDER-MATH-01A — Correct Math Planning Pack
-**Status:** READY
+**Status:** DONE / ACCEPTED
 **Dependencies:** `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`,
 `STUDIO-ACT-EN-01`, `STUDIO-ACT-AR-01`, and `FE-02-STUDIO-01` are
 DONE / ACCEPTED.
-**Purpose:** Correct the existing Grade 5 Math planning pack before renderer
-implementation, not conduct a new unrestricted curriculum-research project.
+**Accepted result:** Corrected the existing Grade 5 Math planning pack before
+renderer implementation, without conducting a new unrestricted
+curriculum-research project. The accepted record is
+`research/curr-render-math-01/10_CORRECTION_RECORD.md`: 36 nodes (34 Grade 5
+targets plus two bridges), 11 proposed families, 9 Core, a retained four-family
+planning recommendation, reproducible qualified coverage, and 0/36 implemented
+Grade 5 renderer capability coverage.
 **Inputs:** the ten existing Markdown files in `research/curr-render-math-01/`
 from `00_RESEARCH_BRIEF.md` through `09_OPEN_QUESTIONS.md`.
-**Expected output:** the seven Section 14.2 corrections; a corrected
+**Accepted output:** the seven Section 14.2 corrections; a corrected
 concept-to-representation/interaction/validator mapping; reproducible coverage
 calculations; old-to-new renderer recommendation reasons; batch dependencies;
 retained source/rights provenance; and planned-versus-implemented coverage
@@ -74,13 +79,15 @@ separation. The current Batch 1 recommendation is `number_line`,
 `place_value_workspace`, `fraction_model_workspace`, and
 `division_workspace`, subject to the correction results and per-renderer
 approval.
-**Verification:** authoritative-source comparison for the named standards,
-substantive-correction traceability, reproducible calculations, independent
-review, and disclosure of unresolved source/rights/coverage questions.
+**Accepted verification:** authoritative-source comparison for the named
+standards, substantive-correction traceability, reproducible calculations, and
+independent review (0 Critical / 0 Important / 0 new Minor); unresolved
+source/rights/coverage questions remain disclosed.
 **Boundary:** no renderer, application, test, schema, dependency, runtime,
 full-system acceptance, deployment, Replit, or real-Lina work. Existing
 accepted contracts and historical persisted data are not renamed or rewritten.
-`MATH-RENDER-BATCH-01` is BLOCKED / NOT PROMOTED until correction acceptance;
+The planning-correction prerequisite for `MATH-RENDER-BATCH-01` is satisfied,
+but it remains BLOCKED / NOT PROMOTED pending separate per-renderer approval;
 `STUDIO-ACCEPT-01` remains BLOCKED / NOT PROMOTED.
 
 ## STUDIO-RUNTIME-01 — Tutor Studio Context and Watermark

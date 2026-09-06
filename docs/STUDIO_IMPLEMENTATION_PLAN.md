@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`, `FE-02-STUDIO-01`, and `STUDIO-ACT-AR-01` are `DONE / ACCEPTED`. `CURR-RENDER-MATH-01A` is the only READY Studio/Math task. Every later Studio task, including `MATH-RENDER-BATCH-01` and `STUDIO-ACCEPT-01`, remains BLOCKED / NOT PROMOTED.
+**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`, `FE-02-STUDIO-01`, `STUDIO-ACT-AR-01`, and `CURR-RENDER-MATH-01A` are `DONE / ACCEPTED`. Every later Studio task, including `MATH-RENDER-BATCH-01` and `STUDIO-ACCEPT-01`, remains BLOCKED / NOT PROMOTED.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -1005,6 +1005,13 @@ integration.
 6. recalculate concept count, coverage denominator, Core coverage, and recommended batch;
 7. preserve the source/license boundaries in the published manifest.
 
+**Completion:** DONE / ACCEPTED on 2026-09-06. The corrected pack records 36
+nodes (34 Grade 5 targets plus two bridges), 11 proposed families, 9 Core
+families, reproducible qualified coverage, and the retained proposed initial
+batch: `number_line`, `place_value_workspace`, `fraction_model_workspace`, and
+`division_workspace`. This satisfied planning prerequisite does not promote a
+renderer or change the status of `MATH-RENDER-BATCH-01`.
+
 ### 14.3 Cross-grade production foundation activity
 
 `ten_frame_group_transfer` supports the approved `9 + 6` scenario.
@@ -1652,33 +1659,35 @@ independent review. Isolated review mounts are insufficient.
 
 #### `CURR-RENDER-MATH-01A — Correct Math Planning Pack`
 
-**Status:** READY.
-**Purpose:** Correct the existing Grade 5 Math planning pack in Section 14.2
-before renderer implementation, without starting a new unrestricted curriculum
-research project.
+**Status:** DONE / ACCEPTED.
+**Accepted result:** Corrected the existing Grade 5 Math planning pack in
+Section 14.2 before renderer implementation, without starting a new
+unrestricted curriculum research project.
 **Inputs:** the existing pack at `research/curr-render-math-01/`:
 `00_RESEARCH_BRIEF.md` through `09_OPEN_QUESTIONS.md`.
-**Output:** corrected concept-to-representation/interaction/validator mapping;
+**Accepted output:** corrected concept-to-representation/interaction/validator mapping;
 explicit reproducible coverage denominator and calculations; old-to-new
 renderer recommendation changes with reasons; bounded batch recommendation and
 dependencies; retained source/rights provenance; and explicit separation of
 planned from implemented coverage. The historical 35 nodes and eight Core
 families are prior planning figures, not immutable targets.
-**Verification:** compare named standards with authoritative educational
-sources; trace each substantive correction; reproduce coverage calculations;
-preserve the rights manifest except for verified corrections; independently
-review the corrected outputs; and disclose unresolved source, rights, or
-coverage questions.
+**Accepted verification:** named standards were checked against authoritative
+educational sources; corrections are traced; coverage is reproducible; the
+rights manifest restrictions remain; independent review reported 0 Critical /
+0 Important / 0 new Minor findings; and unresolved source, rights and coverage
+questions remain disclosed in `research/curr-render-math-01/`.
 **Dependency boundary:** this gate does not block Studio state, subject,
 protocol, runtime, bounded Math/Science/English/Arabic foundation activities,
-or FE-02 Studio integration. It must be accepted before `MATH-RENDER-BATCH-01`.
+or FE-02 Studio integration. Its planning prerequisite is satisfied, but
+`MATH-RENDER-BATCH-01` still requires separate per-renderer approval.
 **Implementation boundary:** no renderer, runtime, schema, dependency, or
 accepted-contract implementation occurs in this correction task.
 
 #### `MATH-RENDER-BATCH-01`
 
-**Status:** BLOCKED / NOT PROMOTED — pending `CURR-RENDER-MATH-01A`
-acceptance and separate per-renderer approval.
+**Status:** BLOCKED / NOT PROMOTED — the `CURR-RENDER-MATH-01A` planning
+prerequisite is satisfied; separate per-renderer approval and promotion remain
+required.
 
 Implement, after corrected research approval:
 
@@ -1925,7 +1934,7 @@ accepted. The durable Studio state foundation is implemented at Alembic head
 `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`,
 `FE-02-STUDIO-01`, and `STUDIO-ACT-AR-01` are DONE / ACCEPTED. Arabic remains
 a recorded Section 22.7 prerequisite, now satisfied. `CURR-RENDER-MATH-01A`
-is the only READY Studio/Math task; it is a planning correction only.
+is DONE / ACCEPTED as a planning correction only.
 `MATH-RENDER-BATCH-01`, `STUDIO-ACCEPT-01`, and every other later Studio task
 remain BLOCKED / NOT PROMOTED; full-system acceptance is not promoted.
 ```
@@ -1947,7 +1956,7 @@ remain BLOCKED / NOT PROMOTED; full-system acceptance is not promoted.
 3. seven focused Node tests, TypeScript typecheck, production build, and SHA-256 identity verification;
 4. retention of the prototype as non-authoritative, non-production architecture.
 
-### 27.3 Current source baselines
+### 27.3 Historical source baselines
 
 - Studio orchestration synthesis: `9466da4d2eb3916f5c5cc61d047c3e800f276620`
 - Grade 5 Math renderer planning pack: `eafd1121a240bd7873de46d260b296dcde52a46f`
@@ -1972,7 +1981,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-ACT-EN-01 — DONE / ACCEPTED
 → FE-02-STUDIO-01 — DONE / ACCEPTED
 → STUDIO-ACT-AR-01 — DONE / ACCEPTED
-→ CURR-RENDER-MATH-01A — READY
+→ CURR-RENDER-MATH-01A — DONE / ACCEPTED
 → MATH-RENDER-BATCH-01 — BLOCKED / NOT PROMOTED
 → STUDIO-ACCEPT-01 — BLOCKED
 ```

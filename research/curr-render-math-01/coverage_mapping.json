@@ -1,0 +1,469 @@
+{
+  "baseline": "f62b6ff593485e411a39b0ea91039bfc348e53ca",
+  "concepts": [
+    {
+      "number": 1,
+      "id": "G5-OA-NUMERICAL-EXPRESSIONS",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 2,
+      "id": "G5-OA-PATTERN-RULES",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 3,
+      "id": "G5-NBT-POWERS-OF-TEN",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 4,
+      "id": "G5-NBT-DECIMAL-READ-WRITE",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 5,
+      "id": "G5-NBT-DECIMAL-COMPARE",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 6,
+      "id": "G5-NBT-DECIMAL-ROUND",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 7,
+      "id": "G5-NBT-MULTIPLICATION-ESTIMATE",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 8,
+      "id": "G5-NBT-MULTIDIGIT-MULTIPLY",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 9,
+      "id": "G5-NBT-DECIMAL-MULTIPLY",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 10,
+      "id": "G5-NBT-DIVISION-ESTIMATE",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 11,
+      "id": "G5-NBT-LONG-DIVISION",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 12,
+      "id": "G5-NBT-DECIMAL-DIVIDE-BY-WHOLE",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 13,
+      "id": "G5-NF-EQUIVALENCE-BRIDGE",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 14,
+      "id": "G5-NF-ADD-SUBTRACT-FRACTIONS",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 15,
+      "id": "G5-NF-FRACTION-WORD-PROBLEMS",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 16,
+      "id": "G5-NF-FRACTION-AS-DIVISION",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 17,
+      "id": "G5-NF-FRACTION-MULTIPLY-WHOLE",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 18,
+      "id": "G5-NF-FRACTION-SCALING",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 19,
+      "id": "G5-NF-FRACTION-AREA-MULTIPLY",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 20,
+      "id": "G5-NF-FRACTION-MULTIPLY-PROBLEMS",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 21,
+      "id": "G5-NF-UNIT-FRACTION-DIVISION",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 22,
+      "id": "G5-MD-UNIT-RELATIONSHIPS",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 23,
+      "id": "G5-MD-MEASUREMENT-PROBLEMS",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 24,
+      "id": "G5-MD-FRACTION-LINE-PLOTS",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 25,
+      "id": "G5-MD-VOLUME-UNIT-CUBES",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 26,
+      "id": "G5-MD-VOLUME-FORMULAS",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 27,
+      "id": "G5-MD-VOLUME-ADDITIVE",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 28,
+      "id": "G5-G-COORDINATE-PLANE",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 29,
+      "id": "G5-G-PLOT-INTERPRET",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 30,
+      "id": "G5-G-COORDINATE-PROBLEMS",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 31,
+      "id": "G5-G-CLASSIFY-2D",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 32,
+      "id": "G5-G-SHAPE-HIERARCHY",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 33,
+      "id": "G5-G-ANGLE-PROPERTIES",
+      "kind": "grade5_target"
+    },
+    {
+      "number": 34,
+      "id": "G5-PREREQ-FRACTION-UNIT-WHOLE",
+      "kind": "prerequisite_bridge"
+    },
+    {
+      "number": 35,
+      "id": "G5-PREREQ-AREA-ARRAY-STRUCTURE",
+      "kind": "prerequisite_bridge"
+    },
+    {
+      "number": 36,
+      "id": "G5-NBT-DECIMAL-ADD-SUBTRACT",
+      "kind": "grade5_target"
+    }
+  ],
+  "renderers": [
+    {
+      "id": "number_line",
+      "core": true,
+      "direct": [
+        "G5-NBT-DECIMAL-COMPARE",
+        "G5-NBT-DECIMAL-ROUND",
+        "G5-NBT-MULTIPLICATION-ESTIMATE",
+        "G5-NF-EQUIVALENCE-BRIDGE",
+        "G5-NF-FRACTION-SCALING"
+      ],
+      "partial": [
+        "G5-NBT-POWERS-OF-TEN",
+        "G5-NF-ADD-SUBTRACT-FRACTIONS"
+      ],
+      "reference_grounded": [],
+      "rationale": "Magnitude, rounding, estimates, equivalence and scaling; shifts and fraction operations lack a complete family path."
+    },
+    {
+      "id": "place_value_workspace",
+      "core": true,
+      "direct": [
+        "G5-NBT-POWERS-OF-TEN",
+        "G5-NBT-DECIMAL-READ-WRITE",
+        "G5-NBT-DECIMAL-COMPARE",
+        "G5-NBT-DECIMAL-ROUND",
+        "G5-NBT-DECIMAL-ADD-SUBTRACT"
+      ],
+      "partial": [
+        "G5-NBT-DECIMAL-MULTIPLY",
+        "G5-NBT-DECIMAL-DIVIDE-BY-WHOLE"
+      ],
+      "reference_grounded": [],
+      "rationale": "Place/exponent/expanded-form state and decimal ADD/SUBTRACT conservation; displaying multiplication or division is partial only."
+    },
+    {
+      "id": "area_array_model",
+      "core": true,
+      "direct": [
+        "G5-NBT-DECIMAL-MULTIPLY",
+        "G5-NF-FRACTION-MULTIPLY-WHOLE",
+        "G5-NF-FRACTION-AREA-MULTIPLY",
+        "G5-PREREQ-AREA-ARRAY-STRUCTURE"
+      ],
+      "partial": [
+        "G5-NBT-MULTIPLICATION-ESTIMATE",
+        "G5-NBT-MULTIDIGIT-MULTIPLY"
+      ],
+      "reference_grounded": [
+        "G5-NF-FRACTION-MULTIPLY-PROBLEMS"
+      ],
+      "rationale": "Area products/partition invariants; estimation is auxiliary and standard-algorithm fluency is absent; context remains source-dependent."
+    },
+    {
+      "id": "fraction_model_workspace",
+      "core": true,
+      "direct": [
+        "G5-NF-EQUIVALENCE-BRIDGE",
+        "G5-NF-ADD-SUBTRACT-FRACTIONS",
+        "G5-NF-FRACTION-AS-DIVISION",
+        "G5-NF-FRACTION-MULTIPLY-WHOLE",
+        "G5-NF-FRACTION-SCALING",
+        "G5-NF-FRACTION-AREA-MULTIPLY",
+        "G5-NF-UNIT-FRACTION-DIVISION",
+        "G5-PREREQ-FRACTION-UNIT-WHOLE"
+      ],
+      "partial": [],
+      "reference_grounded": [
+        "G5-NF-FRACTION-WORD-PROBLEMS",
+        "G5-NF-FRACTION-MULTIPLY-PROBLEMS"
+      ],
+      "rationale": "Whole/partition, exact rational operations, sharing and scaling; word-problem interpretation is not inferred."
+    },
+    {
+      "id": "division_workspace",
+      "core": true,
+      "direct": [
+        "G5-NBT-DIVISION-ESTIMATE",
+        "G5-NBT-LONG-DIVISION",
+        "G5-NBT-DECIMAL-DIVIDE-BY-WHOLE"
+      ],
+      "partial": [],
+      "reference_grounded": [],
+      "rationale": "Full-family proposal for estimates and declared whole/decimal-by-whole tasks; five modes are not all first-slice features."
+    },
+    {
+      "id": "measurement_conversion_workspace",
+      "core": true,
+      "direct": [
+        "G5-MD-UNIT-RELATIONSHIPS"
+      ],
+      "partial": [],
+      "reference_grounded": [
+        "G5-MD-MEASUREMENT-PROBLEMS"
+      ],
+      "rationale": "Exact same-system quantity equivalence; contextual multistep interpretation remains source-dependent."
+    },
+    {
+      "id": "line_plot_workspace",
+      "core": true,
+      "direct": [
+        "G5-MD-FRACTION-LINE-PLOTS"
+      ],
+      "partial": [],
+      "reference_grounded": [],
+      "rationale": "Observation multiset, fractional scale and exact bounded fraction aggregation, not mere display."
+    },
+    {
+      "id": "volume_composer",
+      "core": true,
+      "direct": [
+        "G5-MD-VOLUME-UNIT-CUBES",
+        "G5-MD-VOLUME-FORMULAS"
+      ],
+      "partial": [],
+      "reference_grounded": [
+        "G5-MD-VOLUME-ADDITIVE"
+      ],
+      "rationale": "Cube occupancy and formula state; contextual additive-volume node is conservatively reference-grounded."
+    },
+    {
+      "id": "coordinate_geometry_plane",
+      "core": true,
+      "direct": [
+        "G5-G-COORDINATE-PLANE",
+        "G5-G-PLOT-INTERPRET"
+      ],
+      "partial": [
+        "G5-OA-PATTERN-RULES"
+      ],
+      "reference_grounded": [
+        "G5-G-COORDINATE-PROBLEMS"
+      ],
+      "rationale": "Axes/points and bounded interpretation; pattern generation/relations incomplete; contextual tasks require source."
+    },
+    {
+      "id": "shape_property_explorer",
+      "core": false,
+      "direct": [
+        "G5-G-CLASSIFY-2D",
+        "G5-G-SHAPE-HIERARCHY",
+        "G5-G-ANGLE-PROPERTIES"
+      ],
+      "partial": [],
+      "reference_grounded": [],
+      "rationale": "Proposed property/category states; not a correction of historical citations."
+    },
+    {
+      "id": "expression_pattern",
+      "core": false,
+      "direct": [],
+      "partial": [
+        "G5-OA-NUMERICAL-EXPRESSIONS",
+        "G5-OA-PATTERN-RULES"
+      ],
+      "reference_grounded": [],
+      "rationale": "Grouping/value and bounded assembly alone do not fully validate writing/interpretation or the full pattern-and-plot task."
+    }
+  ],
+  "initial_batch": [
+    "number_line",
+    "place_value_workspace",
+    "fraction_model_workspace",
+    "division_workspace"
+  ],
+  "first_slices": [
+    {
+      "renderer": "number_line",
+      "direct": [
+        "G5-NBT-DECIMAL-COMPARE",
+        "G5-NBT-DECIMAL-ROUND"
+      ],
+      "partial": [],
+      "reference_grounded": [],
+      "rationale": "Bounded decimal comparison and rounding, thousandths chart/line with exact positions."
+    },
+    {
+      "renderer": "place_value_workspace",
+      "direct": [
+        "G5-NBT-DECIMAL-ADD-SUBTRACT"
+      ],
+      "partial": [
+        "G5-NBT-POWERS-OF-TEN",
+        "G5-NBT-DECIMAL-READ-WRITE",
+        "G5-NBT-DECIMAL-COMPARE",
+        "G5-NBT-DECIMAL-ROUND"
+      ],
+      "reference_grounded": [],
+      "rationale": "Decimal ADD/SUBTRACT with regrouping; supporting chart alone does not cover full read/write/powers/comparison nodes."
+    },
+    {
+      "renderer": "fraction_model_workspace",
+      "direct": [
+        "G5-NF-EQUIVALENCE-BRIDGE",
+        "G5-PREREQ-FRACTION-UNIT-WHOLE"
+      ],
+      "partial": [
+        "G5-NF-ADD-SUBTRACT-FRACTIONS"
+      ],
+      "reference_grounded": [],
+      "rationale": "Fixed-whole equivalence with unlike partition sizes; operation construction waits."
+    },
+    {
+      "renderer": "division_workspace",
+      "direct": [],
+      "partial": [
+        "G5-NBT-DIVISION-ESTIMATE",
+        "G5-NBT-LONG-DIVISION"
+      ],
+      "reference_grounded": [],
+      "rationale": "Two-digit dividend/one-digit divisor partial quotients; does not cover full node 11 numeric range or broad estimation."
+    }
+  ],
+  "excluded_accepted": [
+    {
+      "id": "ten_frame_group_transfer",
+      "reason": "Accepted cross-grade foundation; not a node or renderer in Grade 5 numerator/denominator."
+    }
+  ],
+  "legacy": {
+    "reported_concepts": 35,
+    "reported_core_families": 8,
+    "reported_direct": 30,
+    "reported_percentage": "85.7",
+    "catalog_core_associations": {
+      "number_line": [
+        "G5-NBT-POWERS-OF-TEN",
+        "G5-NBT-DECIMAL-COMPARE",
+        "G5-NBT-DECIMAL-ROUND",
+        "G5-NBT-MULTIPLICATION-ESTIMATE",
+        "G5-NF-EQUIVALENCE-BRIDGE",
+        "G5-NF-FRACTION-SCALING"
+      ],
+      "place_value_workspace": [
+        "G5-NBT-POWERS-OF-TEN",
+        "G5-NBT-DECIMAL-READ-WRITE",
+        "G5-NBT-DECIMAL-COMPARE",
+        "G5-NBT-DECIMAL-ROUND",
+        "G5-NBT-DECIMAL-MULTIPLY",
+        "G5-NBT-DECIMAL-DIVIDE-BY-WHOLE"
+      ],
+      "area_array_model": [
+        "G5-NBT-MULTIDIGIT-MULTIPLY",
+        "G5-NBT-DECIMAL-MULTIPLY",
+        "G5-NF-FRACTION-MULTIPLY-WHOLE",
+        "G5-NF-FRACTION-AREA-MULTIPLY",
+        "G5-NF-FRACTION-MULTIPLY-PROBLEMS",
+        "G5-PREREQ-AREA-ARRAY-STRUCTURE"
+      ],
+      "fraction_model_workspace": [
+        "G5-NF-EQUIVALENCE-BRIDGE",
+        "G5-NF-ADD-SUBTRACT-FRACTIONS",
+        "G5-NF-FRACTION-WORD-PROBLEMS",
+        "G5-NF-FRACTION-AS-DIVISION",
+        "G5-NF-FRACTION-MULTIPLY-WHOLE",
+        "G5-NF-FRACTION-SCALING",
+        "G5-NF-FRACTION-AREA-MULTIPLY",
+        "G5-NF-FRACTION-MULTIPLY-PROBLEMS",
+        "G5-NF-UNIT-FRACTION-DIVISION",
+        "G5-PREREQ-FRACTION-UNIT-WHOLE"
+      ],
+      "long_division_workspace": [
+        "G5-NBT-DIVISION-ESTIMATE",
+        "G5-NBT-LONG-DIVISION",
+        "G5-NBT-DECIMAL-DIVIDE-BY-WHOLE"
+      ],
+      "measurement_data_workspace": [
+        "G5-MD-UNIT-RELATIONSHIPS",
+        "G5-MD-MEASUREMENT-PROBLEMS",
+        "G5-MD-FRACTION-LINE-PLOTS"
+      ],
+      "volume_composer": [
+        "G5-MD-VOLUME-UNIT-CUBES",
+        "G5-MD-VOLUME-FORMULAS",
+        "G5-MD-VOLUME-ADDITIVE"
+      ],
+      "coordinate_geometry_plane": [
+        "G5-OA-PATTERN-RULES",
+        "G5-G-COORDINATE-PLANE",
+        "G5-G-PLOT-INTERPRET",
+        "G5-G-COORDINATE-PROBLEMS"
+      ]
+    }
+  }
+}

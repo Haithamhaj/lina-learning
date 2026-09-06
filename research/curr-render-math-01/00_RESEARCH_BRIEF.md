@@ -1,7 +1,7 @@
 # CURR-RENDER-MATH-01 — Grade 5 Math Renderer Planning Brief
 
 **Status:** Research / planning only. Non-authoritative until Product Owner review and task promotion.
-**Research date:** 2026-09-02
+**Research date:** 2026-09-02; bounded correction: 2026-09-06 (CURR-RENDER-MATH-01A, unaccepted).
 **Scope:** Grade 5 Mathematics capability planning for Lina Learning Studio.
 **Not an implementation authorization.**
 
@@ -21,7 +21,7 @@ The catalog is not a My Math replacement, a lesson sequence, a generic Canvas, o
 
 The repository already separates Content/ Retrieval from Tutor and reserves a typed Artifact Specification → Registry → approved renderer path. Studio research further requires application-owned semantic event history, materialized snapshots, deterministic renderers for routine work, and one Student-facing Tutor. This pack therefore proposes only subject-owned catalog data: it must not put fraction, coordinate, or arithmetic fields into a generic Studio Core.
 
-The present code has a source-linked `ContentDocument` / Docling / hybrid `RetrievalService` path and a provider-neutral Model Gateway, but no Learning Artifact or Studio runtime to alter. The Studio prototype, FE-02, database, retrieval, Tutor, and intelligence remain untouched.
+The 2026-09-02 baseline preceded Studio implementation. At correction baseline `f62b6ff593485e411a39b0ea91039bfc348e53ca`, the governing records accept Studio foundations, four bounded subject activities, and FE-02 integration. In particular, `ten_frame_group_transfer` is an accepted cross-grade activity, excluded from both numerator and denominator here. It does not implement a Grade 5 family. The proposed families in this pack remain unimplemented; this correction changes research files only.
 
 ## Research method
 
@@ -59,4 +59,4 @@ The future Trusted Educational Reference Pack may share source identity, alignme
 
 ## Confidence
 
-**High** for Grade 5 capability coverage and the deterministic-first boundary. **Medium** for the exact best first renderer batch until a Product Owner selects the proof objective and real Lina use validates it. **Low / intentionally unknown** for McGraw edition-specific alignment.
+**High** for the named standards corrections and reproducibility of the recorded counts. **Medium** for proposed representation fit and the initial batch; planned support is not educational effectiveness or full standards attainment. **Low / intentionally unknown** for McGraw edition-specific alignment. See [10_CORRECTION_RECORD.md](10_CORRECTION_RECORD.md) for source facts, design recommendations, unresolved assumptions, and the review outcome.

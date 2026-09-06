@@ -23,3 +23,22 @@
 - **Khan Academy:** human/reference coverage check only. Do not scrape, bulk copy, persist proprietary content, or use it as AI/ML training, testing, alignment, or evaluation data.
 - **McGraw Hill:** public program pages establish only broad context. The actual school book becomes `EXACT_CURRICULUM` only after physical/digital edition verification and an appropriate rights path.
 - **Source sharing seam:** future Trusted Reference Pack work may reuse this manifest's source URL, organization, trust tier, alignment class, verification date, and rights decision. It must add source-instance provenance and an asset-specific license decision before any ingestion.
+
+## CURR-RENDER-MATH-01A targeted source verification — 2026-09-06
+
+The rights decisions and original verification dates above remain unchanged.
+This run checked educational wording, not new permissions or asset licenses.
+The official CCSS-M URL was accessible; no fallback was needed and no source
+PDF, lesson, exercise, image, or application code was persisted.
+
+| Source | Exact inspected section | Use / boundary |
+|---|---|---|
+| CCSS-M, existing official PDF | printed p.35: 5.OA.A.1–2, 5.NBT.B.6–7; p.37: 5.MD.A.1, 5.MD.B.2; p.42: 6.NS.B.2–3 | SOURCE FACT checks for A–D; source identifiers and URLs above retained; no change to SAFE_FOR_ANALYSIS |
+| CDE-CCSS, [California Department of Education, Mathematics Standards, 2013/2014 electronic edition](https://www.cde.ca.gov/be/st/ss/documents/ccssmathstandardaug2013.pdf) | printed p.36 (PDF p.43): shared 5.OA.A.1–2 and 5.NBT.B.6–7; printed p.38 (PDF p.45): 5.MD.A.1 and 5.MD.B.2 | Authoritative state publication used only to corroborate the same numbered CCSS wording; California-specific additions are not adopted. REFERENCE_ONLY, research facts only; adaptation/commercial reuse not granted, no local persistence, retain this URL/date/provenance. Copyright/all-rights-reserved notice on printed p.ii; not a rights upgrade. |
+
+The source-to-change record is [10_CORRECTION_RECORD.md](10_CORRECTION_RECORD.md).
+Renderer names, Core membership, the measurement split, interface design and
+priority are LINA DESIGN RECOMMENDATIONS, not official-standard requirements.
+No newly verified source resolves the actual McGraw edition or school sequence.
+IM v1 versus v.360, Khan DO_NOT_INGEST, and all proprietary-source restrictions
+remain exactly as recorded; none was used for a new content collection.

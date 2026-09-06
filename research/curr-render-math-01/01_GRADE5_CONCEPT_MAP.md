@@ -5,11 +5,11 @@
 
 ## Reading this map
 
-This map contains **35 Grade-5-relevant concept nodes**. A node is a meaningful conceptual or procedural capability that can affect representation or validation; it is not a lesson. `G5-*` keys are proposed internal planning keys only. “Visual” and “interactive” mean *materially helpful in at least some learner states*, not required by default. `D` means a bounded deterministic validator is feasible. Every node has the Grade 5 relevance implied by its `G5-*` key; its exact CCSS reference in the table points to `CCSS-M`, and the stated representation needs are corroborated by `WWC-R` and `IM-K5` where applicable. Those source IDs resolve in [07_SOURCE_LICENSE_MANIFEST.md](07_SOURCE_LICENSE_MANIFEST.md).
+This map contains **36 Grade-5-relevant planning nodes: 34 Grade 5 targets and two prerequisite bridges (34–35)**. A node is a meaningful conceptual or procedural capability that can affect representation or validation; it is not a lesson. `G5-*` keys are proposed internal planning keys only. “Visual” and “interactive” mean *materially helpful in at least some learner states*, not required by default. `D` means a bounded deterministic validator is feasible. Every node has the Grade 5 relevance implied by its `G5-*` key; its exact CCSS reference in the table points to `CCSS-M`, and the stated representation needs are corroborated by `WWC-R` and `IM-K5` where applicable. Those source IDs resolve in [07_SOURCE_LICENSE_MANIFEST.md](07_SOURCE_LICENSE_MANIFEST.md).
 
 | # | Proposed concept key | Concept / reasoning | Standards | Prerequisites and relations | Representation need | Visual / interactive / D | Confidence |
 |---:|---|---|---|---|---|---|---|
-| 1 | `G5-OA-NUMERICAL-EXPRESSIONS` | Interpret and write nested numerical expressions; translate word phrase ↔ expression | 5.OA.A.1 | operations, parentheses; relates to patterns | expression tree / grouped tokens when structure is hidden | conditional / low / D | high |
+| 1 | `G5-OA-NUMERICAL-EXPRESSIONS` | Use grouping and evaluate numerical expressions (5.OA.A.1); write calculations as expressions and interpret structure without evaluation (5.OA.A.2) | 5.OA.A.1–2 | operations, parentheses; relates to patterns | expression tree / grouped tokens when structure is hidden | conditional / low / D | high |
 | 2 | `G5-OA-PATTERN-RULES` | Generate, compare, and explain numerical patterns and relations | 5.OA.B.3 | operations; relates to coordinate rules | table, rule, sequence | helpful / medium / D | high |
 | 3 | `G5-NBT-POWERS-OF-TEN` | Explain place-value shifts when multiplying/dividing by powers of ten | 5.NBT.A.1–2 | base-ten place value | place-value chart, shift animation | high / medium / D | high |
 | 4 | `G5-NBT-DECIMAL-READ-WRITE` | Read/write decimals to thousandths in numeral, word, and expanded form | 5.NBT.A.3 | fractions as tenths/hundredths | chart and expanded-form decomposition | high / medium / D | high |
@@ -19,7 +19,7 @@ This map contains **35 Grade-5-relevant concept nodes**. A node is a meaningful 
 | 8 | `G5-NBT-MULTIDIGIT-MULTIPLY` | Fluently multiply multi-digit whole numbers; connect method to place value | 5.NBT.B.5 | arrays, distributive property | area/array and partial products | high / high / D | high |
 | 9 | `G5-NBT-DECIMAL-MULTIPLY` | Multiply decimals to hundredths; explain place-value placement | 5.NBT.B.7 | nodes 3–5, 8 | decimal area model / grid | high / medium / D | high |
 | 10 | `G5-NBT-DIVISION-ESTIMATE` | Estimate quotient and select reasonable quotient magnitude | 5.NBT.B.6 | multiplication facts, place value | multiples table / number line | helpful / medium / D | high |
-| 11 | `G5-NBT-LONG-DIVISION` | Divide up to four-digit dividends by two-digit divisors using place-value strategies/standard algorithm | 5.NBT.B.6 | partial quotients, subtraction | quotient workspace | high / high / D | high |
+| 11 | `G5-NBT-LONG-DIVISION` | Divide whole numbers with up to four-digit dividends and two-digit divisors using place-value/multiplication strategies; standard algorithm is an optional mode, not the Grade 5 fluency requirement | 5.NBT.B.6 | partial quotients, subtraction | quotient workspace | high / high / D | high |
 | 12 | `G5-NBT-DECIMAL-DIVIDE-BY-WHOLE` | Divide decimal dividends to hundredths by whole-number divisors | 5.NBT.B.7 | node 11, decimal place value | place-value / division workspace | high / high / D | high |
 | 13 | `G5-NF-EQUIVALENCE-BRIDGE` | Use equivalent fractions as a bridge to common denominators | 5.NF.A.1 | Grade 4 equivalence; relates to comparison | fraction bars/number line | high / medium / D | high |
 | 14 | `G5-NF-ADD-SUBTRACT-FRACTIONS` | Add/subtract unlike denominators; explain equivalence transformation | 5.NF.A.1 | node 13 | fraction bars, area regions, number line | high / high / D | high |
@@ -44,11 +44,16 @@ This map contains **35 Grade-5-relevant concept nodes**. A node is a meaningful 
 | 33 | `G5-G-ANGLE-PROPERTIES` | Identify properties used to classify quadrilaterals/triangles | 5.G.B.3–4 | angle vocabulary, parallel/perpendicular | labelled shape / angle explorer | high / medium / D | high |
 | 34 | `G5-PREREQ-FRACTION-UNIT-WHOLE` | Preserve the explicit whole and equal-size-part invariant in fraction work | Grade 3–4 prerequisite; required by 5.NF | unit fraction, partition | bars/circles with whole lock | high / medium / D | high |
 | 35 | `G5-PREREQ-AREA-ARRAY-STRUCTURE` | Connect equal rows/columns, area, distributive decomposition, and dimensions | Grade 3–4 prerequisite; required by 5.NBT/5.NF/5.MD | multiplication and area | array/area model | high / high / D | high |
+| 36 | `G5-NBT-DECIMAL-ADD-SUBTRACT` | Add/subtract decimals to hundredths with linked place-value models and written method | 5.NBT.B.7 | nodes 3–6; regrouping and additive conservation | aligned units/tenths/hundredths; compose or remove quantities with equivalent exchanges | high / high / D | high |
+
+Numbering and all 35 existing keys are retained. Node 1 has two explicit requirements, counted once; no expression-node split is needed. The historical `G5-NBT-LONG-DIVISION` key (11) now explicitly denotes the broader whole-number division capability; its name is retained as a planning identifier, not a required method or a runtime rename. Node 12 remains the explicitly bounded decimal-by-whole subset of 5.NBT.B.7; decimal divisors are not thereby covered. Node 13 remains a Grade 5 target (using equivalence for 5.NF.A.1), whereas 34–35 remain bridges. The added node 36 changes the universe; no prerequisite is removed.
+
+SOURCE FACT references for changed nodes: [CCSS-M, printed p.35](https://corestandards.org/wp-content/uploads/2023/09/Math_Standards1.pdf#page=35), 5.OA.A.1–2 and 5.NBT.B.6–7. Representations, node grouping, and priorities are LINA DESIGN RECOMMENDATIONS. This bounded map is not an exhaustive census of every standard; known limits are recorded in [09_OPEN_QUESTIONS.md](09_OPEN_QUESTIONS.md).
 
 ## Family-level observations
 
 - **Fractions (13–21)** are the largest representation-sensitive family: the same fraction-model engine should change whole, partition, and labels without changing pedagogical authority.
-- **Decimal place value and operations (3–12)** share base-ten alignment and number-line behavior; they should not become a separate renderer per operation.
+- **Decimal place value and operations (3–12, 36)** share base-ten alignment and number-line behavior; they should not become a separate renderer per operation.
 - **Volume (25–27)** is standards-critical but spatially distinct; its cube/layer invariant merits its own renderer rather than a generic chart.
 - **Geometry (28–33)** divides cleanly into coordinate-plane and property/classification surfaces. A coordinate plane is reusable beyond Grade 5; a hierarchy/shape explorer is valuable but may follow the first batch.
 

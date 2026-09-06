@@ -1,6 +1,6 @@
 # CURR-RENDER-MATH-01 — Semantic Interaction Patterns
 
-**Boundary:** These are learning-action archetypes, not browser event names. A future Studio Core may record a bounded semantic event after authorization and subject validation. Whether it should trigger Tutor attention is a separate policy decision. It must not infer learning evidence from a click, drag, or completed animation alone.
+**Boundary:** These are learning-action archetypes, not browser event names. The accepted Studio Core records bounded semantic Events through exact Activity/Renderer contracts. Each Activity declares RECORD_ONLY versus Tutor-triggering actions; a planning label cannot override that declaration. It must not infer learning evidence from a click, drag, or completed animation alone.
 
 | Pattern | Purpose and Grade 5 examples | Semantic meaning | Record-only vs Tutor-triggering | Keyboard / touch / accessibility | Validation and recovery |
 |---|---|---|---|---|---|
@@ -31,3 +31,13 @@
 ## Interaction-language boundary
 
 Academic subject is Math. The interaction language can be Arabic, English, or mixed without changing the Math capability. Arabic prose uses `dir=auto`; numerals, coordinates, fraction notation, and expressions retain stable mathematical LTR conventions. Every visual action must be usable by keyboard and touch; dragging is optional enhancement, never the only path.
+
+## Correction-specific operations — proposed, not runtime contract changes
+
+- Decimal addition/subtraction: `exchange_units` conserves an operand's scaled value (one unit equals ten of the next smaller place); `combine` or `remove` changes the working result according to the selected operation. Keep source operands immutable; distinguish equivalent regrouping from moving a digit to change its value. Zero placeholders and different valid exchange sequences are allowed. Submit both result and model state; replay the same exact arithmetic server-side.
+- Expressions: evaluation mode validates grouping and computed value; writing mode assembles an allowlisted operation tree for an authored calculation; interpretation mode selects a bounded structural relationship without requiring calculation. Equal numerical results alone are insufficient for the latter two modes. Free-form Student explanations remain Chat-owned; no unrestricted Canvas text is introduced.
+- Division: group allocation, area partition and quotient-chunk entry are distinct mode operations. Decimal scale changes preserve the ratio by changing both operands together. A bring-down action belongs only to the algorithm mode. First-slice partial-quotient exploration is RECORD_ONLY; its explicit submitted configuration alone requests a Tutor continuation, subject to the eventual exact Activity contract.
+- Measurement conversion: typed source/target units and an entered equivalent value; line plots: observation-ID placement/removal and an explicitly submitted aggregate. Never treat converting a unit as moving a data observation.
+- Make-Ten remains the accepted cross-grade `TRANSFER_ITEM` contract. These planning archetypes do not rename it or any persisted Event.
+
+All first-slice controls are bounded and accessible. Browser feedback is provisional; correctness, exact versions, durable Events/Snapshot and submission identity remain server-owned. There is one Student-facing Tutor and no direct Canvas Evidence, intelligence, or Personal Facts write.
