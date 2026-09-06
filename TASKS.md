@@ -167,14 +167,49 @@ language channel. Detailed fixture, verification, and independent-review
 evidence is retained in `project-state/DAILY_USE_RELEASE_TASKS.md`.
 
 ## STUDIO-ACT-AR-01 — Arabic Sentence Annotation/Ordering
-**Status:** DEFERRED — POST-FE-02 PRODUCT OWNER RE-EVALUATION
-**Retained scope:** a future bounded RTL Arabic academic-subject Activity with
-stable token/span identity and Arabic-specific annotation/ordering semantics.
-It is neither accepted nor cancelled. English proved shared text-oriented and
-mixed-direction Workspace foundations, not Arabic academic semantics. Arabic
-remains in final Studio acceptance unless the Product Owner later implements
-it, approves an explicit alternative proof, or explicitly revises the final
-acceptance matrix.
+**Status:** READY — ONLY READY STUDIO IMPLEMENTATION TASK
+**Historical decision:** the earlier deferral was intentional and ended through
+explicit Product Owner approval after `FE-02-STUDIO-01` acceptance. It is
+preserved as history; Arabic is not implemented or accepted.
+**Purpose:** prove Arabic as an academic subject with one bounded RTL sentence
+annotation/ordering Activity, stable token/span identities, server-owned
+deterministic validation, and accessible direction/focus semantics. This is not
+a grammar engine, curriculum, generic text editor, or multiple Activity family.
+**Required contract:** before completion, record one project-authored or
+rights-safe fixture with provenance, exact learner-visible text and linguistic
+validity; the selected bounded interaction and Section 22.7 rationale; exact
+profile/activity/renderer/Scene/token/span/action/event/payload/validator/
+reducer/fixture/seed versions; duplicate-label and valid-alternative policy;
+and exact activation identity. Keep identities independent of text and answer
+position and the answer key server-owned. Preserve historical Arabic profile
+meanings through exact versioning.
+**Required reuse and boundaries:** use the accepted Subject Capability Registry,
+Studio Event/Snapshot/protocol/feed/rebuild authority, exact activation seam,
+Runtime-03, and the real Student-owned `/student/daily` Chat/Workspace
+composition. Add only the smallest exact-contract Arabic case to the Daily
+Renderer Host; an isolated review mount may supplement but cannot replace it.
+Rearrangement/annotation selection remains contract-defined `RECORD_ONLY`; one
+submitted configuration alone is Tutor-triggering. Preserve original submission
+separately from later current state; no fake Student message, direct Canvas
+Candidate/Evidence/Personal Facts/Intelligence write, Router/feed/client
+reducer/session type/generic drag framework, free-form Canvas language, or
+`ARABIC → LANGUAGE_ARTS` / `LiveSubjectContext` change.
+**Acceptance gate:** prove version/profile preservation, fixture and answer-key
+safety, identity and rejection behavior, truthful wrong attempts, activation,
+idempotency, Event/Scene/Snapshot reload/rebuild, record-only versus one
+Runtime-03 continuation, original-versus-current state, and accepted authority
+regressions. On the real authenticated Daily route, freshly prove Arabic RTL
+academic content/order, keyboard/focus/accessibility/status, pointer and
+evidenced emulated touch, equivalent semantic results, cancellation/retry,
+reconciliation, reload, reduced motion, narrow/mixed direction, and one
+submission with the correct Tutor continuation. Run focused/shared tests, web
+typecheck/build, proportional full suite, and fresh independent final-diff
+review; keep physical-device, emulated-touch, mock-provider, and live-model
+evidence distinct. Existing English/FE-02 evidence is not Arabic evidence.
+**Non-scope:** Voice/STT, Canvas Specialist, generic Artifact/text/editor/drag
+infrastructure, dependency/schema work by default, deployment/Replit, or
+real-Lina execution. All other Studio implementation and deployment tasks,
+including `STUDIO-ACCEPT-01`, remain BLOCKED.
 
 ## FE-02-STUDIO-01 — Connect Real Studio to Daily Student App
 **Status:** DONE / ACCEPTED
@@ -196,9 +231,9 @@ feed/reconciliation, and the retained Runtime-03 boundary. Final evidence is
 cases, not 37 freshly rerun cases. Scope, reusable seams, limits, and evidence
 references are maintained in `project-state/DAILY_USE_RELEASE_TASKS.md`.
 
-**Final acceptance:** `STUDIO-ACCEPT-01` remains BLOCKED pending the later
-Product Owner Arabic-proof re-evaluation. FE-02 acceptance does not waive or
-replace Arabic academic proof.
+**Final acceptance:** `STUDIO-ACCEPT-01` remains BLOCKED pending accepted
+implementation of the READY original bounded Arabic activity. FE-02 acceptance
+does not waive or replace Arabic academic proof.
 
 ---
 
