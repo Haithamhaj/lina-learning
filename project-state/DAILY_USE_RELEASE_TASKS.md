@@ -31,6 +31,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → CURR-RENDER-MATH-01A — DONE / ACCEPTED
 → MATH-RENDER-BATCH-01 — UMBRELLA / NOT ACCEPTED
   → MATH-RENDER-NUMBER-LINE-01 — DONE / ACCEPTED (bounded child only)
+  → MATH-RENDER-PLACE-VALUE-01 — READY (bounded child only; only READY implementation task)
 → STUDIO-ACCEPT-01 — BLOCKED
 → optional STUDIO-SPECIALIST-01 / STUDIO-REUSE-01 — BLOCKED
 → production deployment gate — BLOCKED
@@ -112,10 +113,10 @@ four-family recommendation, and implemented Grade 5 capability coverage of
 0/36; see `research/curr-render-math-01/10_CORRECTION_RECORD.md`.
 
 `MATH-RENDER-BATCH-01` is an unaccepted umbrella, not a release task that
-authorizes all four families. Its only promoted child is
-`MATH-RENDER-NUMBER-LINE-01`, now DONE / ACCEPTED as that one bounded child.
-No other number-line mode, renderer family, coverage count, acceptance gate,
-or deployment work is promoted.
+authorizes all four families. `MATH-RENDER-NUMBER-LINE-01` is DONE / ACCEPTED
+as one bounded child. `MATH-RENDER-PLACE-VALUE-01` is the only separately
+promoted `READY` implementation child. No other number-line mode, renderer
+family, coverage count, acceptance gate, or deployment work is promoted.
 
 ---
 
@@ -160,8 +161,9 @@ remain disclosed in the pack.
 change; no accepted contract or persisted-data rename; no full-system
 acceptance, deployment, Replit, or real-Lina work. The planning prerequisite
 for `MATH-RENDER-BATCH-01` is satisfied. The parent is now an unaccepted
-umbrella with only its separately approved number-line child promoted; all
-remaining renderer scope and `STUDIO-ACCEPT-01` remain BLOCKED / NOT PROMOTED.
+umbrella with its accepted number-line child and separately promoted READY
+place-value child; all remaining renderer scope and `STUDIO-ACCEPT-01` remain
+BLOCKED / NOT PROMOTED.
 
 ---
 
@@ -266,6 +268,87 @@ capabilities, and every other proposed renderer family remain later separate
 decisions. Do not mark `MATH-RENDER-BATCH-01` DONE or `STUDIO-ACCEPT-01` READY.
 No Voice/Vision, image annotation, NotebookLM, Replit, deployment, real-Lina
 history, full-system acceptance, or other task promotion is in scope.
+
+---
+
+## MATH-RENDER-PLACE-VALUE-01 — Decimal Addition and Subtraction
+
+**Status:** READY — the only executable implementation task. This is one
+bounded child of `MATH-RENDER-BATCH-01`; the parent remains **UMBRELLA / NOT
+ACCEPTED**. It does not complete `place_value_workspace`, the renderer batch,
+or the planning pack's implemented-capability count.
+
+**Purpose:** support `G5-NBT-DECIMAL-ADD-SUBTRACT` only: add and subtract
+nonnegative decimals to hundredths using fixed server-owned operands, typed
+place counts, value-preserving exchanges, and a bounded written numeric result.
+Both ADD and SUBTRACT are required; for subtraction, `a >= b`. Support multiple
+authored server-owned configurations within a declared finite domain, not one
+hard-coded example or an unrestricted problem generator.
+
+**Before production code:** document the finite operand/result ranges;
+supported place columns and precision; exact integer-hundredths (or equally
+exact project-native) representation and serialization; immutable original
+operands versus mutable representation/result; exchange, combine, removal, and
+completion rules; intermediate-count limits and valid non-normalized states;
+numeric-result syntax and locale behavior; equivalent decimal equality; and
+configuration provenance, identity, safe seed, and activation linkage. Do not
+inherit the number-line thousandths precision or 0–10 range by default.
+
+**Mathematical contract:** every exchange preserves quantity. Every
+combine/removal operation preserves the authored arithmetic accounting and
+original-operand lineage. Reject over-removal, negative counts, out-of-range
+values, and fabricated quantity; retain bounded feedback for a structurally
+valid academically wrong submission. Permit legitimate pre-regrouping counts
+outside 0–9 where the declared contract allows them. Cover addition regrouping,
+subtraction decomposition including a zero intermediate column, zero operands,
+equal-operand subtraction, carry into an additional supported place, and
+alternative valid exchange sequences.
+
+**Required reuse and boundary:** reuse exact Subject Capability Registry
+versions; server-owned configuration/activation; safe immutable problem
+identity; Studio Event/Snapshot persistence, rebuild, and feed; existing
+`/student/daily` Renderer Host/controller; and Runtime-03 provenance. Preserve
+historical MATH profiles, accepted number-line availability, and Make-Ten Host
+support. Do not parse Tutor prose, choose a browser default problem, or let the
+browser author an answer. Exploration and bounded result editing are
+`RECORD_ONLY`; only explicit contract-defined submission triggers one
+interaction and one Tutor continuation. Preserve original submission separately
+from later workspace state; no fake Student message, direct Canvas Candidate,
+Evidence, Personal Facts, or Intelligence write, second Router/session/feed/
+reducer/Tutor/Canvas Specialist/artifact engine, broad FE-02 refactor,
+dependency, schema, or migration by default.
+
+**Workspace and acceptance requirements:** use React/DOM/SVG/local primitives
+to make columns, operation, quantities/equivalent exchanges, attempted result,
+pending/rejection/recovery, and explicit submission understandable. Aggregate
+counts are allowed only when individual actions stay meaningful, bounded,
+accessible, and verifiable. Mathematical columns remain ordered independently
+of Arabic/English prose. Require pointer and genuinely evidenced emulated touch,
+keyboard/button alternatives, visible focus, cancellation/retry, rejection
+reconciliation, narrow layout, reduced motion, and text/status alternatives.
+
+Backend acceptance must cover ADD/SUBTRACT across multiple configurations;
+conservation and operation invariants; valid regrouping alternatives and
+zero/boundary cases; wrong-but-structurally-valid behavior; malformed/stale/
+cross-Student/state-mismatch rejection without mutation; activation,
+idempotency, reload/rebuild, Event/Scene/Snapshot version consistency,
+Runtime-03 exactly once, original-submission/later-state distinction, and
+shared number-line/Make-Ten regressions. Browser acceptance must be authenticated
+`/student/daily`, correlate input with durable Event/Snapshot/rendered result,
+include wrong-then-correct, explicit Tutor continuation, and same-session reload.
+Before any mutating browser request, preflight the actual API/database target
+and authorized test Student without a no-ID discovery request; do not create
+accounts, alter Parent links, reset shared data, or modify retained demo records.
+Distinguish mock/live provider, prepared/natural activation, and
+emulated/physical input evidence. Require focused and affected tests,
+typecheck/build, proportional full suite, and independent review before
+acceptance. No application or browser test was run for this governance promotion.
+
+**Remaining scope — NOT PROMOTED:** full read/write/number-name or
+exponent/powers-of-ten modes; decimal multiplication/division; every other
+place-value capability; `fraction_model_workspace`, `division_workspace`,
+`STUDIO-ACCEPT-01`, Voice/Vision, image annotation, NotebookLM, Replit,
+deployment, real-Lina use, and research mapping/coverage changes.
 
 ---
 

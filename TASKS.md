@@ -87,9 +87,9 @@ source/rights/coverage questions remain disclosed.
 full-system acceptance, deployment, Replit, or real-Lina work. Existing
 accepted contracts and historical persisted data are not renamed or rewritten.
 The planning-correction prerequisite for `MATH-RENDER-BATCH-01` is satisfied.
-It is now an unaccepted umbrella with only its separately approved
-`MATH-RENDER-NUMBER-LINE-01` child promoted; all remaining renderer scope and
-`STUDIO-ACCEPT-01` remain BLOCKED / NOT PROMOTED.
+It is now an unaccepted umbrella with its accepted `MATH-RENDER-NUMBER-LINE-01`
+child and separately promoted `MATH-RENDER-PLACE-VALUE-01` child; all remaining
+renderer scope and `STUDIO-ACCEPT-01` remain BLOCKED / NOT PROMOTED.
 
 ## MATH-RENDER-NUMBER-LINE-01 — Decimal Comparison and Rounding
 **Status:** DONE / ACCEPTED on 2026-09-07 — bounded child only. See
@@ -127,6 +127,60 @@ and no direct Canvas intelligence writes.
 other number-line modes; every other renderer family; coverage changes;
 `STUDIO-ACCEPT-01`, Voice/Vision, image annotation, NotebookLM, Replit,
 deployment, real-Lina history, and all other task promotion.
+
+## MATH-RENDER-PLACE-VALUE-01 — Decimal Addition and Subtraction
+**Status:** READY — the only executable implementation task.
+**Parent:** `MATH-RENDER-BATCH-01` remains **UMBRELLA / NOT ACCEPTED**. This
+bounded child does not complete the `place_value_workspace` family, the batch,
+or the research coverage calculation.
+**Purpose:** `G5-NBT-DECIMAL-ADD-SUBTRACT` only: add and subtract nonnegative
+decimals to hundredths with fixed server-owned operands, typed place counts,
+value-preserving exchanges, a bounded written result, and explicit submission.
+Both operations and multiple authored configurations are required; subtraction
+requires `a >= b`. This is neither a single hard-coded example nor an arbitrary
+problem generator.
+**Pre-code mathematical state:** document finite operand/result ranges, columns
+and precision, exact integer-hundredths or equally exact representation and
+serialization, immutable original operands versus mutable model/result,
+exchange/combine/removal/completion rules, valid non-normalized count bounds,
+numeric input syntax/locale, equivalent-decimal equality, and configuration
+provenance/identity/activation linkage. Number-line thousandths and its 0–10
+range do not transfer by default. Exchanges must conserve quantity; operations
+must preserve authored accounting and original lineage. Reject negative,
+over-removed, out-of-range, or fabricated quantities without mutation while
+retaining bounded feedback for structurally valid wrong work. Cover addition
+regrouping, subtraction decomposition through zero, zero/equal operands, carry
+into an additional supported place, and alternative valid exchange sequences.
+**Reuse and boundaries:** reuse exact Subject Capability versions, server-owned
+configuration/activation, immutable safe Scene identity, Studio Event/Snapshot/
+rebuild/feed, existing `/student/daily` Renderer Host/controller, and Runtime-03.
+Preserve historical MATH profiles, number-line, and Make-Ten Host support. The
+browser must not author a problem/answer or parse Tutor prose. Exploration and
+result edits are RECORD_ONLY; only declared explicit submission yields one
+source-linked interaction/Tutor continuation. Preserve original submission
+versus later Snapshot; no fake Student message or direct Canvas intelligence
+write. No extra Router, session kind, feed, browser durable reducer, Tutor,
+Canvas Specialist, artifact engine, broad FE-02 refactor, dependency, schema,
+or migration by default.
+**Acceptance:** React/DOM/SVG/local primitives; readable columns/operation/
+equivalent exchanges/attempted result; explicit submit and recovery. Require
+pointer, evidenced emulated touch, keyboard/buttons, focus, cancellation/retry,
+reconciliation, narrow/reduced-motion/text alternatives, with mathematical
+ordering independent of surrounding RTL prose. Verify both operations across
+multiple configurations; invariants, boundary/zero/regrouping alternatives,
+wrong-valid behavior, rejection-without-mutation, activation/idempotency/
+reload/rebuild/version/feed consistency, exactly one Runtime-03 submission,
+and affected number-line/Make-Ten behavior. Authenticated `/student/daily`
+acceptance must correlate input, durable Event/Snapshot, rendered result,
+wrong-then-correct, Tutor continuation, and reload. Preflight target/database
+and authorized Student before any mutating browser request; never use no-ID
+discovery or create/alter accounts/data. Require focused/affected tests,
+typecheck/build, proportional full suite, and independent review. This
+governance promotion ran no application or browser tests.
+**Non-scope:** full read/write/number-name/exponent modes, decimal
+multiplication/division, other place-value capabilities, fraction/division
+families, `STUDIO-ACCEPT-01`, Voice/Vision, image annotation, NotebookLM,
+Replit, deployment, real-Lina use, and research mapping/coverage changes.
 
 ## STUDIO-RUNTIME-01 — Tutor Studio Context and Watermark
 **Status:** DONE / ACCEPTED

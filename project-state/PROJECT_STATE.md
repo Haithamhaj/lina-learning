@@ -26,6 +26,7 @@ FE-02-STUDIO-01 Real Studio + Daily App DONE / ACCEPTED
 STUDIO-ACT-AR-01 Arabic Academic Activity DONE / ACCEPTED
 CURR-RENDER-MATH-01A            DONE / ACCEPTED
 MATH-RENDER-NUMBER-LINE-01      DONE / ACCEPTED
+MATH-RENDER-PLACE-VALUE-01      READY
 STUDIO-ACCEPT-01                BLOCKED
 ```
 
@@ -125,13 +126,22 @@ an independent review with 0 Critical / 0 Important / 0 new Minor findings.
 The corrected planning basis has 11 proposed families, 9 Core and the same
 four-family initial recommendation; actual implemented Grade 5 capability
 coverage remains 0/36. `MATH-RENDER-BATCH-01` is an unaccepted umbrella, not
-a blanket authorization: its only promoted child is
-`MATH-RENDER-NUMBER-LINE-01`, now **DONE / ACCEPTED** for its bounded decimal
-comparison and rounding slice; its sanitized closure record is
+a blanket authorization. `MATH-RENDER-NUMBER-LINE-01` is **DONE / ACCEPTED**
+for its bounded decimal comparison and rounding slice; its sanitized closure record is
 `docs/MATH_RENDER_NUMBER_LINE_01_ACCEPTANCE_CLOSURE.md`. Powers-of-ten,
 estimation, fraction modes, and every other number-line or batch family
 capability remain NOT PROMOTED. This acceptance does not change the research
-coverage calculation or accept the umbrella.
+coverage calculation or accept the umbrella. The only `READY` implementation
+task is `MATH-RENDER-PLACE-VALUE-01`, a separately promoted bounded
+`place_value_workspace` child for `G5-NBT-DECIMAL-ADD-SUBTRACT`: add and
+subtract nonnegative decimals to hundredths with fixed server-owned operands,
+typed place counts, value-preserving exchanges, a bounded written result, and
+explicit submission. Its eventual implementation must support both operations
+across multiple authored configurations; subtraction requires `a >= b`.
+It must retain original operands and attempted model, reuse the accepted
+Studio/Host/Runtime-03 seams, and keep exploration/result editing `RECORD_ONLY`
+until explicit submission. The task remains governance-promoted only; no
+implementation or acceptance evidence is claimed here.
 `STUDIO-ACCEPT-01` is also BLOCKED / NOT PROMOTED. Real Lina longitudinal
 history has not started.
 
@@ -447,10 +457,13 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
-Do not infer a next implementation task from this child acceptance. The
+Execute only `MATH-RENDER-PLACE-VALUE-01`. Before production code, document
+its finite hundredths domain, exact integer representation/serialization,
+columns, result syntax/locale, mutable model versus immutable operands,
+exchange/combine/removal/completion rules, valid non-normalized count bounds,
+equivalent-form equality, and configuration/activation provenance. The
 umbrella's remaining families/modes, `STUDIO-ACCEPT-01`, Replit, deployment,
-real-Lina, and all other later Studio work remain unpromoted. Any next action
-requires separate Product Owner promotion.
+real-Lina, and all other later Studio work remain unpromoted.
 
 ---
 
