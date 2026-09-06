@@ -4,7 +4,7 @@
 **Approved:** 2026-09-02
 **Purpose:** Convert the approved Learning Studio architecture decisions and the Grade 5 Math renderer research into a production-intent, dependency-ordered implementation plan.
 **Scope:** Studio Core, bidirectional Tutor/Workspace orchestration, durable Studio state, subject capabilities, initial production activities, FE-02 integration, verification, and the bounded path to an optional Canvas Specialist.
-**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`, `FE-02-STUDIO-01`, `STUDIO-ACT-AR-01`, and `CURR-RENDER-MATH-01A` are `DONE / ACCEPTED`. `MATH-RENDER-NUMBER-LINE-01` is the only `READY` implementation task; `MATH-RENDER-BATCH-01` is its unaccepted umbrella, and every remaining later Studio task, including `STUDIO-ACCEPT-01`, remains BLOCKED / NOT PROMOTED.
+**Current readiness:** `STUDIO-GOV-01`, `FE-02-PRESERVE-01`, `STUDIO-STATE-01`, `STUDIO-SUBJECT-01`, `STUDIO-PROTOCOL-01`, `STUDIO-RUNTIME-01`, `STUDIO-RUNTIME-02`, `STUDIO-RUNTIME-03`, `STUDIO-ACT-MATH-01`, `STUDIO-ACT-SCI-01`, `STUDIO-ACT-EN-01`, `FE-02-STUDIO-01`, `STUDIO-ACT-AR-01`, `CURR-RENDER-MATH-01A`, and the bounded child `MATH-RENDER-NUMBER-LINE-01` are `DONE / ACCEPTED`. `MATH-RENDER-BATCH-01` remains its unaccepted umbrella, and every remaining later Studio task, including `STUDIO-ACCEPT-01`, remains BLOCKED / NOT PROMOTED.
 **Authorization boundary:** This plan authorizes dependency-ordered task promotion. It does not authorize a single bulk implementation run, uncontrolled schema/runtime changes, dependency installation, FE-02 acceptance, Canvas Specialist production calls, or production deployment. Each named implementation task remains independently reviewable and must preserve its stated gate.
 
 ---
@@ -1047,7 +1047,7 @@ Approval of this plan authorizes these as the default implementation recommendat
 
 #### 14.4.1 First promoted child — `MATH-RENDER-NUMBER-LINE-01`
 
-**Status:** READY — the only implementation task. The Product Owner promoted
+**Status:** DONE / ACCEPTED on 2026-09-07 — bounded child only. The Product Owner promoted
 only this child of the unaccepted `MATH-RENDER-BATCH-01` umbrella. It delivers
 bounded `number_line` support for comparing two nonnegative decimals to
 thousandths and rounding to an authored place (`G5-NBT-DECIMAL-COMPARE`,
@@ -1080,7 +1080,14 @@ extra model call, Router, generic artifact engine, browser durable reducer,
 session kind, Canvas Specialist, second Tutor, FE-02 refactor, dependency,
 schema, or migration by default.
 
-Acceptance later requires varied exact-domain backend cases and authenticated
+Accepted implementation and verification are recorded in
+`docs/MATH_RENDER_NUMBER_LINE_01_ACCEPTANCE_CLOSURE.md`. The accepted child
+uses exact thousandth integer arithmetic from 0 through 10, comparison and
+rounding to ones/tenths/hundredths with explicit nonnegative half-up, an
+eleven-configuration server-authored catalogue, and exact source binding.
+This does not change the umbrella, research coverage, or later task readiness.
+
+Acceptance required varied exact-domain backend cases and authenticated
 `/student/daily` pointer, evidenced browser-emulated touch and keyboard/button
 flows; correction/reconciliation/reload; accessibility, Arabic/English,
 narrow-layout and reduced-motion evidence; focused/affected regressions, web
@@ -1981,7 +1988,7 @@ accepted. The durable Studio state foundation is implemented at Alembic head
 `FE-02-STUDIO-01`, and `STUDIO-ACT-AR-01` are DONE / ACCEPTED. Arabic remains
 a recorded Section 22.7 prerequisite, now satisfied. `CURR-RENDER-MATH-01A`
 is DONE / ACCEPTED as a planning correction only.
-`MATH-RENDER-NUMBER-LINE-01` is the only READY implementation task.
+`MATH-RENDER-NUMBER-LINE-01` is DONE / ACCEPTED as one bounded child.
 `MATH-RENDER-BATCH-01` is an unaccepted umbrella; `STUDIO-ACCEPT-01` and every
 other later Studio task remain BLOCKED / NOT PROMOTED; full-system acceptance
 is not promoted.
@@ -2031,7 +2038,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-ACT-AR-01 — DONE / ACCEPTED
 → CURR-RENDER-MATH-01A — DONE / ACCEPTED
 → MATH-RENDER-BATCH-01 — UMBRELLA / NOT ACCEPTED
-  → MATH-RENDER-NUMBER-LINE-01 — READY (only implementation task)
+  → MATH-RENDER-NUMBER-LINE-01 — DONE / ACCEPTED (bounded child only)
 → STUDIO-ACCEPT-01 — BLOCKED
 ```
 

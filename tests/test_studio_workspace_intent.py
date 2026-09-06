@@ -96,5 +96,7 @@ def test_production_workspace_capability_context_is_honest_and_compact() -> None
     ).as_model_payload()
 
     assert value["known_workspace_capabilities_available"] is True
-    assert value["authorized_source_references"] == ["retrieval-1"]
+    assert value["authorized_source_references"][0] == "retrieval-1"
+    assert set(value["authorized_source_references"][1:]) == {p['source_ref'] for p in value['authored_problem_sources']}
+    assert len(value['authored_problem_sources']) == 11
     assert "renderers" not in value

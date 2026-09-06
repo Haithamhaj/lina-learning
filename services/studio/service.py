@@ -330,14 +330,17 @@ class StudioStateService:
         )
         return AppendStudioEventResult(event, snapshot, scene, interaction, replayed=False)
 
-    def rebuild_snapshot(self, *, runtime_id: UUID, student_id: UUID) -> SnapshotProjection:
+    def rebuild_snapshot(self, *, runtime_id: UUID, student_id: UUID, through_sequence: int | None = None) -> SnapshotProjection:
         """Replay accepted history from sequence zero without touching the stored projection."""
 
         runtime = self._runtime(runtime_id, student_id)
+        if through_sequence is not None and (type(through_sequence) is not int or not 0 <= through_sequence <= runtime.latest_event_sequence):
+            raise StudioStateError('Replay boundary must be an existing runtime sequence.')
         projection = empty_snapshot()
         events = self.session.execute(
             select(StudioEvent)
             .where(StudioEvent.studio_runtime_id == runtime.id, StudioEvent.student_id == student_id)
+            .where(StudioEvent.sequence <= (runtime.latest_event_sequence if through_sequence is None else through_sequence))
             .order_by(StudioEvent.sequence)
         ).scalars()
         for event in events:

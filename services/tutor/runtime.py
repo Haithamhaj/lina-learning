@@ -243,6 +243,7 @@ def build_tutor_model_payload(
     latest_segment_state: StructuredSegmentState | None = None,
     effective_parent_boundaries: dict[str, str] | None = None,
     studio_context: StudioTutorWorkspaceContext | None = None,
+    workspace_subject_key: str | None = None,
 ) -> dict[str, object]:
     """Build bounded model input from the project-owned Tutor context only."""
 
@@ -337,6 +338,7 @@ def build_tutor_model_payload(
     )
     workspace_capability_context = build_workspace_capability_context(
         studio_context,
+        current_subject_key=workspace_subject_key,
         authorized_source_references=tuple(
             str(source["ref"]) for source in (sources or []) if isinstance(source, dict) and isinstance(source.get("ref"), str)
         ),
@@ -346,6 +348,9 @@ def build_tutor_model_payload(
         f"{json.dumps(studio_context.as_model_payload(), ensure_ascii=False)}\n"
         "Workspace Capability Context (compact server-owned availability, not an implementation menu):\n"
         f"{json.dumps(workspace_capability_context.as_model_payload(), ensure_ascii=False)}\n"
+        "authored_problem_sources are a finite prepared catalogue, not retrieval citations or a problem generator. "
+        "For a matching decimal comparison/rounding exercise, select exactly its source_ref in source_references and its activity_hint. "
+        "Do not change operands, invent a reference, use an approximate match, or select a default when none matches; keep teaching in Chat instead. "
         "Respond naturally to current Workspace behavior when useful. Do not mention internal event, storage, or observation terminology. "
         "Studio validation is not Learning Evidence or mastery. You must not mutate Studio state. If Workspace support would help, use only the strict workspace_intent field to express educational need; Studio selects any capability deterministically."
         if studio_context is not None
@@ -972,7 +977,11 @@ class TutorRuntime:
                         renderer_version=scene.renderer_version, source_references=scene.source_references,
                     )
                 ),
-                authorized_source_references=context.debug.retrieval_source_refs,
+                authorized_source_references=build_workspace_capability_context(
+                    context.studio_workspace,
+                    current_subject_key=context.subject,
+                    authorized_source_references=context.debug.retrieval_source_refs,
+                ).authorized_source_references,
                 registry=production_subject_registry(),
                 current_profile_versions=PRODUCTION_CURRENT_PROFILE_VERSIONS,
             ),
@@ -1330,6 +1339,7 @@ def _payload_from_context(
         latest_segment_state=latest_segment_state,
         effective_parent_boundaries=effective_parent_boundaries,
         studio_context=context.studio_workspace,
+        workspace_subject_key=context.subject,
     )
 
 

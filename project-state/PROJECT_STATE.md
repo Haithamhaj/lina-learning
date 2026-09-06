@@ -25,7 +25,7 @@ STUDIO-ACT-EN-01 English Sentence Ordering DONE / ACCEPTED
 FE-02-STUDIO-01 Real Studio + Daily App DONE / ACCEPTED
 STUDIO-ACT-AR-01 Arabic Academic Activity DONE / ACCEPTED
 CURR-RENDER-MATH-01A            DONE / ACCEPTED
-MATH-RENDER-NUMBER-LINE-01      READY (only implementation task)
+MATH-RENDER-NUMBER-LINE-01      DONE / ACCEPTED
 STUDIO-ACCEPT-01                BLOCKED
 ```
 
@@ -126,10 +126,12 @@ The corrected planning basis has 11 proposed families, 9 Core and the same
 four-family initial recommendation; actual implemented Grade 5 capability
 coverage remains 0/36. `MATH-RENDER-BATCH-01` is an unaccepted umbrella, not
 a blanket authorization: its only promoted child is
-`MATH-RENDER-NUMBER-LINE-01`, now **READY** for bounded decimal comparison and
-rounding. Powers-of-ten, estimation, fraction modes, and every other
-number-line or batch family capability remain NOT PROMOTED. No implemented
-coverage changes until later implementation acceptance supports one.
+`MATH-RENDER-NUMBER-LINE-01`, now **DONE / ACCEPTED** for its bounded decimal
+comparison and rounding slice; its sanitized closure record is
+`docs/MATH_RENDER_NUMBER_LINE_01_ACCEPTANCE_CLOSURE.md`. Powers-of-ten,
+estimation, fraction modes, and every other number-line or batch family
+capability remain NOT PROMOTED. This acceptance does not change the research
+coverage calculation or accept the umbrella.
 `STUDIO-ACCEPT-01` is also BLOCKED / NOT PROMOTED. Real Lina longitudinal
 history has not started.
 
@@ -445,11 +447,10 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
-Execute `MATH-RENDER-NUMBER-LINE-01` only: resolve its exact contract/version,
-bounded decimal domain and rounding policy before code, then implement and
-independently accept that one production `/student/daily` slice. The umbrella's
-remaining families/modes, `STUDIO-ACCEPT-01`, Replit, deployment, real-Lina,
-and all other later Studio work remain unpromoted.
+Do not infer a next implementation task from this child acceptance. The
+umbrella's remaining families/modes, `STUDIO-ACCEPT-01`, Replit, deployment,
+real-Lina, and all other later Studio work remain unpromoted. Any next action
+requires separate Product Owner promotion.
 
 ---
 

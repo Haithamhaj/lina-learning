@@ -286,7 +286,11 @@ def _selected_scene_capability(
         renderer_key=scene.renderer_key,
         renderer_version=scene.renderer_version,
         allowed_action_keys=action_keys,
-        source_references=tuple(scene.source_asset_refs),
+        source_references=(
+            (scene.seed_payload['source_ref'],)
+            if scene.activity_key == 'decimal_number_line' and isinstance(scene.seed_payload.get('source_ref'), str)
+            else tuple(scene.source_asset_refs)
+        ),
         source_message_id=scene.source_message_id,
         capability_status=status,
     )

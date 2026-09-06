@@ -26,6 +26,7 @@ from services.studio.subjects.math_make_ten import (
 
 
 logger = logging.getLogger(__name__)
+SUPPORTED_MATH_PROFILES = (MATH_PROFILE_VERSION, 'subject-profile-v3')
 
 
 def activate_make_ten_from_workspace_decision(
@@ -46,6 +47,7 @@ def activate_make_ten_from_workspace_decision(
 
     if not _is_exact_make_ten_open(workspace_audit):
         return None
+    profile_version = workspace_audit['decision']['selected_profile_version']
     if (
         source_tutor_message.role != "tutor"
         or source_tutor_message.session_id != learning_session.id
@@ -76,7 +78,7 @@ def activate_make_ten_from_workspace_decision(
                 StudioScene.source_message_id == source_tutor_message.id,
                 StudioScene.source_segment_id == source_segment_id,
                 StudioScene.subject_key == "MATH",
-                StudioScene.subject_profile_version == MATH_PROFILE_VERSION,
+                StudioScene.subject_profile_version == profile_version,
                 StudioScene.activity_key == ACTIVITY_KEY,
                 StudioScene.activity_contract_version == ACTIVITY_VERSION,
                 StudioScene.renderer_key == RENDERER_KEY,
@@ -90,7 +92,7 @@ def activate_make_ten_from_workspace_decision(
                 student_id=learning_session.student_id,
                 learning_session_id=learning_session.id,
                 subject_key="MATH",
-                subject_profile_version=MATH_PROFILE_VERSION,
+                subject_profile_version=profile_version,
                 concept_keys=("make-ten",),
                 activity_key=ACTIVITY_KEY,
                 artifact_type="interactive-activity",
@@ -147,7 +149,7 @@ def _is_exact_make_ten_open(workspace_audit: Mapping[str, object] | None) -> boo
         and decision.get("mode") == "KNOWN_INTERACTIVE"
         and decision.get("reason_code") == "EXACT_KNOWN_CAPABILITY"
         and decision.get("selected_subject_key") == "MATH"
-        and decision.get("selected_profile_version") == MATH_PROFILE_VERSION
+        and decision.get("selected_profile_version") in SUPPORTED_MATH_PROFILES
         and decision.get("selected_activity_key") == ACTIVITY_KEY
         and decision.get("selected_activity_version") == ACTIVITY_VERSION
         and decision.get("selected_renderer_key") == RENDERER_KEY
@@ -158,7 +160,7 @@ def _is_exact_make_ten_open(workspace_audit: Mapping[str, object] | None) -> boo
 def _is_make_ten_scene(scene: StudioScene) -> bool:
     return (
         scene.subject_key == "MATH"
-        and scene.subject_profile_version == MATH_PROFILE_VERSION
+        and scene.subject_profile_version in SUPPORTED_MATH_PROFILES
         and scene.activity_key == ACTIVITY_KEY
         and scene.activity_contract_version == ACTIVITY_VERSION
         and scene.renderer_key == RENDERER_KEY

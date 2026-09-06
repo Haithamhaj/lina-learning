@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -708,11 +709,17 @@ class StudioInteractionTutorService:
         ).scalar_one_or_none()
         if snapshot is None or snapshot.latest_event_sequence != runtime.latest_event_sequence:
             raise StudioInteractionSourceError("Studio interaction runtime Snapshot is inconsistent.")
+        # A later RECORD_ONLY edit must not become the source submission's state.
+        # Replay uses the same exact historical reducers, without mutating Snapshot.
+        from services.studio.service import StudioStateService
+        submitted_projection = StudioStateService(admission_session, subject_registry=self._subject_registry).rebuild_snapshot(
+            runtime_id=runtime.id, student_id=runtime.student_id, through_sequence=event.sequence - 1,
+        )
         action_payload, validation = self._resolve_source_contract(
             event=event,
             scene=scene,
             interaction=interaction,
-            activity_state=dict(snapshot.state_payload),
+            activity_state=dict(submitted_projection['state_payload']),
         )
         return StudioInteractionTutorContext(
             interaction_id=interaction.id,

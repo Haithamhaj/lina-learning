@@ -4,6 +4,8 @@ import { ProcessSequenceWorkspace } from "@/components/studio/process-sequence-w
 import { ArabicSentenceOrderingWorkspace } from "@/components/studio/arabic-sentence-ordering-workspace";
 import { SentenceOrderingWorkspace } from "@/components/studio/sentence-ordering-workspace";
 import { TenFrameGroupTransfer } from "@/components/studio/ten-frame-group-transfer";
+import { DecimalNumberLineWorkspace } from "@/components/studio/decimal-number-line-workspace";
+import { readDecimalLineState } from "@/lib/studio/decimal-number-line";
 import type { StudioOperation, StudioSnapshotFrame } from "@/lib/studio/contracts";
 import { readMakeTenState } from "@/lib/studio/make-ten";
 import { readArabicSentenceOrderingState } from "@/lib/studio/arabic-sentence-ordering";
@@ -42,6 +44,10 @@ export function StudioRendererHost({ snapshot, operationPending, onOperation, on
     await onOperation(operation);
   };
   const state = activeSceneRendererState(snapshot);
+
+  if (renderer === "MATH_DECIMAL_NUMBER_LINE") {
+    return <DecimalNumberLineWorkspace sceneId={scene.scene_id} sceneVersion={scene.scene_version} state={readDecimalLineState(state)} locale={scene.locale} onOperation={onApprovedOperation} onReload={onReload} />;
+  }
 
   if (renderer === "MATH_MAKE_TEN") {
     return <TenFrameGroupTransfer sceneId={scene.scene_id} sceneVersion={scene.scene_version} state={readMakeTenState(state)} locale={scene.locale} direction={scene.direction} onOperation={onApprovedOperation} />;

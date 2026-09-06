@@ -30,7 +30,7 @@ STUDIO-GOV-01 — DONE / ACCEPTED
 → STUDIO-ACT-AR-01 — DONE / ACCEPTED
 → CURR-RENDER-MATH-01A — DONE / ACCEPTED
 → MATH-RENDER-BATCH-01 — UMBRELLA / NOT ACCEPTED
-  → MATH-RENDER-NUMBER-LINE-01 — READY (only implementation task)
+  → MATH-RENDER-NUMBER-LINE-01 — DONE / ACCEPTED (bounded child only)
 → STUDIO-ACCEPT-01 — BLOCKED
 → optional STUDIO-SPECIALIST-01 / STUDIO-REUSE-01 — BLOCKED
 → production deployment gate — BLOCKED
@@ -113,7 +113,7 @@ four-family recommendation, and implemented Grade 5 capability coverage of
 
 `MATH-RENDER-BATCH-01` is an unaccepted umbrella, not a release task that
 authorizes all four families. Its only promoted child is
-`MATH-RENDER-NUMBER-LINE-01`, which is the sole `READY` implementation task.
+`MATH-RENDER-NUMBER-LINE-01`, now DONE / ACCEPTED as that one bounded child.
 No other number-line mode, renderer family, coverage count, acceptance gate,
 or deployment work is promoted.
 
@@ -167,7 +167,7 @@ remaining renderer scope and `STUDIO-ACCEPT-01` remain BLOCKED / NOT PROMOTED.
 
 ## MATH-RENDER-NUMBER-LINE-01 — Decimal Comparison and Rounding
 
-**Status:** READY — the only implementation task.
+**Status:** DONE / ACCEPTED on 2026-09-07 — bounded child only.
 
 **Parent/status boundary:** This is the first scoped child of
 `MATH-RENDER-BATCH-01`. The parent is **UMBRELLA / NOT ACCEPTED**, with no
@@ -227,7 +227,21 @@ wrong submitted attempt. Preserve equivalent decimal values without inventing
 different values. The accepted server-owned configuration/fixture path must be
 resolved before implementation; it must not become an answer-key leak.
 
-**Required future verification:** focused backend coverage must vary comparison
+**Accepted verification:** exact arithmetic/configuration, activation,
+PostgreSQL persistence/rebuild, Runtime-03, Host/reader/interaction/controller,
+and shared Make-Ten regressions were completed. Closure results were six new
+preflight tests passing, 40 web tests passing, web typecheck/build passing, and
+whitespace passing. The already completed full isolated Python suite remains
+applicable because backend/runtime code did not change during closure: 984
+passed, 7 skipped; it was not rerun. Authenticated Daily evidence covers the
+four prepared configurations/seven continuations in the intended environment,
+including pointer, trusted browser-emulated touch, keyboard/button,
+cancellation/retry, stale rejection/reconciliation, correction, reload,
+Arabic/English, narrow layout, focus, and reduced motion. The independent
+addendum found 0 Critical / 0 Important. The sanitized disposition and limits
+are recorded in `docs/MATH_RENDER_NUMBER_LINE_01_ACCEPTANCE_CLOSURE.md`.
+
+**Verification boundary retained:** focused backend coverage must vary comparison
 and rounding configurations across the declared domain, including equality,
 boundaries, midpoint/tie cases, exact validation, academically wrong valid
 attempts, malformed/stale/cross-Student/state-mismatch rejection,

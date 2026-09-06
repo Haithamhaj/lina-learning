@@ -124,12 +124,12 @@ def _make_ten_scene_command(
     )
 
 
-def _make_ten_workspace_audit() -> dict[str, object]:
+def _make_ten_workspace_audit(profile_version: str | None = None) -> dict[str, object]:
     decision = route_workspace_intent(
         _intent(),
         WorkspaceAuthorityContext(
             registry=production_subject_registry(),
-            current_profile_versions=PRODUCTION_CURRENT_PROFILE_VERSIONS,
+            current_profile_versions=PRODUCTION_CURRENT_PROFILE_VERSIONS if profile_version is None else {'MATH': profile_version},
         ),
     )
     return {
@@ -500,7 +500,8 @@ def test_make_ten_is_the_current_exact_math_capability_without_rewriting_math_v1
     )
 
     registry = production_subject_registry()
-    assert PRODUCTION_CURRENT_PROFILE_VERSIONS["MATH"] == MATH_PROFILE_VERSION
+    assert PRODUCTION_CURRENT_PROFILE_VERSIONS["MATH"] == 'subject-profile-v3'
+    assert registry.resolve_activity('MATH', 'subject-profile-v3', ACTIVITY_KEY, ACTIVITY_VERSION) == registry.resolve_activity('MATH', MATH_PROFILE_VERSION, ACTIVITY_KEY, ACTIVITY_VERSION)
     assert registry.activities_for_profile("MATH", "subject-profile-v1") == ()
     activity = registry.resolve_activity("MATH", MATH_PROFILE_VERSION, ACTIVITY_KEY, ACTIVITY_VERSION)
     renderer = registry.resolve_renderer("MATH", MATH_PROFILE_VERSION, RENDERER_KEY, RENDERER_VERSION)
@@ -903,7 +904,7 @@ def test_make_ten_activation_selects_the_one_exact_accepted_scene_among_multiple
             learning_session=learning_session,
             source_tutor_message=source_message,
             source_segment_id=source_segment.id,
-            workspace_audit=_make_ten_workspace_audit(),
+            workspace_audit=_make_ten_workspace_audit('subject-profile-v2'),
         )
 
         assert activated is not None and activated.id == exact.id

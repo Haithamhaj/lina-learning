@@ -11,10 +11,11 @@ from services.studio.subjects.math_make_ten import MATH_PROFILE_VERSION, make_te
 from services.studio.subjects.process_sequence import SCIENCE_PROFILE_VERSION, make_process_sequence_profile
 from services.studio.subjects.sentence_ordering import ENGLISH_PROFILE_VERSION, make_sentence_ordering_profile
 from services.studio.subjects.registry import SubjectCapabilityRegistry
+from services.studio.subjects.decimal_number_line import PROFILE_VERSION, make_profile
 
 
 PRODUCTION_CURRENT_PROFILE_VERSIONS = MappingProxyType({
-    "MATH": MATH_PROFILE_VERSION,
+    "MATH": PROFILE_VERSION,
     "SCIENCE": SCIENCE_PROFILE_VERSION,
     "ENGLISH": ENGLISH_PROFILE_VERSION,
     "ARABIC": ARABIC_PROFILE_VERSION,
@@ -40,7 +41,7 @@ def production_subject_registry() -> SubjectCapabilityRegistry:
         for subject_key in ("MATH", "SCIENCE", "ENGLISH", "ARABIC")
     )
     return SubjectCapabilityRegistry(
-        (*baseline_profiles, make_ten_profile(), make_process_sequence_profile(), make_sentence_ordering_profile(), make_arabic_sentence_ordering_profile())
+        (*baseline_profiles, make_ten_profile(), make_profile(), make_process_sequence_profile(), make_sentence_ordering_profile(), make_arabic_sentence_ordering_profile())
     )
 
 

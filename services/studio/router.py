@@ -115,6 +115,21 @@ def _route_workspace_intent(intent: WorkspaceIntent, context: WorkspaceAuthority
             if active_scene_id is not None
             else _no_change("NO_ACTIVE_SCENE")
         )
+    from services.studio.subjects.decimal_number_line import ACTIVITY_KEY as DECIMAL_ACTIVITY, problem_for
+    decimal_source = None
+    if any(ref.startswith('decimal-line:') for ref in intent.source_references) and (
+        intent.activity_hint != DECIMAL_ACTIVITY or intent.action.value != 'OPEN_ACTIVITY' or intent.representation_need.value != 'INTERACTIVE'
+    ):
+        return _fallback('AUTHORED_PROBLEM_IS_NOT_AN_ASSET')
+    if intent.activity_hint == DECIMAL_ACTIVITY:
+        if intent.subject_key != 'MATH' or len(intent.source_references) != 1:
+            return _fallback('EXACT_AUTHORED_PROBLEM_REQUIRED')
+        try:
+            decimal_source = problem_for(intent.source_references[0]).source_ref
+        except ValueError:
+            return _fallback('UNSUPPORTED_AUTHORED_PROBLEM')
+        if not _references_are_authorized(intent, context):
+            return _fallback('UNAUTHORIZED_SOURCE_REFERENCE')
     if _active_scene_is_suitable(intent, context):
         return _preserve(active_scene_id)
     if not _references_are_authorized(intent, context):
@@ -136,7 +151,7 @@ def _route_workspace_intent(intent: WorkspaceIntent, context: WorkspaceAuthority
         activity, renderer = candidate
         return _routed(
             WorkspaceExecutionMode.KNOWN_INTERACTIVE if renderer.interactive else WorkspaceExecutionMode.KNOWN_VISUAL,
-            "EXACT_KNOWN_CAPABILITY", None, profile=profile, activity=activity, renderer=renderer,
+            "EXACT_KNOWN_CAPABILITY", decimal_source, profile=profile, activity=activity, renderer=renderer,
         )
     if intent.action.value == "REQUEST_CUSTOM_COMPOSE" or intent.representation_need.value == "CUSTOM_COMPOSITION":
         if profile.canvas_specialist_profile_key is not None:
@@ -174,6 +189,8 @@ def _current_profile(intent: WorkspaceIntent, context: WorkspaceAuthorityContext
 def _active_scene_is_suitable(intent: WorkspaceIntent, context: WorkspaceAuthorityContext) -> bool:
     scene = context.active_scene
     if scene is None or context.registry is None:
+        return False
+    if scene.activity_key == 'decimal_number_line' and tuple(intent.source_references) != scene.source_references:
         return False
     if intent.subject_key is not None and intent.subject_key != scene.subject_key:
         return False

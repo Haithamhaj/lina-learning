@@ -92,7 +92,9 @@ It is now an unaccepted umbrella with only its separately approved
 `STUDIO-ACCEPT-01` remain BLOCKED / NOT PROMOTED.
 
 ## MATH-RENDER-NUMBER-LINE-01 — Decimal Comparison and Rounding
-**Status:** READY — the only implementation task in the current Studio overlay.
+**Status:** DONE / ACCEPTED on 2026-09-07 — bounded child only. See
+`docs/MATH_RENDER_NUMBER_LINE_01_ACCEPTANCE_CLOSURE.md` for the sanitized
+accepted contract, evidence disposition, and retained limitations.
 **Parent:** `MATH-RENDER-BATCH-01` is an unaccepted umbrella; this promotion
 does not authorize the whole batch or complete the `number_line` family.
 **Purpose:** production `number_line` support for comparing two nonnegative
