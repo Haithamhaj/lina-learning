@@ -19,9 +19,10 @@ This is the small navigation and delivery index for Product Owner review, not a 
 | CANVAS-SPECIALIST-EXECUTION | [Execution contract](../CANVAS_SPECIALIST_EXECUTION_CONTRACT.md) | ACCEPTED | 2026-09-07 | Governs Tutor↔Specialist↔Application authority, Semantic Alignment, Visual Learner Context, one-call policy, Toolbelt boundaries and first Process slice. |
 | CANVAS-SPECIALIST-PLAN | [Implementation plan](../CANVAS_SPECIALIST_IMPLEMENTATION_PLAN.md) | APPROVED EXECUTION PLAN | 2026-09-07 | CS-01→CS-07 sequencing; only CS-01 is READY. |
 | CANVAS-SPECIALIST-ACCEPTANCE | [Acceptance & verification spec](../CANVAS_SPECIALIST_ACCEPTANCE_SPEC.md) | GOVERNING VERIFICATION SPEC | 2026-09-07 | Quality→Speed→Cost gates, evidence taxonomy, per-task acceptance matrix and documentation lifecycle. |
+| CS-01 | [Implementation record](CS-01/IMPLEMENTATION_RECORD.md) | READY / NOT STARTED | 2026-09-07 | Prepared pre-code handoff for the runtime Visual Learning Composer Skill and capability-boundary reconciliation; no model/dependency/runtime execution yet. |
 
 Historical Process evidence: [Checkpoint 1 report and gallery](STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT.md).
 
-When a CS task is submitted for review, add a row for its `docs/reviews/CS-XX/IMPLEMENTATION_RECORD.md`. Do not promote the next task from this index alone; current execution authority remains `project-state/PROJECT_STATE.md` plus `project-state/DAILY_USE_RELEASE_TASKS.md`.
+For later CS tasks, create their `docs/reviews/CS-XX/IMPLEMENTATION_RECORD.md` before code and add a row when the task becomes the active review artifact. Do not promote the next task from this index alone; current execution authority remains `project-state/PROJECT_STATE.md` plus `project-state/DAILY_USE_RELEASE_TASKS.md`.
 
 Accompanying records: [Studio plan](../STUDIO_IMPLEMENTATION_PLAN.md), [decision register](../DAILY_USE_RELEASE_DECISIONS.md), [current task overlay](../../project-state/DAILY_USE_RELEASE_TASKS.md), and [Project State](../../project-state/PROJECT_STATE.md).
