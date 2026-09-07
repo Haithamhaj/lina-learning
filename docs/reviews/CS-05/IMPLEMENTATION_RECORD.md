@@ -116,3 +116,12 @@ before opening a separate deterministic acceptance transaction; acceptance
 failure cannot erase the proposal or trigger another generation. Production
 `TRACE_RELATION` now persists `tracing_relation_id` in authoritative Process
 state so the existing ProcessView renders its established trace after reload.
+
+Final affected PostgreSQL verification after the trace-state correction:
+**61 passed, 1 external deprecation warning** across CS-05 production,
+CS-04 admission/execution, Process awareness, and process-sequence lifecycle
+coverage. The matrix caught and fixed one CS-05 admission-ordering regression:
+same-transaction Tutor messages share a database timestamp, so only a strictly
+later admitted order blocks an older admission. No Candidate, Evidence,
+CurrentState, Pattern, Learner Intelligence, or Personal Fact writes are made
+by CS-05 Scene acceptance or record-only operations.
