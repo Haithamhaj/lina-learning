@@ -25,6 +25,7 @@ from services.tutor.session_lifecycle import (
 from workers.content_handlers import register_content_handlers
 from workers.intelligence_handlers import register_intelligence_handlers
 from workers.personal_facts_handlers import register_personal_facts_handlers
+from workers.studio_handlers import reconcile_canvas_specialist_runs, register_canvas_specialist_handlers
 
 JobHandler: TypeAlias = Callable[[Job], Mapping[str, object] | None]
 _logger = logging.getLogger(__name__)
@@ -83,6 +84,7 @@ def run_once(
     if not job_types:
         return None
     with session_factory.begin() as session:
+        reconcile_canvas_specialist_runs(session, now=claim_time)
         job = claim_next_job(
             session,
             worker_id=worker_id,
@@ -163,6 +165,7 @@ def main() -> None:
         session_factory=session_factory,
         gateway_factory=create_personal_facts_gateway,
     )
+    register_canvas_specialist_handlers(registry, session_factory=session_factory)
     worker_id = f"{socket.gethostname()}-{os.getpid()}-{uuid4().hex[:8]}"
     _logger.info("Starting jobs worker %s", worker_id)
     run_forever(session_factory, registry, worker_id=worker_id)

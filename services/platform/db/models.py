@@ -53,6 +53,7 @@ class ModelTask(str, Enum):
     CURRICULUM_SEMANTICS = "curriculum_semantics"
     EMBEDDING = "embedding"
     PERSONAL_FACTS = "personal_facts"
+    CANVAS_SPECIALIST = "canvas_specialist"
 
 
 class Job(Base):
@@ -1668,6 +1669,7 @@ class StudioCanvasSpecialistRun(Base):
         ),
         Index("ix_studio_specialist_runs_runtime_status", "studio_runtime_id", "status", "created_at"),
         Index("ix_studio_specialist_runs_runtime_source_message", "studio_runtime_id", "source_message_id"),
+        Index("uq_studio_specialist_runs_execution_identity", "source_message_id", "order_digest", "capability_profile_version", unique=True, postgresql_where=text("order_digest IS NOT NULL")),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -1692,6 +1694,9 @@ class StudioCanvasSpecialistRun(Base):
     accepted_scene_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
     failure_metadata: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    order_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    proposal_payload: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    proposal_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

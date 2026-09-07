@@ -22,6 +22,7 @@ This is the small navigation and delivery index for Product Owner review, not a 
 | CS-01 | [Implementation record](CS-01/IMPLEMENTATION_RECORD.md) | DONE / ACCEPTED | 2026-09-07 | Runtime Visual Learning Composer Skill and per-run capability-boundary reconciliation accepted; no model/dependency/runtime execution enabled. |
 | CS-02 | [Implementation record](CS-02/IMPLEMENTATION_RECORD.md) | DONE / ACCEPTED | 2026-09-07 | Complete visual Toolbelt installed/proven behind isolated adapters; no production routing or Specialist execution enabled. |
 | CS-03 | [Implementation record](CS-03/IMPLEMENTATION_RECORD.md) | DONE / ACCEPTED | 2026-09-07 | Tutor v10 Visual Order, Semantic Alignment, bounded Visual Learner Context and Frozen Composition Pack accepted; no Specialist execution enabled. |
+| CS-04 | [Implementation record](CS-04/IMPLEMENTATION_RECORD.md) | IMPLEMENTED / AWAITING REVIEW | 2026-09-07 | One bounded Canvas Specialist Worker/Gateway proposal runtime with durable lineage and no Scene acceptance. |
 
 Historical Process evidence: [Checkpoint 1 report and gallery](STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT.md).
 
