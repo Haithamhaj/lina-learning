@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from services.platform.db.models import Job, LearningMessage, LearningSession, StudioCanvasSpecialistRun, StudioRuntime
+from services.platform.db.models import Job, LearningMessage, LearningSession, StudioCanvasSpecialistRun, StudioRuntime, StudioScene
 from services.platform.jobs import enqueue_job
 from services.studio.visual_order import contains_implementation_control
 
@@ -98,25 +98,40 @@ def validate_proposal_against_frozen_pack(proposal: CanvasSpecialistProcessPropo
     alignment = pack.get("semantic_alignment")
     if not isinstance(alignment, dict):
         raise ValueError("frozen semantic alignment is invalid")
-    required = {
-        item.get("id") for key in ("required_semantics", "required_relations")
-        for item in alignment.get(key, []) if isinstance(item, dict) and isinstance(item.get("id"), str)
-    }
-    claimed = {identifier for stage in proposal.stages for identifier in stage.support_ids} | {identifier for relation in proposal.relations for identifier in relation.support_ids}
-    if not required.issubset(claimed) or not claimed.issubset(required):
+    semantic_ids = {item.get("id") for item in alignment.get("required_semantics", []) if isinstance(item, dict) and isinstance(item.get("id"), str)}
+    relation_ids = {item.get("id") for item in alignment.get("required_relations", []) if isinstance(item, dict) and isinstance(item.get("id"), str)}
+    stage_claimed = {identifier for stage in proposal.stages for identifier in stage.support_ids}
+    relation_claimed = {identifier for relation in proposal.relations for identifier in relation.support_ids}
+    if stage_claimed != semantic_ids or (relation_claimed != relation_ids if relation_ids else not relation_claimed.issubset(semantic_ids)):
         raise ValueError("proposal support is not covered by the frozen semantic alignment")
+    forbidden = [value.casefold() for value in alignment.get("must_not_imply", []) if isinstance(value, str)]
+    proposal_text = " ".join(filter(None, [proposal.title, proposal.subtitle, proposal.text_equivalent, *(stage.label for stage in proposal.stages), *(stage.detail or "" for stage in proposal.stages), *(relation.label or "" for relation in proposal.relations)])).casefold()
+    if any(value in proposal_text for value in forbidden):
+        raise ValueError("proposal implies forbidden frozen meaning")
     allowed = pack.get("allowed_affordances")
     if not isinstance(allowed, list) or not set(proposal.interaction_affordances).issubset(set(allowed)):
         raise ValueError("proposal affordance is not allowed by the frozen pack")
-    if proposal.motion_intents or any(stage.art_handle is not None for stage in proposal.stages):
+    if proposal.motion_intents:
         raise ValueError("proposal requests capability not enabled by the frozen pack")
+    allowed_art_handles = pack.get("allowed_art_handles", [])
+    if not isinstance(allowed_art_handles, list) or any(
+        stage.art_handle is not None and stage.art_handle not in allowed_art_handles
+        for stage in proposal.stages
+    ):
+        raise ValueError("proposal requests artwork not enabled by the frozen pack")
 
 
 def admit_committed_visual_order(session: Session, *, student_id: UUID, learning_session_id: UUID, source_message_id: UUID, now: datetime | None = None, before_run_create: Callable[[], None] | None = None) -> StudioCanvasSpecialistRun | None:
     """Atomically admit one executable committed order; all non-admitted paths are no-ops."""
-    message = session.execute(select(LearningMessage).where(LearningMessage.id == source_message_id, LearningMessage.session_id == learning_session_id, LearningMessage.role == "tutor").with_for_update()).scalar_one_or_none()
+    unguarded_message = session.get(LearningMessage, source_message_id)
     learning_session = session.get(LearningSession, learning_session_id)
-    if message is None or learning_session is None or learning_session.student_id != student_id:
+    if unguarded_message is None or learning_session is None or learning_session.student_id != student_id:
+        raise CanvasSpecialistAdmissionError("SOURCE_LINEAGE_INVALID")
+    runtime = session.execute(select(StudioRuntime).where(StudioRuntime.student_id == student_id, StudioRuntime.learning_session_id == learning_session_id).with_for_update()).scalar_one_or_none()
+    if runtime is None:
+        raise CanvasSpecialistAdmissionError("STUDIO_RUNTIME_INVALID")
+    message = session.execute(select(LearningMessage).where(LearningMessage.id == source_message_id, LearningMessage.session_id == learning_session_id, LearningMessage.role == "tutor").with_for_update()).scalar_one_or_none()
+    if message is None:
         raise CanvasSpecialistAdmissionError("SOURCE_LINEAGE_INVALID")
     visual = message.payload.get("workspace_visual") if isinstance(message.payload, dict) else None
     if not isinstance(visual, dict) or visual.get("status") != "ADMITTED":
@@ -130,9 +145,10 @@ def admit_committed_visual_order(session: Session, *, student_id: UUID, learning
     capability = pack.get("capability_pack")
     if not isinstance(capability, dict) or capability.get("identity") != PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY:
         return None
-    runtime = session.execute(select(StudioRuntime).where(StudioRuntime.student_id == student_id, StudioRuntime.learning_session_id == learning_session_id).with_for_update()).scalar_one_or_none()
-    if runtime is None:
-        raise CanvasSpecialistAdmissionError("STUDIO_RUNTIME_INVALID")
+    admitted_messages = session.scalars(select(LearningMessage).where(LearningMessage.session_id == learning_session_id, LearningMessage.role == "tutor").order_by(LearningMessage.created_at.desc()).with_for_update())
+    newest = next((candidate for candidate in admitted_messages if isinstance(candidate.payload, dict) and isinstance(candidate.payload.get("workspace_visual"), dict) and candidate.payload["workspace_visual"].get("status") == "ADMITTED"), None)
+    if newest is None or newest.id != message.id:
+        return None
     existing = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.source_message_id == source_message_id, StudioCanvasSpecialistRun.order_digest == digest, StudioCanvasSpecialistRun.capability_profile_version == PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY)).scalar_one_or_none()
     if existing is not None:
         return existing
@@ -144,7 +160,8 @@ def admit_committed_visual_order(session: Session, *, student_id: UUID, learning
         .join(LearningMessage, StudioCanvasSpecialistRun.source_message_id == LearningMessage.id)
         .where(
             StudioCanvasSpecialistRun.studio_runtime_id == runtime.id,
-            StudioCanvasSpecialistRun.status.in_(("PENDING", "RUNNING")),
+            StudioCanvasSpecialistRun.status.in_(("PENDING", "RUNNING", "COMPLETED")),
+            StudioCanvasSpecialistRun.scene_id.is_(None),
             StudioCanvasSpecialistRun.source_message_id != message.id,
         )
         .with_for_update()
@@ -166,7 +183,8 @@ def admit_committed_visual_order(session: Session, *, student_id: UUID, learning
         before_run_create()
     try:
         with session.begin_nested():
-            run = StudioCanvasSpecialistRun(studio_runtime_id=runtime.id, student_id=student_id, learning_session_id=learning_session_id, source_message_id=source_message_id, scene_id=None, base_scene_version=0, subject_key="PROCESS", capability_profile_version=PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY, status="PENDING", job_id=job.id, output_schema_version=CANVAS_SPECIALIST_PROCESS_PROPOSAL_SCHEMA_VERSION, accepted_scene_version=None, deadline_at=(now or datetime.now(UTC)) + CANVAS_SPECIALIST_DEADLINE, order_digest=digest)
+            active_scene = session.execute(select(StudioScene).where(StudioScene.studio_runtime_id == runtime.id, StudioScene.status == "ACTIVE").with_for_update()).scalar_one_or_none()
+            run = StudioCanvasSpecialistRun(studio_runtime_id=runtime.id, student_id=student_id, learning_session_id=learning_session_id, source_message_id=source_message_id, scene_id=None, base_scene_id=None if active_scene is None else active_scene.id, base_scene_version=0 if active_scene is None else active_scene.scene_version, subject_key="PROCESS", capability_profile_version=PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY, status="PENDING", job_id=job.id, output_schema_version=CANVAS_SPECIALIST_PROCESS_PROPOSAL_SCHEMA_VERSION, accepted_scene_version=None, deadline_at=(now or datetime.now(UTC)) + CANVAS_SPECIALIST_DEADLINE, order_digest=digest)
             session.add(run)
             session.flush()
             return run

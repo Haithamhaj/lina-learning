@@ -87,7 +87,10 @@ export function ProcessView({scene,state,onAction,onExplain,reducedMotion=false}
  <h2>{active?active.label:ar?'اختر مرحلة في الرسم':'Choose a stage in the scene'}</h2>
  {shown?<p className="pv-detail" key={active.id}>{active.detail}</p>:<p>{ar?'تبقى الدورة كاملة ظاهرة أثناء استكشاف التفاصيل.':'The whole process stays visible while you explore a detail.'}</p>}
  {highlighted&&<p className="pv-relation-summary"><bdi>{scene.stages.find(s=>s.id===highlighted.from)?.label}</bdi><span aria-hidden="true"> → </span><bdi>{scene.stages.find(s=>s.id===highlighted.to)?.label}</bdi> · {highlighted.label}</p>}
- <button className="pv-explain" disabled={!selected} onClick={()=>selected&&onExplain(selected.id)}>{ar?'اشرح هذا — معاينة محلية':'Explain this — local preview'}</button></aside>
+ {active&&<button className="pv-explain" onClick={()=>onAction({type:'reveal',id:active.id})}>{ar?'أظهر التفاصيل':'Reveal details'}</button>}
+ {highlighted&&<button className="pv-explain" onClick={()=>onAction({type:'trace',id:highlighted.id})}>{ar?'تتبّع هذه العلاقة':'Trace this relationship'}</button>}
+ <button className="pv-explain" disabled={!selected} onClick={()=>selected&&onExplain(selected.id)}>{ar?'اشرح هذه المرحلة':'Explain this stage'}</button>
+ {highlighted&&<button className="pv-explain" onClick={()=>onExplain(highlighted.id)}>{ar?'اشرح هذه العلاقة':'Explain this relationship'}</button>}</aside>
  <details className="pv-text-equivalent"><summary>{ar?'الوصف النصّي لجميع المراحل والروابط':'Text equivalent: all stages and relationships'}</summary><ol>{scene.stages.map(s=><li key={s.id}><strong>{s.label}:</strong> {s.detail}</li>)}</ol><ul>{scene.relations.map(r=><li key={r.id}>{scene.stages.find(s=>s.id===r.from)?.label} → {scene.stages.find(s=>s.id===r.to)?.label}: {r.label}</li>)}</ul></details>
  <footer className="pv-source">{ar?'مرجع الشرح: ':'Instructional reference: '}<bdi>{scene.sourceLabel}</bdi></footer>
  </section>;

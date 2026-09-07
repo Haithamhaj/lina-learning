@@ -14,8 +14,9 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from services.model_gateway.factory import create_canvas_specialist_gateway
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
-from services.platform.db.models import AIExecution, Job, JobStatus, LearningMessage, LearningSession, ModelTask, StudioCanvasSpecialistRun, StudioRuntime
+from services.platform.db.models import AIExecution, Job, JobStatus, LearningMessage, LearningSession, ModelTask, StudioCanvasSpecialistRun, StudioRuntime, StudioSnapshot
 from services.studio.canvas_specialist import CANVAS_SPECIALIST_COMPOSE_JOB, CANVAS_SPECIALIST_PROCESS_PROPOSAL_SCHEMA_VERSION, PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY, CanvasSpecialistProcessProposal, validate_proposal_against_frozen_pack
+from services.studio.process_production_acceptance import accept_completed_process_run
 
 if TYPE_CHECKING:
     from workers.job_worker import JobHandlerRegistry
@@ -82,6 +83,11 @@ def _preflight(factory: sessionmaker[Session], job: Job, payload: dict[str, obje
 
 def _settle(factory: sessionmaker[Session], run_id: UUID, proposal: dict[str, object], execution_id: UUID | None) -> dict[str, object]:
     with factory.begin() as session:
+        unguarded_run = session.get(StudioCanvasSpecialistRun, run_id)
+        if unguarded_run is None:
+            raise ValueError("SPECIALIST_RUN_MISSING")
+        # Canonical order shared with admission and acceptance: Runtime -> Run.
+        session.execute(select(StudioRuntime).where(StudioRuntime.id == unguarded_run.studio_runtime_id).with_for_update()).scalar_one()
         run = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.id == run_id).with_for_update()).scalar_one()
         if run.status in {"COMPLETED", "FAILED", "CANCELLED", "SUPERSEDED", "REJECTED"}:
             if run.ai_execution_id is None and execution_id is not None:
@@ -94,7 +100,12 @@ def _settle(factory: sessionmaker[Session], run_id: UUID, proposal: dict[str, ob
             run.ai_execution_id = execution_id
             return {"run_id": str(run.id), "run_status": run.status}
         run.proposal_payload, run.proposal_digest, run.ai_execution_id, run.status, run.completed_at = proposal, sha256(json.dumps(proposal, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest(), execution_id, "COMPLETED", datetime.now(UTC)
-        return {"run_id": str(run.id), "run_status": run.status, "proposal_digest": run.proposal_digest}
+        # CS-04 fixtures and corrupt historical runtimes can legitimately lack the
+        # Studio projection.  Keep the durable proposal; production acceptance
+        # fails closed until the existing lifecycle has an authoritative Snapshot.
+        has_snapshot = session.execute(select(StudioSnapshot.id).where(StudioSnapshot.studio_runtime_id == run.studio_runtime_id)).scalar_one_or_none() is not None
+        scene = accept_completed_process_run(session, run.id) if has_snapshot else None
+        return {"run_id": str(run.id), "run_status": run.status, "proposal_digest": run.proposal_digest, "scene_id": None if scene is None else str(scene.id)}
 
 
 def _fail(factory: sessionmaker[Session], run_id: UUID, code: str, execution_id: UUID | None = None) -> None:

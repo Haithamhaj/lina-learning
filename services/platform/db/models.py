@@ -1678,6 +1678,8 @@ class StudioCanvasSpecialistRun(Base):
     learning_session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
     source_message_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
     scene_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=True)
+    # Exact causal identity of the active Scene (or None) observed at admission.
+    base_scene_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=True)
     base_scene_version: Mapped[int] = mapped_column(Integer, nullable=False)
     subject_key: Mapped[str] = mapped_column(String(64), nullable=False)
     capability_profile_version: Mapped[str] = mapped_column(String(64), nullable=False)

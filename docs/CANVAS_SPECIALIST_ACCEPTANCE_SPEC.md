@@ -213,6 +213,8 @@ Reject:
 - old active Scene is superseded only inside successful replacement unit;
 - acceptance failure leaves old Scene usable;
 - Event/Snapshot/replay/reload reconstruct exact authoritative state;
+- the persisted ADMITTED visual order and Frozen Composition Pack are the authorization snapshot: Safety, Parent Boundary, and source rights were resolved by the Primary Tutor/admission path and are not re-evaluated at Scene acceptance;
+- acceptance rechecks only run eligibility, exact source/order identity, supersession, capability/profile identity, proposal structure and semantic support, allowed art handles, and the causal Scene read set; later policy-setting changes affect future visual orders only;
 - feed refreshes committed state without new transport.
 
 ### Renderer proof

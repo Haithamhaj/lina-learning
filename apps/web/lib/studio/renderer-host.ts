@@ -5,6 +5,7 @@ export type ApprovedStudioRenderer =
   | "MATH_DECIMAL_NUMBER_LINE"
   | "MATH_DECIMAL_PLACE_VALUE"
   | "SCIENCE_PROCESS_SEQUENCE"
+  | "SCIENCE_PROCESS_PRODUCTION"
   | "ENGLISH_SENTENCE_ORDERING"
   | "ARABIC_SENTENCE_ORDERING";
 
@@ -13,6 +14,11 @@ type ApprovedContract = Omit<StudioActiveSceneContract, "scene_id" | "scene_vers
 };
 
 const approvedContracts: readonly ApprovedContract[] = [
+  {
+    renderer: "SCIENCE_PROCESS_PRODUCTION", subject_key: "SCIENCE", subject_profile_version: "process-visual-production-profile-v1",
+    activity_key: "process_visual_production", activity_contract_version: "process-visual-production-activity-v1",
+    renderer_key: "process-visual-production", renderer_version: "process-visual-production-renderer-v1", payload_schema_version: "process-visual-production-seed-v1",
+  },
   {
     renderer: 'MATH_DECIMAL_PLACE_VALUE', subject_key:'MATH', subject_profile_version:'subject-profile-v4',
     activity_key:'decimal_place_value', activity_contract_version:'decimal-place-value-activity-v1',

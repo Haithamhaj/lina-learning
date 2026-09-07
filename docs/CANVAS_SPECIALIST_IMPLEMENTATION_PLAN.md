@@ -267,7 +267,7 @@ A library compatibility problem must be solved inside a bounded adapter first. D
 1. Add an additive exact production Process profile/renderer/scene version; do not mutate the accepted awareness-only profile into production silently.
 2. First slice: sequence/cycle, 2–8 stages, approved art handles, focus/reveal/trace, object/relation explanation.
 3. Validate structural shape and Semantic Alignment support before acceptance.
-4. Recheck source/asset permissions, Safety and causal/stale state in the short acceptance transaction.
+4. Treat the admitted visual order plus Frozen Composition Pack as the authorization snapshot: Safety, Parent Boundary, and source rights are resolved before admission. In the short acceptance transaction, recheck only run eligibility, exact source/order identity, supersession, capability/profile identity, structural and semantic-support validity, allowed art handles, and causal/stale Scene state. Later policy-setting changes apply prospectively to future visual orders.
 5. Atomically supersede prior active Scene when needed, accept new Scene, activate it, update Event/Snapshot and complete the run link.
 6. Add the smallest production Host/adapter mapping authoritative Process Scene/state to the **existing accepted ProcessView**.
 7. Add production operation plumbing for focus/reveal/trace and object/relation `REQUEST_EXPLANATION` without visual redesign.

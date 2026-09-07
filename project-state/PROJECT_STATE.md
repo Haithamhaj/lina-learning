@@ -103,10 +103,10 @@ Do not break or silently reinterpret:
 
 ## Next action
 
-**CS-05 — Process Production Integration: READY.**
+**CS-05 — Process Production Integration: IMPLEMENTED / AWAITING PRODUCT OWNER REVIEW.**
 
-CS-01 through CS-04 are DONE / ACCEPTED. CS-05 is the only READY task; it is
-not started by this closure. CS-06 through CS-07 remain BLOCKED.
+CS-01 through CS-04 are DONE / ACCEPTED. CS-05 is implemented and awaiting
+Product Owner review. CS-06 through CS-07 remain BLOCKED.
 
 ## Critical references
 

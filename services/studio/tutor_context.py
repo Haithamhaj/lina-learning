@@ -24,7 +24,7 @@ from services.studio.subjects import production_subject_registry
 from services.studio.subjects.registry import SubjectCapabilityError
 
 
-from services.studio.subjects import process_visual as visual
+from services.studio.subjects import process_production, process_visual as visual
 
 STUDIO_TUTOR_CONTEXT_SCHEMA_VERSION = "studio-tutor-context-v1"
 OBSERVATION_FAILURE_CODES = TUTOR_OBSERVATION_FAILURE_CODES
@@ -109,7 +109,7 @@ class StudioTutorWorkspaceContext:
     visual_scene: Mapping[str, object] | None = None
 
     def as_model_payload(self) -> dict[str, object]:
-        process = self.active_activity_key == visual.ACTIVITY_KEY
+        process = self.active_activity_key in (visual.ACTIVITY_KEY, process_production.ACTIVITY_KEY)
         result = {
             "schema_version": STUDIO_TUTOR_CONTEXT_SCHEMA_VERSION,
             "through_sequence": self.through_sequence,
@@ -134,7 +134,7 @@ class StudioTutorWorkspaceContext:
 
 def _safe_event(event):
     payload = event.as_model_payload()
-    if event.activity_key == visual.ACTIVITY_KEY:
+    if event.activity_key in (visual.ACTIVITY_KEY, process_production.ACTIVITY_KEY):
         # Keep the selected observation range and semantic target; never echo
         # the accepted seed or application artwork through unseen Events.
         action = event.payload.get("action")
@@ -271,11 +271,16 @@ def select_studio_tutor_context(
 
 
 def _selected_visual(session, runtime, snapshot, capability):
-    if capability is None or capability.activity_key != visual.ACTIVITY_KEY:
+    if capability is None:
         return None
-    if (capability.capability_status != "RESOLVED" or capability.subject_profile_version != visual.PROFILE_VERSION
-        or capability.activity_version != visual.ACTIVITY_VERSION or capability.renderer_key != visual.RENDERER_KEY
-        or capability.renderer_version != visual.RENDERER_VERSION):
+    profiles = {
+        visual.ACTIVITY_KEY: (visual.PROFILE_VERSION, visual.ACTIVITY_VERSION, visual.RENDERER_KEY, visual.RENDERER_VERSION),
+        process_production.ACTIVITY_KEY: (process_production.PROFILE_VERSION, process_production.ACTIVITY_VERSION, process_production.RENDERER_KEY, process_production.RENDERER_VERSION),
+    }
+    profile = profiles.get(capability.activity_key)
+    if profile is None or (capability.capability_status != "RESOLVED" or capability.subject_profile_version != profile[0]
+        or capability.activity_version != profile[1] or capability.renderer_key != profile[2]
+        or capability.renderer_version != profile[3]):
         return None
     scene = session.execute(select(StudioScene).where(StudioScene.id == snapshot.current_scene_id,
         StudioScene.student_id == runtime.student_id, StudioScene.studio_runtime_id == runtime.id,
@@ -285,10 +290,10 @@ def _selected_visual(session, runtime, snapshot, capability):
     if snapshot.state_payload.get("scene_status") not in ("ACCEPTED", "ACTIVE"):
         return None
     seed = snapshot.state_payload.get("scene_seed")
-    if seed != scene.seed_payload or scene.payload_schema_version != visual.SEED_VERSION:
+    if seed != scene.seed_payload or scene.payload_schema_version != (visual.SEED_VERSION if capability.activity_key == visual.ACTIVITY_KEY else process_production.SEED_VERSION):
         return None
     try:
-        return visual.project_visual(seed, snapshot.state_payload.get(visual.ACTIVITY_KEY, {}))
+        return visual.project_visual(seed, snapshot.state_payload.get(capability.activity_key, {}))
     except (ValueError, TypeError, KeyError):
         return None
 
@@ -336,7 +341,7 @@ def _selected_scene_capability(
         renderer_version=scene.renderer_version,
         allowed_action_keys=action_keys,
         source_references=(
-            () if scene.activity_key == visual.ACTIVITY_KEY else
+            () if scene.activity_key in (visual.ACTIVITY_KEY, process_production.ACTIVITY_KEY) else
             (scene.seed_payload['source_ref'],)
             if scene.activity_key == 'decimal_number_line' and isinstance(scene.seed_payload.get('source_ref'), str)
             else tuple(scene.source_asset_refs)

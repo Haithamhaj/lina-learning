@@ -23,6 +23,7 @@ This is the small navigation and delivery index for Product Owner review, not a 
 | CS-02 | [Implementation record](CS-02/IMPLEMENTATION_RECORD.md) | DONE / ACCEPTED | 2026-09-07 | Complete visual Toolbelt installed/proven behind isolated adapters; no production routing or Specialist execution enabled. |
 | CS-03 | [Implementation record](CS-03/IMPLEMENTATION_RECORD.md) | DONE / ACCEPTED | 2026-09-07 | Tutor v10 Visual Order, Semantic Alignment, bounded Visual Learner Context and Frozen Composition Pack accepted; no Specialist execution enabled. |
 | CS-04 | [Implementation record](CS-04/IMPLEMENTATION_RECORD.md) | DONE / ACCEPTED | 2026-09-07 | Accepted at `8de9a752b00998f6d1f2a2b24102ba49cf5a1b2a`: one bounded Canvas Specialist Worker/Gateway proposal runtime with durable lineage and no Scene acceptance; live Luna remains unverified because configuration was unavailable. |
+| CS-05 | [Implementation record](CS-05/IMPLEMENTATION_RECORD.md) | IMPLEMENTED / AWAITING PRODUCT OWNER REVIEW | 2026-09-08 | Additive Process Scene acceptance/activation, protected ProcessView host, record-only operations and same-Tutor Runtime-03 relation provenance; CS-06 remains blocked. |
 
 Historical Process evidence: [Checkpoint 1 report and gallery](STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT.md).
 

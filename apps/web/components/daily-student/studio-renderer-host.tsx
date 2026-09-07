@@ -14,6 +14,7 @@ import { readArabicSentenceOrderingState } from "@/lib/studio/arabic-sentence-or
 import { readProcessSequenceState } from "@/lib/studio/process-sequence";
 import { activeSceneRendererState, resolveApprovedStudioRenderer } from "@/lib/studio/renderer-host";
 import { readSentenceOrderingState } from "@/lib/studio/sentence-ordering";
+import { ProcessProductionWorkspace } from "@/components/studio/process-production-workspace";
 
 type Props = {
   snapshot: StudioSnapshotFrame;
@@ -60,6 +61,9 @@ export function StudioRendererHost({ snapshot, operationPending, onOperation, on
   }
   if (renderer === "SCIENCE_PROCESS_SEQUENCE") {
     return <ProcessSequenceWorkspace sceneId={scene.scene_id} sceneVersion={scene.scene_version} state={readProcessSequenceState(state)} locale={scene.locale} direction={scene.direction} onOperation={onApprovedOperation} />;
+  }
+  if (renderer === "SCIENCE_PROCESS_PRODUCTION") {
+    return <ProcessProductionWorkspace sceneId={scene.scene_id} sceneVersion={scene.scene_version} seed={snapshot.active_scene_seed ?? {}} state={(snapshot.state_payload[scene.activity_key] as Record<string, unknown>) ?? null} onOperation={onApprovedOperation} />;
   }
   if (renderer === "ARABIC_SENTENCE_ORDERING") {
     return <ArabicSentenceOrderingWorkspace sceneId={scene.scene_id} sceneVersion={scene.scene_version} state={readArabicSentenceOrderingState(state)} onOperation={onApprovedOperation} />;

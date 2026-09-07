@@ -33,7 +33,7 @@ CS-03 Tutor ↔ Specialist Runtime Alignment       DONE / ACCEPTED
   ↓
 CS-04 Real Canvas Specialist Execution Runtime   DONE / ACCEPTED
   ↓
-CS-05 Process Production Integration             READY
+CS-05 Process Production Integration             IMPLEMENTED / AWAITING PRODUCT OWNER REVIEW
   ↓
 CS-06 Real Daily End-to-End Trial                BLOCKED
   ↓
@@ -149,7 +149,7 @@ Documentation: `docs/reviews/CS-04/IMPLEMENTATION_RECORD.md`.
 
 # CS-05 — Process Production Integration
 
-**Status:** READY.
+**Status:** IMPLEMENTED / AWAITING PRODUCT OWNER REVIEW.
 
 First production natural-composition capability only:
 
@@ -222,4 +222,4 @@ Documentation: one `docs/reviews/CS-07/IMPLEMENTATION_RECORD.md` with bounded su
 
 ## Execution boundary
 
-Only **CS-05** is currently executable. All later CS tasks and all unrelated blocked work remain blocked until explicitly promoted.
+Only **CS-05 review/closure work** is currently executable. All later CS tasks and all unrelated blocked work remain blocked until explicitly promoted.

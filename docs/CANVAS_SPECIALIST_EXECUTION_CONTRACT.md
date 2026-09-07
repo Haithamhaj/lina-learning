@@ -233,6 +233,8 @@ complete Tutor result
 → Worker may claim
 ```
 
+The admitted visual order and its persisted Frozen Composition Pack are the authorization snapshot for that composition. Safety and Parent Boundary are resolved by the Primary Tutor/admission path before that snapshot exists. Later setting changes govern future Tutor turns and future visual orders; they do not retroactively invalidate an already admitted composition.
+
 The primary Tutor response does not await Specialist completion. The Worker must not keep a database lock/transaction open across inference.
 
 ## 12. Specialist proposal contract
@@ -266,10 +268,10 @@ Required semantic IDs are represented; declared relations reference admitted sup
 All handles/actions/motion intents are allowed by the exact registered pack; model output cannot grant new capabilities.
 
 ### Safety / permissions / rights
-Current Student scope, source/asset permissions, current Safety/Parent Boundary rules, provenance and serving rights remain application-owned.
+Safety, Parent Boundary, Student scope, and source/asset rights are application-owned and resolved in the Primary Tutor/admission path. Their admitted order and Frozen Composition Pack form the authorization snapshot; Scene acceptance does not rerun Safety, Parent Boundary, source-rights, Retrieval, or any new educational-policy judgment.
 
 ### Causal / stale
-Recheck source Tutor message/order identity, capability/content versions, deadline, target/current Scene state and relevant semantic read set. If compatibility with newer state cannot be proven, reject rather than overwrite/rebase.
+Scene acceptance rechecks only eligible run state, exact source Tutor message and order digest, supersession by a newer admitted order, exact capability/profile identity, structural and semantic-support validity, allowed application-owned art handles, and the current Studio Scene identity/version causal read set. If compatibility with newer state cannot be proven, reject rather than overwrite/rebase.
 
 ## 14. Atomic Scene replacement
 
@@ -279,7 +281,7 @@ A valid Specialist proposal still does not become visible directly.
 validated proposal
 → short acceptance transaction
 → lock current Studio state
-→ recheck causality/permissions/run state
+→ recheck causal snapshot, run state, capability identity, and structural validation
 → supersede prior ACTIVE Scene when replacement is required
 → accept new Scene
 → activate new Scene

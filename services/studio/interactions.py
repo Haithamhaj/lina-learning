@@ -99,10 +99,11 @@ class StudioInteractionTutorContext:
             "source": deepcopy(dict(self.source)),
             "workspace": deepcopy(dict(self.workspace)),
         }
-        from services.studio.subjects import process_visual as visual
-        if self.workspace.get("active_activity_key") == visual.ACTIVITY_KEY:
+        from services.studio.subjects import process_production, process_visual as visual
+        process_activity_keys = (visual.ACTIVITY_KEY, process_production.ACTIVITY_KEY)
+        if self.workspace.get("active_activity_key") in process_activity_keys:
             result["workspace"]["state"] = {}
-        if self.source["event"].get("activity_key") == visual.ACTIVITY_KEY:
+        if self.source["event"].get("activity_key") in process_activity_keys:
             # Source target meaning is frozen at admission; current state comes
             # separately from the existing Runtime-01 selection.
             result["current_interaction"] = result["source"].pop("current_interaction")
@@ -920,7 +921,8 @@ class StudioInteractionTutorService:
             "studio_interaction_context": encoded_context,
             "studio_workspace_context": workspace_payload,
         }
-        if "current_interaction" in encoded_context or (workspace_context is not None and workspace_context.active_activity_key == "process_visual_context"):
+        from services.studio.subjects import process_production, process_visual
+        if "current_interaction" in encoded_context or (workspace_context is not None and workspace_context.active_activity_key in (process_visual.ACTIVITY_KEY, process_production.ACTIVITY_KEY)):
             from services.tutor.capacity import serialized_model_request_characters
             if serialized_model_request_characters(payload) > get_settings().tutor_context_capacity:
                 if workspace_context is not None and workspace_context.visual_scene is not None:
@@ -1039,11 +1041,16 @@ class StudioInteractionTutorService:
 
 def _visual_interaction_source(scene, action, source_state):
     """Resolve meaning from immutable source replay, never a later browser selection."""
-    from services.studio.subjects import process_visual as visual
-    if scene.activity_key != visual.ACTIVITY_KEY:
+    from services.studio.subjects import process_production, process_visual as visual
+    validators = {
+        visual.ACTIVITY_KEY: visual.validate_seed,
+        process_production.ACTIVITY_KEY: process_production.validate_seed,
+    }
+    validate_seed = validators.get(scene.activity_key)
+    if validate_seed is None:
         return {}
     seed = source_state.get("scene_seed")
-    visual.validate_seed(seed)
+    validate_seed(seed)
     target = action.get("target_id")
     stage = next((s for s in seed["stages"] if s["id"] == target), None)
     relation = next((r for r in seed["relations"] if r["id"] == target), None)
