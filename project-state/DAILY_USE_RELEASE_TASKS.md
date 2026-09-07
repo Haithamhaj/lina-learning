@@ -7,49 +7,28 @@
 
 ---
 
-# Current bounded design task — 2026-09-07
+# Current bounded checkpoint — 2026-09-07
 
-## STUDIO-VISUAL-01 — Hybrid Composition Revision
+## STUDIO-VISUAL-PROCESS-01 — Early Visual Process Checkpoint
 
-**Status:** APPROVED HYBRID DIRECTION — REVISED SPECIFICATION AWAITING REVIEW.
-Detailed specification awaiting review; no specialist enabled.
-**Authority:** explicit Product Owner authorization on 2026-09-07; this is the
-only active design task. No implementation task is promoted or made READY.
-**Documentation baseline verified:** `codex/ctx-03` at
-`1bb90f3beeb65155cf1ff49083fbe6e3c4a71646` in
-`/Users/haitham/development/lina-learning-ctx03`; existing local work/evidence
-is preserved.
-**Scope/output:** one integrated five-section specification at
-`docs/STUDIO_VISUAL_EXPLANATION_SPEC.md`, plus narrow decision/task/state
-records. Covers four approved reusable patterns, actual Studio seams,
-proposed versioned primary-Tutor order/control and specialist-result contracts, content/attempt separation,
-privacy, correctness, visual quality, focused official-library comparison,
-and bounded delivery/acceptance sequence. The approved revision clarifies
-whole-response versus visual-only failure, semantic pre-call reuse, first-slice
-sequences/cycles, reviewed SVG assets, motion recipes, development-only tool/skill
-guidance and staged early production-component visual review. Proposed v10 and
-storage details remain proposals. Decision 35 approves the hybrid change:
-compact primary order, zero composition for reuse/controls, and one bounded
-post-commit Worker/Gateway specialist call for new known-pattern content.
-The later first process slice can include this seam without a generic specialist
-prerequisite; this record does not promote that slice or enable execution.
-**Verification boundary:** documentation and repository/official-source
-inspection only. No code, database, runtime, browser, live-model or learning
-benefit verification is claimed. Specification acceptance remains pending.
-**Protected scope:** existing accepted statuses remain unchanged; fractions,
-division, Voice, Vision, remaining renderer modes, full Studio acceptance,
-specialist, Replit and deployment remain separately gated, not cancelled.
-**Review delivery authorization — 2026-09-07:** publish the existing revised
-hybrid draft and these decision/task/state records, scoped
-`docs/STUDIO_IMPLEMENTATION_PLAN.md` clarification and `docs/reviews/README.md` with
-a documentation-only commit and normal non-force push to
-`Haithamhaj/lina-learning`, `origin`, `refs/heads/codex/ctx-03`. This direct
-Product Owner instruction supersedes only the drafting-stage staging/commit/push
-restriction for the six selected documentation paths; no implementation is READY.
-**Next action:** deliver commit-pinned review links, then Product Owner review
-and stop. Publication is not design acceptance, migration/dependency approval,
-or implementation authorization. No unrelated source, raw private evidence,
-installation, paid call, deployment or implementation promotion is authorized.
+**Status:** EARLY VISUAL CHECKPOINT / PRODUCT OWNER REVIEW. Not DONE. Not ACCEPTED.
+**Authority:** direct Product Owner checkpoint authorization and decision 36.
+STUDIO-VISUAL-01 at `20b87f05e817b55188302db03e526545d6965b72` is accepted as
+implementation direction. Its historical draft text remains the reviewed artifact.
+This is the only active bounded checkpoint; full runtime work is not promoted.
+**Built locally:** shared React/SVG/DOM process view, strict 2–8-stage model,
+three authored Science/language fixtures, controlled selection/reveal/relation
+emphasis and local-only Explain callback in an isolated review mount.
+**Verification:** 6 focused checks, 40 existing Studio web tests, web typecheck,
+production build and 16 browser checks passed. Prepared scenes establish visual
+and component evidence only, not model composition or Studio persistence.
+**Review:** `docs/reviews/STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT.md` and nine
+safe previews. Documentation/governance/images only may be committed/pushed to
+`origin`, `refs/heads/codex/ctx-03`; implementation remains unstaged/uncommitted.
+**Next action:** Product Owner visual review, then explicit source-commit/further
+work authorization. No full-task acceptance, specialist call, Worker/Gateway,
+DB/migration, Tutor contract, account or Student-runtime changes. Accepted
+activities and remaining fractions/division/Voice/Vision work stay protected.
 
 ---
 

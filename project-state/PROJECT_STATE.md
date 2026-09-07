@@ -4,19 +4,16 @@
 
 Finish Daily-Use Lina Release 1 one accepted task at a time until Lina can begin stable private daily use.
 
-**Current bounded design task — 2026-09-07:** `STUDIO-VISUAL-01 — Reusable
-Visual Explanation Design` is the only active design task. Its integrated
-specification status is **APPROVED HYBRID DIRECTION — REVISED SPECIFICATION AWAITING REVIEW**
-(detailed specification not yet accepted) at `docs/STUDIO_VISUAL_EXPLANATION_SPEC.md`. Product Owner approved
-four reusable patterns: `process_cycle`, `labeled_diagram`, `geometry_scene`,
-and `fraction_model / quantity_visual`. Contract/storage/library/implementation
-details remain proposals; the visual-production direction is approved in
-decision 33, including reviewed vector assets, bounded motion and early visual
-review. Decision 35 approves the hybrid split: compact primary order/control,
-zero composition calls for compatible reuse/simple updates, and one bounded
-asynchronous specialist generation for new content after primary commit. Exact
-contracts and persistence remain proposals. No implementation is READY and no
-specialist is enabled.
+**Current bounded checkpoint — 2026-09-07:** `STUDIO-VISUAL-PROCESS-01` is at
+**EARLY VISUAL CHECKPOINT / PRODUCT OWNER REVIEW**, not DONE or ACCEPTED.
+Product Owner accepted STUDIO-VISUAL-01's reviewed hybrid design at `20b87f0`
+as implementation direction (decision 36). One shared process view now renders
+three prepared Science/language datasets locally; source/tests remain unstaged
+and uncommitted. Six focused tests, 40 Studio web tests, typecheck, production
+build and 16 browser checks passed. Review report/gallery:
+`docs/reviews/STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT.md`.
+No specialist, Worker/Gateway, DB, Tutor or Student runtime is enabled/changed.
+All four patterns and other accepted/planned work retain their separate gates.
 
 Current sequence state:
 
@@ -260,8 +257,8 @@ capability Registry, Renderer Host, state/feed/lifecycle and learning authority.
 Reusable instructional content is separate from Student-owned instances and
 history; books ground rather than permit explanations. Chat-only is valid.
 The four-pattern approval and approved visual-production revision are recorded
-in decisions 32–35 of
-`docs/DAILY_USE_RELEASE_DECISIONS.md`. Documentation-only scope does not cancel
+in decisions 32–36 of
+`docs/DAILY_USE_RELEASE_DECISIONS.md`. The bounded visual checkpoint does not cancel
 fractions, division, Voice, Vision or other agreed work. Proposed contract and
 storage additions, factual-review authority, reuse compatibility, and natural
 composition quality require review/verification before implementation release.
@@ -492,17 +489,14 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
-Publish the revised `docs/STUDIO_VISUAL_EXPLANATION_SPEC.md` for Product Owner
-review under the direct 2026-09-07 documentation-delivery authorization in
-decision 35. The six-path documentation-only commit and normal non-force push
-supersede only the earlier drafting-stage staging/commit/push restriction.
-Return actual SHA and commit-pinned review links, then stop; do not mark the specification
-accepted or promote implementation. The expected worktree/branch baseline
-`1bb90f3beeb65155cf1ff49083fbe6e3c4a71646` was verified for this hybrid revision; existing
-local work/evidence is preserved. No runtime/database/provider validation was
-performed by this design task.
+Review the actual process preview gallery at
+`docs/reviews/STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT.md`.
+Only sanitized report/images and narrow governance are authorized for publication.
+Keep the six implementation/test/helper files unstaged and uncommitted until
+Product Owner visual approval; stop at this checkpoint. Baseline `20b87f0` was
+verified unchanged before work and fetch. No full runtime or next pattern is promoted.
 
-No next renderer task is promoted. The later production-serving/deployment
+The later production-serving/deployment
 readiness check remains OPEN: production-mode serving was blocked in this
 environment by a reported missing Clerk secret, while the production build and
 authenticated browser acceptance passed. This is not a claim about all Clerk
