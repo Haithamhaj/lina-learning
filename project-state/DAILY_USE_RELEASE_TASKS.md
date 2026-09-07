@@ -9,26 +9,25 @@
 
 # Current bounded checkpoint — 2026-09-07
 
-## STUDIO-VISUAL-PROCESS-01 — Early Visual Process Checkpoint
+## STUDIO-VISUAL-PROCESS-01 — Semantic Animated SVG Scene
 
-**Status:** EARLY VISUAL CHECKPOINT / PRODUCT OWNER REVIEW. Not DONE. Not ACCEPTED.
-**Authority:** direct Product Owner checkpoint authorization and decision 36.
-STUDIO-VISUAL-01 at `20b87f05e817b55188302db03e526545d6965b72` is accepted as
-implementation direction. Its historical draft text remains the reviewed artifact.
-This is the only active bounded checkpoint; full runtime work is not promoted.
-**Built locally:** shared React/SVG/DOM process view, strict 2–8-stage model,
-three authored Science/language fixtures, controlled selection/reveal/relation
-emphasis and local-only Explain callback in an isolated review mount.
-**Verification:** 6 focused checks, 40 existing Studio web tests, web typecheck,
-production build and 16 browser checks passed. Prepared scenes establish visual
-and component evidence only, not model composition or Studio persistence.
-**Review:** `docs/reviews/STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT.md` and nine
-safe previews. Documentation/governance/images only may be committed/pushed to
-`origin`, `refs/heads/codex/ctx-03`; implementation remains unstaged/uncommitted.
-**Next action:** Product Owner visual review, then explicit source-commit/further
-work authorization. No full-task acceptance, specialist call, Worker/Gateway,
-DB/migration, Tutor contract, account or Student-runtime changes. Accepted
-activities and remaining fractions/division/Voice/Vision work stay protected.
+**Status:** VISUAL CHECKPOINT 2 / PRODUCT OWNER REVIEW. Not DONE. Not ACCEPTED.
+**Authority:** direct Product Owner Checkpoint 2 authorization, decision 37;
+accepted hybrid direction remains decision 36. Only this bounded checkpoint is active.
+**Built locally:** evolved the same six files from Checkpoint 1; generic spatial
+SVG cycle with stable IDs, semantic focus/highlight/reveal/trace, keyboard/tap,
+Arabic/mixed text, narrow explicit return and reduced motion. Existing butterfly
+data is the visual stress case; local-only Explain. Motion deferred; no dependency change.
+**Verification:** 12 focused checks, 40 Studio web tests, typecheck, production
+build, isolated preview build and 27 browser checks passed. Prepared visual evidence
+is not model composition, persistence, learning benefit or runtime acceptance.
+**Review:** `docs/reviews/STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT_2.md`, eleven
+safe images. Checkpoint 1 report/gallery remain historical. Publish only the authorized
+review material and narrow governance to `origin`, `refs/heads/codex/ctx-03`.
+The six implementation/test/helper files remain unstaged and uncommitted.
+**Next action:** Product Owner visual review; stop. No specialist, Tutor integration,
+DB, model-generated scene or Student traffic. No full runtime or other pattern is
+promoted. Accepted activities and fractions/division/Voice/Vision gates remain unchanged.
 
 ---
 

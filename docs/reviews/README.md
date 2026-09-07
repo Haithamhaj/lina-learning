@@ -15,7 +15,9 @@ a governing specification. Delivery convention approved on 2026-09-07.
 | Task | Canonical document | Review status | Revision date | Purpose |
 |---|---|---|---|---|
 | STUDIO-VISUAL-01 | [docs/STUDIO_VISUAL_EXPLANATION_SPEC.md](../STUDIO_VISUAL_EXPLANATION_SPEC.md) | ACCEPTED AS IMPLEMENTATION DIRECTION (decision 36) | 2026-09-07 | Reviewed revision at 20b87f0 retained; only the separate early process visual checkpoint is authorized. No specialist enabled. |
-| STUDIO-VISUAL-PROCESS-01 | [Visual checkpoint and gallery](STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT.md) | EARLY VISUAL CHECKPOINT / PRODUCT OWNER REVIEW | 2026-09-07 | Three datasets, one reusable process view; actual screenshots and focused checks. Implementation remains unstaged/uncommitted; not DONE or ACCEPTED. |
+| STUDIO-VISUAL-PROCESS-01 | [Checkpoint 2 report and gallery](STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT_2.md) | VISUAL CHECKPOINT 2 / PRODUCT OWNER REVIEW | 2026-09-07 | Semantic radial SVG, focus/reveal/trace and narrow return; 11 actual previews. Six source files remain unstaged/uncommitted; not DONE or ACCEPTED. |
+
+Historical process evidence: [Checkpoint 1 report and gallery](STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT.md).
 
 Accompanying records: [scoped Studio plan](../STUDIO_IMPLEMENTATION_PLAN.md), [decision register](../DAILY_USE_RELEASE_DECISIONS.md),
 [current task overlay](../../project-state/DAILY_USE_RELEASE_TASKS.md), and

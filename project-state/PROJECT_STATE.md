@@ -5,15 +5,15 @@
 Finish Daily-Use Lina Release 1 one accepted task at a time until Lina can begin stable private daily use.
 
 **Current bounded checkpoint — 2026-09-07:** `STUDIO-VISUAL-PROCESS-01` is at
-**EARLY VISUAL CHECKPOINT / PRODUCT OWNER REVIEW**, not DONE or ACCEPTED.
-Product Owner accepted STUDIO-VISUAL-01's reviewed hybrid design at `20b87f0`
-as implementation direction (decision 36). One shared process view now renders
-three prepared Science/language datasets locally; source/tests remain unstaged
-and uncommitted. Six focused tests, 40 Studio web tests, typecheck, production
-build and 16 browser checks passed. Review report/gallery:
-`docs/reviews/STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT.md`.
-No specialist, Worker/Gateway, DB, Tutor or Student runtime is enabled/changed.
-All four patterns and other accepted/planned work retain their separate gates.
+**VISUAL CHECKPOINT 2 / PRODUCT OWNER REVIEW**, not DONE or ACCEPTED.
+Decision 37 retains the accepted semantic direction and authorizes the spatial
+SVG revision of the same six local files. Butterfly focus/reveal/trace, Arabic,
+narrow return path and reduced motion are demonstrated. Motion remains deferred.
+Twelve focused tests, 40 Studio web tests, typecheck, production/isolated builds
+and 27 browser checks passed. Report and eleven-image gallery:
+`docs/reviews/STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT_2.md`.
+Implementation remains unstaged/uncommitted. No specialist, Tutor integration,
+DB, model-generated scene or Student traffic. All other work keeps its separate gates.
 
 Current sequence state:
 
@@ -257,7 +257,7 @@ capability Registry, Renderer Host, state/feed/lifecycle and learning authority.
 Reusable instructional content is separate from Student-owned instances and
 history; books ground rather than permit explanations. Chat-only is valid.
 The four-pattern approval and approved visual-production revision are recorded
-in decisions 32–36 of
+in decisions 32–37 of
 `docs/DAILY_USE_RELEASE_DECISIONS.md`. The bounded visual checkpoint does not cancel
 fractions, division, Voice, Vision or other agreed work. Proposed contract and
 storage additions, factual-review authority, reuse compatibility, and natural
@@ -490,10 +490,10 @@ Lina daily/longitudinal use.
 ## Next recommended action
 
 Review the actual process preview gallery at
-`docs/reviews/STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT.md`.
+`docs/reviews/STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT_2.md`.
 Only sanitized report/images and narrow governance are authorized for publication.
 Keep the six implementation/test/helper files unstaged and uncommitted until
-Product Owner visual approval; stop at this checkpoint. Baseline `20b87f0` was
+Product Owner visual approval; stop at this checkpoint. Checkpoint 2 baseline `fc65cef` was
 verified unchanged before work and fetch. No full runtime or next pattern is promoted.
 
 The later production-serving/deployment
