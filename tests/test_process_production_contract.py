@@ -107,3 +107,13 @@ def test_semantic_support_keeps_stage_and_relation_provenance_separate_and_respe
     forbidden = proposal.model_copy(update={"title": "Collect water twice"})
     with pytest.raises(ValueError, match="forbidden frozen meaning"):
         validate_proposal_against_frozen_pack(forbidden, pack)
+
+
+@pytest.mark.parametrize("topology,stage_count", [("SEQUENCE", 2), ("SEQUENCE", 8), ("CYCLE", 2)])
+def test_production_structural_bounds_map_deterministically(topology, stage_count):
+    stages = [{"semantic_key": f"s{i}", "label": f"Stage {i}", "detail": None, "support_ids": [f"S{i}"], "art_handle": "idea"} for i in range(stage_count)]
+    relations = [{"relation_key": f"r{i}", "source_semantic_key": f"s{i}", "target_semantic_key": f"s{(i + 1) % stage_count}", "label": "next", "support_ids": [f"R{i}"]} for i in range(stage_count if topology == "CYCLE" else stage_count - 1)]
+    proposal = {"version": "canvas-specialist-process-proposal-v1", "pattern": "PROCESS", "topology": topology, "title": "Process", "subtitle": None, "stages": stages, "relations": relations, "text_equivalent": "Process steps.", "focus_intent": None, "motion_intents": [], "interaction_affordances": ["FOCUS_OBJECT"]}
+    pack = {"pattern": "PROCESS", "topology": topology, "capability_pack": {"process_stage_limit": [2, 8]}, "semantic_alignment": {"required_semantics": [{"id": f"S{i}"} for i in range(stage_count)], "required_relations": [{"id": f"R{i}"} for i in range(len(relations))]}, "allowed_affordances": ["FOCUS_OBJECT"], "allowed_art_handles": ["idea"]}
+    seed = proposal_to_scene_seed(proposal, pack, locale="en", direction="ltr")
+    assert seed["topology"] == topology.lower() and len(seed["stages"]) == stage_count

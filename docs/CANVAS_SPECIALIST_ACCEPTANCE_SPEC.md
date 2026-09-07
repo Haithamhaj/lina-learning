@@ -222,7 +222,7 @@ Reject:
 - existing accepted ProcessView is the rendered view;
 - production adapter parses exact server Scene/state;
 - no second visual implementation of Process is introduced;
-- wide/narrow, Arabic/English/mixed direction, keyboard/touch, focus/reveal/trace and reduced motion verified in browser.
+- one controlled production Host smoke proves existing ProcessView rendering and one bounded semantic operation. The complete locale/viewport/input/reduced-motion/quality browser matrix belongs to CS-06.
 
 ### Interaction proof
 

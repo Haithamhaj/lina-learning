@@ -297,7 +297,7 @@ A library compatibility problem must be solved inside a bounded adapter first. D
 
 ## Documentation
 
-`docs/reviews/CS-05/IMPLEMENTATION_RECORD.md` plus sanitized wide/narrow Arabic/English and interaction screenshots.
+`docs/reviews/CS-05/IMPLEMENTATION_RECORD.md` plus one controlled production Host/ProcessView smoke. The complete locale, viewport, input, reduced-motion and interaction-quality browser matrix is a CS-06 acceptance requirement.
 
 **Stop gate:** Product Owner acceptance before CS-06.
 

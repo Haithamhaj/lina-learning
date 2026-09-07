@@ -125,3 +125,21 @@ same-transaction Tutor messages share a database timestamp, so only a strictly
 later admitted order blocks an older admission. No Candidate, Evidence,
 CurrentState, Pattern, Learner Intelligence, or Personal Fact writes are made
 by CS-05 Scene acceptance or record-only operations.
+
+## Product Owner acceptance-boundary clarification
+
+The Product Owner clarified that CS-05 is production-integration proof and
+CS-06 owns the complete Daily/browser/experience matrix. CS-05 therefore
+retains one controlled isolated-review Student smoke of the production Renderer
+Host resolving the production Process Scene into the existing ProcessView and
+emitting `FOCUS_OBJECT`; its private local capture is
+`output/playwright/cs05-process-production/focus-operation.png` and is not
+staged. The full sequence/cycle, locale, viewport, pointer/keyboard/touch,
+reduced-motion, trace and explanation product-UI matrix remains mandatory and
+is explicitly assigned to blocked CS-06.
+
+Focused structural contracts now explicitly cover SEQUENCE at 2 and 8 stages
+and CYCLE at 2 stages (**7 passed**). The fresh affected PostgreSQL/lifecycle
+matrix is **61 passed, 1 external deprecation warning**. Web typecheck and
+production build pass. The prior full-suite result remains unchanged: 1,136
+passed, 7 skipped, 2 documented unrelated failures.
