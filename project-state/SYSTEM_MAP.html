@@ -3,169 +3,108 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Lina Personal Learning System — Operating Map</title>
+<title>Lina — Current Operating Map · Canvas Specialist Track</title>
 <style>
-:root{--bg:#f5f7fb;--panel:#fff;--ink:#182033;--muted:#667085;--line:#d9e0ec;--student:#fff1f5;--core:#f4efff;--data:#eefbf4;--warn:#fff7e8;--future:#eef8ff;--accent:#6658d3;--ok:#25754a;--radius:18px;--shadow:0 10px 30px rgba(25,35,58,.08)}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.wrap{max-width:1460px;margin:auto;padding:28px}header{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin-bottom:20px}h1{margin:0 0 8px;font-size:32px;letter-spacing:-.03em}h2{font-size:20px;margin:0 0 14px}h3{font-size:15px;margin:0 0 7px}p{margin:0;color:var(--muted);line-height:1.55}.badge,.status{display:inline-flex;padding:7px 11px;border-radius:999px;font-weight:750;font-size:12px}.badge{background:#fff2cc;color:#7a5710}.status{background:#e9f8ee;color:var(--ok);margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}.student{background:linear-gradient(145deg,var(--student),#fff)}.core{background:linear-gradient(145deg,var(--core),#fff)}.data{background:linear-gradient(145deg,var(--data),#fff)}.warn{background:linear-gradient(145deg,var(--warn),#fff)}.future{background:linear-gradient(145deg,var(--future),#fff)}.stack{display:grid;gap:10px}.node{border:1px solid var(--line);background:rgba(255,255,255,.92);border-radius:14px;padding:12px 13px}.node strong{display:block;margin-bottom:4px}.node small{color:var(--muted);line-height:1.45;display:block}.section{margin-top:16px}.flow{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;align-items:stretch}.studio-flow{grid-template-columns:repeat(3,minmax(0,1fr))}.studio-boundaries{grid-template-columns:repeat(4,minmax(0,1fr))}.flow .node{position:relative;min-height:106px}.flow .node:not(:last-child):after{content:'→';position:absolute;right:-12px;top:42%;z-index:3;color:#8792a5;font-weight:900}.studio-boundaries .node:after{display:none!important}.overlay{border:2px dashed #d6a64c}.capabilities{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.cap{border:1px solid #cbd9eb;background:#fff;border-radius:13px;padding:12px}.cap b{display:block;font-size:13px}.cap span{display:block;color:var(--muted);font-size:11px;line-height:1.4;margin-top:4px}.authority{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.authority code{display:block;background:#f6f7fa;border:1px solid #e5e8ef;padding:9px;border-radius:10px;font-size:11px;white-space:normal}.rules{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.rule{border-top:1px solid #edf0f5;padding-top:9px;font-size:12px}.rule b{color:#30374a}.muted{font-size:12px;color:var(--muted);line-height:1.5}.legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.pill{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:700}.ok{color:#25754a}.pending{color:#996515}.frozen{color:#53657b}@media(max-width:1100px){.flow{grid-template-columns:repeat(4,1fr)}.studio-flow{grid-template-columns:repeat(3,minmax(0,1fr))}.studio-boundaries{grid-template-columns:repeat(4,minmax(0,1fr))}.flow .node:nth-child(4):after{display:none}.capabilities,.authority{grid-template-columns:repeat(2,1fr)}}@media(max-width:780px){header{display:block}.badge{margin-top:12px}.grid,.flow,.capabilities,.authority,.rules{grid-template-columns:1fr}.flow .node:after{content:'↓'!important;right:50%!important;top:auto!important;bottom:-15px!important}.flow .node:last-child:after{display:none}}
+:root{--bg:#f5f7fb;--panel:#fff;--ink:#182033;--muted:#667085;--line:#dce2ec;--purple:#6658d3;--purple-bg:#f1efff;--green:#24734b;--green-bg:#edf8f1;--amber:#976410;--amber-bg:#fff6df;--blue:#245f92;--blue-bg:#eef7ff;--red:#9b3b49;--red-bg:#fff0f2;--shadow:0 12px 32px rgba(24,32,51,.07)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.wrap{max-width:1480px;margin:auto;padding:28px}.top{display:flex;justify-content:space-between;gap:24px;align-items:flex-start}.eyebrow{font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:11px;color:var(--purple)}h1{font-size:34px;letter-spacing:-.035em;margin:6px 0 8px}h2{font-size:20px;margin:0 0 12px}h3{font-size:14px;margin:0 0 6px}p{margin:0;color:var(--muted);line-height:1.55}.badge{display:inline-flex;border:1px solid #d7d2ff;background:var(--purple-bg);color:#4f42b2;padding:8px 11px;border-radius:999px;font-size:12px;font-weight:800}.panel{background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:18px}.section{margin-top:16px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.node{border:1px solid var(--line);border-radius:15px;background:#fff;padding:13px}.node small{display:block;color:var(--muted);line-height:1.45}.tutor{background:linear-gradient(145deg,var(--purple-bg),#fff)}.specialist{background:linear-gradient(145deg,var(--blue-bg),#fff)}.app{background:linear-gradient(145deg,var(--green-bg),#fff)}.warn{background:linear-gradient(145deg,var(--amber-bg),#fff)}.status{font-size:11px;font-weight:850;display:inline-flex;padding:5px 8px;border-radius:999px;margin-bottom:8px}.done{background:var(--green-bg);color:var(--green)}.ready{background:var(--purple-bg);color:#5042b4}.blocked{background:#f3f4f6;color:#6b7280}.future{background:var(--blue-bg);color:var(--blue)}.flow{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:8px;align-items:stretch}.flow .node{position:relative;min-height:120px;padding:12px}.flow .node:not(:last-child):after{content:"→";position:absolute;right:-12px;top:43%;font-weight:900;color:#8b95a6;z-index:2}.flow strong{font-size:12px;display:block;margin-bottom:5px}.flow small{font-size:10.5px}.tasks{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}.task{position:relative;border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff;min-height:128px}.task:not(:last-child):after{content:"→";position:absolute;right:-12px;top:44%;font-weight:900;color:#8b95a6;z-index:2}.task b{display:block;font-size:12px;margin:3px 0 5px}.task span{font-size:10.5px;color:var(--muted);line-height:1.35;display:block}.rules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.rule{border-top:1px solid #e8ecf2;padding:10px 0 0;font-size:12px;color:var(--muted)}.rule b{color:var(--ink)}.tool b{display:block;font-size:13px}.tool span{font-size:11px;color:var(--muted);line-height:1.4}.prio{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px}.prio .node:first-child{border:2px solid #8d81e8}.refs{font-size:12px;line-height:1.65;color:var(--muted)}code{background:#f5f6f8;border:1px solid #e6e8ed;border-radius:6px;padding:1px 5px;font-size:.92em}@media(max-width:1100px){.flow{grid-template-columns:repeat(3,1fr)}.flow .node:nth-child(3n):after{display:none}.tasks{grid-template-columns:repeat(2,1fr)}.task:after{display:none}.grid4{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.wrap{padding:16px}.top{display:block}.badge{margin-top:12px}.grid3,.grid4,.flow,.tasks,.rules,.prio{grid-template-columns:1fr}.flow .node:after{content:"↓"!important;right:50%!important;top:auto!important;bottom:-14px!important}.flow .node:last-child:after{display:none}}
 </style>
 </head>
 <body>
 <div class="wrap">
-<header>
-<div><h1>Lina Personal Learning System</h1><p>Current operating map. Stable architecture is separated from operational readiness and from approved-but-frozen product expansion.</p></div>
-<div class="badge">DOC-SYNC-01 ACCEPTED · RL-01 HISTORICAL · STUDIO-RUNTIME-01 ACCEPTED</div>
+<header class="top">
+<div><div class="eyebrow">Current operating map · 2026-09-07</div><h1>Lina Learning — Canvas Specialist Execution Track</h1><p>Current truth only: accepted foundations, protected authority, active CS sequence and the shortest path to a real natural Process trial in <code>/student/daily</code>.</p></div>
+<div class="badge">CS-01 READY · CS-02→07 BLOCKED</div>
 </header>
 
-<section class="grid">
-<article class="panel student"><h2>👧 Learner Experience</h2><div class="stack">
-<div class="node"><strong>Natural AI Tutor</strong><small>The current Student question drives the interaction. The experience is not book-bound and does not expose learner analytics to Lina.</small></div>
-<div class="node"><strong>Current proving ground</strong><small>Authenticated Math-first Text Tutor with SSE streaming, Arabic/English continuity, guided checks/actions, persistence, safety, and optional grounding.</small></div>
-<div class="node"><strong>Limited real Lina use</strong><small>Lina herself participated in part of a real Tutor interaction. Stable daily use and longitudinal cross-session validation are not yet proven.</small></div>
-</div></article>
-<article class="panel core"><h2>🧠 Product Differentiator</h2><div class="stack">
-<div class="node"><strong>More than LLM Q&amp;A</strong><small>General AI can already answer, read PDFs, transcribe, and interpret images. Lina Learning adds durable learning intelligence around natural tutoring.</small></div>
-<div class="node"><strong>Evidence-grounded personalization</strong><small>Raw interaction → semantic learning interpretation → Session-authorized Evidence → State/Patterns → Card → relevant future teaching.</small></div>
-<div class="node"><strong>Current behavior wins</strong><small>Historical intelligence is advisory. Demonstrated current independence or changed behavior outranks history.</small></div>
-</div></article>
-<article class="panel data"><h2>📚 Grounding & School Context</h2><div class="stack">
-<div class="node"><strong>Question first</strong><small>Book, school plan, outline, captured page, trusted source, and model knowledge may ground the current question; none controls the learning path.</small></div>
-<div class="node"><strong>Zero-book Tutor</strong><small>No uploaded curriculum or semantic extraction is required before the Tutor can help.</small></div>
-<div class="node"><strong>Semantics = optional enrichment</strong><small>Structural retrieval is the basic source path. Educational semantics may improve organization/navigation without becoming a permission gate.</small></div>
-</div></article>
+<section class="grid3 section">
+<article class="panel tutor"><span class="status done">PROTECTED AUTHORITY</span><h2>Primary Tutor</h2><div class="node"><h3>What should be learned?</h3><small>Sole Student-facing teacher. Owns objective, explanation, scaffolding, dialogue and the educational decision that a visual would help.</small></div><div class="node" style="margin-top:8px"><h3>Cheap paths first</h3><small>Chat, compatible reuse and supported updates do not call Canvas Specialist.</small></div></article>
+<article class="panel specialist"><span class="status future">BOUNDED COMPOSER</span><h2>Canvas Specialist</h2><div class="node"><h3>How can the accepted meaning become visual?</h3><small>Visual Learning Composer: hierarchy, grouping, relations, progressive detail, interaction semantics and meaningful motion intent.</small></div><div class="node" style="margin-top:8px"><h3>Not a second Tutor</h3><small>No independent lesson, grading rule, renderer choice, persistence, Safety, Evidence, Personal Facts or Learner Intelligence authority.</small></div></article>
+<article class="panel app"><span class="status done">EXECUTION AUTHORITY</span><h2>Application / Studio</h2><div class="node"><h3>Can and how should it execute?</h3><small>Owns admission, Registry/engine selection, validation, permissions, layout/code, Scene lifecycle, Event/Snapshot and final visible state.</small></div><div class="node" style="margin-top:8px"><h3>Durable truth</h3><small>Browser state is never authority. Accepted/active Scene + Event Log + rebuildable Snapshot remain canonical.</small></div></article>
 </section>
 
-<section class="panel core section">
-<span class="status">IMPLEMENTED / FULL-SYSTEM ACCEPTANCE COMPLETED</span>
-<h2>Canonical Learning Intelligence Architecture</h2>
+<section class="panel section">
+<span class="status ready">TARGET JOURNEY</span><h2>Natural Tutor → Specialist → Canvas → Same Tutor</h2>
 <div class="flow">
-<div class="node"><strong>Raw Interaction</strong><small>Messages and original learner work remain source authority.</small></div>
-<div class="node"><strong>Optional Candidate</strong><small>Same-primary-call provisional hint only. Candidate ≠ Evidence.</small></div>
-<div class="node"><strong>Completed Segment</strong><small>Session-local semantic analysis unit with source lineage.</small></div>
-<div class="node"><strong>Segment Review</strong><small>Background semantic review; zero findings is valid.</small></div>
-<div class="node"><strong>Staged Findings</strong><small>Inactive until the full Session is ready for authorization.</small></div>
-<div class="node"><strong>Session Finalization</strong><small>Deterministic durable authority. No ordinary semantic Session summarizer.</small></div>
-<div class="node"><strong>Evidence + State/Patterns</strong><small>Traceable, versioned, rebuildable downstream intelligence.</small></div>
-<div class="node"><strong>Card → Later Tutor</strong><small>Only relevant intelligence enters a later Tutor context.</small></div>
-</div>
-<p class="muted" style="margin-top:12px">Normal Student turns retain one primary Tutor model call. Subject attribution, TeachingMethod metadata, Safety, conversation context, curriculum grounding, and Learner Intelligence remain distinct authorities.</p>
-</section>
-
-<section class="grid section">
-<article class="panel future"><h2>💬 Conversation & Tutor Runtime</h2><div class="stack">
-<div class="node"><strong>Session → Segments</strong><small>One technical Session may contain multiple session-local Segments. A meaningful subject/topic switch creates a new Segment; an intervened old Segment is not reopened.</small></div>
-<div class="node"><strong>Hybrid Segment Context</strong><small>Current Turn + Full Immediate Exchange + compact Segment State + selected current-Segment exchanges. No full-history injection.</small></div>
-<div class="node"><strong>One primary Tutor call</strong><small>Produces learner-facing response plus bounded semantic decisions/metadata; runtime validates and persists them.</small></div>
-</div></article>
-<article class="panel data"><h2>🏛️ Durable Authority</h2><div class="stack">
-<div class="node"><strong>Segment interprets</strong><small>Semantic learning meaning and reviewed Broad Subject are determined at Segment Review.</small></div>
-<div class="node"><strong>Session commits</strong><small>Only complete coherent Review state can activate the Session's durable Event/Evidence generation.</small></div>
-<div class="node"><strong>Reprocessing</strong><small>Raw history and prior generations remain auditable; new authority activates atomically by bounded scope.</small></div>
-</div></article>
-<article class="panel warn"><h2>🛡️ Safety & Family Boundaries</h2><div class="stack">
-<div class="node"><strong>Hard baseline upstream</strong><small>Non-overridable child safety remains product/runtime policy.</small></div>
-<div class="node"><strong>Parent Boundary semantics</strong><small>Semantic applicability is determined within the same primary Tutor call; server-owned configuration remains final authority.</small></div>
-<div class="node"><strong>Separate from intelligence</strong><small>Safety/policy redirects are audit records, not Learner Intelligence.</small></div>
-</div></article>
-</section>
-
-<section class="panel warn overlay section">
-<span class="status" style="background:#fff2cc;color:#7a5710">HISTORICAL DAILY-USE OVERLAY — NOT THE CURRENT EXECUTION GATE</span>
-<h2>Daily-Use Lina Baseline — completed historical release work</h2>
-<p>RL-01 is completed historical Daily-Use release work and remains a provenance overlay, not the current next track. STUDIO-GOV-01, FE-02-PRESERVE-01, and the durable Studio state foundation are accepted; broader Studio runtime work remains task-gated.</p>
-<div class="capabilities" style="margin-top:12px">
-<div class="cap"><b>Web</b><span class="ok">Implemented</span><span>Real recurring environment proof pending.</span></div>
-<div class="cap"><b>API</b><span class="ok">Implemented</span><span>Real recurring environment proof pending.</span></div>
-<div class="cap"><b>Clerk identity</b><span class="ok">Implemented</span><span>Limited real flow exists; daily path still to verify.</span></div>
-<div class="cap"><b>Persistent PostgreSQL</b><span class="ok">Wiring implemented</span><span>Target daily environment to verify.</span></div>
-<div class="cap"><b>Worker</b><span class="ok">Implemented entrypoint</span><span>Not launched by the standard current .replit Project workflow.</span></div>
-<div class="cap"><b>Real Model route</b><span class="ok">Implemented</span><span>Current OpenAI route is operational choice, not provider lock-in.</span></div>
-<div class="cap"><b>Session lifecycle</b><span class="ok">Implemented</span><span>Requires running Worker operationally.</span></div>
-<div class="cap"><b>Cross-session proof</b><span class="pending">Pending</span><span>Lina Session → Review → Evidence → Card → later relevant personalization.</span></div>
+<div class="node"><strong>Student Question</strong><small>Natural Chat input.</small></div>
+<div class="node"><strong>Primary Tutor</strong><small>Teaches and decides whether visual support is useful.</small></div>
+<div class="node"><strong>Visual Order</strong><small>Additive contract; <code>workspace_intent-v1</code> remains unchanged.</small></div>
+<div class="node"><strong>Alignment</strong><small>Objective + support IDs + required relations + must-not-imply.</small></div>
+<div class="node"><strong>Frozen Pack</strong><small>Exact admitted facts/source/locale/capability + bounded learner visual context.</small></div>
+<div class="node"><strong>1 Specialist Call</strong><small>GPT-5.6 Luna through Model Gateway; max one generation.</small></div>
+<div class="node"><strong>Studio Validation</strong><small>Support/capability/Safety/permission/stale checks.</small></div>
+<div class="node"><strong>Accepted Process</strong><small>Atomic supersede → accept → activate → Event/Snapshot.</small></div>
+<div class="node"><strong>Same Tutor</strong><small>Object/relation request → existing Runtime-03 continuation.</small></div>
 </div>
 </section>
 
-<section class="panel future section">
-<span class="status">PARTIAL — STATE, SUBJECT CAPABILITY, PROTOCOL + TUTOR RUNTIME FOUNDATIONS IMPLEMENTED</span>
-<h2>Learning Studio — Target Architecture</h2>
-<p>The FE-02 Daily Student shell is a preserved prototype, not accepted production Studio architecture. Durable Studio State, Subject Capability, authenticated resumable Protocol, Tutor Snapshot/Event observation-watermark, WorkspaceIntent, and the deterministic Workspace Router are implemented; activities, renderers, and FE-02 production integration remain incomplete.</p>
-<div class="flow studio-flow" style="margin-top:12px">
-<div class="node"><strong>Student</strong><small>Uses Chat and/or Canvas. Chat remains usable when any Studio work fails.</small></div>
-<div class="node"><strong>Chat and/or Canvas</strong><small>Simple student-facing surfaces; neither is Studio authority.</small></div>
-<div class="node"><strong>Studio Core</strong><small>Target application-owned authority for semantic Event Log, Materialized Snapshot, authorization, Safety/Parent Boundary, scene versions, idempotency, cancellation, stale-result rejection, resumable Studio feed, and routing.</small></div>
-</div>
-<p class="muted" style="margin-top:12px">Implemented foundations cover durable state, exact subject capability contracts, authenticated protocol transport, one-primary-call Tutor access to the current Snapshot plus exact unseen Events, and deterministic Workspace decisions. Routed decisions do not render a Canvas or mutate Studio state.</p>
-<div class="flow studio-boundaries" style="margin-top:12px">
-<div class="node"><strong>Tutor</strong><small>Sole teaching authority; sees compact Studio snapshot/history and emits semantically meaningful Studio intents.</small></div>
-<div class="node done"><strong>Deterministic Workspace Router</strong><small>IMPLEMENTED: decision-only active Scene, authorized Source/Annotation, known-capability, custom-compose eligibility, and fallback routing.</small></div>
-<div class="node"><strong>Optional Canvas Specialist — CUSTOM_COMPOSE only</strong><small>NOT IMPLEMENTED. The Router may record eligibility only; no specialist model, provider, tools, or ScenePlan execution exists.</small></div>
-<div class="node done"><strong>Subject Capability Layer</strong><small>IMPLEMENTED: exact Subject/Activity/Renderer/Action/Validator contracts and typed validator/reducer dispatch; no production Activities or renderers.</small></div>
-</div>
-<p class="muted" style="margin-top:12px">Tutor SSE remains the Chat conversation feed. The implemented Studio Feed is authenticated resumable workspace state, not a second chat stream or raw Chat replay. Tutor context observation/watermark, WorkspaceIntent, and the Execution Router are implemented; Canvas-originated Tutor turns, Student-facing activities/renderers, Canvas Specialist execution, and FE-02 production integration do not yet exist. Canvas actions and derived Vision outputs do not create Evidence directly. All later Studio work stays dependency-ordered and blocked.</p>
-<div class="flow studio-boundaries" style="margin-top:12px">
-<div class="node done"><strong>STUDIO-GOV-01</strong><small>DONE / ACCEPTED.</small></div>
-<div class="node done"><strong>FE-02-PRESERVE-01</strong><small>DONE / ACCEPTED. PRESERVED PROTOTYPE / NOT ACCEPTED PRODUCTION ARCHITECTURE.</small></div>
-<div class="node done"><strong>STUDIO-STATE-01</strong><small>DONE / ACCEPTED. DURABLE STATE FOUNDATION IMPLEMENTED.</small></div>
-<div class="node done"><strong>STUDIO-SUBJECT-01</strong><small>DONE / ACCEPTED. SUBJECT CAPABILITY FOUNDATION IMPLEMENTED.</small></div>
-<div class="node done"><strong>STUDIO-PROTOCOL-01</strong><small>DONE / ACCEPTED. Authenticated open/resume, Snapshot API, typed operation API, resumable Studio SSE, Event Log catch-up, PostgreSQL wake-up, and web protocol/controller are implemented.</small></div>
-<div class="node done"><strong>STUDIO-RUNTIME-01</strong><small>DONE / ACCEPTED. Current Snapshot and exact unseen Events enter the existing Tutor call; completed successful Tutor provenance advances the watermark.</small></div>
-<div class="node done"><strong>STUDIO-RUNTIME-02</strong><small>DONE / ACCEPTED. Strict WorkspaceIntent and deterministic non-mutating execution routing are implemented.</small></div>
-<div class="node"><strong>STUDIO-RUNTIME-03</strong><small>ONLY READY TASK. It has not started.</small></div>
-<div class="node"><strong>LATER STUDIO WORK</strong><small>BLOCKED. Canvas-originated Tutor turns, activities, renderers, Specialist execution, and FE-02 production integration are not implemented.</small></div>
-<div class="node"><strong>CURR-RENDER-MATH-01A</strong><small>BLOCKED UNTIL THE GRADE 5 MATH RENDERER IMPLEMENTATION GATE.</small></div>
+<section class="grid3 section">
+<article class="panel"><span class="status done">ALIGNMENT</span><h2>Semantic Alignment Envelope</h2><p>The Specialist may creatively compose presentation, but instructional meaning stays pinned to stable support identities from the Primary Tutor order. The application validates support coverage; it does not pretend deterministic code can solve arbitrary factual entailment.</p></article>
+<article class="panel"><span class="status done">PERSONALIZATION</span><h2>Visual Learner Context</h2><p>Transient projection only. Student Core Profile supplies authoritative age/Grade/identity when useful; a few relevant current safe Personal Facts may optionally inspire examples/visuals. No history dump, personality inference or forced personalization.</p></article>
+<article class="panel"><span class="status done">ASYNC SAFETY</span><h2>Frozen Composition Pack</h2><p>Freeze the exact admitted objective, support, source excerpts/version, locale, current relevant Scene meaning and capability before asynchronous Worker execution. Do not silently rerun Retrieval and replace grounding later.</p></article>
+</section>
+
+<section class="panel section">
+<span class="status future">VISUAL TOOLBELT</span><h2>Renderer-first capability stack</h2>
+<div class="grid4">
+<div class="node tool"><b>React / DOM / SVG</b><span class="status done">BASELINE / ACTIVE</span><span>Process, diagrams, relations, labels, application-owned illustrations.</span></div>
+<div class="node tool"><b>Motion</b><span class="status blocked">CS-02 INSTALL / PROVE</span><span>Semantic focus, reveal, traces and transformations. Does not force a ProcessView rewrite.</span></div>
+<div class="node tool"><b>React Konva / Konva</b><span class="status blocked">CS-02 INSTALL / PROVE</span><span>Spatial drag/place/group/label interaction; client/lazy adapter.</span></div>
+<div class="node tool"><b>JSXGraph</b><span class="status blocked">CS-02 INSTALL / PROVE</span><span>Number lines, geometry, coordinates, mathematical construction; client/lazy adapter.</span></div>
+<div class="node tool"><b>MathLive</b><span class="status blocked">CS-02 INSTALL / PROVE</span><span>Editable fractions/expressions/math input; controlled semantic value handoff.</span></div>
+<div class="node tool"><b>Engine selection</b><span class="status done">APPLICATION-OWNED</span><span>Models request semantic capability; Registry/adapters select technology.</span></div>
+<div class="node tool"><b>Images / 3D</b><span class="status blocked">OUTSIDE TRACK</span><span>Generated imagery and 3D remain separately gated.</span></div>
+<div class="node tool"><b>Generic Artifact Engine</b><span class="status blocked">NOT REQUIRED</span><span>Do not build before a concrete need proves it.</span></div>
 </div>
 </section>
 
-<section class="panel future section">
-<h2>Approved Product Expansion — Visible but Frozen</h2>
-<p>These are intentional product capabilities, not random nice-to-haves. Their implementation order is gated by sequencing and real-use evidence.</p>
-<div class="capabilities" style="margin-top:12px">
-<div class="cap"><b>Science</b><span class="frozen">Approved core direction · frozen</span></div>
-<div class="cap"><b>Voice / STT</b><span class="frozen">Approved core direction · frozen</span></div>
-<div class="cap"><b>Vision / homework photos</b><span class="frozen">Approved core direction · frozen</span></div>
-<div class="cap"><b>Handwriting / drawing evidence</b><span class="frozen">Approved core direction · frozen</span></div>
-<div class="cap"><b>Visual / interactive artifacts</b><span class="frozen">Approved core direction · frozen</span></div>
-<div class="cap"><b>Learning Canvas</b><span class="frozen">Approved direction · gated</span></div>
-<div class="cap"><b>Parent Intelligence UX</b><span class="frozen">First Product Loop direction · broader UI frozen</span></div>
-<div class="cap"><b>Grade progression</b><span class="frozen">Approved direction · production deferred</span></div>
+<section class="panel section">
+<span class="status ready">EXECUTION SEQUENCE</span><h2>CS-01 → CS-07</h2>
+<div class="tasks">
+<div class="task"><span class="status ready">READY</span><b>CS-01</b><span>Runtime Specialist Skill + capability boundary. No model call/dependencies.</span></div>
+<div class="task"><span class="status blocked">BLOCKED</span><b>CS-02</b><span>Install/prove Motion, Konva, JSXGraph, MathLive.</span></div>
+<div class="task"><span class="status blocked">BLOCKED</span><b>CS-03</b><span>Visual Order + Alignment + Frozen Pack + Visual Learner Context.</span></div>
+<div class="task"><span class="status blocked">BLOCKED</span><b>CS-04</b><span>Luna Specialist ModelTask/Worker/Gateway/run lifecycle, one attempt.</span></div>
+<div class="task"><span class="status blocked">BLOCKED</span><b>CS-05</b><span>Production Process composition, atomic Scene lifecycle, existing ProcessView.</span></div>
+<div class="task"><span class="status blocked">BLOCKED</span><b>CS-06</b><span>Real Daily natural journey; quality + latency + cost baseline.</span></div>
+<div class="task"><span class="status blocked">BLOCKED</span><b>CS-07</b><span>Controlled Motion/Konva/JSXGraph/MathLive labs; KILL/MODIFY/KEEP.</span></div>
 </div>
 </section>
 
-<section class="grid section">
-<article class="panel"><h2>Do Not Resurrect</h2><div class="rules">
-<div class="rule"><b>Current School Focus authority:</b> superseded.</div>
-<div class="rule"><b>Book required before Tutor:</b> superseded.</div>
-<div class="rule"><b>Mandatory curriculum semantics:</b> superseded.</div>
-<div class="rule"><b>Candidate as Evidence:</b> rejected.</div>
-<div class="rule"><b>Second normal-turn classifier:</b> rejected.</div>
-<div class="rule"><b>Semantic Session LLM summarizer:</b> superseded/rejected.</div>
-<div class="rule"><b>Exam-pressure learning flow:</b> rejected.</div>
-<div class="rule"><b>Arbitrary unsandboxed AI JavaScript:</b> rejected.</div>
-</div></article>
-<article class="panel"><h2>Document Authority</h2><div class="authority">
-<code>AGENTS.md<br>Agent operating rules</code>
-<code>PROJECT_REFERENCE.md<br>Stable product truth</code>
-<code>LEARNING_INTELLIGENCE_SPEC.md<br>Intelligence semantics</code>
-<code>LEARNING_PRODUCT_ROADMAP.md<br>Approved evolution</code>
-<code>IMPLEMENTATION_PLAN.md<br>Implementation direction</code>
-<code>PROJECT_STATE.md<br>Current operational truth</code>
-<code>TASKS.md<br>Execution/task state</code>
-<code>SYSTEM_MAP.html<br>Visual map + readiness overlay</code>
-</div><p class="muted" style="margin-top:12px">Historical task/roadmap records preserve provenance. They do not override newer governing truth or current execution state.</p></article>
-<article class="panel"><h2>Current Execution Gate</h2><div class="stack">
-<div class="node"><strong>DOC-SYNC-01</strong><small>DONE / ACCEPTED after Product Owner approval and final governance/scope audit.</small></div>
-<div class="node done"><strong>RL-01</strong><small>COMPLETED / HISTORICAL Daily-Use release work. It is not the current next track.</small></div>
-<div class="node done"><strong>STUDIO-GOV-01</strong><small>DONE / ACCEPTED.</small></div>
-<div class="node done"><strong>FE-02-PRESERVE-01</strong><small>DONE / ACCEPTED. Preserved prototype; not accepted production architecture.</small></div>
-<div class="node done"><strong>STUDIO-STATE-01</strong><small>DONE / ACCEPTED. DURABLE STATE FOUNDATION IMPLEMENTED.</small></div>
-<div class="node done"><strong>STUDIO-SUBJECT-01</strong><small>DONE / ACCEPTED. SUBJECT CAPABILITY FOUNDATION IMPLEMENTED.</small></div>
-<div class="node done"><strong>STUDIO-PROTOCOL-01</strong><small>DONE / ACCEPTED. Authenticated Studio API, resumable feed, Event Log recovery, PostgreSQL wake-up, and web protocol/controller are implemented.</small></div>
-<div class="node done"><strong>STUDIO-RUNTIME-01</strong><small>DONE / ACCEPTED. Current Snapshot and exact unseen Events enter the existing Tutor call; completed successful Tutor provenance advances the watermark.</small></div>
-<div class="node done"><strong>STUDIO-RUNTIME-02</strong><small>DONE / ACCEPTED. Strict WorkspaceIntent and deterministic non-mutating execution routing are implemented.</small></div>
-<div class="node"><strong>STUDIO-RUNTIME-03</strong><small>ONLY READY TASK. It has not started.</small></div>
-<div class="node"><strong>LATER STUDIO WORK</strong><small>BLOCKED. Canvas-originated Tutor turns, activities, renderers, Specialist execution, and FE-02 production integration are not implemented.</small></div>
-<div class="node"><strong>CURR-RENDER-MATH-01A</strong><small>BLOCKED UNTIL THE GRADE 5 MATH RENDERER IMPLEMENTATION GATE.</small></div>
-</div></article>
+<section class="panel section">
+<span class="status done">ACCEPTED FIRST PRODUCTION SLICE</span><h2>Process only before broad expansion</h2>
+<div class="grid3">
+<div class="node"><h3>Representation</h3><small>Sequence / cycle, 2–8 stages, approved handles, explicit supported relations.</small></div>
+<div class="node"><h3>View</h3><small>Reuse the accepted Checkpoint-2 ProcessView. No competing Process renderer or card/row redesign.</small></div>
+<div class="node"><h3>Interaction</h3><small>Focus/reveal/trace are record-only; object/relation explanation returns to the same Primary Tutor through Runtime-03.</small></div>
+</div>
 </section>
+
+<section class="panel warn section">
+<span class="status ready">OPTIMIZATION ORDER</span><h2>Quality first, then speed, then cost</h2>
+<div class="prio">
+<div class="node"><h3>1 · Quality — blocking gate</h3><small>Semantic fidelity, learning usefulness, visual clarity, age/Grade appropriateness, Arabic/English correctness, accessibility and natural personalization.</small></div>
+<div class="node"><h3>2 · Speed</h3><small>Measure Tutor first text/terminal, queue, Specialist generation, validation/commit and first useful Canvas. Optimize the measured bottleneck.</small></div>
+<div class="node"><h3>3 · Cost</h3><small>Measure Tutor/Specialist tokens/cost and calls avoided by Chat/reuse/update. Reduce cost only without lowering accepted quality.</small></div>
+</div>
+</section>
+
+<section class="grid3 section">
+<article class="panel"><span class="status done">FACTS</span><h2>Authority separation</h2><p><b>Core Profile</b> = authoritative identity/age/Grade. <b>Personal Facts</b> = explicit safe Student-asserted context. <b>Learner Intelligence</b> = evidence-backed learning state. Canvas Specialist receives only the bounded transient projection allowed by the contract.</p></article>
+<article class="panel"><span class="status done">LEARNING INTELLIGENCE</span><h2>No direct Canvas evidence</h2><p>Canvas/Specialist output or clicking/focusing is not proof of learning. Existing Tutor/Segment/Session review pipeline remains the learning-authority path.</p></article>
+<article class="panel"><span class="status done">SAFETY</span><h2>Application remains final authority</h2><p>Specialist proposal is untrusted semantic data until Student scope, Safety/Parent Boundary, source/asset rights, capability and stale/causal checks pass.</p></article>
+</section>
+
+<section class="panel section">
+<h2>Documentation and review discipline</h2>
+<div class="rules">
+<div class="rule"><b>Before each CS task:</b> create <code>docs/reviews/CS-XX/IMPLEMENTATION_RECORD.md</code> with baseline, scope/non-scope, protected boundaries, expected files and verification.</div>
+<div class="rule"><b>Before completion:</b> record actual paths, unit/Postgres/mock/live-Luna/build/browser evidence, call counts, quality findings, latency/tokens/cost where applicable and unverified evidence.</div>
+<div class="rule"><b>Promotion:</b> only Product Owner acceptance marks DONE/ACCEPTED and allows the next task to become READY.</div>
+<div class="rule"><b>History:</b> current state/task files stay concise; detailed history remains in <code>TASKS.md</code> and accepted review/closure records.</div>
+</div>
+</section>
+
+<section class="panel section refs"><b>Critical references:</b> <code>docs/CANVAS_SPECIALIST_EXECUTION_CONTRACT.md</code> · <code>docs/CANVAS_SPECIALIST_IMPLEMENTATION_PLAN.md</code> · <code>docs/CANVAS_SPECIALIST_ACCEPTANCE_SPEC.md</code> · <code>project-state/PROJECT_STATE.md</code> · <code>project-state/DAILY_USE_RELEASE_TASKS.md</code> · <code>docs/STUDIO_VISUAL_EXPLANATION_SPEC.md</code> · <code>docs/LINA_EDUCATIONAL_VISUALS_GUIDE.md</code> · accepted Process checkpoint and system Safety/Learning Intelligence/Personal Facts authorities.</section>
 </div>
 </body>
 </html>
