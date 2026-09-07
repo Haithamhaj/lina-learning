@@ -1,10 +1,11 @@
 # CS-01 — Contract + Runtime Specialist Skill — Implementation Record
 
-**Status:** READY / NOT STARTED  
+**Status:** DONE / ACCEPTED
 **Prepared:** 2026-09-07  
 **Execution branch:** `codex/ctx-03`  
 **Preparation baseline inspected:** `dbcdffa321fb50cd6282be81e192e9bf920b124b`  
-**Implementation start rule:** begin from the current `codex/ctx-03` HEAD that contains this Implementation Record and the Canvas Specialist documentation sync; do not reset or execute from the older preparation baseline.  
+**Implementation baseline:** `aa60cb49d848c095ca8835caebfac1f99ea3d25b`
+**Implementation start rule:** began from the current `codex/ctx-03` HEAD containing this Implementation Record and the Canvas Specialist documentation sync; no reset or protected-work discard was used.
 **Purpose:** Create the runtime Canvas Specialist Visual Learning Composer Skill and reconcile the disabled per-run capability boundary, without enabling Specialist model execution or changing Student runtime behavior.
 
 ## 1. Governing references
@@ -134,19 +135,75 @@ Run additional relevant regressions if the actual changed paths make them necess
 
 ## 7. Implementation decisions
 
-_Not started. Record only meaningful decisions/deviations here._
+- Added `runtime/canvas-specialist/SKILL.md` as the runtime-only
+  `CANVAS_SPECIALIST_VISUAL_LEARNING_COMPOSER_V1` instruction boundary. It
+  composes an admitted semantic proposal and explicitly leaves Tutor,
+  application/Studio, renderer, Safety, persistence, and learning-authority
+  responsibilities unchanged.
+- Reconciled `visual-capability-pack-v1.md` by identifying it as the exact,
+  bounded, application-supplied **per-run** pack, distinct from the general
+  Skill and not execution authorization. The accepted Process seed bounds
+  remain unchanged, including 2–8 stages.
+- Added focused marker-based tests rather than a full-prose snapshot. They
+  assert Primary Tutor instruction isolation plus Specialist and pack authority
+  boundaries. No change to `runtime/tutor/visual-guidance-v1.md` was needed:
+  source inspection confirms it is the sole runtime visual file appended to
+  shared Primary Tutor instructions.
 
 ## 8. Actual changed paths
 
-_Not started._
+- `runtime/canvas-specialist/SKILL.md` — new runtime Visual Learning Composer
+  Skill.
+- `runtime/canvas-specialist/visual-capability-pack-v1.md` — clarified
+  per-run/general-Skill/execution separation only.
+- `tests/test_canvas_specialist_skill.py` — focused authority and instruction
+  isolation contract tests.
+- `docs/reviews/CS-01/IMPLEMENTATION_RECORD.md` — this completion record.
 
 ## 9. Verification results
 
-_Not run._
+| Command | Result |
+|---|---|
+| `uv run --with-requirements apps/api/requirements.txt --with pytest pytest -q tests/test_canvas_specialist_skill.py` | COLLECTION FAILURE — `ModuleNotFoundError: No module named 'services'`; the repository root was absent from the Python import path. |
+| `PYTHONPATH=. uv run --with-requirements apps/api/requirements.txt --with pytest pytest -q tests/test_canvas_specialist_skill.py` | PASS — **3 passed** in 0.09s; 0 failed, 0 skipped. |
+| `PYTHONPATH=. uv run --with-requirements apps/api/requirements.txt --with pytest pytest -q tests/test_process_visual_awareness.py tests/test_tutor_runtime_contract.py` | PASS — **34 passed** in 0.10s; 0 failed, 0 skipped. Existing coverage executed: `test_process_visual_awareness.py` proves `VISUAL_GUIDANCE_V1`, development-only/runtime separation, and Primary Tutor instruction behavior; `test_tutor_runtime_contract.py` covers the affected Tutor runtime contract. |
+| `git diff --check` | PASS — no whitespace errors. |
+| `rg -n "visual-guidance-v1|canvas-specialist/SKILL|visual-capability-pack|VISUAL_GUIDANCE_V1|SPECIALIST_CAPABILITY_PACK_V1|CANVAS_SPECIALIST_VISUAL_LEARNING_COMPOSER_V1" services runtime tests --glob '!tests/test_canvas_specialist_skill.py'` | PASS — only Primary Tutor guidance is runtime-loaded; no Specialist Skill/pack runtime loader exists. |
+| `npm run test:python` | DIAGNOSTIC NON-PASS — PostgreSQL container setup and all migrations completed. A full-suite aggregate count was not obtained because the foreground command capture stopped before completion. The first-error diagnostic run below classifies the observed failure. |
+
+No tests were skipped and counted as passes.
+
+### Broader-suite diagnostic classification
+
+To obtain a bounded first failure, the canonical script was run with
+`PYTEST_ADDOPTS='--maxfail=1 --tb=short' npm run test:python`. PostgreSQL setup
+and all Alembic migrations completed successfully. Pytest then reached a final
+diagnostic result of **19 passed, 1 error, 1 warning** in 5.98s:
+
+- `tests/test_candidate_event_postgres.py::test_same_call_candidate_persists_raw_source_and_never_creates_derived_intelligence`
+  — **ENVIRONMENT / INFRASTRUCTURE FAILURE.** Its setup fixture failed before
+  the test body while truncating the disposable PostgreSQL database with
+  `psycopg.errors.DeadlockDetected` / `sqlalchemy.exc.OperationalError`.
+  The lock cycle was between PostgreSQL processes holding `AccessExclusiveLock`
+  and `RowShareLock`. The same setup deadlock reproduced when the implicated
+  test was run alone through the canonical disposable-database script.
+
+The CS-01 diff does not alter this test, PostgreSQL fixtures, migrations,
+database code, or the test runner. Earlier diagnostic runs had overlapping
+canonical-suite processes against the single named disposable database; that
+shared-runner contention is the observed environmental cause. No baseline
+comparison was needed because the classification has no source-level overlap
+with the four CS-01 paths. No CS-01 regression was observed.
 
 ## 10. Independent review
 
-_Not performed._
+No independent reviewer was available or authorized. A separate static
+self-review found no Critical or Important issue in the CS-01 diff: the sole
+shared Primary Tutor runtime loader remains
+`runtime/tutor/visual-guidance-v1.md`, while the new Specialist Skill and pack
+have no runtime loader. Focused test evidence is independently reproducible
+through the repository-declared `uv` environment; the broader suite remains
+non-passing with no captured final aggregate count.
 
 ## 11. Known unverified evidence / blockers
 
@@ -154,11 +211,32 @@ _Not performed._
 - Visual Toolbelt installation intentionally remains blocked until CS-02.
 - Tutor Visual Order/Frozen Pack intentionally remains blocked until CS-03.
 - Natural Process production composition intentionally remains blocked until CS-05.
+- The required CS-01 focused tests and existing visual-awareness/Tutor contract
+  tests are verified. The broader canonical Python regression needs a later
+  clean, non-overlapping run to obtain its full aggregate count; its first
+  classified failure is PostgreSQL lock contention, not CS-01. No CS-01-related
+  failure appeared in the focused runs.
 
 ## 12. Scope review
 
-**Before implementation:** documentation-only preparation. No CS-01 source changes have been made yet.
+Reviewed complete tracked and CS-01 untracked diff. Changes are limited to the
+new runtime Skill, the disabled capability-pack wording, focused tests, and this
+record. No change was made to Tutor authority or shared Tutor guidance,
+WorkspaceIntent, ModelTask/Gateway/Worker, database/schema/migrations,
+dependencies, Student runtime, ProcessView, production routing, or
+Evidence/PF/LI boundaries. No model execution path was enabled.
 
 ## 13. Product Owner disposition
 
-**READY / NOT STARTED.** Execute CS-01 only. After implementation and verification, submit this record for review and stop. CS-02 remains BLOCKED until explicit Product Owner acceptance/promotion.
+**DONE / ACCEPTED — 2026-09-07.** Product Owner accepted the reviewed CS-01
+implementation with Critical: 0, Important: 0, Minor: 0. Retained acceptance
+evidence: CS-01 focused tests **3 passed, 0 failed, 0 skipped**; affected
+Tutor/Process contracts **34 passed, 0 failed, 0 skipped**; and `git diff
+--check` passed. Primary Tutor loads only its accepted Tutor visual guidance,
+not the Canvas Specialist Skill or capability pack. The broader canonical
+regression diagnostic encountered an environment/infrastructure PostgreSQL
+deadlock during fixture `TRUNCATE` before the test body; no failure was
+attributable to CS-01. No dependency, schema, ModelTask, Gateway, Worker,
+Student runtime, WorkspaceIntent, ProcessView, or routing change occurred. No
+live Luna, browser, or PostgreSQL product evidence was required or claimed for
+CS-01. CS-02 is READY but not started.

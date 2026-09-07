@@ -20,7 +20,7 @@ Student question
 → same Primary Tutor explains through existing Runtime-03
 ```
 
-The active bounded path is `CS-01 → CS-06`. `CS-07` is a controlled post-proof visual Toolbelt lab, not required before the first real Process trial.
+The active bounded path is `CS-02 → CS-06`. `CS-07` is a controlled post-proof visual Toolbelt lab, not required before the first real Process trial.
 
 ## Current reality
 
@@ -28,6 +28,9 @@ The active bounded path is `CS-01 → CS-06`. `CS-07` is a controlled post-proof
 
 - `LINA-VISUAL-INTELLIGENCE-01` — DONE / ACCEPTED: canonical visual grammar, development-only visual Skill, Primary Tutor visual guidance, disabled future Specialist capability pack, semantic Tutor Canvas awareness and Process awareness proofs.
 - `STUDIO-VISUAL-PROCESS-01` — DONE / ACCEPTED: Checkpoint-2 Process visual direction and reusable prepared-data ProcessView foundation; sequence/radial cycle, stable IDs, focus/de-emphasis, reveal, relation trace, keyboard/tap, narrow/Arabic and reduced-motion behavior.
+- `CS-01` — DONE / ACCEPTED: runtime Visual Learning Composer Skill and
+  disabled per-run capability-pack boundary; focused tests 3/0/0 and affected
+  Tutor/Process contracts 34/0/0 passed. It does not enable model execution.
 - Studio State/Subject Registry/Protocol/Runtime-01/02/03 and `/student/daily` Studio integration are DONE / ACCEPTED.
 - Existing deterministic activities and accepted Math renderers remain protected.
 - Student Core Profile, Personal Facts, PF-03 Personal Memory Tutor context, Learning Intelligence, Retrieval and Child Safety authorities are accepted and remain separate.
@@ -36,7 +39,6 @@ The active bounded path is `CS-01 → CS-06`. `CS-07` is a controlled post-proof
 ### Not yet implemented/proven
 
 - no natural Canvas Specialist dispatch/execution;
-- no runtime `runtime/canvas-specialist/SKILL.md`;
 - no additive Tutor Visual Order / Semantic Alignment Envelope;
 - no frozen Specialist Composition Pack / Visual Learner Context;
 - no `ModelTask.CANVAS_SPECIALIST` live route;
@@ -91,11 +93,11 @@ Do not break or silently reinterpret:
 
 ## Next action
 
-**CS-01 — Contract + Runtime Specialist Skill: READY.**
+**CS-02 — Complete Visual Toolbelt: READY.**
 
-Implement only CS-01 from `docs/CANVAS_SPECIALIST_IMPLEMENTATION_PLAN.md` and verify it against `docs/CANVAS_SPECIALIST_ACCEPTANCE_SPEC.md`. CS-01 must not enable a Specialist model call, install Toolbelt dependencies, modify WorkspaceIntent semantics, change database/schema, or alter Student production behavior.
-
-Stop after CS-01 verification and review. Do not promote or execute CS-02 in the same run without explicit Product Owner authorization.
+CS-01 is DONE / ACCEPTED. CS-02 is the next action only; it is not started in
+this closure. Do not install or prove Toolbelt dependencies without explicit
+Product Owner authorization for CS-02.
 
 ## Critical references
 

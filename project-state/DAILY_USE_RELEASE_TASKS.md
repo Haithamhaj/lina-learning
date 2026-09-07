@@ -25,9 +25,9 @@ The following foundations are already DONE / ACCEPTED and must not be reopened b
 **Acceptance/verification:** `docs/CANVAS_SPECIALIST_ACCEPTANCE_SPEC.md`
 
 ```text
-CS-01 Contract + Runtime Specialist Skill        READY
+CS-01 Contract + Runtime Specialist Skill        DONE / ACCEPTED
   ↓
-CS-02 Complete Visual Toolbelt                   BLOCKED
+CS-02 Complete Visual Toolbelt                   READY
   ↓
 CS-03 Tutor ↔ Specialist Runtime Alignment       BLOCKED
   ↓
@@ -46,9 +46,20 @@ The previous recommendation-only `LINA-VISUAL-SKILL-01` is absorbed into **CS-01
 
 # CS-01 — Contract + Runtime Specialist Skill
 
-**Status:** READY  
+**Status:** DONE / ACCEPTED
 **Dependency:** accepted Canvas Specialist contract/documentation sync only.  
 **Purpose:** create the runtime Visual Learning Composer Skill and align the current disabled capability pack without enabling model execution.
+
+### Accepted closure evidence
+
+Product Owner accepted CS-01 on 2026-09-07 with Critical: 0, Important: 0,
+Minor: 0. Focused tests: 3 passed, 0 failed, 0 skipped; affected Tutor/Process
+contracts: 34 passed, 0 failed, 0 skipped; `git diff --check` passed. Primary
+Tutor loads only accepted Tutor visual guidance, not Specialist instructions.
+The broader regression diagnostic found an environment PostgreSQL deadlock
+during fixture `TRUNCATE` before the test body, not a CS-01 failure. No model
+execution, dependency, schema, Student runtime, WorkspaceIntent, ProcessView,
+or routing change occurred.
 
 ### Required
 
@@ -73,13 +84,14 @@ The previous recommendation-only `LINA-VISUAL-SKILL-01` is absorbed into **CS-01
 
 Follow CS-01 requirements in `docs/CANVAS_SPECIALIST_ACCEPTANCE_SPEC.md`. Create `docs/reviews/CS-01/IMPLEMENTATION_RECORD.md` before implementation and complete it before review.
 
-**Stop:** after verification/review. Product Owner acceptance is required before CS-02 can become READY.
+**Accepted closure:** CS-01 is closed. CS-02 is READY but must not be executed
+without its own explicit Product Owner authorization.
 
 ---
 
 # CS-02 — Complete Visual Toolbelt
 
-**Status:** BLOCKED pending CS-01 acceptance.  
+**Status:** READY
 **Approved target:** Motion + `react-konva@18`/Konva + JSXGraph + MathLive, with React/DOM/SVG remaining baseline.
 
 Purpose is installation/adapter/browser proof only. No new production learning routing. Heavy/client-only engines should remain isolated/lazy where practical. Accepted ProcessView is not rewritten simply because Motion is installed.

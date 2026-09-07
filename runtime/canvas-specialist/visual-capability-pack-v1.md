@@ -1,6 +1,15 @@
-SPECIALIST_DISABLED — version 1 capability boundary, not execution authorization
+SPECIALIST_CAPABILITY_PACK_V1
+
+SPECIALIST_DISABLED — version 1 per-run capability boundary, not execution authorization
 Canonical source: docs/LINA_EDUCATIONAL_VISUALS_GUIDE.md.
 Future runtime subset only; not loaded into the Tutor or any ModelTask/Worker.
+
+This is an exact, bounded, application-supplied per-run Capability Pack. It is
+not the general Specialist intelligence definition and not execution
+authorization by itself. It constrains a dispatched semantic proposal; the
+general Visual Learning Composer reasoning belongs only in
+`runtime/canvas-specialist/SKILL.md`. Natural production Process composition is
+not enabled by this pack or by CS-01.
 
 Compose only when dispatched with an exact application-registered pattern and
 bounded objective/facts/source/locale pack. Approved families are Process
@@ -32,3 +41,6 @@ renderer, motion implementation/easing/duration, ID authority, validation,
 permissions, persistence and final accepted Scene state. The specialist has no
 direct persistence, Safety, Evidence, Personal Facts or Learning Intelligence
 authority and never becomes a competing Tutor.
+
+This preserves application-owned renderer/layout/motion/IDs/persistence; the
+pack authorizes no implementation, storage, or execution behavior.

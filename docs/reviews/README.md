@@ -17,9 +17,9 @@ This is the small navigation and delivery index for Product Owner review, not a 
 | STUDIO-VISUAL-01 | [docs/STUDIO_VISUAL_EXPLANATION_SPEC.md](../STUDIO_VISUAL_EXPLANATION_SPEC.md) | ACCEPTED AS IMPLEMENTATION DIRECTION (decision 36) | 2026-09-07 | Broader hybrid visual design source. Later bounded Canvas Specialist execution is governed by the dedicated accepted contract below where details differ. |
 | STUDIO-VISUAL-PROCESS-01 | [Accepted closure and gallery](STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT_2.md) | DONE / ACCEPTED (decision 38) | 2026-09-07 | V1 Process foundation and prepared-data visuals accepted; existing ProcessView is protected for the first natural-composition production slice. |
 | CANVAS-SPECIALIST-EXECUTION | [Execution contract](../CANVAS_SPECIALIST_EXECUTION_CONTRACT.md) | ACCEPTED | 2026-09-07 | Governs Tutor↔Specialist↔Application authority, Semantic Alignment, Visual Learner Context, one-call policy, Toolbelt boundaries and first Process slice. |
-| CANVAS-SPECIALIST-PLAN | [Implementation plan](../CANVAS_SPECIALIST_IMPLEMENTATION_PLAN.md) | APPROVED EXECUTION PLAN | 2026-09-07 | CS-01→CS-07 sequencing; only CS-01 is READY. |
+| CANVAS-SPECIALIST-PLAN | [Implementation plan](../CANVAS_SPECIALIST_IMPLEMENTATION_PLAN.md) | APPROVED EXECUTION PLAN | 2026-09-07 | CS-01→CS-07 sequencing; CS-01 is accepted and CS-02 is READY. |
 | CANVAS-SPECIALIST-ACCEPTANCE | [Acceptance & verification spec](../CANVAS_SPECIALIST_ACCEPTANCE_SPEC.md) | GOVERNING VERIFICATION SPEC | 2026-09-07 | Quality→Speed→Cost gates, evidence taxonomy, per-task acceptance matrix and documentation lifecycle. |
-| CS-01 | [Implementation record](CS-01/IMPLEMENTATION_RECORD.md) | READY / NOT STARTED | 2026-09-07 | Prepared pre-code handoff for the runtime Visual Learning Composer Skill and capability-boundary reconciliation; no model/dependency/runtime execution yet. |
+| CS-01 | [Implementation record](CS-01/IMPLEMENTATION_RECORD.md) | DONE / ACCEPTED | 2026-09-07 | Runtime Visual Learning Composer Skill and per-run capability-boundary reconciliation accepted; no model/dependency/runtime execution enabled. |
 
 Historical Process evidence: [Checkpoint 1 report and gallery](STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT.md).
 
