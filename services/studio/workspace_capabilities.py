@@ -66,7 +66,7 @@ def build_workspace_capability_context(
         subject_key, profile_version, profile.tutor_guidance_fragment, active_scene_status,
         () if scene is None else scene.allowed_action_keys,
         tuple(dict.fromkeys((*authorized_source_references, *(p['source_ref'] for p in problems)))),
-        bool(profile.activities),
+        any(r.implementation_status != "AWARENESS_ONLY" for r in profile.renderers) and bool(profile.activities),
         profile.canvas_specialist_profile_key is not None,
         problems,
     )

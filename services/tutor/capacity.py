@@ -174,6 +174,11 @@ def _drop_next_optional_unit(context: TutorContext) -> tuple[TutorContext, Dropp
             replace(context, intelligence=context.intelligence[:-1]),
             DroppedContextUnit("LEARNER_INTELLIGENCE", source_ids=(str(item.source_id),)),
         )
+    if context.studio_workspace is not None and context.studio_workspace.visual_scene is not None:
+        from services.studio.subjects.process_visual import reduce_visual
+        return (replace(context, studio_workspace=replace(context.studio_workspace,
+            visual_scene=reduce_visual(context.studio_workspace.visual_scene))),
+            DroppedContextUnit("VISUAL_SEMANTIC_UNIT"))
     return context, None
 
 

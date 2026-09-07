@@ -24,6 +24,8 @@ from services.studio.subjects import production_subject_registry
 from services.studio.subjects.registry import SubjectCapabilityError
 
 
+from services.studio.subjects import process_visual as visual
+
 STUDIO_TUTOR_CONTEXT_SCHEMA_VERSION = "studio-tutor-context-v1"
 OBSERVATION_FAILURE_CODES = TUTOR_OBSERVATION_FAILURE_CODES
 
@@ -104,8 +106,11 @@ class StudioTutorWorkspaceContext:
     observation_id: UUID | None
     current_scene_capability: StudioTutorSceneCapability | None = None
 
+    visual_scene: Mapping[str, object] | None = None
+
     def as_model_payload(self) -> dict[str, object]:
-        return {
+        process = self.active_activity_key == visual.ACTIVITY_KEY
+        result = {
             "schema_version": STUDIO_TUTOR_CONTEXT_SCHEMA_VERSION,
             "through_sequence": self.through_sequence,
             "snapshot": {
@@ -118,10 +123,30 @@ class StudioTutorWorkspaceContext:
                 "current_scene_capability": (
                     None if self.current_scene_capability is None else self.current_scene_capability.as_model_payload()
                 ),
-                "state": dict(self.state_payload),
+                "state": {} if process else dict(self.state_payload),
             },
-            "unseen_events": [event.as_model_payload() for event in self.unseen_events],
+            "unseen_events": [_safe_event(event) for event in self.unseen_events],
         }
+        if self.visual_scene is not None:
+            result["snapshot"]["visual_scene"] = dict(self.visual_scene)
+        return result
+
+
+def _safe_event(event):
+    payload = event.as_model_payload()
+    if event.activity_key == visual.ACTIVITY_KEY:
+        # Keep the selected observation range and semantic target; never echo
+        # the accepted seed or application artwork through unseen Events.
+        action = event.payload.get("action")
+        if event.action_key in visual.ACTIONS and isinstance(action, dict):
+            try:
+                visual.validate_action(action)
+                payload["payload"] = {"action": dict(action)}
+            except ValueError:
+                payload["payload"] = {}
+        else:
+            payload["payload"] = {}
+    return payload
 
 
 @dataclass(frozen=True)
@@ -237,11 +262,35 @@ def select_studio_tutor_context(
                     unseen_events=events,
                     observation_id=observation_id,
                     current_scene_capability=scene_capability,
+                    visual_scene=_selected_visual(selection_session, runtime, snapshot, scene_capability),
                 ),
                 previous_watermark=previous_watermark,
             )
     finally:
         selection_session.close()
+
+
+def _selected_visual(session, runtime, snapshot, capability):
+    if capability is None or capability.activity_key != visual.ACTIVITY_KEY:
+        return None
+    if (capability.capability_status != "RESOLVED" or capability.subject_profile_version != visual.PROFILE_VERSION
+        or capability.activity_version != visual.ACTIVITY_VERSION or capability.renderer_key != visual.RENDERER_KEY
+        or capability.renderer_version != visual.RENDERER_VERSION):
+        return None
+    scene = session.execute(select(StudioScene).where(StudioScene.id == snapshot.current_scene_id,
+        StudioScene.student_id == runtime.student_id, StudioScene.studio_runtime_id == runtime.id,
+        StudioScene.learning_session_id == runtime.learning_session_id)).scalar_one_or_none()
+    if scene is None or scene.status not in ("ACCEPTED", "ACTIVE") or scene.scene_version != snapshot.current_scene_version:
+        return None
+    if snapshot.state_payload.get("scene_status") not in ("ACCEPTED", "ACTIVE"):
+        return None
+    seed = snapshot.state_payload.get("scene_seed")
+    if seed != scene.seed_payload or scene.payload_schema_version != visual.SEED_VERSION:
+        return None
+    try:
+        return visual.project_visual(seed, snapshot.state_payload.get(visual.ACTIVITY_KEY, {}))
+    except (ValueError, TypeError, KeyError):
+        return None
 
 
 def _selected_scene_capability(
@@ -287,6 +336,7 @@ def _selected_scene_capability(
         renderer_version=scene.renderer_version,
         allowed_action_keys=action_keys,
         source_references=(
+            () if scene.activity_key == visual.ACTIVITY_KEY else
             (scene.seed_payload['source_ref'],)
             if scene.activity_key == 'decimal_number_line' and isinstance(scene.seed_payload.get('source_ref'), str)
             else tuple(scene.source_asset_refs)

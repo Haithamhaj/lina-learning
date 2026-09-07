@@ -255,6 +255,8 @@ def _activity_is_current(activity: ActivityContract, profile: SubjectCapabilityP
 
 
 def _renderer_matches_need(renderer: RendererContract, intent: WorkspaceIntent) -> bool:
+    if renderer.implementation_status == "AWARENESS_ONLY":
+        return False
     if intent.representation_need.value == "INTERACTIVE":
         return renderer.interactive
     if intent.representation_need.value == "VISUAL":

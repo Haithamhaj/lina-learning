@@ -7,6 +7,8 @@ from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 import json
+from copy import deepcopy
+from dataclasses import replace
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
@@ -89,14 +91,24 @@ class StudioInteractionTutorContext:
     workspace: Mapping[str, object]
 
     def as_model_payload(self) -> dict[str, object]:
-        return {
+        result = {
             "schema_version": "studio-interaction-tutor-context-v1",
             "interaction_id": str(self.interaction_id),
             "runtime_id": str(self.runtime_id),
             "learning_session_id": str(self.learning_session_id),
-            "source": dict(self.source),
-            "workspace": dict(self.workspace),
+            "source": deepcopy(dict(self.source)),
+            "workspace": deepcopy(dict(self.workspace)),
         }
+        from services.studio.subjects import process_visual as visual
+        if self.workspace.get("active_activity_key") == visual.ACTIVITY_KEY:
+            result["workspace"]["state"] = {}
+        if self.source["event"].get("activity_key") == visual.ACTIVITY_KEY:
+            # Source target meaning is frozen at admission; current state comes
+            # separately from the existing Runtime-01 selection.
+            result["current_interaction"] = result["source"].pop("current_interaction")
+            for key in ("renderer_key", "renderer_version"):
+                result["source"]["event"].pop(key, None)
+        return result
 
 
 @dataclass(frozen=True)
@@ -726,6 +738,7 @@ class StudioInteractionTutorService:
             runtime_id=runtime.id,
             learning_session_id=runtime.learning_session_id,
             source={
+                **_visual_interaction_source(scene, action_payload, submitted_projection["state_payload"]),
                 "turn_origin": "CANVAS_INTERACTION",
                 "interaction_kind": interaction.interaction_kind,
                 "live_subject": {
@@ -893,7 +906,7 @@ class StudioInteractionTutorService:
             else ""
         )
 
-        return {
+        payload = {
             "instructions": TUTOR_SHARED_INSTRUCTIONS,
             "input": (
                 "Canvas-originated Studio interaction (server-owned bounded semantic control; no Chat Student message exists):\n"
@@ -907,6 +920,15 @@ class StudioInteractionTutorService:
             "studio_interaction_context": encoded_context,
             "studio_workspace_context": workspace_payload,
         }
+        if "current_interaction" in encoded_context or (workspace_context is not None and workspace_context.active_activity_key == "process_visual_context"):
+            from services.tutor.capacity import serialized_model_request_characters
+            if serialized_model_request_characters(payload) > get_settings().tutor_context_capacity:
+                if workspace_context is not None and workspace_context.visual_scene is not None:
+                    from services.studio.subjects.process_visual import reduce_visual
+                    return self._model_payload(context, workspace_context=replace(workspace_context,
+                        visual_scene=reduce_visual(workspace_context.visual_scene)))
+                raise StudioInteractionSourceError("Protected Canvas interaction exceeds Tutor capacity.")
+        return payload
 
     @staticmethod
     def _validate_tutor_output(result: ModelResult) -> None:
@@ -1013,3 +1035,21 @@ class StudioInteractionTutorService:
             "intent": intent.model_dump(mode="json"),
             "decision": decision.as_audit_payload(),
         }
+
+
+def _visual_interaction_source(scene, action, source_state):
+    """Resolve meaning from immutable source replay, never a later browser selection."""
+    from services.studio.subjects import process_visual as visual
+    if scene.activity_key != visual.ACTIVITY_KEY:
+        return {}
+    seed = source_state.get("scene_seed")
+    visual.validate_seed(seed)
+    target = action.get("target_id")
+    stage = next((s for s in seed["stages"] if s["id"] == target), None)
+    relation = next((r for r in seed["relations"] if r["id"] == target), None)
+    if stage is None and relation is None:
+        raise StudioInteractionSourceError("Process explanation target is unavailable.")
+    meaning = ({"label": stage["label"], "detail": stage["detail"]} if stage else
+        {"from": relation["from"], "to": relation["to"], "meaning": relation["label"]})
+    return {"current_interaction": {"action": "REQUEST_EXPLANATION", "target_id": target,
+        "target_kind": "object" if stage else "relation", **meaning}}

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -224,6 +226,10 @@ TUTOR_SHARED_INSTRUCTIONS = (
     "Confusion is not a misconception. Uncertainty, a request for another explanation, a wrong answer without stated reasoning, and a calculation slip are not misconceptions by themselves. When the Student is confused, respond pedagogically and change support or representation when useful. A misconception_signal is allowed only when the Student-authored current raw message explicitly demonstrates a specific incorrect mental model, rule, relationship, or interpretation. When only an answer is wrong without stated reasoning, prefer incorrect_attempt when appropriate. Every misconception_signal must include misconception_evidence with version misconception-evidence-v1, a concise incorrect_model, the current Student source_message_id, and an explicit_student_reasoning field that must copy the supporting Student reasoning span exactly from that raw message; do not paraphrase or use Tutor text. "
     "Never treat a chosen Tutor strategy as an outcome without an observable Student result. provisional_broad_subject is optional, must be null for casual or ambiguous turns, and when present must select only the supplied controlled Broad Subject key from the current conversation. It is a non-authoritative runtime hint only: it is not Evidence, learner intelligence, or final Segment Subject authority. workspace_intent is required but nullable: use null when no Workspace support is needed. When useful, it may express only a bounded educational need, current academic Subject, learning goal, representation need, Student response mode, source reference, and safe text fallback. Never choose a renderer, implementation technology, provider, model, Scene ID, event, reducer, validator, or specialist execution. Never mention hidden metadata in text."
 )
+
+
+# Explicit runtime subset; development skill and specialist pack are not loaded.
+TUTOR_SHARED_INSTRUCTIONS += "\n\n" + (Path(__file__).resolve().parents[2] / "runtime/tutor/visual-guidance-v1.md").read_text(encoding="utf-8")
 
 
 def build_tutor_model_payload(

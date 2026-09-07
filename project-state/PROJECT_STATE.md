@@ -4,6 +4,15 @@
 
 Finish Daily-Use Lina Release 1 one accepted task at a time until Lina can begin stable private daily use.
 
+**Latest accepted task — LINA-VISUAL-INTELLIGENCE-01:** **DONE / ACCEPTED**,
+by direct Product Owner approval in chat on 2026-09-07. Completed A–F visual
+grammar, development/runtime subsets and existing Tutor semantic Canvas awareness;
+403 regressions, 36 focused checks, 13 Process checks and independent review 0/0/0.
+Exact 18-file commit and normal push authorized; no additional implementation.
+Record: `docs/reviews/LINA-VISUAL-INTELLIGENCE-01/IMPLEMENTATION_RECORD.md`.
+No natural specialist composition/activation, live-provider quality proof,
+production Host integration, schema, deployment or learning-benefit acceptance.
+
 **Latest bounded closure — 2026-09-07:** `STUDIO-VISUAL-PROCESS-01` is
 **DONE / ACCEPTED** (decision 38): reusable prepared-data V1 process foundation,
 sequence/radial SVG/DOM, semantic interaction and native motion. Ordinal counter
@@ -488,14 +497,12 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
-Recommended only: **LINA-VISUAL-SKILL-01 — Lina Educational Visuals**. Formalize
-proven visual-writing, composition, SVG, motion, interaction, Arabic/English,
-accessibility, responsive, content-density and Good/Bad-example rules into a compact
-development skill/guide, with a separable future Canvas Specialist runtime subset.
-**Not READY or started.** Accepted density principle: concise primary labels,
-focused callouts/Tutor dialogue for longer explanations, illustrations and relations
-leading the Canvas; avoid permanent stage paragraphs. No broad copy rewrite now.
-STUDIO-VISUAL-PROCESS-01 is closed; stop and await separate next-task authorization.
+Recommended only: the smallest bounded **Process Canvas-specialist composition**
+slice through existing Worker/Gateway → validated accepted semantic Scene → this
+same Tutor-awareness path. Grounding, admission, permissions, causal rejection,
+provider cost and actual Host integration retain separate gates. **Not READY or
+started.** A–D fulfill the earlier visual-skill recommendation within the accepted
+task; no separate skill task is active. Stop after this authorized delivery.
 
 The later production-serving/deployment
 readiness check remains OPEN: production-mode serving was blocked in this
