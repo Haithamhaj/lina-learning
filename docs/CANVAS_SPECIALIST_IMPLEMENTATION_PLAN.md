@@ -373,7 +373,26 @@ Do not invent latency/cost pass thresholds before this baseline. Quality is eval
 
 These are capability experiments, not blanket production promotion. Each lab records quality, interaction correctness, accessibility, browser behavior, bundle/loading implications, latency/cost where AI is involved, and whether the capability should be killed/modified/kept.
 
-A later production slice is selected only after Product Owner review.
+Each lab evaluates two independent axes. **Technical Capability** covers
+correctness, interaction capability, semantic-state handoff, lifecycle,
+accessibility, browser/mobile behavior, performance, bundle/loading
+implications, reliability and appropriate engine fit. **Visual Quality / Lina
+Visual Language** covers attractiveness, hierarchy, clarity, Grade-appropriate
+information density, typography, spacing, shape/control language,
+focus/de-emphasis, motion character, Arabic/English/mixed-direction appearance,
+consistency with Lina's visual system, and whether application-owned
+wrappers/design tokens/components can make the result one coherent Lina Canvas
+that is clearer than a simpler React/SVG alternative when relevant.
+
+A technically capable engine does not qualify for production promotion merely
+because it works. It must also be capable of producing a visually coherent,
+child-appropriate Lina experience through application-owned styling/wrappers.
+Native/default library styling need not itself look like Lina; JSXGraph, Konva
+and MathLive may remain internal beneath the application-owned wrapper.
+
+A later production slice is selected only after Product Owner review. Each
+KILL / MODIFY / KEEP justification records separate Technical and Visual
+findings.
 
 ## Documentation
 

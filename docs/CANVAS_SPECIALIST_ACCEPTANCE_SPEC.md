@@ -295,6 +295,25 @@ Cost optimization may be proposed only after quality acceptance. A cheaper/faste
 
 Each engine lab is evaluated independently as **KILL / MODIFY / KEEP** before any production promotion.
 
+Each lab must record independent findings for **Technical Capability** and
+**Visual Quality / Lina Visual Language**. Technical Capability covers
+correctness, interaction capability, semantic state handoff, lifecycle,
+accessibility, browser/mobile behavior, performance, bundle/loading
+implications, reliability and appropriate engine fit. Visual Quality covers
+attractiveness, hierarchy, clarity, Grade-appropriate information density,
+typography, spacing, shape/control language, focus/de-emphasis, motion
+character, Arabic/English/mixed-direction appearance, consistency with Lina's
+visual system, application-owned wrapper/design-token integration, and whether
+the result is clearer than a simpler React/SVG alternative when relevant.
+
+A technically capable engine does not qualify for production promotion merely
+because it works. It must also be capable of producing a visually coherent,
+child-appropriate Lina experience through application-owned styling/wrappers.
+Native/default library styling need not itself look like Lina; engines such as
+JSXGraph, Konva and MathLive may remain internal beneath the application-owned
+wrapper. Every KILL / MODIFY / KEEP justification must include separate
+Technical and Visual findings.
+
 ### Motion Lab
 
 Check whether motion clarifies relationship/transformation rather than decoration, handles interruption/reduced motion, and does not introduce unnecessary complexity.

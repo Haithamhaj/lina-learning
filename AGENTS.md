@@ -39,11 +39,13 @@ Normally execute only the single task explicitly marked `READY` in the current o
 
 ## Current active task
 
-**CS-01 — Contract + Runtime Specialist Skill: READY.**
+**CS-03 — Tutor ↔ Specialist Runtime Alignment: READY.**
 
-Read the three Canvas Specialist governing documents before CS work. CS-01 may create/adjust runtime Specialist Skill/capability guidance and focused tests only within its plan. It must not enable Specialist model execution, install Toolbelt dependencies, alter WorkspaceIntent meaning, modify database/schema, change Process production routing, or change Student runtime behavior.
+CS-01 and CS-02 are **DONE / ACCEPTED**. CS-03 is the only READY task.
+CS-04 through CS-07 remain BLOCKED.
 
-CS-02 and later are BLOCKED until separately promoted.
+Do not start CS-04 until CS-03 has separately completed review and received
+Product Owner acceptance.
 
 ## Core execution rules
 
@@ -158,7 +160,10 @@ Renderer-first remains the approved strategy:
 - JSXGraph — mathematical visualization/construction;
 - MathLive — editable math input.
 
-CS-02 is the approved future installation/proof task but is currently BLOCKED. Presence in the technology catalog or lockfile never production-enables a learning capability. Models request semantic capabilities; application-owned Registry/adapters select the engine.
+CS-02 is the accepted installation/proof foundation. Presence in the
+technology catalog or lockfile never production-enables a learning capability.
+Models request semantic capabilities; application-owned Registry/adapters select
+the engine. CS-03 is READY; CS-04 through CS-07 remain BLOCKED.
 
 Avoid arbitrary model-authored HTML/JS/SVG/code for routine visuals when typed renderers fit.
 
@@ -217,4 +222,5 @@ Read:
 4. `docs/CANVAS_SPECIALIST_IMPLEMENTATION_PLAN.md`
 5. `docs/CANVAS_SPECIALIST_ACCEPTANCE_SPEC.md`
 
-Then execute **CS-01 only** and stop after its verification/report.
+Then execute **CS-03 only** and stop after its verification/report. CS-04
+through CS-07 remain BLOCKED.

@@ -8,13 +8,18 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
     "@clerk/nextjs": "6.39.6",
     "@clerk/themes": "2.4.57",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "jsxgraph": "^1.13.3",
+    "konva": "^10.3.3",
+    "mathlive": "^0.110.0",
+    "motion": "^13.2.0",
     "next": "^14.2.15",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-konva": "^18.2.16",
     "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {

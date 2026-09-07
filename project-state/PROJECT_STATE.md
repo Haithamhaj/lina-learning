@@ -20,7 +20,7 @@ Student question
 → same Primary Tutor explains through existing Runtime-03
 ```
 
-The active bounded path is `CS-02 → CS-06`. `CS-07` is a controlled post-proof visual Toolbelt lab, not required before the first real Process trial.
+The active bounded path is `CS-03 → CS-06`. `CS-07` is a controlled post-proof visual Toolbelt lab, not required before the first real Process trial.
 
 ## Current reality
 
@@ -31,6 +31,11 @@ The active bounded path is `CS-02 → CS-06`. `CS-07` is a controlled post-proof
 - `CS-01` — DONE / ACCEPTED: runtime Visual Learning Composer Skill and
   disabled per-run capability-pack boundary; focused tests 3/0/0 and affected
   Tutor/Process contracts 34/0/0 passed. It does not enable model execution.
+- `CS-02` — DONE / ACCEPTED: Motion 13.2.0, React-Konva 18.2.16, Konva
+  10.3.3, JSXGraph 1.13.3 and MathLive 0.110.0 are installed/proven behind
+  isolated client/lazy adapters. Focused contracts 2/0/0, Process
+  visual-awareness 19/0/0, typecheck, build and diff-check passed. Engines
+  remain non-production capabilities except already accepted React/SVG behavior.
 - Studio State/Subject Registry/Protocol/Runtime-01/02/03 and `/student/daily` Studio integration are DONE / ACCEPTED.
 - Existing deterministic activities and accepted Math renderers remain protected.
 - Student Core Profile, Personal Facts, PF-03 Personal Memory Tutor context, Learning Intelligence, Retrieval and Child Safety authorities are accepted and remain separate.
@@ -45,7 +50,6 @@ The active bounded path is `CS-02 → CS-06`. `CS-07` is a controlled post-proof
 - no full Specialist Run stale/cancel/settlement lifecycle;
 - no production natural-composition Process profile/Host adapter;
 - no real Luna Specialist quality proof;
-- Motion/Konva/JSXGraph/MathLive are approved Toolbelt targets but are not yet installed/proven in the current web package;
 - no real Lina Student history/use has been started by this work.
 
 ## Active decisions
@@ -58,7 +62,7 @@ The active bounded path is `CS-02 → CS-06`. `CS-07` is a controlled post-proof
 6. Application performs bounded semantic-support validation; do not claim deterministic general natural-language factual entailment.
 7. **Visual Learner Context is a transient projection, not a new profile authority:** Core Profile supplies authoritative identity/age/Grade when useful; a small relevant current subset of safe Personal Facts may optionally personalize visuals.
 8. Current Specialist/Tutor model decision is **GPT-5.6 Luna** through the existing Model Gateway architecture.
-9. Approved Toolbelt to install/prove in CS-02: React/SVG baseline + Motion + `react-konva@18`/Konva + JSXGraph + MathLive. Specialist never selects these technologies by name; application Registry/adapters own engine selection.
+9. Complete Toolbelt is installed/proven: React/SVG baseline + Motion + `react-konva@18`/Konva + JSXGraph + MathLive. Specialist never selects these technologies by name; application Registry/adapters own engine selection.
 10. First production natural-composition capability is **Process sequence/cycle, 2–8 stages**, reusing the accepted ProcessView. Konva/JSXGraph/MathLive production learning activities remain later than the first Process proof.
 11. Optimization order is **Quality → Speed → Cost**. Quality is the blocking acceptance gate; latency/token/cost are measured from the start and optimized only after a real baseline.
 12. `STUDIO-ACCEPT-01`, deployment, Voice/Vision, generated images/3D, generic Artifact Engine, generic multi-agent platform and reusable-content DB remain outside this bounded track unless separately promoted.
@@ -93,11 +97,10 @@ Do not break or silently reinterpret:
 
 ## Next action
 
-**CS-02 — Complete Visual Toolbelt: READY.**
+**CS-03 — Tutor ↔ Specialist Runtime Alignment: READY.**
 
-CS-01 is DONE / ACCEPTED. CS-02 is the next action only; it is not started in
-this closure. Do not install or prove Toolbelt dependencies without explicit
-Product Owner authorization for CS-02.
+CS-01 and CS-02 are DONE / ACCEPTED. CS-03 is the only READY task; do not
+execute it in this closure.
 
 ## Critical references
 

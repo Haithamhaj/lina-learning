@@ -27,9 +27,9 @@ The following foundations are already DONE / ACCEPTED and must not be reopened b
 ```text
 CS-01 Contract + Runtime Specialist Skill        DONE / ACCEPTED
   ↓
-CS-02 Complete Visual Toolbelt                   READY
+CS-02 Complete Visual Toolbelt                   DONE / ACCEPTED
   ↓
-CS-03 Tutor ↔ Specialist Runtime Alignment       BLOCKED
+CS-03 Tutor ↔ Specialist Runtime Alignment       READY
   ↓
 CS-04 Real Canvas Specialist Execution Runtime   BLOCKED
   ↓
@@ -91,18 +91,24 @@ without its own explicit Product Owner authorization.
 
 # CS-02 — Complete Visual Toolbelt
 
-**Status:** READY
+**Status:** DONE / ACCEPTED
 **Approved target:** Motion + `react-konva@18`/Konva + JSXGraph + MathLive, with React/DOM/SVG remaining baseline.
 
 Purpose is installation/adapter/browser proof only. No new production learning routing. Heavy/client-only engines should remain isolated/lazy where practical. Accepted ProcessView is not rewritten simply because Motion is installed.
 
 Documentation: `docs/reviews/CS-02/IMPLEMENTATION_RECORD.md` and sanitized browser evidence where useful.
 
+**Accepted closure:** Product Owner accepted CS-02 with Critical 0, Important
+0, Minor 0. Motion 13.2.0, React-Konva/Konva, JSXGraph and MathLive were
+installed/proven behind isolated adapters; focused contracts 2/0/0, Process
+visual-awareness 19/0/0, typecheck, build and diff-check passed. No production
+routing, Tutor, Studio runtime, Specialist execution or ProcessView change.
+
 ---
 
 # CS-03 — Tutor ↔ Specialist Runtime Alignment
 
-**Status:** BLOCKED pending CS-02 acceptance.
+**Status:** READY.
 
 Required direction:
 
