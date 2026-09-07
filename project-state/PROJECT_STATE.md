@@ -6,13 +6,17 @@ Finish Daily-Use Lina Release 1 one accepted task at a time until Lina can begin
 
 **Current bounded design task — 2026-09-07:** `STUDIO-VISUAL-01 — Reusable
 Visual Explanation Design` is the only active design task. Its integrated
-specification is **REVISED DRAFT / AWAITING PRODUCT OWNER REVIEW** (not
-accepted) at `docs/STUDIO_VISUAL_EXPLANATION_SPEC.md`. Product Owner approved
+specification status is **APPROVED HYBRID DIRECTION — REVISED SPECIFICATION AWAITING REVIEW**
+(detailed specification not yet accepted) at `docs/STUDIO_VISUAL_EXPLANATION_SPEC.md`. Product Owner approved
 four reusable patterns: `process_cycle`, `labeled_diagram`, `geometry_scene`,
 and `fraction_model / quantity_visual`. Contract/storage/library/implementation
 details remain proposals; the visual-production direction is approved in
 decision 33, including reviewed vector assets, bounded motion and early visual
-review. No implementation is READY.
+review. Decision 35 approves the hybrid split: compact primary order/control,
+zero composition calls for compatible reuse/simple updates, and one bounded
+asynchronous specialist generation for new content after primary commit. Exact
+contracts and persistence remain proposals. No implementation is READY and no
+specialist is enabled.
 
 Current sequence state:
 
@@ -256,7 +260,7 @@ capability Registry, Renderer Host, state/feed/lifecycle and learning authority.
 Reusable instructional content is separate from Student-owned instances and
 history; books ground rather than permit explanations. Chat-only is valid.
 The four-pattern approval and approved visual-production revision are recorded
-in decisions 32–33 of
+in decisions 32–35 of
 `docs/DAILY_USE_RELEASE_DECISIONS.md`. Documentation-only scope does not cancel
 fractions, division, Voice, Vision or other agreed work. Proposed contract and
 storage additions, factual-review authority, reuse compatibility, and natural
@@ -490,11 +494,11 @@ Lina daily/longitudinal use.
 
 Publish the revised `docs/STUDIO_VISUAL_EXPLANATION_SPEC.md` for Product Owner
 review under the direct 2026-09-07 documentation-delivery authorization in
-decision 34. The five-path documentation-only commit and normal non-force push
+decision 35. The six-path documentation-only commit and normal non-force push
 supersede only the earlier drafting-stage staging/commit/push restriction.
 Return actual SHA and commit-pinned review links, then stop; do not mark the specification
 accepted or promote implementation. The expected worktree/branch baseline
-`3235fdcdfcc2c98819788a853bc9e7d5991d93f4` was verified for this task; existing
+`1bb90f3beeb65155cf1ff49083fbe6e3c4a71646` was verified for this hybrid revision; existing
 local work/evidence is preserved. No runtime/database/provider validation was
 performed by this design task.
 

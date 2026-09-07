@@ -14,8 +14,8 @@ a governing specification. Delivery convention approved on 2026-09-07.
 
 | Task | Canonical document | Review status | Revision date | Purpose |
 |---|---|---|---|---|
-| STUDIO-VISUAL-01 | [docs/STUDIO_VISUAL_EXPLANATION_SPEC.md](../STUDIO_VISUAL_EXPLANATION_SPEC.md) | REVISED DRAFT / AWAITING PRODUCT OWNER REVIEW | 2026-09-07 | Reusable visual explanation patterns, existing Studio integration, visual production guidance and bounded acceptance. No implementation is READY. |
+| STUDIO-VISUAL-01 | [docs/STUDIO_VISUAL_EXPLANATION_SPEC.md](../STUDIO_VISUAL_EXPLANATION_SPEC.md) | APPROVED HYBRID DIRECTION — REVISED SPECIFICATION AWAITING REVIEW | 2026-09-07 | Hybrid compact Tutor order / bounded async Canvas proposal, informed reuse and existing Studio admission; visual production/acceptance retained. No implementation is READY; no specialist enabled. |
 
-Accompanying records: [decision register](../DAILY_USE_RELEASE_DECISIONS.md),
+Accompanying records: [scoped Studio plan](../STUDIO_IMPLEMENTATION_PLAN.md), [decision register](../DAILY_USE_RELEASE_DECISIONS.md),
 [current task overlay](../../project-state/DAILY_USE_RELEASE_TASKS.md), and
 [Project State](../../project-state/PROJECT_STATE.md).

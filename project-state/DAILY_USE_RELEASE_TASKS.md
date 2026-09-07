@@ -9,25 +9,30 @@
 
 # Current bounded design task — 2026-09-07
 
-## STUDIO-VISUAL-01 — Design Review Corrections and Visual Production Guidance
+## STUDIO-VISUAL-01 — Hybrid Composition Revision
 
-**Status:** REVISED DRAFT / AWAITING PRODUCT OWNER REVIEW. Not accepted.
+**Status:** APPROVED HYBRID DIRECTION — REVISED SPECIFICATION AWAITING REVIEW.
+Detailed specification awaiting review; no specialist enabled.
 **Authority:** explicit Product Owner authorization on 2026-09-07; this is the
 only active design task. No implementation task is promoted or made READY.
-**Baseline verified:** `codex/ctx-03` at
-`3235fdcdfcc2c98819788a853bc9e7d5991d93f4` in
+**Documentation baseline verified:** `codex/ctx-03` at
+`1bb90f3beeb65155cf1ff49083fbe6e3c4a71646` in
 `/Users/haitham/development/lina-learning-ctx03`; existing local work/evidence
 is preserved.
 **Scope/output:** one integrated five-section specification at
 `docs/STUDIO_VISUAL_EXPLANATION_SPEC.md`, plus narrow decision/task/state
 records. Covers four approved reusable patterns, actual Studio seams,
-proposed versioned primary-Tutor content contract, content/attempt separation,
+proposed versioned primary-Tutor order/control and specialist-result contracts, content/attempt separation,
 privacy, correctness, visual quality, focused official-library comparison,
 and bounded delivery/acceptance sequence. The approved revision clarifies
 whole-response versus visual-only failure, semantic pre-call reuse, first-slice
 sequences/cycles, reviewed SVG assets, motion recipes, development-only tool/skill
 guidance and staged early production-component visual review. Proposed v10 and
-storage details remain unaccepted; decision 33 records direction only.
+storage details remain proposals. Decision 35 approves the hybrid change:
+compact primary order, zero composition for reuse/controls, and one bounded
+post-commit Worker/Gateway specialist call for new known-pattern content.
+The later first process slice can include this seam without a generic specialist
+prerequisite; this record does not promote that slice or enable execution.
 **Verification boundary:** documentation and repository/official-source
 inspection only. No code, database, runtime, browser, live-model or learning
 benefit verification is claimed. Specification acceptance remains pending.
@@ -35,11 +40,12 @@ benefit verification is claimed. Specification acceptance remains pending.
 division, Voice, Vision, remaining renderer modes, full Studio acceptance,
 specialist, Replit and deployment remain separately gated, not cancelled.
 **Review delivery authorization — 2026-09-07:** publish the existing revised
-draft and these decision/task/state records plus `docs/reviews/README.md` with
+hybrid draft and these decision/task/state records, scoped
+`docs/STUDIO_IMPLEMENTATION_PLAN.md` clarification and `docs/reviews/README.md` with
 a documentation-only commit and normal non-force push to
 `Haithamhaj/lina-learning`, `origin`, `refs/heads/codex/ctx-03`. This direct
 Product Owner instruction supersedes only the drafting-stage staging/commit/push
-restriction for the five selected paths; no implementation is READY.
+restriction for the six selected documentation paths; no implementation is READY.
 **Next action:** deliver commit-pinned review links, then Product Owner review
 and stop. Publication is not design acceptance, migration/dependency approval,
 or implementation authorization. No unrelated source, raw private evidence,

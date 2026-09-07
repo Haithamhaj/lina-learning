@@ -45,14 +45,14 @@ Research inputs are non-authoritative until Product Owner approval and promotion
 
 The following decisions were explicitly approved during architecture review:
 
-1. **Target architecture:** Application-owned, subject-agnostic Studio Core; one Student-facing Tutor; persistent Canvas/Workspace; deterministic renderers for known activities; optional Canvas Specialist for `CUSTOM_COMPOSE` only.
+1. **Target architecture:** Application-owned, subject-agnostic Studio Core; one Student-facing Tutor; persistent Canvas/Workspace; deterministic renderers for known activities; bounded Canvas Specialist under the scoped 2026-09-07 hybrid clarification in §16.0 (execution still gated).
 2. **Production intent:** Build the real database, protocol, state, and runtime contracts from the start. Acceptance scenarios test the production implementation; they are not throwaway demos.
 3. **Foundation scenarios:** Math, Science, and Language must prove the same cross-subject Studio Core.
 4. **State model:** Durable semantic Event Log plus Materialized Current Snapshot.
 5. **Transport:** Existing Tutor SSE remains Chat authority; Canvas/Studio uses a dedicated authenticated resumable Studio event/state feed from the first production implementation. Snapshot reads support initial load and reconnect, not permanent polling architecture.
 6. **Canvas role:** Canvas/Workspace is a first-class Student input and output surface and may be active in a large portion of learning.
 7. **Tutor observability:** Every meaningful Canvas event and committed state change remains reconstructable and available to Tutor.
-8. **Specialist eligibility:** Canvas Specialist is used only for `CUSTOM_COMPOSE` when known capabilities are insufficient. Tutor states the educational need; Studio Core makes the final deterministic routing decision.
+8. **Specialist eligibility:** For broader custom work, Canvas Specialist remains subject to `CUSTOM_COMPOSE` eligibility. The bounded four-pattern hybrid direction in §16.0 also permits new content/recomposition within known modes; Tutor states educational need and Studio makes the final deterministic execution decision.
 9. **External reuse:** Reuse mature technology when it materially reduces work without adding greater coupling, licensing risk, state duplication, or operational complexity. Otherwise use a small Lina-owned primitive or a bounded fit spike.
 10. **UI truth:** The browser may render optimistic state, but durable truth remains server-owned.
 11. **Subject architecture:** Studio Core is not Math-specific. Subject and interaction language are separate axes. Subject-specific renderers, payloads, validators, and guidance live behind a small capability boundary.
@@ -1241,13 +1241,37 @@ Proves:
 
 ## 16. Canvas Specialist
 
+### 16.0 Scoped hybrid direction — Product Owner approval 2026-09-07
+
+For STUDIO-VISUAL-01's four registered patterns, new content or substantial
+recomposition is ordered compactly by the primary Tutor, then proposed by one
+bounded Canvas specialist through existing Worker/Gateway infrastructure after
+complete primary validation and committed order/lineage. Known activity/reuse
+and supported highlight/reveal/parameter controls need no specialist. Keep
+KNOWN_VISUAL/KNOWN_INTERACTIVE separate from content origin and the need for
+specialist execution; new known-pattern content is not automatically CUSTOM_COMPOSE.
+This explicitly supersedes the earlier specialist-only-CUSTOM_COMPOSE restriction
+for this bounded direction, including the earlier diagram/scaffolding shorthand
+elsewhere in this plan. Broader CUSTOM_COMPOSE retains §16.2 below.
+
+The canonical [visual specification](STUDIO_VISUAL_EXPLANATION_SPEC.md) A2/B1
+owns the proposed admission/result contracts: no speculative dispatch, no
+transaction/lock spanning inference, independent output/policy/causal checks,
+atomic Scene acceptance, existing feed delivery, and at-most-once accepted
+effects rather than guaranteed exactly-once external inference. No automatic
+post-composition Tutor call or observation advancement. The first process slice
+may include this bounded handler/route/run/acceptance seam when separately
+promoted; it does not depend on a deferred generic STUDIO-SPECIALIST-01 platform.
+All prior accepted runtime evidence remains unchanged. This is approved design
+direction only: no implementation READY, provider route or specialist enabled.
+
 ### 16.1 Role
 
 Canvas Specialist is a bounded visual/interactive composition specialist, not a second Tutor.
 
 ### 16.2 Eligibility
 
-Studio Core permits one specialist run only when:
+For broader CUSTOM_COMPOSE outside the §16.0 bounded known-pattern direction, Studio Core permits one specialist run only when:
 
 1. Tutor emits a structured `REQUEST_CUSTOM_COMPOSE` need;
 2. an enabled Subject Capability exists;
@@ -1264,7 +1288,7 @@ Do not use the specialist for:
 
 - ordinary arithmetic;
 - casual conversation;
-- existing known activities;
+- existing exact activities, compatible reusable content, and supported simple updates (new content inside a registered pattern follows §16.0);
 - decoration only;
 - unsupported or unvalidated subject content;
 - arbitrary browser code;
@@ -1273,16 +1297,17 @@ Do not use the specialist for:
 ### 16.4 Execution
 
 ```text
-Tutor response streams normally
-→ application creates CanvasSpecialistRun
-→ existing Worker / Model Gateway executes Canvas task
-→ specialist receives fixed objective, capability pack, source turn, base scene version
+Complete primary Tutor result and policy validate
+→ application persists accepted Tutor lineage/order and durable Job/CanvasSpecialistRun admission
+→ commit makes the job claimable; Tutor does not wait for composition
+→ existing Worker claims/commits, then Model Gateway executes outside database transactions
+→ specialist receives fixed objective and bounded capability pack; server retains source/causal identity
 → specialist returns typed ScenePlan proposal
 → application validates and accepts/rejects
 → accepted scene/event is committed and broadcast
 ```
 
-Maximum normal specialist behavior: one additional Canvas model call for one eligible request. No blocking agent-as-tool loop in the first implementation.
+Maximum normal specialist behavior: one additional Canvas model call for one eligible request. No blocking agent-as-tool loop or hidden repair loop. The bounded first implementation must explicitly constrain generic Job/SDK retries and reconcile crashes as specified in the canonical visual specification A2; late incompatible results cannot replace newer work.
 
 ### 16.5 Provider flexibility
 
