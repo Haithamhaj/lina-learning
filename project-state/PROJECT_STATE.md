@@ -4,16 +4,15 @@
 
 Finish Daily-Use Lina Release 1 one accepted task at a time until Lina can begin stable private daily use.
 
-**Current bounded checkpoint — 2026-09-07:** `STUDIO-VISUAL-PROCESS-01` is at
-**VISUAL CHECKPOINT 2 / PRODUCT OWNER REVIEW**, not DONE or ACCEPTED.
-Decision 37 retains the accepted semantic direction and authorizes the spatial
-SVG revision of the same six local files. Butterfly focus/reveal/trace, Arabic,
-narrow return path and reduced motion are demonstrated. Motion remains deferred.
-Twelve focused tests, 40 Studio web tests, typecheck, production/isolated builds
-and 27 browser checks passed. Report and eleven-image gallery:
-`docs/reviews/STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT_2.md`.
-Implementation remains unstaged/uncommitted. No specialist, Tutor integration,
-DB, model-generated scene or Student traffic. All other work keeps its separate gates.
+**Latest bounded closure — 2026-09-07:** `STUDIO-VISUAL-PROCESS-01` is
+**DONE / ACCEPTED** (decision 38): reusable prepared-data V1 process foundation,
+sequence/radial SVG/DOM, semantic interaction and native motion. Ordinal counter
+corrected in English/Arabic and reduced to 22 px. All requested closure checks pass:
+13 process tests, 40 Studio tests, typecheck, production/isolated builds and five
+fresh browser checks. Six implementation/test/helper files authorized for commit.
+Closure and corrected images: `docs/reviews/STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT_2.md`.
+No specialist, natural model composition proof, DB persistence, Tutor integration,
+learning-benefit proof or other pattern follows. Other work keeps separate gates.
 
 Current sequence state:
 
@@ -257,7 +256,7 @@ capability Registry, Renderer Host, state/feed/lifecycle and learning authority.
 Reusable instructional content is separate from Student-owned instances and
 history; books ground rather than permit explanations. Chat-only is valid.
 The four-pattern approval and approved visual-production revision are recorded
-in decisions 32–37 of
+in decisions 32–38 of
 `docs/DAILY_USE_RELEASE_DECISIONS.md`. The bounded visual checkpoint does not cancel
 fractions, division, Voice, Vision or other agreed work. Proposed contract and
 storage additions, factual-review authority, reuse compatibility, and natural
@@ -489,12 +488,14 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
-Review the actual process preview gallery at
-`docs/reviews/STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT_2.md`.
-Only sanitized report/images and narrow governance are authorized for publication.
-Keep the six implementation/test/helper files unstaged and uncommitted until
-Product Owner visual approval; stop at this checkpoint. Checkpoint 2 baseline `fc65cef` was
-verified unchanged before work and fetch. No full runtime or next pattern is promoted.
+Recommended only: **LINA-VISUAL-SKILL-01 — Lina Educational Visuals**. Formalize
+proven visual-writing, composition, SVG, motion, interaction, Arabic/English,
+accessibility, responsive, content-density and Good/Bad-example rules into a compact
+development skill/guide, with a separable future Canvas Specialist runtime subset.
+**Not READY or started.** Accepted density principle: concise primary labels,
+focused callouts/Tutor dialogue for longer explanations, illustrations and relations
+leading the Canvas; avoid permanent stage paragraphs. No broad copy rewrite now.
+STUDIO-VISUAL-PROCESS-01 is closed; stop and await separate next-task authorization.
 
 The later production-serving/deployment
 readiness check remains OPEN: production-mode serving was blocked in this

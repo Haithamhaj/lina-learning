@@ -7,27 +7,26 @@
 
 ---
 
-# Current bounded checkpoint — 2026-09-07
+# Latest bounded closure — 2026-09-07
 
-## STUDIO-VISUAL-PROCESS-01 — Semantic Animated SVG Scene
+## STUDIO-VISUAL-PROCESS-01 — Reusable Animated SVG Process Visual
 
-**Status:** VISUAL CHECKPOINT 2 / PRODUCT OWNER REVIEW. Not DONE. Not ACCEPTED.
-**Authority:** direct Product Owner Checkpoint 2 authorization, decision 37;
-accepted hybrid direction remains decision 36. Only this bounded checkpoint is active.
-**Built locally:** evolved the same six files from Checkpoint 1; generic spatial
-SVG cycle with stable IDs, semantic focus/highlight/reveal/trace, keyboard/tap,
-Arabic/mixed text, narrow explicit return and reduced motion. Existing butterfly
-data is the visual stress case; local-only Explain. Motion deferred; no dependency change.
-**Verification:** 12 focused checks, 40 Studio web tests, typecheck, production
-build, isolated preview build and 27 browser checks passed. Prepared visual evidence
-is not model composition, persistence, learning benefit or runtime acceptance.
-**Review:** `docs/reviews/STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT_2.md`, eleven
-safe images. Checkpoint 1 report/gallery remain historical. Publish only the authorized
-review material and narrow governance to `origin`, `refs/heads/codex/ctx-03`.
-The six implementation/test/helper files remain unstaged and uncommitted.
-**Next action:** Product Owner visual review; stop. No specialist, Tutor integration,
-DB, model-generated scene or Student traffic. No full runtime or other pattern is
-promoted. Accepted activities and fractions/division/Voice/Vision gates remain unchanged.
+**Status: DONE / ACCEPTED.** Direct Product Owner acceptance and decision 38.
+Accepted reusable Process foundation and prepared-data V1 sequence/cycle behavior;
+ordinal counter corrected to “Stage N of total” / “المرحلة N من total”, restrained
+at 22 px. Native CSS/SVG motion accepted; Motion deferred. The six reviewed source,
+test and helper files are authorized for implementation commit with narrow records.
+**Closure verification:** 13 process tests, 40 Studio web tests, typecheck,
+production/isolated builds and five correction browser checks pass. Prior 27-check
+matrix remains historical. Two corrected screenshots are in the existing
+`docs/reviews/STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT_2.md` closure addendum.
+**Boundaries:** no specialist, natural composition proof, DB persistence, Tutor
+integration, learning-benefit proof or other patterns. No Student traffic.
+**Recommended only — NOT READY / NOT STARTED:** LINA-VISUAL-SKILL-01 — Lina Educational
+Visuals: compact visual-writing/composition/SVG/motion/interaction, bilingual,
+accessibility, responsive, content-density and Good/Bad-example development guide;
+clearly separate a subset for a future Canvas Specialist runtime capability pack.
+Stop after closure; other accepted/planned tasks retain their gates.
 
 ---
 

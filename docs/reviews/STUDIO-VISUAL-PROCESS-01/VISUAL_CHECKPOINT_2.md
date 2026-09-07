@@ -1,7 +1,50 @@
 # STUDIO-VISUAL-PROCESS-01 — Visual Checkpoint 2
 
-**Status: VISUAL CHECKPOINT 2 / PRODUCT OWNER REVIEW. Not DONE. Not ACCEPTED.**
+**Current status: DONE / ACCEPTED — closure verified 2026-09-07.**
 Revision: 2026-09-07. Baseline: `fc65cef4ff20184ce1a37ef2b87443c2e0ec4711`, branch `codex/ctx-03`.
+
+## Accepted closure — 2026-09-07
+
+Product Owner accepts the reusable Process visual foundation, prepared-data behavior
+and V1 visual language, including sequence and radial/spatial cycle representations,
+stable semantic stage/relation IDs, focus/de-emphasis, tracing, progressive detail,
+pointer/tap/keyboard equivalence, reduced motion and native CSS/SVG motion.
+Motion remains deferred; no package or lockfile changes.
+
+The sole correction replaces fraction-like stage progress with **Stage N of 4** /
+**المرحلة N من 4** (total remains data-driven), and reduces the center counter from
+28 px to 22 px. No scene redesign or broad copy rewrite. Focused regression covers
+stages 1 and 3 in both locales and rejects fraction notation in the center.
+
+Closure verification: **13/13 process tests, 40/40 Studio web tests, web typecheck,
+production build and isolated preview build pass**. Five fresh browser checks verify
+English and Arabic ordinals, no fraction notation, 22 px sizing and center fit.
+Actual settled-state screenshots were inspected below. The earlier 27-check matrix
+remains Checkpoint 2 evidence; it is not claimed as a fresh closure rerun.
+
+![Corrected English ordinal](preview-v2/closure-ordinal-english.png)
+
+![Corrected Arabic ordinal](preview-v2/closure-ordinal-arabic.png)
+
+**Accepted content-density principle:** concise primary labels; longer explanations
+belong in focused callouts or Tutor dialogue. Illustrations and relations lead the
+Canvas; avoid permanent paragraph-like text at every stage. No broad rewrite here.
+
+The six files listed below are authorized for implementation commit with this narrow
+closure record and governance updates. This supersedes their historical held-source
+status. No specialist, natural model composition proof, DB persistence, Tutor
+integration, learning-benefit claim or other-pattern implementation is included.
+No provider calls, Student traffic or dependency changes occurred.
+
+**Recommended only, not READY or started:** LINA-VISUAL-SKILL-01 — Lina Educational
+Visuals. Formalize proven visual-writing, composition, SVG, motion, interaction,
+Arabic/English, accessibility, responsive, content-density and Good/Bad-example rules
+in a compact development skill/guide, with a clearly separable subset for a later
+Canvas Specialist runtime capability pack. Stop after this closure.
+
+The following checkpoint narrative, original eleven images and source hashes are
+preserved as historical review evidence; their awaiting-review and source-hold
+statements describe the pre-acceptance checkpoint, superseded by this closure.
 
 ## Review decision and scope
 
