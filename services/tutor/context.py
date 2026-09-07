@@ -19,7 +19,7 @@ from services.model_gateway.factory import create_embedding_gateway
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
 from services.personal_facts.memory_document import format_current_personal_memory_card
 from services.platform.core_profile import StudentCoreContext, student_core_context
-from services.platform.db.models import LearningExchangeEmbedding, LearningMessage, LearningSession, ModelTask
+from services.platform.db.models import LearningExchangeEmbedding, LearningMessage, LearningSession, ModelTask, PersonalFact
 from services.retrieval.service import CurrentFocus, QueryEmbedding, RetrievedBlock, RetrievalService
 from services.studio.tutor_context import StudioTutorWorkspaceContext
 from services.tutor.exchanges import SEMANTIC_RECALL_MIN_COSINE_SIMILARITY, ConversationExchangeContext, complete_exchanges_for_segment, immediate_exchange_for_current_turn, persist_exchange_embedding, serialize_exchange
@@ -27,6 +27,10 @@ from services.tutor.segments import latest_segment_for_session, latest_valid_str
 
 
 logger = logging.getLogger(__name__)
+
+
+VISUAL_PERSONALIZATION_CATALOG_MAX_FACTS = 12
+VISUAL_PERSONALIZATION_CATALOG_MAX_CHARACTERS = 1200
 
 
 class LiveSubjectOrigin(str, Enum):
@@ -128,6 +132,7 @@ class TutorContextDebug:
     recent_exchange_message_ids: tuple[UUID, ...] = ()
     semantic_recall_exchange_message_ids: tuple[UUID, ...] = ()
     personal_memory_status: str = "PERSONAL_MEMORY_NOT_AVAILABLE"
+    visual_personalization_catalog_status: str = "CATALOG_NOT_AVAILABLE"
     studio_runtime_id: UUID | None = None
     studio_snapshot_sequence: int | None = None
     studio_observation_id: UUID | None = None
@@ -152,6 +157,7 @@ class TutorContext:
     debug: TutorContextDebug
     student_core_context: StudentCoreContext = StudentCoreContext(None, None, None)
     personal_memory: str | None = None
+    visual_personalization_catalog: tuple[dict[str, str], ...] = ()
     immediate_exchange: ConversationExchangeContext | None = None
     recent_exchanges: tuple[ConversationExchangeContext, ...] = ()
     semantic_recall_exchanges: tuple[ConversationExchangeContext, ...] = ()
@@ -169,6 +175,7 @@ class TutorContext:
             + sum(len(block.text) for block in self.retrieval)
             + sum(len(item.text) for item in self.intelligence)
             + len(self.personal_memory or "")
+            + sum(len(str(item)) for item in self.visual_personalization_catalog)
             + (0 if self.studio_workspace is None else len(str(self.studio_workspace.as_model_payload())))
         )
 
@@ -297,6 +304,9 @@ class TutorContextBuilder:
         personal_memory, personal_memory_status = self._personal_memory(
             learning_session=learning_session,
         )
+        visual_personalization_catalog, visual_personalization_catalog_status = self._visual_personalization_catalog(
+            learning_session=learning_session,
+        )
         return TutorContext(
             question=question,
             subject=live_subject.broad_subject,
@@ -313,6 +323,7 @@ class TutorContextBuilder:
             intelligence=intelligence,
             student_core_context=core_context,
             personal_memory=personal_memory,
+            visual_personalization_catalog=visual_personalization_catalog,
             studio_workspace=studio_context,
             debug=TutorContextDebug(
                 focus=effective_focus,
@@ -328,6 +339,7 @@ class TutorContextBuilder:
                 recent_exchange_message_ids=tuple(message_id for exchange in recent_exchanges for message_id in exchange.message_ids),
                 semantic_recall_exchange_message_ids=tuple(message_id for exchange in semantic_recall for message_id in exchange.message_ids),
                 personal_memory_status=personal_memory_status,
+                visual_personalization_catalog_status=visual_personalization_catalog_status,
                 studio_runtime_id=None if studio_context is None else studio_context.runtime_id,
                 studio_snapshot_sequence=None if studio_context is None else studio_context.snapshot_sequence,
                 studio_observation_id=None if studio_context is None else studio_context.observation_id,
@@ -371,6 +383,43 @@ class TutorContextBuilder:
             )
             return None, "PERSONAL_MEMORY_OMITTED_ERROR"
         return card, "PERSONAL_MEMORY_INCLUDED" if card else "PERSONAL_MEMORY_NOT_AVAILABLE"
+
+    def _visual_personalization_catalog(
+        self,
+        *,
+        learning_session: LearningSession,
+    ) -> tuple[tuple[dict[str, str], ...], str]:
+        """Expose every current safe fact within one all-or-nothing compact boundary."""
+
+        rows = list(self._session.scalars(
+            select(PersonalFact)
+            .where(
+                PersonalFact.student_id == learning_session.student_id,
+                PersonalFact.category.in_(("PREFERENCE", "FAVORITE", "ACTIVITY", "PET")),
+            )
+            .order_by(PersonalFact.fact_key, PersonalFact.last_observed_at.desc(), PersonalFact.id.desc())
+        ))
+        latest_by_key: dict[str, PersonalFact] = {}
+        for fact in rows:
+            latest_by_key.setdefault(fact.fact_key, fact)
+        catalogue = tuple(
+            {
+                "fact_key": fact.fact_key,
+                "category": fact.category,
+                "display_statement": fact.display_statement,
+            }
+            for fact in sorted(latest_by_key.values(), key=lambda fact: fact.fact_key)
+        )
+        character_count = sum(
+            len(item["fact_key"]) + len(item["category"]) + len(item["display_statement"])
+            for item in catalogue
+        )
+        if (
+            len(catalogue) > VISUAL_PERSONALIZATION_CATALOG_MAX_FACTS
+            or character_count > VISUAL_PERSONALIZATION_CATALOG_MAX_CHARACTERS
+        ):
+            return (), "CATALOG_CAPACITY_EXCEEDED"
+        return catalogue, "AVAILABLE" if catalogue else "CATALOG_NOT_AVAILABLE"
 
     def _card_budget(self) -> CardBudget:
         """Keep the existing Tutor allocation while using the centralized Card policy."""

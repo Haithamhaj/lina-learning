@@ -117,6 +117,7 @@ class _Provider:
         teaching_strategy: object | None = None,
         prior_method_relation: object | None = None,
         workspace_intent: object | None = None,
+        workspace_visual_order: object | None = None,
     ) -> None:
         self.calls = 0
         self.payloads: list[dict[str, object]] = []
@@ -129,6 +130,7 @@ class _Provider:
         self.teaching_strategy = teaching_strategy
         self.prior_method_relation = prior_method_relation
         self.workspace_intent = workspace_intent
+        self.workspace_visual_order = workspace_visual_order
 
     def stream(self, route: ModelRoute, payload: dict[str, object]):
         del route
@@ -147,6 +149,7 @@ class _Provider:
             "prior_method_relation": self.prior_method_relation,
             "candidate_metadata": metadata,
             "workspace_intent": self.workspace_intent,
+            "workspace_visual_order": self.workspace_visual_order,
         }
         if self.suggested_actions is not None:
             output["suggested_actions"] = self.suggested_actions
@@ -169,6 +172,7 @@ def _runtime(
     teaching_strategy: object | None = None,
     prior_method_relation: object | None = None,
     workspace_intent: object | None = None,
+    workspace_visual_order: object | None = None,
     immediate_exchange: ConversationExchangeContext | None = None,
 ) -> tuple[TutorRuntime, _ContextBuilder, _Provider, _Session]:
     session = _Session()
@@ -182,6 +186,7 @@ def _runtime(
         teaching_strategy=teaching_strategy,
         prior_method_relation=prior_method_relation,
         workspace_intent=workspace_intent,
+        workspace_visual_order=workspace_visual_order,
     )
     gateway = ModelGateway(session, routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")}, providers={"fixture": provider})
     return TutorRuntime(session, context_builder=context, safety_policy=_Policy(decision), gateway=gateway), context, provider, session
@@ -263,8 +268,8 @@ def test_valid_workspace_intent_is_hidden_bounded_audit_metadata_and_never_candi
     assert len([row for row in session.rows if isinstance(row, LearningMessage)]) == 2
 
 
-def test_null_workspace_intent_persists_as_no_workspace_request() -> None:
-    """The explicit nullable v9 value remains a valid ordinary Tutor turn."""
+def test_null_workspace_intent_and_visual_order_persist_as_no_request() -> None:
+    """The current required-nullable fields preserve an ordinary Chat turn."""
 
     runtime, _, provider, session = _runtime(_decision(), workspace_intent=None)
 
@@ -278,6 +283,45 @@ def test_null_workspace_intent_persists_as_no_workspace_request() -> None:
     assert provider.calls == 1
     assert tutor_message.payload["workspace"]["intent_status"] == "ABSENT"
     assert tutor_message.payload["workspace"]["intent"] is None
+    assert tutor_message.payload["workspace_visual"]["status"] == "NOT_REQUESTED"
+
+
+def test_valid_visual_order_is_hidden_admitted_metadata_with_no_execution_side_effect() -> None:
+    """CS-03 admits a Process request only as hidden Tutor metadata, never a job or Scene."""
+
+    visual_order = {
+        "version": "workspace-visual-order-v1",
+        "operation": "COMPOSE",
+        "pattern": "PROCESS",
+        "topology": "SEQUENCE",
+        "objective": "Explain the butterfly life cycle.",
+        "required_semantics": ["Egg becomes larva.", "Larva becomes pupa.", "Adult emerges."],
+        "required_relations": ["The stages occur in this order."],
+        "must_not_imply": ["The same adult returns to egg."],
+        "source_references": ["book#page=12"],
+        "personal_fact_keys": [],
+        "locale": "en",
+        "direction": "ltr",
+        "use_display_name": False,
+    }
+    runtime, _, provider, session = _runtime(_decision(), workspace_visual_order=visual_order)
+
+    list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), last_activity_at=None),
+        question="How does a butterfly grow?",
+    ))
+
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    visual = tutor_message.payload["workspace_visual"]
+    assert provider.calls == 1
+    assert visual["status"] == "ADMITTED"
+    assert visual["semantic_alignment"]["required_semantics"][0]["id"] == "F1"
+    assert visual["frozen_composition_pack"]["grounding"]["excerpts"][0]["source_ref"] == "book#page=12"
+    assert len(visual["order_digest"]) == 64
+    assert len([row for row in session.rows if isinstance(row, LearningMessage)]) == 2
+    non_message_rows = [row for row in session.rows if not isinstance(row, LearningMessage)]
+    assert {type(row).__name__ for row in non_message_rows} == {"AIExecution", "LearningSegment"}
+    assert [row.task for row in non_message_rows if type(row).__name__ == "AIExecution"] == [ModelTask.TUTOR.value]
 
 
 def test_runtime_rejects_openai_v9_missing_workspace_intent_before_absent_audit() -> None:
@@ -921,6 +965,7 @@ def test_parent_redirect_discards_all_ordinary_stream_text_and_persists_only_ser
         "enforced": True,
         "response_origin": "server_composed_redirect",
     }
+    assert messages[-1].payload["workspace_visual"]["status"] == "NOT_REQUESTED"
     assert provider.calls == 1
 
 

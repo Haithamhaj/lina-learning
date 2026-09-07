@@ -39,13 +39,13 @@ Do not reopen or redesign accepted:
 ## 3. Task sequence
 
 ```text
-CS-01 Contract + Runtime Specialist Skill        READY
+CS-01 Contract + Runtime Specialist Skill        DONE / ACCEPTED
   ↓
-CS-02 Complete Visual Toolbelt                   BLOCKED
+CS-02 Complete Visual Toolbelt                   DONE / ACCEPTED
   ↓
-CS-03 Tutor ↔ Specialist Runtime Alignment       BLOCKED
+CS-03 Tutor ↔ Specialist Runtime Alignment       DONE / ACCEPTED
   ↓
-CS-04 Real Canvas Specialist Execution Runtime   BLOCKED
+CS-04 Real Canvas Specialist Execution Runtime   READY
   ↓
 CS-05 Process Production Integration             BLOCKED
   ↓
@@ -60,7 +60,7 @@ No later task becomes READY automatically because code exists. Promotion follows
 
 # CS-01 — Contract + Runtime Specialist Skill
 
-**Status:** READY  
+**Status:** DONE / ACCEPTED
 **Purpose:** Convert the accepted visual-composer behavior into a runtime Skill/capability boundary without enabling any Specialist model execution.
 
 ## Required outputs
@@ -97,13 +97,13 @@ No later task becomes READY automatically because code exists. Promotion follows
 
 Create/update `docs/reviews/CS-01/IMPLEMENTATION_RECORD.md` with baseline SHA, exact changed paths, contract/version decisions, verification, unverified evidence and boundary.
 
-**Stop gate:** Product Owner acceptance before CS-02 promotion.
+**Stop gate:** accepted; CS-02 is closed.
 
 ---
 
 # CS-02 — Complete Visual Toolbelt
 
-**Status:** BLOCKED pending CS-01 acceptance  
+**Status:** DONE / ACCEPTED
 **Purpose:** Install and prove the approved visual engines without enabling new production learning routing.
 
 ## Approved Toolbelt target
@@ -159,13 +159,13 @@ A library compatibility problem must be solved inside a bounded adapter first. D
 
 `docs/reviews/CS-02/IMPLEMENTATION_RECORD.md` plus sanitized screenshots/proofs where useful.
 
-**Stop gate:** Product Owner acceptance before CS-03.
+**Stop gate:** accepted; CS-03 is READY.
 
 ---
 
 # CS-03 — Tutor ↔ Specialist Runtime Alignment
 
-**Status:** BLOCKED pending CS-02 acceptance  
+**Status:** DONE / ACCEPTED
 **Purpose:** Add the bounded Primary Tutor visual-order and frozen composition context while preserving existing WorkspaceIntent/Router meaning and without yet executing a Specialist model.
 
 ## Required outputs
@@ -205,13 +205,13 @@ A library compatibility problem must be solved inside a bounded adapter first. D
 
 `docs/reviews/CS-03/IMPLEMENTATION_RECORD.md` with exact schema/version decisions and compatibility evidence.
 
-**Stop gate:** Product Owner acceptance before CS-04.
+**Stop gate:** accepted; CS-04 is READY.
 
 ---
 
 # CS-04 — Real Canvas Specialist Execution Runtime
 
-**Status:** BLOCKED pending CS-03 acceptance  
+**Status:** READY
 **Purpose:** Execute one admitted Canvas Specialist generation through the existing Worker/Gateway/AIExecution architecture without accepting a production Process Scene yet.
 
 ## Required outputs

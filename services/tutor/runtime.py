@@ -46,6 +46,7 @@ from services.studio.subjects import PRODUCTION_CURRENT_PROFILE_VERSIONS, produc
 from services.studio.workspace_capabilities import build_workspace_capability_context
 from services.studio.workspace_intent import WorkspaceIntentContractError, parse_workspace_intent
 from services.platform.db.models import CandidateEvent, LearningMessage, LearningSegment, LearningSession, ModelTask
+from services.studio.visual_order import VisualOrderAdmissionError, admit_visual_order
 from services.platform.safety import ParentBoundaryResolution, SafetyAction, SafetyPolicyService
 from services.retrieval.service import RetrievalService
 from services.intelligence.subjects import BROAD_SUBJECT_KEYS, is_supported_broad_subject
@@ -189,6 +190,7 @@ class LocalTutorProvider:
                 "candidate_metadata": None,
                 "provisional_broad_subject": None,
                 "workspace_intent": None,
+                "workspace_visual_order": None,
             },
             input_tokens=20,
             output_tokens=18,
@@ -250,6 +252,7 @@ def build_tutor_model_payload(
     effective_parent_boundaries: dict[str, str] | None = None,
     studio_context: StudioTutorWorkspaceContext | None = None,
     workspace_subject_key: str | None = None,
+    visual_personalization_catalog: list[dict[str, str]] | None = None,
 ) -> dict[str, object]:
     """Build bounded model input from the project-owned Tutor context only."""
 
@@ -362,6 +365,16 @@ def build_tutor_model_payload(
         if studio_context is not None
         else ""
     )
+    visual_catalog = visual_personalization_catalog or []
+    visual_catalog_context = (
+        "\n\nVisual Personalization Catalogue (optional read-only presentation input; "
+        "select no more than three exact fact_key values only when naturally relevant):\n"
+        f"{json.dumps(visual_catalog, ensure_ascii=False)}\n"
+        "Do not infer facts, age, Grade, identity, or learning state from this catalogue. "
+        "Core Profile remains the only age/Grade authority."
+        if visual_catalog
+        else "\n\nNo Visual Personalization Catalogue is available; use no personal_fact_keys."
+    )
     return {
         "instructions": TUTOR_SHARED_INSTRUCTIONS,
         "input": (
@@ -370,7 +383,7 @@ def build_tutor_model_payload(
             f"Current Turn:\nStudent question:\n{question}{current_turn_source_context}\n\nImmediate Exchange:\n{immediate_exchange_context}\n\n"
             f"Recent raw complete Exchanges:\n{recent_exchange_context}\n\n"
             f"Relevant older complete Exchanges from current Segment:\n{semantic_recall_context}\n\n"
-            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{studio_workspace_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}{segment_context}{segment_state_context}{parent_boundary_context}"
+            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{studio_workspace_context}{visual_catalog_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}{segment_context}{segment_state_context}{parent_boundary_context}"
         ),
         "max_output_tokens": get_settings().tutor_max_output_tokens,
         "question": question,
@@ -378,6 +391,7 @@ def build_tutor_model_payload(
         "intelligence": intelligence or [],
         "student_core_context": student_core_context,
         "personal_memory": personal_memory,
+        "visual_personalization_catalog": visual_catalog,
         "active_teaching_methods": [method.value for method in ACTIVE_TEACHING_METHODS],
         "response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA,
         "candidate_source_message_id": str(candidate_source_message_id) if candidate_source_message_id is not None else None,
@@ -892,6 +906,12 @@ class TutorRuntime:
             result.output.get("provisional_broad_subject")
         )
         workspace_audit = self._workspace_audit(context=context, raw_intent=result.output.get("workspace_intent"))
+        visual_audit = self._visual_order_audit(
+            learning_session=learning_session,
+            context=context,
+            raw_order=result.output.get("workspace_visual_order"),
+            parent_resolution=parent_resolution,
+        )
         candidate_metadata_status, candidate_metadata_error = self._persist_candidates(
             learning_session=learning_session,
             source_message=student_message,
@@ -925,6 +945,7 @@ class TutorRuntime:
             capacity_lineage=capacity_lineage,
             guided_check=guided_check,
             workspace_audit=workspace_audit,
+            visual_audit=visual_audit,
         )
         if state is not None:
             resolved_segment.segment.structured_state = state.model_dump(mode="json")
@@ -997,6 +1018,24 @@ class TutorRuntime:
             "intent": intent.model_dump(mode="json"),
             "decision": decision.as_audit_payload(),
         }
+
+    def _visual_order_audit(self, *, learning_session: LearningSession, context: TutorContext, raw_order: object, parent_resolution: ParentBoundaryResolution) -> dict[str, object]:
+        """Admit an optional composition order without touching WorkspaceIntent or Studio state."""
+        if raw_order is None:
+            return {"status": "NOT_REQUESTED", "reason_code": None, "admitted_order": None, "semantic_alignment": None, "order_digest": None, "frozen_composition_pack": None}
+        if parent_resolution.action is SafetyAction.REDIRECT_TO_PARENT:
+            return {"status": "REJECTED", "reason_code": "PARENT_BOUNDARY_REDIRECT", "admitted_order": None, "semantic_alignment": None, "order_digest": None, "frozen_composition_pack": None}
+        source_map = {str(item.source_ref): {"text": item.text} for item in context.retrieval}
+        catalog = {
+            fact["fact_key"]: {"category": fact["category"], "display_statement": fact["display_statement"]}
+            for fact in context.visual_personalization_catalog
+        }
+        core = context.student_core_context
+        try:
+            admitted = admit_visual_order(raw_order, authorized_source_references=source_map, visual_personalization_catalog=catalog, core_profile={"display_name": core.display_name, "age_years": core.age_years, "grade_level": core.grade_level})
+        except VisualOrderAdmissionError as error:
+            return {"status": "REJECTED", "reason_code": str(error), "admitted_order": None, "semantic_alignment": None, "order_digest": None, "frozen_composition_pack": None}
+        return {"status": "ADMITTED", "reason_code": None, "admitted_order": admitted.admitted_order, "semantic_alignment": admitted.semantic_alignment, "order_digest": admitted.order_digest, "frozen_composition_pack": admitted.frozen_composition_pack}
 
     def _resolve_parent_boundary(
         self,
@@ -1206,6 +1245,7 @@ class TutorRuntime:
         guided_check: PersistedGuidedLearningCheck | None = None,
         provisional_broad_subject: str | None = None,
         workspace_audit: dict[str, object] | None = None,
+        visual_audit: dict[str, object] | None = None,
     ) -> TutorTurn:
         sources = _source_metadata(context)
         intelligence = [item.text for item in context.intelligence] if context else []
@@ -1228,6 +1268,7 @@ class TutorRuntime:
                 "intent": None,
                 "decision": None,
             },
+            "workspace_visual": visual_audit or {"status": "NOT_REQUESTED", "reason_code": None, "admitted_order": None, "semantic_alignment": None, "order_digest": None, "frozen_composition_pack": None},
         }
         if selected_method is not None:
             payload["teaching_method_registry_version"] = TEACHING_METHOD_REGISTRY_VERSION
@@ -1256,6 +1297,7 @@ class TutorRuntime:
                 "retrieval_source_refs": list(context.debug.retrieval_source_refs),
                 "intelligence_source_ids": [str(identifier) for identifier in context.debug.intelligence_source_ids],
                 "personal_memory_status": context.debug.personal_memory_status,
+                "visual_personalization_catalog_status": context.debug.visual_personalization_catalog_status,
                 "studio": {
                     "included": context.studio_workspace is not None,
                     "context_schema_version": (
@@ -1346,6 +1388,7 @@ def _payload_from_context(
         effective_parent_boundaries=effective_parent_boundaries,
         studio_context=context.studio_workspace,
         workspace_subject_key=context.subject,
+        visual_personalization_catalog=list(context.visual_personalization_catalog),
     )
 
 

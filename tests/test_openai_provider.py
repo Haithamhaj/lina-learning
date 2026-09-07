@@ -19,7 +19,7 @@ def _v9_tutor_payload_without_workspace_intent() -> dict[str, object]:
     return {
         "instructions": "Teach calmly.",
         "input": "Help with fractions.",
-        "response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA,
+        "response_schema": {"name": "tutor_turn_v9", "schema": {"type": "object"}},
     }
 
 
@@ -37,6 +37,24 @@ def _v9_tutor_body_without_workspace_intent() -> str:
         "parent_boundary": None,
         "candidate_metadata": None,
         "provisional_broad_subject": None,
+    })
+
+
+def _v10_tutor_body_without_workspace_visual_order() -> str:
+    return json.dumps({
+        "text": "Try one step.",
+        "suggested_actions": [],
+        "guided_check": None,
+        "teaching_mode": None,
+        "teaching_strategy": None,
+        "teaching_method_id": None,
+        "prior_method_relation": None,
+        "segment_relation": None,
+        "structured_segment_state": None,
+        "parent_boundary": None,
+        "candidate_metadata": None,
+        "provisional_broad_subject": None,
+        "workspace_intent": None,
     })
 
 
@@ -220,6 +238,37 @@ def test_openai_stream_rejects_v9_result_without_required_workspace_intent() -> 
                 ModelRoute(provider="openai", model="gpt-5.6-luna"),
                 _v9_tutor_payload_without_workspace_intent(),
             )
+        )
+
+
+def test_openai_execute_rejects_v10_result_without_required_visual_order() -> None:
+    """Current Tutor results cannot silently turn an omitted visual order into null."""
+
+    class FakeResponse:
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return json.dumps({
+                "output": [{"type": "message", "content": [{"type": "output_text", "text": _v10_tutor_body_without_workspace_visual_order()}]}],
+                "usage": {"input_tokens": 5, "output_tokens": 2},
+            }).encode()
+
+    def send(request: object, *, timeout: float) -> FakeResponse:
+        del request, timeout
+        return FakeResponse()
+
+    payload = {
+        "instructions": "Teach calmly.",
+        "input": "Help with fractions.",
+        "response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA,
+    }
+    with pytest.raises(ValueError, match="workspace_visual_order"):
+        OpenAIResponsesProvider(api_key="test-key", request_sender=send).execute(
+            ModelRoute(provider="openai", model="gpt-5.6-luna"), payload
         )
 
 

@@ -44,7 +44,7 @@ def test_tutor_output_requires_nullable_workspace_intent_with_its_own_schema_ver
         TUTOR_OUTPUT_RESPONSE_SCHEMA,
     )
 
-    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v9"
+    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v10"
     assert "workspace_intent" in TUTOR_OUTPUT_JSON_SCHEMA["required"]
     schema = TUTOR_OUTPUT_JSON_SCHEMA["properties"]["workspace_intent"]
     assert schema["anyOf"][0]["additionalProperties"] is False

@@ -29,9 +29,9 @@ CS-01 Contract + Runtime Specialist Skill        DONE / ACCEPTED
   ↓
 CS-02 Complete Visual Toolbelt                   DONE / ACCEPTED
   ↓
-CS-03 Tutor ↔ Specialist Runtime Alignment       READY
+CS-03 Tutor ↔ Specialist Runtime Alignment       DONE / ACCEPTED
   ↓
-CS-04 Real Canvas Specialist Execution Runtime   BLOCKED
+CS-04 Real Canvas Specialist Execution Runtime   READY
   ↓
 CS-05 Process Production Integration             BLOCKED
   ↓
@@ -108,18 +108,14 @@ routing, Tutor, Studio runtime, Specialist execution or ProcessView change.
 
 # CS-03 — Tutor ↔ Specialist Runtime Alignment
 
-**Status:** READY.
+**Status:** DONE / ACCEPTED.
 
-Required direction:
-
-- additive required-nullable Visual Order sibling; preserve `workspace_intent-v1` meaning;
-- Semantic Alignment Envelope with bounded support identities and must-not-imply constraints;
-- application admission after complete Tutor parse/policy handling;
-- Frozen Composition Pack;
-- transient Visual Learner Context from authoritative Student Core Profile + small relevant current safe Personal Fact subset;
-- no extra normal-turn model call for personalization/admission;
-- application-derived order digest/idempotency and source/capability/current-Scene lineage;
-- no Specialist generation yet.
+Product Owner accepted Tutor v10 optional Visual Order, deterministic Semantic
+Alignment/Frozen Pack lineage, and bounded complete-current Personal Fact
+catalogue behavior. Focused affected tests passed 159/0/0; disposable
+PostgreSQL proof passed 5/0/0; no Specialist call, Job, Scene mutation, or
+Evidence/PF/LI effect exists. The broader-suite fixture TRUNCATE deadlock is
+retained in the implementation record as environment/test-fixture evidence.
 
 Documentation: `docs/reviews/CS-03/IMPLEMENTATION_RECORD.md`.
 
@@ -127,7 +123,7 @@ Documentation: `docs/reviews/CS-03/IMPLEMENTATION_RECORD.md`.
 
 # CS-04 — Real Canvas Specialist Execution Runtime
 
-**Status:** BLOCKED pending CS-03 acceptance.
+**Status:** READY.
 
 Required direction:
 
@@ -221,4 +217,4 @@ Documentation: one `docs/reviews/CS-07/IMPLEMENTATION_RECORD.md` with bounded su
 
 ## Execution boundary
 
-Only **CS-01** is currently executable. All later CS tasks and all unrelated blocked work remain blocked until explicitly promoted.
+Only **CS-04** is currently executable. All later CS tasks and all unrelated blocked work remain blocked until explicitly promoted.

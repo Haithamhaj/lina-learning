@@ -20,7 +20,7 @@ Student question
 → same Primary Tutor explains through existing Runtime-03
 ```
 
-The active bounded path is `CS-03 → CS-06`. `CS-07` is a controlled post-proof visual Toolbelt lab, not required before the first real Process trial.
+The active bounded path is `CS-04 → CS-06`. `CS-07` is a controlled post-proof visual Toolbelt lab, not required before the first real Process trial.
 
 ## Current reality
 
@@ -36,6 +36,11 @@ The active bounded path is `CS-03 → CS-06`. `CS-07` is a controlled post-proof
   isolated client/lazy adapters. Focused contracts 2/0/0, Process
   visual-awareness 19/0/0, typecheck, build and diff-check passed. Engines
   remain non-production capabilities except already accepted React/SVG behavior.
+- `CS-03` — DONE / ACCEPTED: the one Primary Tutor call now emits the strict
+  required-nullable `tutor_turn_v10` Visual Order sibling. Application-owned
+  Semantic Alignment, bounded Visual Learner Context, Frozen Composition Pack
+  and deterministic digest persist as hidden Tutor lineage. No Specialist
+  execution, Job, Scene mutation, or Evidence/PF/LI effect exists.
 - Studio State/Subject Registry/Protocol/Runtime-01/02/03 and `/student/daily` Studio integration are DONE / ACCEPTED.
 - Existing deterministic activities and accepted Math renderers remain protected.
 - Student Core Profile, Personal Facts, PF-03 Personal Memory Tutor context, Learning Intelligence, Retrieval and Child Safety authorities are accepted and remain separate.
@@ -44,8 +49,6 @@ The active bounded path is `CS-03 → CS-06`. `CS-07` is a controlled post-proof
 ### Not yet implemented/proven
 
 - no natural Canvas Specialist dispatch/execution;
-- no additive Tutor Visual Order / Semantic Alignment Envelope;
-- no frozen Specialist Composition Pack / Visual Learner Context;
 - no `ModelTask.CANVAS_SPECIALIST` live route;
 - no full Specialist Run stale/cancel/settlement lifecycle;
 - no production natural-composition Process profile/Host adapter;
@@ -97,10 +100,10 @@ Do not break or silently reinterpret:
 
 ## Next action
 
-**CS-03 — Tutor ↔ Specialist Runtime Alignment: READY.**
+**CS-04 — Real Canvas Specialist Execution Runtime: READY.**
 
-CS-01 and CS-02 are DONE / ACCEPTED. CS-03 is the only READY task; do not
-execute it in this closure.
+CS-01, CS-02 and CS-03 are DONE / ACCEPTED. CS-04 is the only READY task; it
+is not started by this closure. CS-05 through CS-07 remain BLOCKED.
 
 ## Critical references
 

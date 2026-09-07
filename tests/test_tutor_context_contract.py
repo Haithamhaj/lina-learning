@@ -1,6 +1,8 @@
 """Small guard that the Tutor context boundary remains a dedicated module."""
 
 from pathlib import Path
+from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from uuid import uuid4
 
 from services.tutor import context
@@ -84,3 +86,26 @@ def test_chat_uses_a_scene_subject_only_for_an_exact_server_link() -> None:
     assert linked.broad_subject == "LANGUAGE_ARTS"
     assert linked.origin is context.LiveSubjectOrigin.CHAT_LINKED_SCENE
     assert unlinked == context.unknown_live_subject()
+
+
+def test_visual_personalization_catalogue_keeps_every_current_eligible_fact_within_its_boundary() -> None:
+    """CS-03: recency resolves a key's current value, never relevance-preselects keys."""
+
+    now = datetime.now(UTC)
+    facts = [
+        SimpleNamespace(fact_key="favorite:butterfly", category="FAVORITE", display_statement="Likes butterflies", last_observed_at=now - timedelta(days=4), id=uuid4()),
+        SimpleNamespace(fact_key="activity:garden", category="ACTIVITY", display_statement="Gardens", last_observed_at=now - timedelta(days=3), id=uuid4()),
+        SimpleNamespace(fact_key="pet:cat", category="PET", display_statement="Has a cat", last_observed_at=now - timedelta(days=2), id=uuid4()),
+        SimpleNamespace(fact_key="preference:space", category="PREFERENCE", display_statement="Likes space", last_observed_at=now - timedelta(days=1), id=uuid4()),
+    ]
+    session = SimpleNamespace(scalars=lambda _statement: facts)
+    builder = TutorContextBuilder(session, retrieval_service=object())
+
+    catalogue, status = builder._visual_personalization_catalog(  # noqa: SLF001 - focused contract
+        learning_session=SimpleNamespace(student_id=uuid4()),
+    )
+
+    assert status == "AVAILABLE"
+    assert [item["fact_key"] for item in catalogue] == [
+        "activity:garden", "favorite:butterfly", "pet:cat", "preference:space",
+    ]

@@ -55,7 +55,7 @@ def test_structured_tutor_normalization_preserves_all_luna_semantic_decisions() 
     """Catches a valid v6 decision being dropped before Tutor runtime validation."""
 
     output = _normalize_output(
-        '{"text":"Use a fraction bar.","suggested_actions":[],"teaching_mode":"HOMEWORK","teaching_strategy":"HINT_FIRST","teaching_method_id":"VISUAL_REPRESENTATION","prior_method_relation":"CONTINUATION","segment_relation":"CONTINUE","structured_segment_state":null,"candidate_metadata":null,"workspace_intent":null}',
+        '{"text":"Use a fraction bar.","suggested_actions":[],"teaching_mode":"HOMEWORK","teaching_strategy":"HINT_FIRST","teaching_method_id":"VISUAL_REPRESENTATION","prior_method_relation":"CONTINUATION","segment_relation":"CONTINUE","structured_segment_state":null,"candidate_metadata":null,"workspace_intent":null,"workspace_visual_order":null}',
         {"response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA},
     )
 
@@ -67,11 +67,11 @@ def test_structured_tutor_normalization_preserves_all_luna_semantic_decisions() 
     assert output["structured_segment_state"] is None
 
 
-def test_structured_v9_tutor_normalization_preserves_workspace_intent() -> None:
-    """A v9 Tutor response keeps its strict Workspace Intent rather than taking the generic path."""
+def test_structured_v10_tutor_normalization_preserves_workspace_intent() -> None:
+    """A current Tutor response keeps its strict Workspace Intent rather than taking the generic path."""
 
     output = _normalize_output(
-        '{"text":"Try a number line.","suggested_actions":[],"workspace_intent":{"version":"workspace-intent-v1","action":"OPEN_ACTIVITY","subject_key":"MATH","concept_keys":["fraction-equivalence"],"learning_goal":"Compare equivalent fractions.","activity_hint":null,"representation_need":"VISUAL","expected_student_response_mode":"WORKSPACE","presentation_sequence":"PARALLEL","source_references":[],"safe_text_fallback":"Let us compare the fractions."}}',
+        '{"text":"Try a number line.","suggested_actions":[],"workspace_intent":{"version":"workspace-intent-v1","action":"OPEN_ACTIVITY","subject_key":"MATH","concept_keys":["fraction-equivalence"],"learning_goal":"Compare equivalent fractions.","activity_hint":null,"representation_need":"VISUAL","expected_student_response_mode":"WORKSPACE","presentation_sequence":"PARALLEL","source_references":[],"safe_text_fallback":"Let us compare the fractions."},"workspace_visual_order":null}',
         {"response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA},
     )
 
@@ -92,10 +92,11 @@ def test_structured_v9_tutor_normalization_preserves_workspace_intent() -> None:
     assert output["candidate_metadata_error"] == "candidate_metadata_missing"
 
     null_output = _normalize_output(
-        '{"text":"Keep going.","suggested_actions":[],"candidate_metadata":null,"workspace_intent":null}',
+        '{"text":"Keep going.","suggested_actions":[],"candidate_metadata":null,"workspace_intent":null,"workspace_visual_order":null}',
         {"response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA},
     )
     assert null_output["workspace_intent"] is None
+    assert null_output["workspace_visual_order"] is None
 
 
 def test_structured_v9_tutor_normalization_rejects_missing_workspace_intent() -> None:
@@ -117,6 +118,18 @@ def test_structured_v8_tutor_normalization_keeps_historical_absent_workspace_int
     )
 
     assert "workspace_intent" not in output
+
+
+def test_structured_v9_tutor_normalization_does_not_require_the_new_visual_order() -> None:
+    """The v10 addition does not reinterpret a valid historical v9 response."""
+
+    output = _normalize_output(
+        '{"text":"Try one step.","suggested_actions":[],"candidate_metadata":null,"workspace_intent":null}',
+        {"response_schema": {"name": "tutor_turn_v9", "schema": {"type": "object"}}},
+    )
+
+    assert output["workspace_intent"] is None
+    assert "workspace_visual_order" not in output
 
 
 def test_structured_v9_fallback_cannot_masquerade_as_a_valid_result() -> None:

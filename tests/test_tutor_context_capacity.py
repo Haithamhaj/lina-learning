@@ -116,6 +116,7 @@ def _payload(
         latest_segment_state=latest_segment_state,
         effective_parent_boundaries={"SEXUAL_CONTENT": "REDIRECT_TO_PARENT"},
         studio_context=context.studio_workspace,
+        visual_personalization_catalog=list(context.visual_personalization_catalog),
     )
 
 
@@ -133,6 +134,23 @@ def test_under_or_exact_capacity_keeps_every_selected_unit() -> None:
         assert result.lineage.initial_measured_size == exact_limit
         assert result.lineage.final_measured_size == exact_limit
         assert result.lineage.capacity_policy_version == TUTOR_CONTEXT_CAPACITY_POLICY_VERSION
+
+
+def test_capacity_omits_the_entire_visual_personalization_catalogue_never_individual_facts() -> None:
+    catalogue = tuple(
+        {"fact_key": f"favorite:{index}", "category": "FAVORITE", "display_statement": f"Likes {index}"}
+        for index in range(4)
+    )
+    context = replace(_context(), visual_personalization_catalog=catalogue)
+    full_size = serialized_model_request_characters(_payload(context))
+
+    result = apply_context_capacity_guardrail(context, capacity_limit=full_size - 1, payload_builder=_payload)
+
+    assert result.context.visual_personalization_catalog == ()
+    assert result.context.debug.visual_personalization_catalog_status == "CATALOG_OMITTED_CONTEXT_CAPACITY"
+    assert result.lineage.dropped_context[0].kind == "VISUAL_PERSONALIZATION_CATALOG"
+    assert "favorite:0" not in str(result.payload["input"])
+    assert "favorite:3" not in str(result.payload["input"])
 
 
 def test_capacity_drops_lowest_priority_semantic_exchange_not_first_chronological_exchange() -> None:

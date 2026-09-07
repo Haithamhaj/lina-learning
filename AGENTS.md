@@ -39,13 +39,12 @@ Normally execute only the single task explicitly marked `READY` in the current o
 
 ## Current active task
 
-**CS-03 — Tutor ↔ Specialist Runtime Alignment: READY.**
+**CS-04 — Real Canvas Specialist Execution Runtime: READY.**
 
-CS-01 and CS-02 are **DONE / ACCEPTED**. CS-03 is the only READY task.
-CS-04 through CS-07 remain BLOCKED.
+CS-01, CS-02 and CS-03 are **DONE / ACCEPTED**. CS-04 is the only READY task.
+CS-05 through CS-07 remain BLOCKED.
 
-Do not start CS-04 until CS-03 has separately completed review and received
-Product Owner acceptance.
+Do not start CS-04 without its own explicit Product Owner authorization.
 
 ## Core execution rules
 
@@ -163,7 +162,7 @@ Renderer-first remains the approved strategy:
 CS-02 is the accepted installation/proof foundation. Presence in the
 technology catalog or lockfile never production-enables a learning capability.
 Models request semantic capabilities; application-owned Registry/adapters select
-the engine. CS-03 is READY; CS-04 through CS-07 remain BLOCKED.
+the engine. CS-03 is DONE / ACCEPTED; CS-04 is READY; CS-05 through CS-07 remain BLOCKED.
 
 Avoid arbitrary model-authored HTML/JS/SVG/code for routine visuals when typed renderers fit.
 
@@ -222,5 +221,5 @@ Read:
 4. `docs/CANVAS_SPECIALIST_IMPLEMENTATION_PLAN.md`
 5. `docs/CANVAS_SPECIALIST_ACCEPTANCE_SPEC.md`
 
-Then execute **CS-03 only** and stop after its verification/report. CS-04
-through CS-07 remain BLOCKED.
+The current next action is **CS-04 only**. CS-05 through CS-07 remain BLOCKED;
+do not start CS-04 without its own explicit Product Owner authorization.

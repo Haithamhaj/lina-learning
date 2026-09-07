@@ -1096,7 +1096,7 @@ def test_owned_canvas_interaction_executes_once_with_exact_gateway_lineage(
     )
 
     assert len(provider.payloads) == 1
-    assert provider.payloads[0]["response_schema"]["name"] == "tutor_turn_v9"  # type: ignore[index]
+    assert provider.payloads[0]["response_schema"]["name"] == "tutor_turn_v10"  # type: ignore[index]
     assert "question" not in provider.payloads[0]
     source = result.context.as_model_payload()["source"]
     assert source["turn_origin"] == "CANVAS_INTERACTION"

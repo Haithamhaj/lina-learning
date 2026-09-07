@@ -128,6 +128,21 @@ def apply_context_capacity_guardrail(
 def _drop_next_optional_unit(context: TutorContext) -> tuple[TutorContext, DroppedContextUnit | None]:
     """Apply CTX-03D's deterministic layer order without changing upstream relevance."""
 
+    if context.visual_personalization_catalog:
+        return (
+            replace(
+                context,
+                visual_personalization_catalog=(),
+                debug=replace(
+                    context.debug,
+                    visual_personalization_catalog_status="CATALOG_OMITTED_CONTEXT_CAPACITY",
+                ),
+            ),
+            DroppedContextUnit(
+                "VISUAL_PERSONALIZATION_CATALOG",
+                reason="CATALOG_OMITTED_CONTEXT_CAPACITY",
+            ),
+        )
     if context.personal_memory is not None:
         return (
             replace(
@@ -204,6 +219,8 @@ def _context_metadata(context: TutorContext) -> dict[str, object]:
 
     studio_workspace = context.studio_workspace
     return {
+        "visual_personalization_catalog_status": context.debug.visual_personalization_catalog_status,
+        "visual_personalization_catalog_count": len(context.visual_personalization_catalog),
         "immediate_exchange_message_ids": _exchange_ids(context.immediate_exchange),
         "recent_exchange_message_ids": [
             str(identifier)
