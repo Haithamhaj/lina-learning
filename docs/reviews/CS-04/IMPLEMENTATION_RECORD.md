@@ -1,9 +1,9 @@
 # CS-04 — Real Canvas Specialist Execution Runtime — Implementation Record
 
-**Status:** IMPLEMENTED / AWAITING REVIEW
+**Status:** IMPLEMENTED / AWAITING PRODUCT OWNER REVIEW
 **Prepared:** 2026-09-07
 **Execution branch:** `codex/ctx-03`
-**Implementation baseline:** `c94252537cd59b053fb10fc82127b01df8475403`
+**Implementation baseline:** `b4b1f605dbddbb1f8309513a566ecf199b44c0b2`
 
 ## Purpose
 
@@ -102,16 +102,47 @@ memory rebuild; and no CS-05 work.
   only Job settlement was lost, and marks expired final-attempt outcomes as
   ambiguous terminal failures without another generation.
 
+## Product Owner review corrections after `b4b1f605`
+
+- The executable `runtime/canvas-specialist/process-capability-pack-v1.md` is
+  committed and paired with `SKILL.md` for Worker instructions. Historical
+  `SPECIALIST_CAPABILITY_PACK_V1` remains disabled and never acts as fallback.
+- Persisted Tutor completion automatically admits an `ADMITTED` visual order
+  when the Daily session has its matching Studio runtime. It atomically creates
+  one `max_attempts=1` Job and one pending Run; null, rejected, redirected, and
+  non-Studio paths create neither. Specialist inference remains asynchronous.
+- The OpenAI Responses request receives the exact strict Pydantic proposal
+  schema with `strict=true`. Every object forbids extra properties and requires
+  all properties; absent values are required nullable fields. Focus, motion,
+  and affordances are registry-bounded rather than free-form control channels.
+- A later admitted order supersedes prior pending/running work for the same
+  Studio runtime. Pending work becomes terminal before claim; an already
+  started call may finish but cannot make its superseded Run usable. No work is
+  regenerated.
+- Implementation-control validation uses explicit token/markup/URL/code
+  patterns, so “chemical reaction”, “reaction”, and “reactants” remain valid
+  while React, Konva, SVG/HTML/JavaScript, URLs, renderer direction, and code
+  control remain invalid.
+- Deadline-before-inference, invalid proposal, final lease expiry, completed
+  Run/lost-Job reconciliation, and terminal Run states are terminal; none
+  re-enters the provider.
+
 ## Verification
 
 - Canonical disposable PostgreSQL migration through `d1c4a7e2b9f0`: passed.
-- Focused CS-04 admission/proposal/Worker matrix: **23 passed, 0 failed**.
-- Full affected PostgreSQL/Gateway/CS-03/Studio matrix: **92 passed, 0 failed,
-  1 external deprecation warning**. It covers Jobs claim/lease behavior,
-  OpenAI structured-output adapter, Visual Order/Frozen Pack, Studio State and
-  Process Runtime regressions.
-- `uv run ... python -m compileall -q services workers`: passed.
-- `git diff --check`: passed.
+- Focused CS-04 admission/proposal/Worker/OpenAI/Job matrix: **64 passed, 0
+  failed**. It covers Tutor-completion admission, one Job/Run and
+  `max_attempts=1`, frozen input, no transaction across inference, strict
+  OpenAI schema, lease/final-attempt handling, terminal non-reentry, invalid
+  proposal, supersession, and no repair/critic path.
+- Affected CS-03 Visual Order/Frozen Pack, Tutor, Studio and Runtime-03 matrix:
+  **207 passed, 0 failed, 1 external deprecation warning**.
+- Disposable PostgreSQL reset applied all migrations through `d1c4a7e2b9f0`.
+- `PYTHONPATH=. uv run --with-requirements apps/api/requirements.txt --with
+  pytest python -m compileall -q services workers`: passed.
+- `alembic current` on the disposable PostgreSQL database: `d1c4a7e2b9f0
+  (head)`.
+- `npm run typecheck`, `npm run build`, and `git diff --check`: passed.
 - Mock proof confirms one Job (`max_attempts=1`), one Run, one provider call,
   frozen input only, no transaction across inference, durable proposal/AIExecution
   lineage, no Scene/Event/Snapshot and no Evidence/PF/LI writes.

@@ -324,6 +324,19 @@ def test_valid_visual_order_is_hidden_admitted_metadata_with_no_execution_side_e
     assert [row.task for row in non_message_rows if type(row).__name__ == "AIExecution"] == [ModelTask.TUTOR.value]
 
 
+@pytest.mark.parametrize("statement", ["Chemical reaction", "How a reaction happens", "Reactants are used in a reaction."])
+def test_visual_order_allows_normal_science_reaction_language(statement: str) -> None:
+    from services.studio.visual_order import WorkspaceVisualOrder
+
+    order = WorkspaceVisualOrder.model_validate({
+        "version": "workspace-visual-order-v1", "operation": "COMPOSE", "pattern": "PROCESS", "topology": "SEQUENCE",
+        "objective": statement, "required_semantics": [statement, "A result follows."], "required_relations": [],
+        "must_not_imply": [], "source_references": [], "personal_fact_keys": [], "locale": "en", "direction": "ltr", "use_display_name": False,
+    })
+
+    assert order.objective == statement
+
+
 def test_runtime_rejects_openai_v9_missing_workspace_intent_before_absent_audit() -> None:
     """A provider-invalid v9 result fails before Runtime can write an ordinary absent intent audit."""
 

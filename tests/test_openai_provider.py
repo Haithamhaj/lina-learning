@@ -12,6 +12,7 @@ from services.model_gateway.gateway import ModelResult, ModelRoute, StaticModelP
 from services.model_gateway.openai_provider import OpenAIResponsesProvider
 from services.platform.config import Settings, reset_settings_cache
 from services.platform.db.models import ModelTask
+from services.studio.canvas_specialist import CanvasSpecialistProcessProposal
 from services.tutor.candidate_events import TUTOR_OUTPUT_RESPONSE_SCHEMA
 
 
@@ -139,6 +140,32 @@ def test_openai_responses_provider_returns_text_usage_and_luna_cost() -> None:
     assert result.cached_input_tokens == 0
     assert result.output_tokens == 143
     assert result.estimated_cost_usd == 0.000625
+
+
+def test_openai_canvas_specialist_request_sends_the_exact_strict_schema() -> None:
+    captured: dict[str, object] = {}
+
+    class FakeResponse:
+        def __enter__(self): return self
+        def __exit__(self, *args: object) -> None: return None
+        def read(self) -> bytes:
+            return json.dumps({"output": [{"type": "message", "content": [{"type": "output_text", "text": "{}"}]}], "usage": {}}).encode()
+
+    def send(request: object, *, timeout: float) -> FakeResponse:
+        del timeout
+        captured["request"] = request
+        return FakeResponse()
+
+    schema = CanvasSpecialistProcessProposal.model_json_schema()
+    provider = OpenAIResponsesProvider(api_key="test-key", request_sender=send)
+    provider.execute(
+        ModelRoute("openai", "gpt-5.6-luna"),
+        {"instructions": "specialist", "input": "frozen-pack", "response_schema": {"name": "canvas-specialist-process-proposal-v1", "schema": schema}},
+    )
+    body = json.loads(captured["request"].data.decode())
+    assert body["text"]["format"] == {
+        "type": "json_schema", "name": "canvas-specialist-process-proposal-v1", "schema": schema, "strict": True,
+    }
 
 
 def test_openai_responses_provider_accounts_for_each_luna_prompt_cache_category() -> None:

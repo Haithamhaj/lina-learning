@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from services.platform.db.models import Job, LearningMessage, LearningSession, StudioCanvasSpecialistRun, StudioRuntime
 from services.platform.jobs import enqueue_job
+from services.studio.visual_order import contains_implementation_control
 
 
 CANVAS_SPECIALIST_PROCESS_PROPOSAL_SCHEMA_VERSION = "canvas-specialist-process-proposal-v1"
@@ -23,17 +24,14 @@ PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY = "process-capability-pack-v1"
 CANVAS_SPECIALIST_COMPOSE_JOB = "studio.canvas_specialist.compose.v1"
 CANVAS_SPECIALIST_DEADLINE = timedelta(minutes=2)
 
-_FORBIDDEN_TEXT = ("<script", "<svg", "<html", "javascript:", "http://", "https://", "react", "konva", "jsxgraph", "mathlive", "css")
-
-
 class _Stage(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     semantic_key: str = Field(min_length=1, max_length=64, pattern=r"^[a-z][a-z0-9_-]*$")
     label: str = Field(min_length=1, max_length=80)
-    detail: str | None = Field(default=None, max_length=300)
+    detail: str | None = Field(..., max_length=300)
     support_ids: list[str] = Field(min_length=1, max_length=8)
-    art_handle: str | None = Field(default=None, max_length=64)
+    art_handle: str | None = Field(..., max_length=64)
 
 
 class _Relation(BaseModel):
@@ -42,7 +40,7 @@ class _Relation(BaseModel):
     relation_key: str = Field(min_length=1, max_length=64, pattern=r"^[a-z][a-z0-9_-]*$")
     source_semantic_key: str = Field(min_length=1, max_length=64)
     target_semantic_key: str = Field(min_length=1, max_length=64)
-    label: str | None = Field(default=None, max_length=120)
+    label: str | None = Field(..., max_length=120)
     support_ids: list[str] = Field(min_length=1, max_length=8)
 
 
@@ -55,13 +53,13 @@ class CanvasSpecialistProcessProposal(BaseModel):
     pattern: Literal["PROCESS"]
     topology: Literal["SEQUENCE", "CYCLE"]
     title: str = Field(min_length=1, max_length=120)
-    subtitle: str | None = Field(default=None, max_length=180)
+    subtitle: str | None = Field(..., max_length=180)
     stages: list[_Stage] = Field(min_length=2, max_length=8)
-    relations: list[_Relation] = Field(default_factory=list, max_length=8)
+    relations: list[_Relation] = Field(..., max_length=8)
     text_equivalent: str = Field(min_length=1, max_length=1000)
-    focus_intent: str | None = Field(default=None, max_length=64)
-    motion_intents: list[str] = Field(default_factory=list, max_length=8)
-    interaction_affordances: list[str] = Field(default_factory=list, max_length=8)
+    focus_intent: Literal["FOCUS_STAGE", "FOCUS_RELATION"] | None = Field(...)
+    motion_intents: list[Literal["REVEAL_IN_ORDER", "TRACE_CYCLE"]] = Field(..., max_length=8)
+    interaction_affordances: list[Literal["FOCUS_OBJECT", "DEEMPHASIZE_OTHERS", "REVEAL_OBJECT_DETAIL", "TRACE_RELATION", "TRANSITION_FOCUS"]] = Field(..., max_length=8)
 
     @field_validator("motion_intents", "interaction_affordances")
     @classmethod
@@ -80,7 +78,7 @@ class CanvasSpecialistProcessProposal(BaseModel):
         if any(relation.source_semantic_key not in keys or relation.target_semantic_key not in keys for relation in self.relations):
             raise ValueError("relations must reference proposal-local stage keys")
         text = " ".join(filter(None, [self.title, self.subtitle, self.text_equivalent, *(stage.label for stage in self.stages), *(stage.detail or "" for stage in self.stages), *(relation.label or "" for relation in self.relations)]))
-        if any(term in text.casefold() for term in _FORBIDDEN_TEXT):
+        if contains_implementation_control(text):
             raise ValueError("proposal must not contain executable, URL, or engine instructions")
         return self
 
@@ -138,6 +136,30 @@ def admit_committed_visual_order(session: Session, *, student_id: UUID, learning
     existing = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.source_message_id == source_message_id, StudioCanvasSpecialistRun.order_digest == digest, StudioCanvasSpecialistRun.capability_profile_version == PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY)).scalar_one_or_none()
     if existing is not None:
         return existing
+    # A later admitted order is the sole current composition intent. Pending
+    # work is made unclaimable; a genuinely in-flight call may return, but its
+    # settlement is permanently barred by the Run's superseded state.
+    prior_runs = session.scalars(
+        select(StudioCanvasSpecialistRun)
+        .join(LearningMessage, StudioCanvasSpecialistRun.source_message_id == LearningMessage.id)
+        .where(
+            StudioCanvasSpecialistRun.studio_runtime_id == runtime.id,
+            StudioCanvasSpecialistRun.status.in_(("PENDING", "RUNNING")),
+            StudioCanvasSpecialistRun.source_message_id != message.id,
+        )
+        .with_for_update()
+    )
+    superseded_at = now or datetime.now(UTC)
+    for prior in prior_runs:
+        prior.status = "SUPERSEDED"
+        prior.failure_metadata = {"code": "SUPERSEDED_BY_NEWER_ADMITTED_ORDER", "successor_order_digest": digest}
+        prior.completed_at = superseded_at
+        if prior.job_id is not None:
+            prior_job = session.get(Job, prior.job_id, with_for_update=True)
+            if prior_job is not None and prior_job.status == "PENDING":
+                prior_job.status = "FAILED"
+                prior_job.completed_at = superseded_at
+                prior_job.last_error = "Superseded by a newer admitted Canvas Specialist order."
     key = f"canvas-specialist:{source_message_id}:{digest}:{PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY}"
     job = enqueue_job(session, job_type=CANVAS_SPECIALIST_COMPOSE_JOB, payload={"student_id": str(student_id), "learning_session_id": str(learning_session_id), "source_message_id": str(source_message_id), "order_digest": digest, "capability_identity": PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY}, idempotency_key=key, max_attempts=1)
     if before_run_create is not None:

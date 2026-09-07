@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 import json
+import re
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
@@ -14,7 +15,21 @@ VISUAL_ORDER_SCHEMA_VERSION = "workspace-visual-order-v1"
 SEMANTIC_ALIGNMENT_SCHEMA_VERSION = "semantic-alignment-envelope-v1"
 FROZEN_COMPOSITION_PACK_SCHEMA_VERSION = "frozen-composition-pack-v1"
 VISUAL_LEARNER_CONTEXT_SCHEMA_VERSION = "visual-learner-context-v1"
-_IMPLEMENTATION_TERMS = ("react", "svg", "konva", "jsxgraph", "mathlive", "renderer", "css", "html", "javascript", "<script", "{")
+_IMPLEMENTATION_CONTROL_PATTERNS = (
+    re.compile(r"<\\s*/?\\s*(?:script|svg|html)\\b", re.IGNORECASE),
+    re.compile(r"\\b(?:https?|javascript)\\s*:", re.IGNORECASE),
+    re.compile(r"\\b(?:react|konva|jsxgraph|mathlive|renderer|css|html|svg|javascript)\\b", re.IGNORECASE),
+    re.compile(r"\\b(?:import|function|const|let|var|class)\\s+[A-Za-z_]", re.IGNORECASE),
+)
+
+
+def contains_implementation_control(value: str) -> bool:
+    """Reject executable/rendering direction without rejecting educational words.
+
+    Word boundaries intentionally distinguish the React framework from normal
+    Science language such as reaction and reactants.
+    """
+    return any(pattern.search(value) is not None for pattern in _IMPLEMENTATION_CONTROL_PATTERNS)
 
 
 class VisualOrderAdmissionError(ValueError):
@@ -48,7 +63,7 @@ class WorkspaceVisualOrder(BaseModel):
     @model_validator(mode="after")
     def educational_text_has_no_implementation_control(self) -> "WorkspaceVisualOrder":
         values = [self.objective, *self.required_semantics, *self.required_relations, *self.must_not_imply]
-        if any(any(term in value.casefold() for term in _IMPLEMENTATION_TERMS) for value in values):
+        if any(contains_implementation_control(value) for value in values):
             raise ValueError("Visual order must contain educational meaning only.")
         return self
 

@@ -45,8 +45,9 @@ from services.studio.router import (
 from services.studio.subjects import PRODUCTION_CURRENT_PROFILE_VERSIONS, production_subject_registry
 from services.studio.workspace_capabilities import build_workspace_capability_context
 from services.studio.workspace_intent import WorkspaceIntentContractError, parse_workspace_intent
-from services.platform.db.models import CandidateEvent, LearningMessage, LearningSegment, LearningSession, ModelTask
+from services.platform.db.models import CandidateEvent, LearningMessage, LearningSegment, LearningSession, ModelTask, StudioRuntime
 from services.studio.visual_order import VisualOrderAdmissionError, admit_visual_order
+from services.studio.canvas_specialist import admit_committed_visual_order
 from services.platform.safety import ParentBoundaryResolution, SafetyAction, SafetyPolicyService
 from services.retrieval.service import RetrievalService
 from services.intelligence.subjects import BROAD_SUBJECT_KEYS, is_supported_broad_subject
@@ -1339,6 +1340,26 @@ class TutorRuntime:
                 source_tutor_message=message,
                 source_segment_id=segment_id,
                 workspace_audit=workspace_audit,
+            )
+        if (
+            isinstance(visual_audit, dict)
+            and visual_audit.get("status") == "ADMITTED"
+            and callable(getattr(self._session, "execute", None))
+            and self._session.scalar(
+                select(StudioRuntime.id).where(
+                    StudioRuntime.student_id == learning_session.student_id,
+                    StudioRuntime.learning_session_id == learning_session.id,
+                )
+            ) is not None
+        ):
+            # This is an admission-only handoff inside the normal committed
+            # Tutor completion transaction. It neither waits for nor invokes
+            # Specialist inference; the independent Worker owns that work.
+            admit_committed_visual_order(
+                self._session,
+                student_id=learning_session.student_id,
+                learning_session_id=learning_session.id,
+                source_message_id=message.id,
             )
         return TutorTurn(
             text,

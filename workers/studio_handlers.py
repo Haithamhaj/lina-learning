@@ -64,7 +64,7 @@ def _preflight(factory: sessionmaker[Session], job: Job, payload: dict[str, obje
         claimed = session.get(Job, job.id)
         run = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.job_id == job.id).with_for_update()).scalar_one_or_none()
         if claimed is None or claimed.job_type != CANVAS_SPECIALIST_COMPOSE_JOB or claimed.max_attempts != 1: raise ValueError("SPECIALIST_JOB_INVALID")
-        if run is None or run.status in {"COMPLETED", "FAILED", "CANCELLED", "SUPERSEDED"}: return None
+        if run is None or run.status in {"COMPLETED", "FAILED", "CANCELLED", "SUPERSEDED", "REJECTED"}: return None
         if run.deadline_at and run.deadline_at <= datetime.now(UTC):
             run.status, run.failure_metadata, run.completed_at = "FAILED", {"code": "DEADLINE_EXCEEDED"}, datetime.now(UTC); return None
         if payload.get("order_digest") != run.order_digest or payload.get("capability_identity") != PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY:
@@ -141,6 +141,12 @@ def reconcile_canvas_specialist_runs(session: Session, *, now: datetime | None =
         run.status = "FAILED"
         run.failure_metadata = {"code": code}
         run.completed_at = clock
+        if job is not None and job.status == JobStatus.RUNNING.value:
+            job.status = JobStatus.FAILED.value
+            job.completed_at = clock
+            job.lease_token = None
+            job.lease_expires_at = None
+            job.last_error = "Canvas Specialist final attempt reached a terminal outcome without a proposal."
         changed += 1
     return changed
 

@@ -172,7 +172,7 @@ def _catalogue(session: Session, learning_session: m.LearningSession) -> tuple[t
     )
 
 
-def test_null_and_admitted_visual_orders_round_trip_without_specialist_side_effects(factory: sessionmaker[Session]) -> None:
+def test_null_and_admitted_visual_orders_round_trip_with_one_automatic_specialist_admission(factory: sessionmaker[Session]) -> None:
     with factory.begin() as session:
         learning_session = _learning_session(session)
         session.add(m.PersonalFact(
@@ -188,10 +188,12 @@ def test_null_and_admitted_visual_orders_round_trip_without_specialist_side_effe
             "status": "NOT_REQUESTED", "reason_code": None, "admitted_order": None,
             "semantic_alignment": None, "order_digest": None, "frozen_composition_pack": None,
         }
-        assert provider.calls == 1 and _protected_counts(session) == baseline
+        assert provider.calls == 1
+        assert _protected_counts(session) == baseline
 
     with factory.begin() as session:
         learning_session = _learning_session(session)
+        session.add(m.StudioRuntime(student_id=learning_session.student_id, learning_session_id=learning_session.id))
         session.add(m.PersonalFact(
             student_id=learning_session.student_id, category="FAVORITE", fact_key="favorite:butterfly",
             value="butterfly", display_statement="Likes butterflies", support_count=1,
@@ -218,7 +220,14 @@ def test_null_and_admitted_visual_orders_round_trip_without_specialist_side_effe
             "version": "visual-learner-context-v1", "core_profile": {"age_years": 10, "grade_level": 5, "display_name": "Lina"},
             "selected_personal_facts": [{"fact_key": "favorite:butterfly", "category": "FAVORITE", "display_statement": "Likes butterflies"}],
         }
-        assert provider.calls == 1 and _protected_counts(session) == baseline
+        assert provider.calls == 1
+        assert _protected_counts(session) == (
+            baseline[0] + 1, baseline[1] + 1, *baseline[2:]
+        )
+        job = session.scalar(select(m.Job))
+        run = session.scalar(select(m.StudioCanvasSpecialistRun))
+        assert job is not None and job.max_attempts == 1
+        assert run is not None and run.status == "PENDING" and run.job_id == job.id
 
 
 def test_rejection_and_parent_redirect_persist_no_admitted_pack(factory: sessionmaker[Session]) -> None:

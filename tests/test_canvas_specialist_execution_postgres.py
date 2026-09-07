@@ -68,12 +68,16 @@ def _valid_proposal() -> dict[str, object]:
         "pattern": "PROCESS",
         "topology": "SEQUENCE",
         "title": "A two-stage process",
+        "subtitle": None,
         "stages": [
-            {"semantic_key": "start", "label": "Start", "support_ids": ["F1"]},
-            {"semantic_key": "finish", "label": "Finish", "support_ids": ["F1"]},
+            {"semantic_key": "start", "label": "Start", "detail": None, "support_ids": ["F1"], "art_handle": None},
+            {"semantic_key": "finish", "label": "Finish", "detail": None, "support_ids": ["F1"], "art_handle": None},
         ],
-        "relations": [{"relation_key": "next", "source_semantic_key": "start", "target_semantic_key": "finish", "support_ids": ["F1"]}],
+        "relations": [{"relation_key": "next", "source_semantic_key": "start", "target_semantic_key": "finish", "label": None, "support_ids": ["F1"]}],
         "text_equivalent": "Start then finish.",
+        "focus_intent": None,
+        "motion_intents": [],
+        "interaction_affordances": [],
     }
 
 
@@ -102,6 +106,49 @@ def test_provider_failure_records_failed_lineage_and_never_retries(factory: sess
         assert job is not None and job.status == "FAILED" and job.attempt_count == job.max_attempts == 1
         assert run is not None and run.status == "FAILED" and run.ai_execution_id == execution.id
         assert execution is not None and execution.success is False and execution.parent_execution_id is not None
+
+
+def test_deadline_before_inference_is_terminal_without_provider_call(factory: sessionmaker[Session]) -> None:
+    with factory.begin() as session:
+        run, job = _admitted_run(session)
+        run.deadline_at = datetime.now(UTC) - timedelta(seconds=1)
+        run_id, job_id = run.id, job.id
+    calls = 0
+
+    class Provider:
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            nonlocal calls
+            calls += 1
+            return ModelResult(output=_valid_proposal())
+
+    registry = JobHandlerRegistry()
+    register_canvas_specialist_handlers(registry, session_factory=factory, gateway_factory=lambda session: ModelGateway(session, routes={ModelTask.CANVAS_SPECIALIST: ModelRoute("fixture", "gpt-5.6-luna")}, providers={"fixture": Provider()}))
+    assert run_once(factory, registry, worker_id="cs04-worker") == m.JobStatus.COMPLETED
+    with factory() as session:
+        assert session.get(m.StudioCanvasSpecialistRun, run_id).status == "FAILED"
+        assert session.get(m.Job, job_id).status == "COMPLETED"
+        assert calls == 0
+
+
+def test_invalid_proposal_fails_after_one_call_without_repair_or_critic(factory: sessionmaker[Session]) -> None:
+    with factory.begin() as session:
+        run, job = _admitted_run(session)
+        run_id, job_id = run.id, job.id
+    calls = 0
+
+    class Provider:
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            nonlocal calls
+            calls += 1
+            return ModelResult(output={"not": "a proposal"})
+
+    registry = JobHandlerRegistry()
+    register_canvas_specialist_handlers(registry, session_factory=factory, gateway_factory=lambda session: ModelGateway(session, routes={ModelTask.CANVAS_SPECIALIST: ModelRoute("fixture", "gpt-5.6-luna")}, providers={"fixture": Provider()}))
+    assert run_once(factory, registry, worker_id="cs04-worker") == m.JobStatus.FAILED
+    with factory() as session:
+        assert session.get(m.StudioCanvasSpecialistRun, run_id).status == "FAILED"
+        assert session.get(m.Job, job_id).status == "FAILED"
+        assert calls == 1
 
 
 def test_success_uses_only_frozen_input_outside_the_preflight_transaction(factory: sessionmaker[Session]) -> None:
@@ -169,8 +216,77 @@ def test_expired_final_attempt_is_reconciled_without_a_second_generation(factory
         job = session.get(m.Job, job_id)
         assert run is not None and run.status == "FAILED"
         assert run.failure_metadata == {"code": "LEASE_EXPIRED_OUTCOME_UNKNOWN"}
-        assert job is not None and job.status == "RUNNING"
+        assert job is not None and job.status == "FAILED"
         assert session.scalar(select(m.AIExecution).where(m.AIExecution.task == ModelTask.CANVAS_SPECIALIST.value)) is None
+
+
+def test_newer_admitted_order_supersedes_pending_work_before_provider_execution(factory: sessionmaker[Session]) -> None:
+    with factory.begin() as session:
+        older, older_job = _admitted_run(session)
+        message = session.get(m.LearningMessage, older.source_message_id)
+        assert message is not None
+        pack = dict(message.payload["workspace_visual"]["frozen_composition_pack"])
+        pack["admitted_order"] = {"objective": "Explain a newer process."}
+        digest = sha256(json.dumps(pack, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+        newer_message = m.LearningMessage(
+            session_id=older.learning_session_id, role="tutor", content="Newer Tutor", ai_execution_id=message.ai_execution_id,
+            payload={"workspace_visual": {"status": "ADMITTED", "order_digest": digest, "frozen_composition_pack": pack}},
+        )
+        session.add(newer_message); session.flush()
+        newer = admit_committed_visual_order(
+            session, student_id=older.student_id, learning_session_id=older.learning_session_id, source_message_id=newer_message.id,
+        )
+        assert newer is not None
+        older_id, older_job_id, newer_job_id = older.id, older_job.id, newer.job_id
+
+    calls = 0
+
+    class Provider:
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            nonlocal calls
+            calls += 1
+            return ModelResult(output=_valid_proposal(), input_tokens=1, output_tokens=1)
+
+    registry = JobHandlerRegistry()
+    register_canvas_specialist_handlers(
+        registry, session_factory=factory,
+        gateway_factory=lambda session: ModelGateway(session, routes={ModelTask.CANVAS_SPECIALIST: ModelRoute("fixture", "gpt-5.6-luna")}, providers={"fixture": Provider()}),
+    )
+    assert run_once(factory, registry, worker_id="cs04-worker") == m.JobStatus.COMPLETED
+
+    with factory() as session:
+        old_run, old_job, new_job = session.get(m.StudioCanvasSpecialistRun, older_id), session.get(m.Job, older_job_id), session.get(m.Job, newer_job_id)
+        assert old_run is not None and old_run.status == "SUPERSEDED" and old_run.proposal_payload is None
+        assert old_job is not None and old_job.status == "FAILED"
+        assert new_job is not None and new_job.status == "COMPLETED"
+        assert calls == 1
+
+
+@pytest.mark.parametrize("status", ["FAILED", "CANCELLED", "SUPERSEDED", "REJECTED"])
+def test_terminal_specialist_runs_never_reenter_provider(factory: sessionmaker[Session], status: str) -> None:
+    with factory.begin() as session:
+        run, job = _admitted_run(session)
+        run.status = status
+        run_id, job_id = run.id, job.id
+
+    calls = 0
+
+    class Provider:
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            nonlocal calls
+            calls += 1
+            return ModelResult(output=_valid_proposal())
+
+    registry = JobHandlerRegistry()
+    register_canvas_specialist_handlers(
+        registry, session_factory=factory,
+        gateway_factory=lambda session: ModelGateway(session, routes={ModelTask.CANVAS_SPECIALIST: ModelRoute("fixture", "gpt-5.6-luna")}, providers={"fixture": Provider()}),
+    )
+    assert run_once(factory, registry, worker_id="cs04-worker") == m.JobStatus.COMPLETED
+    with factory() as session:
+        assert session.get(m.StudioCanvasSpecialistRun, run_id).status == status
+        assert session.get(m.Job, job_id).status == "COMPLETED"
+        assert calls == 0
 
 
 def test_completed_run_repairs_only_the_lost_queue_settlement_after_lease_expiry(factory: sessionmaker[Session]) -> None:

@@ -5,6 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SPECIALIST_SKILL = ROOT / "runtime/canvas-specialist/SKILL.md"
 CAPABILITY_PACK = ROOT / "runtime/canvas-specialist/visual-capability-pack-v1.md"
+EXECUTION_PACK = ROOT / "runtime/canvas-specialist/process-capability-pack-v1.md"
 DEVELOPMENT_SKILL = ROOT / "skills/lina-educational-visuals/SKILL.md"
 
 
@@ -55,3 +56,11 @@ def test_capability_pack_is_per_run_bounded_and_not_execution_authorization():
 
     for marker in required_markers:
         assert marker in pack
+
+
+def test_worker_uses_the_committed_execution_pack_not_the_disabled_historical_pack():
+    from workers.studio_handlers import _instructions
+
+    instructions = _instructions()
+    assert EXECUTION_PACK.read_text() in instructions
+    assert CAPABILITY_PACK.read_text() not in instructions
