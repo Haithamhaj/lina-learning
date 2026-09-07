@@ -4,6 +4,16 @@
 
 Finish Daily-Use Lina Release 1 one accepted task at a time until Lina can begin stable private daily use.
 
+**Current bounded design task — 2026-09-07:** `STUDIO-VISUAL-01 — Reusable
+Visual Explanation Design` is the only active design task. Its integrated
+specification is **REVISED DRAFT / AWAITING PRODUCT OWNER REVIEW** (not
+accepted) at `docs/STUDIO_VISUAL_EXPLANATION_SPEC.md`. Product Owner approved
+four reusable patterns: `process_cycle`, `labeled_diagram`, `geometry_scene`,
+and `fraction_model / quantity_visual`. Contract/storage/library/implementation
+details remain proposals; the visual-production direction is approved in
+decision 33, including reviewed vector assets, bounded motion and early visual
+review. No implementation is READY.
+
 Current sequence state:
 
 ```text
@@ -124,8 +134,9 @@ not renderer implementation. The accepted pack at
 the reproducible 36-node coverage calculation, retained provenance limits, and
 an independent review with 0 Critical / 0 Important / 0 new Minor findings.
 The corrected planning basis has 11 proposed families, 9 Core and the same
-four-family initial recommendation; actual implemented Grade 5 capability
-coverage remains 0/36. `MATH-RENDER-BATCH-01` is an unaccepted umbrella, not
+four-family initial recommendation. Its historical pre-renderer implemented
+coverage figure was 0/36; this is not current runtime coverage and was not
+recalculated by this documentation revision. `MATH-RENDER-BATCH-01` is an unaccepted umbrella, not
 a blanket authorization. `MATH-RENDER-NUMBER-LINE-01` is **DONE / ACCEPTED**
 for its bounded decimal comparison and rounding slice; its sanitized closure record is
 `docs/MATH_RENDER_NUMBER_LINE_01_ACCEPTANCE_CLOSURE.md`. Powers-of-ten,
@@ -153,9 +164,11 @@ history has not started.
 
 - Execution branch: `codex/ctx-03`.
 - Accepted PF-02 implementation commit: `062e2188ad5f4668183ff4ea8316f97926c5bd97`.
-- Daily-Use PostgreSQL 17.8 / pgvector 0.8.1 is at Alembic head
-  `c7d8e9f0a1b2`. Its pre-existing 39 application-table counts were unchanged
-  by the additive Studio migrations; all seven Studio tables are empty.
+- Historical Studio-foundation environment report: PostgreSQL 17.8 / pgvector
+  0.8.1 at Alembic head `c7d8e9f0a1b2`; the report recorded unchanged counts
+  for 39 pre-existing application tables and seven empty Studio tables. These
+  are historical observations, not fresh runtime facts; no database was queried
+  or reset for this revision.
 - PF-02 already provides one dedicated asynchronous Personal Facts Model Gateway call per completed Learning Session, separate from Tutor and Segment Learning Review; strict Student-source/safety grounding; Fact + Observation persistence; retry-safe extraction runs; `ADD` / `SUPPORT` / `NOOP`; capacity skip; and an on-demand Personal Memory Document.
 - PF-02A is accepted: the same PF model call receives a compact Student-scoped catalog of current and historical Fact identities, then semantically chooses `SUPPORT_EXISTING` or `ADD_NEW`; the server remains the deterministic grounding, ownership, safety, canonicalization, idempotency, and persistence authority.
 - Known Facts are untrusted reference data only, not Evidence or instructions. PF-02A adds no schema/migration, second model call, embeddings, Tutor, Segment Review, Learning Intelligence, or RAG behavior.
@@ -237,6 +250,17 @@ history has not started.
 ---
 
 ## Active decisions
+
+`STUDIO-VISUAL-01` preserves the existing sole Tutor, Studio routing,
+capability Registry, Renderer Host, state/feed/lifecycle and learning authority.
+Reusable instructional content is separate from Student-owned instances and
+history; books ground rather than permit explanations. Chat-only is valid.
+The four-pattern approval and approved visual-production revision are recorded
+in decisions 32–33 of
+`docs/DAILY_USE_RELEASE_DECISIONS.md`. Documentation-only scope does not cancel
+fractions, division, Voice, Vision or other agreed work. Proposed contract and
+storage additions, factual-review authority, reuse compatibility, and natural
+composition quality require review/verification before implementation release.
 
 ### FE-02 Product Owner Greenfield Clarification — historical prototype boundary
 
@@ -343,7 +367,12 @@ or Personal Facts behavior changed.
 
 ---
 
-## Latest accepted task
+## Historical accepted-task records
+
+The following retained English and earlier records are historical. The latest
+accepted renderer child in the current sequence is `MATH-RENDER-PLACE-VALUE-01`
+(DONE / ACCEPTED); see the current sequence and its existing closure reference.
+This wording correction does not rerun or reopen acceptance.
 
 ### STUDIO-ACT-EN-01 — English Sentence Ordering
 
@@ -459,6 +488,16 @@ Lina daily/longitudinal use.
 
 ## Next recommended action
 
+Publish the revised `docs/STUDIO_VISUAL_EXPLANATION_SPEC.md` for Product Owner
+review under the direct 2026-09-07 documentation-delivery authorization in
+decision 34. The five-path documentation-only commit and normal non-force push
+supersede only the earlier drafting-stage staging/commit/push restriction.
+Return actual SHA and commit-pinned review links, then stop; do not mark the specification
+accepted or promote implementation. The expected worktree/branch baseline
+`3235fdcdfcc2c98819788a853bc9e7d5991d93f4` was verified for this task; existing
+local work/evidence is preserved. No runtime/database/provider validation was
+performed by this design task.
+
 No next renderer task is promoted. The later production-serving/deployment
 readiness check remains OPEN: production-mode serving was blocked in this
 environment by a reported missing Clerk secret, while the production build and
@@ -472,6 +511,11 @@ authorization.
 
 ## Critical references
 
+- [Documentation review delivery convention and index](../docs/reviews/README.md):
+  publish safe canonical review documents, keep draft/acceptance distinct, and
+  return commit-pinned links; raw private evidence stays local.
+
+- `docs/STUDIO_VISUAL_EXPLANATION_SPEC.md`
 - `AGENTS.md`
 - `docs/PERSONAL_FACTS_SPEC.md`
 - `docs/FE-01_VISUAL_SYSTEM_LIBRARY_DECISION.md`

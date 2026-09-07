@@ -7,6 +7,46 @@
 
 ---
 
+# Current bounded design task — 2026-09-07
+
+## STUDIO-VISUAL-01 — Design Review Corrections and Visual Production Guidance
+
+**Status:** REVISED DRAFT / AWAITING PRODUCT OWNER REVIEW. Not accepted.
+**Authority:** explicit Product Owner authorization on 2026-09-07; this is the
+only active design task. No implementation task is promoted or made READY.
+**Baseline verified:** `codex/ctx-03` at
+`3235fdcdfcc2c98819788a853bc9e7d5991d93f4` in
+`/Users/haitham/development/lina-learning-ctx03`; existing local work/evidence
+is preserved.
+**Scope/output:** one integrated five-section specification at
+`docs/STUDIO_VISUAL_EXPLANATION_SPEC.md`, plus narrow decision/task/state
+records. Covers four approved reusable patterns, actual Studio seams,
+proposed versioned primary-Tutor content contract, content/attempt separation,
+privacy, correctness, visual quality, focused official-library comparison,
+and bounded delivery/acceptance sequence. The approved revision clarifies
+whole-response versus visual-only failure, semantic pre-call reuse, first-slice
+sequences/cycles, reviewed SVG assets, motion recipes, development-only tool/skill
+guidance and staged early production-component visual review. Proposed v10 and
+storage details remain unaccepted; decision 33 records direction only.
+**Verification boundary:** documentation and repository/official-source
+inspection only. No code, database, runtime, browser, live-model or learning
+benefit verification is claimed. Specification acceptance remains pending.
+**Protected scope:** existing accepted statuses remain unchanged; fractions,
+division, Voice, Vision, remaining renderer modes, full Studio acceptance,
+specialist, Replit and deployment remain separately gated, not cancelled.
+**Review delivery authorization — 2026-09-07:** publish the existing revised
+draft and these decision/task/state records plus `docs/reviews/README.md` with
+a documentation-only commit and normal non-force push to
+`Haithamhaj/lina-learning`, `origin`, `refs/heads/codex/ctx-03`. This direct
+Product Owner instruction supersedes only the drafting-stage staging/commit/push
+restriction for the five selected paths; no implementation is READY.
+**Next action:** deliver commit-pinned review links, then Product Owner review
+and stop. Publication is not design acceptance, migration/dependency approval,
+or implementation authorization. No unrelated source, raw private evidence,
+installation, paid call, deployment or implementation promotion is authorized.
+
+---
+
 # Learning Studio — Approved Execution Track
 
 **Authority:** `docs/STUDIO_IMPLEMENTATION_PLAN.md` is the approved detailed
@@ -109,8 +149,8 @@ remain blocked.
 It does not reopen the accepted activities or FE-02, and it does not authorize
 renderer implementation. Its accepted pack documents 36 nodes (34 Grade 5
 targets plus two bridges), 11 proposed families, 9 Core families, the retained
-four-family recommendation, and implemented Grade 5 capability coverage of
-0/36; see `research/curr-render-math-01/10_CORRECTION_RECORD.md`.
+four-family recommendation, and the historical pre-renderer implemented
+coverage figure of 0/36, not current runtime coverage; see `research/curr-render-math-01/10_CORRECTION_RECORD.md`.
 
 `MATH-RENDER-BATCH-01` is an unaccepted umbrella, not a release task that
 authorizes all four families. `MATH-RENDER-NUMBER-LINE-01` is DONE / ACCEPTED
@@ -161,8 +201,8 @@ remain disclosed in the pack.
 change; no accepted contract or persisted-data rename; no full-system
 acceptance, deployment, Replit, or real-Lina work. The planning prerequisite
 for `MATH-RENDER-BATCH-01` is satisfied. The parent is now an unaccepted
-umbrella with its accepted number-line child and separately promoted READY
-place-value child; all remaining renderer scope and `STUDIO-ACCEPT-01` remain
+umbrella with its accepted number-line and place-value children (both
+DONE / ACCEPTED); all remaining renderer scope and `STUDIO-ACCEPT-01` remain
 BLOCKED / NOT PROMOTED.
 
 ---
@@ -175,7 +215,9 @@ BLOCKED / NOT PROMOTED.
 `MATH-RENDER-BATCH-01`. The parent is **UMBRELLA / NOT ACCEPTED**, with no
 blanket implementation authorization. This task neither completes the
 `number_line` family nor changes the accepted planning-pack result or its
-implemented Grade 5 capability count of 0/36.
+historical pre-renderer implemented Grade 5 capability count of 0/36. That
+retained planning figure is not a fresh current-coverage claim; this revision
+does not recalculate coverage.
 
 **Purpose:** Deliver one bounded production `number_line` capability for
 `G5-NBT-DECIMAL-COMPARE` and `G5-NBT-DECIMAL-ROUND`: compare two nonnegative
