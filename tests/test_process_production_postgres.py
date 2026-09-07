@@ -210,3 +210,4 @@ def test_focus_reveal_and_trace_are_record_only_and_replay_exactly(factory: sess
         state = replay["state_payload"]["process_visual_production"]
         assert state["focused_stage_id"] == "collect" and state["active_explanation_stage_id"] == "filter"
         assert state["highlighted_relation_ids"] == ["collect-to-filter"]
+        assert state["tracing_relation_id"] == "collect-to-filter"

@@ -161,6 +161,7 @@ def view_state(seed, state):
         "active_explanation_stage_id": None,
         "revealed_stage_ids": [],
         "highlighted_relation_ids": [],
+        "tracing_relation_id": None,
     }
     if not isinstance(state, Mapping) or set(state) - set(result):
         raise ValueError("Unknown Process state.")
@@ -170,6 +171,11 @@ def view_state(seed, state):
             not isinstance(result[k], str) or result[k] not in ids
         ):
             raise ValueError("Unknown selected stage.")
+    if result["tracing_relation_id"] is not None and (
+        not isinstance(result["tracing_relation_id"], str)
+        or result["tracing_relation_id"] not in relations
+    ):
+        raise ValueError("Unknown tracing relation.")
     for k, allowed in [
         ("revealed_stage_ids", ids),
         ("highlighted_relation_ids", relations),
@@ -196,6 +202,7 @@ def focus_state(seed, state, target):
         highlighted_relation_ids=[
             r["id"] for r in seed["relations"] if r["from"] == target
         ],
+        tracing_relation_id=None,
     )
     if target not in result["revealed_stage_ids"]:
         result["revealed_stage_ids"].append(target)
