@@ -3,7 +3,8 @@
 **Status:** READY / NOT STARTED  
 **Prepared:** 2026-09-07  
 **Execution branch:** `codex/ctx-03`  
-**Baseline for implementation:** `dbcdffa321fb50cd6282be81e192e9bf920b124b`  
+**Preparation baseline inspected:** `dbcdffa321fb50cd6282be81e192e9bf920b124b`  
+**Implementation start rule:** begin from the current `codex/ctx-03` HEAD that contains this Implementation Record and the Canvas Specialist documentation sync; do not reset or execute from the older preparation baseline.  
 **Purpose:** Create the runtime Canvas Specialist Visual Learning Composer Skill and reconcile the disabled per-run capability boundary, without enabling Specialist model execution or changing Student runtime behavior.
 
 ## 1. Governing references
