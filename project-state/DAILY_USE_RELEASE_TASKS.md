@@ -31,9 +31,9 @@ CS-02 Complete Visual Toolbelt                   DONE / ACCEPTED
   ↓
 CS-03 Tutor ↔ Specialist Runtime Alignment       DONE / ACCEPTED
   ↓
-CS-04 Real Canvas Specialist Execution Runtime   READY
+CS-04 Real Canvas Specialist Execution Runtime   DONE / ACCEPTED
   ↓
-CS-05 Process Production Integration             BLOCKED
+CS-05 Process Production Integration             READY
   ↓
 CS-06 Real Daily End-to-End Trial                BLOCKED
   ↓
@@ -123,7 +123,12 @@ Documentation: `docs/reviews/CS-03/IMPLEMENTATION_RECORD.md`.
 
 # CS-04 — Real Canvas Specialist Execution Runtime
 
-**Status:** READY.
+**Status:** DONE / ACCEPTED.
+
+**Accepted implementation:** `8de9a752b00998f6d1f2a2b24102ba49cf5a1b2a`.
+Product Owner acceptance recorded Critical: 0, Important: 0, Blocking: 0.
+**LIVE LUNA NOT VERIFIED — CONFIGURATION UNAVAILABLE.** This retained evidence
+limitation is not a CS-04 acceptance blocker.
 
 Required direction:
 
@@ -144,7 +149,7 @@ Documentation: `docs/reviews/CS-04/IMPLEMENTATION_RECORD.md`.
 
 # CS-05 — Process Production Integration
 
-**Status:** BLOCKED pending CS-04 acceptance.
+**Status:** READY.
 
 First production natural-composition capability only:
 
@@ -217,4 +222,4 @@ Documentation: one `docs/reviews/CS-07/IMPLEMENTATION_RECORD.md` with bounded su
 
 ## Execution boundary
 
-Only **CS-04** is currently executable. All later CS tasks and all unrelated blocked work remain blocked until explicitly promoted.
+Only **CS-05** is currently executable. All later CS tasks and all unrelated blocked work remain blocked until explicitly promoted.

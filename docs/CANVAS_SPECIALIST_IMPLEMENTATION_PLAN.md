@@ -45,9 +45,9 @@ CS-02 Complete Visual Toolbelt                   DONE / ACCEPTED
   ↓
 CS-03 Tutor ↔ Specialist Runtime Alignment       DONE / ACCEPTED
   ↓
-CS-04 Real Canvas Specialist Execution Runtime   READY
+CS-04 Real Canvas Specialist Execution Runtime   DONE / ACCEPTED
   ↓
-CS-05 Process Production Integration             BLOCKED
+CS-05 Process Production Integration             READY
   ↓
 CS-06 Real Daily End-to-End Trial                BLOCKED
   ↓
@@ -211,7 +211,7 @@ A library compatibility problem must be solved inside a bounded adapter first. D
 
 # CS-04 — Real Canvas Specialist Execution Runtime
 
-**Status:** READY
+**Status:** DONE / ACCEPTED
 **Purpose:** Execute one admitted Canvas Specialist generation through the existing Worker/Gateway/AIExecution architecture without accepting a production Process Scene yet.
 
 ## Required outputs
@@ -249,13 +249,17 @@ A library compatibility problem must be solved inside a bounded adapter first. D
 
 `docs/reviews/CS-04/IMPLEMENTATION_RECORD.md` including mock vs live-model evidence, call counts, failure behavior and any migration decision.
 
-**Stop gate:** Product Owner acceptance before CS-05.
+**Accepted implementation:** `8de9a752b00998f6d1f2a2b24102ba49cf5a1b2a`.
+**Independent review disposition:** Critical: 0; Important: 0; Blocking: 0.
+**Retained evidence limitation:** **LIVE LUNA NOT VERIFIED — CONFIGURATION UNAVAILABLE.** This is retained evidence and not a CS-04 acceptance blocker.
+
+**Stop gate:** accepted; CS-05 is READY.
 
 ---
 
 # CS-05 — Process Production Integration
 
-**Status:** BLOCKED pending CS-04 acceptance  
+**Status:** READY
 **Purpose:** Turn one valid Process Specialist proposal into the first production natural-composition Scene while reusing accepted Process semantics/visuals/Tutor awareness.
 
 ## Required outputs

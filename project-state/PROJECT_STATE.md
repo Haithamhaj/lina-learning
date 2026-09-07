@@ -20,7 +20,7 @@ Student question
 → same Primary Tutor explains through existing Runtime-03
 ```
 
-The active bounded path is `CS-04 → CS-06`. `CS-07` is a controlled post-proof visual Toolbelt lab, not required before the first real Process trial.
+The active bounded path is `CS-05 → CS-06`. `CS-07` is a controlled post-proof visual Toolbelt lab, not required before the first real Process trial.
 
 ## Current reality
 
@@ -41,6 +41,12 @@ The active bounded path is `CS-04 → CS-06`. `CS-07` is a controlled post-proof
   Semantic Alignment, bounded Visual Learner Context, Frozen Composition Pack
   and deterministic digest persist as hidden Tutor lineage. No Specialist
   execution, Job, Scene mutation, or Evidence/PF/LI effect exists.
+- `CS-04` — DONE / ACCEPTED at
+  `8de9a752b00998f6d1f2a2b24102ba49cf5a1b2a`: one admitted composition
+  creates one `max_attempts=1` Job and one durable Specialist Run; frozen input,
+  strict schema, causal supersession, terminal lifecycle, and no-Scene/no-
+  Evidence/PF/LI boundaries are accepted. **LIVE LUNA NOT VERIFIED —
+  CONFIGURATION UNAVAILABLE** is retained non-blocking evidence.
 - Studio State/Subject Registry/Protocol/Runtime-01/02/03 and `/student/daily` Studio integration are DONE / ACCEPTED.
 - Existing deterministic activities and accepted Math renderers remain protected.
 - Student Core Profile, Personal Facts, PF-03 Personal Memory Tutor context, Learning Intelligence, Retrieval and Child Safety authorities are accepted and remain separate.
@@ -48,9 +54,6 @@ The active bounded path is `CS-04 → CS-06`. `CS-07` is a controlled post-proof
 
 ### Not yet implemented/proven
 
-- no natural Canvas Specialist dispatch/execution;
-- no `ModelTask.CANVAS_SPECIALIST` live route;
-- no full Specialist Run stale/cancel/settlement lifecycle;
 - no production natural-composition Process profile/Host adapter;
 - no real Luna Specialist quality proof;
 - no real Lina Student history/use has been started by this work.
@@ -100,10 +103,10 @@ Do not break or silently reinterpret:
 
 ## Next action
 
-**CS-04 — Real Canvas Specialist Execution Runtime: READY.**
+**CS-05 — Process Production Integration: READY.**
 
-CS-01, CS-02 and CS-03 are DONE / ACCEPTED. CS-04 is the only READY task; it
-is not started by this closure. CS-05 through CS-07 remain BLOCKED.
+CS-01 through CS-04 are DONE / ACCEPTED. CS-05 is the only READY task; it is
+not started by this closure. CS-06 through CS-07 remain BLOCKED.
 
 ## Critical references
 
