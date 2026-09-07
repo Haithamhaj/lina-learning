@@ -1,24 +1,27 @@
 # Documentation Reviews
 
-This is the small navigation and delivery index for Product Owner review, not
-a governing specification. Delivery convention approved on 2026-09-07.
+This is the small navigation and delivery index for Product Owner review, not a governing specification. Delivery convention approved on 2026-09-07.
 
 - Publish safe task documentation to GitHub when submitting it for review.
 - Keep one canonical copy at its existing path; link to it rather than duplicating specifications.
 - Index task, canonical path, review status, revision date and short purpose.
 - New standalone sanitized review summaries may use `docs/reviews/<TASK-ID>/` when needed.
-- Keep DRAFT / AWAITING REVIEW distinct from ACCEPTED. Publication does not grant design, migration, dependency or implementation approval.
+- For the active Canvas Specialist track, each CS task uses one `docs/reviews/<TASK-ID>/IMPLEMENTATION_RECORD.md` created before code and completed before review.
+- Keep DRAFT / AWAITING REVIEW / READY / DONE / ACCEPTED distinct. Publication does not grant migration/dependency/runtime approval beyond the explicit task state.
 - Documentation publication does not authorize committing unrelated source code.
-- Return the actual commit SHA and commit-pinned GitHub file links in the delivery response. This index uses relative canonical links, not a self-referential commit SHA.
-- Private raw evidence remains local; publish only sanitized review summaries.
+- Return actual commit SHA and commit-pinned GitHub file links in delivery responses. This index uses relative canonical links.
+- Private raw evidence/secrets remain local; publish only sanitized review summaries/screenshots.
 
 | Task | Canonical document | Review status | Revision date | Purpose |
 |---|---|---|---|---|
-| STUDIO-VISUAL-01 | [docs/STUDIO_VISUAL_EXPLANATION_SPEC.md](../STUDIO_VISUAL_EXPLANATION_SPEC.md) | ACCEPTED AS IMPLEMENTATION DIRECTION (decision 36) | 2026-09-07 | Reviewed revision at 20b87f0 retained; only the separate early process visual checkpoint is authorized. No specialist enabled. |
-| STUDIO-VISUAL-PROCESS-01 | [Accepted closure and gallery](STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT_2.md) | DONE / ACCEPTED (decision 38) | 2026-09-07 | V1 process foundation and prepared-data visuals accepted; ordinal correction verified. Six implementation files authorized for commit. Runtime/model/persistence boundaries remain open. |
+| STUDIO-VISUAL-01 | [docs/STUDIO_VISUAL_EXPLANATION_SPEC.md](../STUDIO_VISUAL_EXPLANATION_SPEC.md) | ACCEPTED AS IMPLEMENTATION DIRECTION (decision 36) | 2026-09-07 | Broader hybrid visual design source. Later bounded Canvas Specialist execution is governed by the dedicated accepted contract below where details differ. |
+| STUDIO-VISUAL-PROCESS-01 | [Accepted closure and gallery](STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT_2.md) | DONE / ACCEPTED (decision 38) | 2026-09-07 | V1 Process foundation and prepared-data visuals accepted; existing ProcessView is protected for the first natural-composition production slice. |
+| CANVAS-SPECIALIST-EXECUTION | [Execution contract](../CANVAS_SPECIALIST_EXECUTION_CONTRACT.md) | ACCEPTED | 2026-09-07 | Governs Tutor↔Specialist↔Application authority, Semantic Alignment, Visual Learner Context, one-call policy, Toolbelt boundaries and first Process slice. |
+| CANVAS-SPECIALIST-PLAN | [Implementation plan](../CANVAS_SPECIALIST_IMPLEMENTATION_PLAN.md) | APPROVED EXECUTION PLAN | 2026-09-07 | CS-01→CS-07 sequencing; only CS-01 is READY. |
+| CANVAS-SPECIALIST-ACCEPTANCE | [Acceptance & verification spec](../CANVAS_SPECIALIST_ACCEPTANCE_SPEC.md) | GOVERNING VERIFICATION SPEC | 2026-09-07 | Quality→Speed→Cost gates, evidence taxonomy, per-task acceptance matrix and documentation lifecycle. |
 
-Historical process evidence: [Checkpoint 1 report and gallery](STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT.md).
+Historical Process evidence: [Checkpoint 1 report and gallery](STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT.md).
 
-Accompanying records: [scoped Studio plan](../STUDIO_IMPLEMENTATION_PLAN.md), [decision register](../DAILY_USE_RELEASE_DECISIONS.md),
-[current task overlay](../../project-state/DAILY_USE_RELEASE_TASKS.md), and
-[Project State](../../project-state/PROJECT_STATE.md).
+When a CS task is submitted for review, add a row for its `docs/reviews/CS-XX/IMPLEMENTATION_RECORD.md`. Do not promote the next task from this index alone; current execution authority remains `project-state/PROJECT_STATE.md` plus `project-state/DAILY_USE_RELEASE_TASKS.md`.
+
+Accompanying records: [Studio plan](../STUDIO_IMPLEMENTATION_PLAN.md), [decision register](../DAILY_USE_RELEASE_DECISIONS.md), [current task overlay](../../project-state/DAILY_USE_RELEASE_TASKS.md), and [Project State](../../project-state/PROJECT_STATE.md).

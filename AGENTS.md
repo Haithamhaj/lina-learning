@@ -2,282 +2,219 @@
 
 ## Purpose
 
-This file is the compact operating map for Codex/AI agents working in this repository. It does not duplicate the full product specification. Read the governing documents relevant to the current task before changing code.
+Compact operating map for Codex/AI agents working in this repository. Read the governing documents relevant to the current task before changing code. Do not infer execution authorization from roadmap/design presence alone.
 
-## Governing References
+## Governing references
 
 Read in this order when relevant:
 
 1. `docs/PROJECT_REFERENCE.md` — stable approved product truth and protected product boundaries.
-2. `docs/LEARNING_PRODUCT_ROADMAP.md` — approved product-evolution direction; roadmap presence alone is not execution approval.
-3. `docs/LEARNING_INTELLIGENCE_SPEC.md` — canonical Learning Intelligence semantics and authority.
+2. `docs/LEARNING_PRODUCT_ROADMAP.md` — approved evolution direction; roadmap presence is not execution approval.
+3. `docs/LEARNING_INTELLIGENCE_SPEC.md` — canonical Learning Intelligence semantics/authority.
 4. `docs/CHILD_SAFETY_POLICY.md` — non-overridable child safety and Parent Learning Boundaries.
-5. `docs/IMPLEMENTATION_PLAN.md` — technical implementation direction, sequencing, gates, and deferred architecture.
-6. `docs/STUDIO_IMPLEMENTATION_PLAN.md` — approved Learning Studio subsystem direction, protected contracts, and task order.
-7. `docs/DAILY_USE_RELEASE_PLAN.md` — Product Owner-approved launch-first implementation addendum for Daily-Use Lina Release 1.
-8. `docs/DAILY_USE_RELEASE_DECISIONS.md` — compact Product Owner-approved decision register introduced by the Daily-Use transition.
-9. `docs/TECHNOLOGY_REUSE_CATALOG.md` — approved reuse candidates and mandatory fit checks.
-10. `docs/SUBJECT_SCOPE_POLICY.md` — accepted cross-subject policy when relevant.
-11. `project-state/PROJECT_STATE.md` — **current operational reality and current next action**.
-12. `project-state/DAILY_USE_RELEASE_TASKS.md` — current bounded Daily-Use Release 1 executable-task overlay.
-13. `TASKS.md` — preserved durable historical task ledger.
+5. `docs/IMPLEMENTATION_PLAN.md` — broad technical implementation direction.
+6. `docs/STUDIO_IMPLEMENTATION_PLAN.md` — accepted Learning Studio subsystem direction.
+7. `docs/DAILY_USE_RELEASE_PLAN.md` — launch-first Daily-Use addendum.
+8. `docs/DAILY_USE_RELEASE_DECISIONS.md` — Product Owner decision register.
+9. `docs/CANVAS_SPECIALIST_EXECUTION_CONTRACT.md` — accepted bounded Tutor↔Canvas-Specialist authority/behavior contract for the active track.
+10. `docs/CANVAS_SPECIALIST_IMPLEMENTATION_PLAN.md` — active CS-01→CS-07 sequencing/task boundaries.
+11. `docs/CANVAS_SPECIALIST_ACCEPTANCE_SPEC.md` — evidence, quality/speed/cost and documentation gates for CS tasks.
+12. `docs/TECHNOLOGY_REUSE_CATALOG.md` — approved reuse/dependency candidates and fit-check rules.
+13. `docs/SUBJECT_SCOPE_POLICY.md` — accepted cross-subject policy when relevant.
+14. `project-state/PROJECT_STATE.md` — **current operational reality and next action**.
+15. `project-state/DAILY_USE_RELEASE_TASKS.md` — **current bounded executable task overlay**.
+16. `TASKS.md` — preserved historical task ledger; do not rewrite merely to mirror the current overlay.
 
-### Document authority and task coordination
+### Authority/coordination
 
-- `PROJECT_REFERENCE.md` owns stable product truth.
-- `LEARNING_INTELLIGENCE_SPEC.md` owns Learning Intelligence semantics.
-- `LEARNING_PRODUCT_ROADMAP.md` owns approved evolution direction, not current execution.
-- `IMPLEMENTATION_PLAN.md` owns technical implementation direction.
-- `STUDIO_IMPLEMENTATION_PLAN.md` owns approved Learning Studio subsystem sequencing and contracts; it does not itself make a later Studio task executable.
-- `docs/DAILY_USE_RELEASE_PLAN.md` is the approved current launch implementation addendum where historical sequencing is stale.
-- `docs/DAILY_USE_RELEASE_DECISIONS.md` records approved product decisions introduced by this launch transition pending later routine consolidation into the stable reference.
-- `PROJECT_STATE.md` owns current operational truth and next action.
-- `project-state/DAILY_USE_RELEASE_TASKS.md` owns the bounded executable Daily-Use Release 1 task sequence.
-- `TASKS.md` remains the preserved historical task/execution ledger and must not be rewritten merely to mirror the current launch overlay.
+- Stable product truth → `PROJECT_REFERENCE.md` and specialist accepted decision documents where explicitly scoped.
+- Learning semantics → `LEARNING_INTELLIGENCE_SPEC.md`.
+- Safety → `CHILD_SAFETY_POLICY.md`.
+- Studio Core sequencing/contracts → `STUDIO_IMPLEMENTATION_PLAN.md`.
+- Current Canvas Specialist execution contract → `CANVAS_SPECIALIST_EXECUTION_CONTRACT.md`.
+- Current executable task/status → `PROJECT_STATE.md` + `DAILY_USE_RELEASE_TASKS.md` jointly.
+- Historical detail → `TASKS.md`, accepted closure records and `docs/reviews/`.
 
-Normally Codex executes only a task explicitly marked `READY` in the current bounded task source. A newer Product Owner-approved bounded transition recorded in `PROJECT_STATE.md` may override stale historical sequencing for that bounded task and must not be generalized.
+Normally execute only the single task explicitly marked `READY` in the current overlay/state. Stop after verification/review. Never promote the next task in the same run unless the Product Owner explicitly authorizes it.
 
-## Current Product Owner Transition — Daily-Use Lina Release 1
+## Current active task
 
-`DOC-SYNC-01` is **DONE / ACCEPTED**.
+**CS-01 — Contract + Runtime Specialist Skill: READY.**
 
-`RL-01 — Real-Use Environment & Integrated Intelligence Loop Verification` completed its Current Reality Audit and the launch-first transition is now being executed sequentially.
+Read the three Canvas Specialist governing documents before CS work. CS-01 may create/adjust runtime Specialist Skill/capability guidance and focused tests only within its plan. It must not enable Specialist model execution, install Toolbelt dependencies, alter WorkspaceIntent meaning, modify database/schema, change Process production routing, or change Student runtime behavior.
 
-The Product Owner clarified that the existing historical database is experimental/test data. It is not a production baseline to preserve or migrate as Lina's longitudinal real-use history. Daily-Use Release 1 uses one fresh shared current-schema application database; Lina's longitudinal baseline is Student-scoped, not database-scoped.
+CS-02 and later are BLOCKED until separately promoted.
 
-The Product Owner approved a **launch-first Daily-Use Lina Release 1** sequence. The sequence is recorded in `PROJECT_STATE.md`, `docs/DAILY_USE_RELEASE_PLAN.md`, `docs/DAILY_USE_RELEASE_DECISIONS.md`, and `project-state/DAILY_USE_RELEASE_TASKS.md`. It deliberately promotes capabilities in order, not simultaneously.
+## Core execution rules
 
-**Only the task that `PROJECT_STATE.md` and `project-state/DAILY_USE_RELEASE_TASKS.md` jointly mark `READY` is executable. Do not rely on a hardcoded task name in this file.**
+- Execute one READY task at a time.
+- Do not skip dependencies because a later task appears easy.
+- Prefer the simplest implementation that preserves accepted authorities, provenance, rebuildability and real failure behavior.
+- Reuse-first, not dependency-first: inspect `TECHNOLOGY_REUSE_CATALOG.md`; record ADOPT/PARTIAL ADOPT/REJECT when a fit check is required.
+- Do not introduce microservices, Redis/Celery, graph DB, dedicated vector DB, new memory platform, generic agent framework or deployment redesign without explicit approval and demonstrated need.
+- AI tasks use Model Gateway; do not call provider SDKs arbitrarily from routes/services/components.
+- Use deterministic code for durable state, counts, permissions, validation, lifecycle, reconciliation and plumbing where practical.
+- An additional AI call requires identifiable product value and explicit task authorization.
+- Keep current RAG architecture unless a separately promoted task changes it.
+- Preserve secret/privacy boundaries. Never print, expose, copy, hardcode or commit secret values.
 
-Do not start any later Daily-Use task, Personal Facts, Frontend redesign, Voice, Vision, deployment, RAG evaluation, Artifacts, Science, Parent Insight analysis, MATH-01, ID-01, EDU-ERR-01, REC-25, or LR-D04B unless explicitly promoted.
+## Protected Learning Intelligence
 
-## Daily-Use Release 1 Sequence
-
-```text
-RL-01A Accepted Runtime Alignment
-→ RL-01B Fresh Shared DB + Runtime Composition
-→ RL-01C Clerk + OpenAI Operational Verification
-→ RL-01D Controlled Full Intelligence Loop
-→ TASK-027A Student Core Profile
-→ PF-01 Personal Facts Contract
-→ PF-02 Personal Facts Extraction/Reconciliation
-→ PF-03 Relevant Facts in Tutor Context
-→ FE-01 Lina Visual System & Reuse Decision
-→ FE-02 Daily Student Experience
-→ TASK-032 Voice / STT
-→ TASK-033 Vision / Student Work
-→ TASK-034 Original-Image Annotation
-→ DEPLOY-01 Private Daily Environment
-→ LINA-R1 Clean Real-Use Baseline
-```
-
-Post-launch work includes measured RAG evaluation, selected learning artifacts, Science expansion when promoted, and future Parent Facts × Learning insight exploration after sufficient real data exists.
-
-## Execution Rules
-
-- Execute one `READY` task at a time unless a task explicitly defines a tightly related bounded group.
-- Do not skip dependencies or promote later tasks because they appear easy.
-- Do not silently revive historical phase gates that have been superseded by the current approved release sequence.
-- Prefer the simplest implementation that preserves approved boundaries, provenance, and rebuildability.
-- **Reuse-first, not dependency-first:** inspect applicable candidates in `docs/TECHNOLOGY_REUSE_CATALOG.md` before custom-building substantial UI/chat/RAG/artifact infrastructure.
-- For any candidate marked `EVALUATE BEFORE CUSTOM BUILD`, record `ADOPT / PARTIAL ADOPT / REJECT` with rationale.
-- Do not introduce microservices, Redis/Celery, a graph database, dedicated vector DB, new memory platform, generic agent framework, or deployment redesign without explicit approval and demonstrated need.
-- Replit is an environment convenience/candidate host, not product architecture.
-- Current hybrid Retrieval remains the launch baseline. Do not redesign RAG during foundation tasks.
-- Current production proving ground remains Math-first until another Subject task is explicitly promoted.
-
-## Protected Architecture — Learning Intelligence
-
-The accepted learning path is:
+Accepted path:
 
 ```text
 Raw learning interaction
-→ optional provisional Candidate hints
-→ completed structurally reviewable Segment
-→ Segment Learning Review / staged findings
+→ optional Candidate hints
+→ completed reviewable Segment
+→ Segment Learning Review
 → deterministic Session Intelligence Finalization
 → Session-authorized Event/Evidence
 → Current Learning State / Patterns
 → Learner Intelligence Card
-→ relevant later learning personalization
+→ relevant later personalization
 ```
 
-Protect these invariants:
+Protect:
 
-- **Segment interprets; Session commits.**
+- Segment interprets; Session commits.
 - Candidate ≠ Evidence.
-- One primary Tutor model call per normal Student turn.
-- No second normal-turn classifier, summarizer, critic, profile agent, or evidence evaluator.
+- One Primary Tutor model call per normal Student turn.
+- No second normal-turn classifier/critic/profile/evidence model.
 - Current demonstrated behavior outranks historical personalization.
-- Never personalize away demonstrated independence.
-- Selecting/using a TeachingMethod is not evidence that it worked.
-- TeachingStrategy and TeachingMethod remain separate.
-- Luna/primary Tutor call semantically determines allowed turn-level Mode/Strategy/Method/prior relation; deterministic runtime validates/persists canonical values and lineage.
-- Current School Focus is superseded as learning-path authority and must not be recreated.
+- Teaching Strategy/Method selection is not evidence it worked.
+- Canvas/Specialist actions do not directly create Candidate/Evidence/State/Patterns/PF/LI.
 - Book/content availability improves grounding but is never Tutor permission.
-- Curriculum semantics are optional enrichment, not a prerequisite for Tutor or Learning Intelligence.
-- Full prior-session transcripts are not injected into normal Tutor context.
-- A Learning Thread is the session-local contiguous Segment; no third Thread entity.
-- Durable Conversation Topic is optional navigation metadata, not Learner Intelligence, Evidence, Safety, or curriculum authority.
-- Hybrid Segment Context uses Current Multimodal Turn + Full Immediate Exchange + compact Structured Segment State + relevance-selected complete current-Segment Exchanges; capacity is a guardrail, not a relevance algorithm.
 
-## Personal Facts — Approved Separate Context Layer
+## Student Core Profile / Personal Facts
 
-Personal Facts are a new approved Daily-Use Release 1 capability, but are not executable until PF-01 is `READY`.
-
-Purpose:
-
-> Preserve durable facts the Student tells the system about herself so future interactions know the person they are speaking with.
-
-Protected boundaries:
-
-- Personal Facts are **separate from Learner Intelligence**, Evidence, Student Core Profile, Conversation Context, Safety, and curriculum grounding.
-- The source is the Student's own assertions/interactions. Parent-supplied claims do not automatically become the Student's Personal Facts.
-- A Personal Fact is not required to be externally verified objective truth; it represents what the Student has asserted about herself/world for personalization continuity.
-- Store facts, not personality analysis, psychological interpretations, intelligence labels, learning-style labels, transcript summaries, or global character judgments.
-- Personal Facts may be temporal/revisable: support, contradiction, invalidation, supersession, first/last observation, and source-message provenance should remain available.
-- Relevant Personal Facts may later enter Tutor context as a separate bounded input.
-- Personal Facts never become Learning Evidence merely because they exist.
-- Learning Intelligence does not copy itself into Personal Facts merely to create a second memory.
-- Future Parent Insights may combine Personal Facts and Learning Intelligence for analysis, but derived insights must not write back as facts or learning truth without their own governed evidence.
-- Parent may inspect stored Personal Facts; no separate hidden-child-facts store is required under the current Product Owner decision.
-
-## Student Core Profile
-
-Student Core Profile remains separate from Personal Facts and Learner Intelligence.
-
-It owns Parent/System-authoritative application facts such as child identity, date of birth when supplied, derived age, and active Grade/Grade Period linkage. Age should be derived from date of birth rather than manually maintained.
-
-Parent facts in Core Profile must not be transformed into learning conclusions.
-
-## Multimodal / Visual Decisions
-
-The following are approved for the Daily-Use Release sequence but remain blocked until their task is promoted.
-
-### Voice
+These authorities remain separate:
 
 ```text
-Audio
-→ Speech-to-Text
-→ Transcript
-→ normal Tutor pipeline
+Student Core Profile = Parent/System-authoritative identity/age/Grade
+Personal Facts       = explicit safe durable Student-asserted context
+Learner Intelligence = evidence-backed learning-derived state
+Conversation Context = current/raw continuity
+RAG                  = curriculum/reference grounding
+Safety               = safety authority
 ```
 
-Current policy: retain transcript; do not retain raw audio after successful STT. No speech-to-speech requirement for Release 1.
+Canvas Specialist work may build only the bounded transient **Visual Learner Context** defined by the accepted Specialist contract:
 
-### Student Images / Vision
+- authoritative Core Profile fields when useful;
+- a small relevant current safe Personal Fact subset for optional visual personalization.
 
-- Preserve the original Student image/work as the raw source.
-- Vision interpretation is derived and may be uncertain.
-- If a critical region is ambiguous, ask Lina a simple clarification rather than inventing certainty.
-- Default visual correction path is **annotation on a derived copy of the original image**.
-- Clean React/SVG/interactive reconstruction is fallback when annotation is insufficient.
-- Annotation/reconstruction never replaces the original source and is not evidence of what Lina originally produced.
+Never copy age/Grade into Personal Facts, pass full Personal-Fact history/support counts by default, infer personality/learning style/talent, or let personalization change instructional truth. Absence of Personal Facts never blocks learning/visual composition.
 
-### Teaching Visuals — Renderer First
+## Learning Studio / Tutor↔Canvas Specialist protected architecture
 
-The primary teaching-visual strategy is deterministic/reusable renderers, not image generation:
+Studio Core remains application-owned and subject-agnostic. Durable truth is semantic Event Log + rebuildable Materialized Snapshot. Browser state is not durable authority. Existing Tutor SSE remains Chat authority and the authenticated Studio feed remains Workspace state-delivery authority.
 
-- React/SVG
-- Motion
-- JSXGraph
-- React Konva
-- MathLive
+### Primary Tutor
 
-Optional later: Rough.js, Recharts, p5.js, React Flow when a real use case requires them.
+Primary Tutor is the **sole Student-facing teacher**. It owns teaching objective, explanation/scaffolding/dialogue and the educational decision whether a visual helps.
 
-OpenAI or other image generation is **optional/deferred/illustrative**, not the default teaching renderer. Artifact failure must never block learning.
+### WorkspaceIntent
 
-## UI / Frontend Direction
+`workspace_intent-v1` is protected as a bounded educational Workspace need. Do not add renderer/engine/Scene body/specialist execution meaning to existing fields. The active Canvas Specialist track uses an additive sibling visual-order contract in CS-03.
 
-Frontend improvement is part of the approved launch sequence, but begins only when FE-01 is promoted.
+### Canvas Specialist
 
-Before Daily Student App or Public Landing frontend work, read
-docs/FRONTEND_SKILL_PACK.md; it provides task-facing frontend guidance but does
-not override product, safety, architecture, or project-state authorities.
+Canvas Specialist is a bounded **Visual Learning Composer**, not a second Tutor. It may propose semantic visual composition only after application admission. It has no direct renderer/engine, persistence, Safety, Evidence, Personal Facts, Learner Intelligence or grading authority.
 
-Target Student experience:
+For registered-pattern new content, the accepted hybrid direction is:
 
-> warm + intelligent + personal + visually engaging, designed for learners roughly
-> 10–18. Lina is the first private daily-use Student, not the only design target.
-> Not preschool, cartoonish, corporate, or visually noisy.
+```text
+complete Primary Tutor result
+→ admitted compact visual order
+→ committed Tutor lineage + frozen composition pack
+→ one bounded asynchronous Specialist generation
+→ application validation/stale checks
+→ atomic Studio Scene acceptance/activation
+→ same Tutor awareness/Runtime-03 later interaction
+```
 
-Reuse candidates include shadcn/ui, assistant-ui fit assessment, Motion/Motion Primitives, ThreeUI/Three.js selective use, Magic UI, React Bits, 21st.dev, Aceternity UI, and Cult UI. Do not stack them indiscriminately. FE-01 must classify relevant candidates as `ADOPT / PARTIAL ADOPT / VISUAL REFERENCE / REJECT` and establish one coherent design system.
+This is **not** the same as generic `CUSTOM_COMPOSE`. Broader custom composition remains separately bounded/blocked.
 
-ThreeUI/Three.js may be used selectively for high-value visual moments/background/3D experiences when performance and readability remain acceptable; they do not become application architecture.
+### Call policy
 
-## Retrieval / RAG Rules
+- Chat-only = 0 Specialist calls.
+- Compatible reuse = 0.
+- Supported update = 0.
+- New admitted composition = max 1 Specialist generation.
+- No automatic critic/repair/hidden inference retry.
+- Specialist Job route must explicitly avoid inheriting generic three-attempt generation behavior when CS-04 is promoted.
 
-- Keep the current native Docling + PostgreSQL/pgvector Hybrid Retrieval path for launch.
-- Preserve metadata filtering, lexical + vector retrieval, ranking/context budgets, and source provenance.
-- Do not replace it with OpenAI File Search, LlamaIndex, or another framework by assumption.
-- A post-launch evaluation may compare alternatives on a real Grade-5 golden set for retrieval quality, provenance, Arabic/English behavior, latency, cost, dependency complexity, and rebuildability.
-- Adopt a replacement only if measured evidence shows a material advantage behind the existing Retrieval boundary.
+### First production slice
 
-## AI / Model Rules
+Process sequence/cycle, 2–8 stages, existing accepted ProcessView. Do not conflate it with the older deterministic `process_sequence_workspace` filtration activity. Process natural composition is not implemented until CS-05.
 
-- Application domains request AI tasks through Model Gateway; do not call provider SDKs arbitrarily from routes/services.
-- Current operational provider may be OpenAI, but provider/model is replaceable architecture.
-- Daily-Use Release tasks may add future task routes such as `personal_fact_extraction`, `speech_to_text`, and `vision_student_work` when their task is promoted.
-- Keep AI usage/cost lineage observable.
-- Use deterministic code for state, counts, lifecycle, reconciliation validation, and plumbing where practical.
-- Do not introduce an additional AI call without identifiable product value.
+## Visual Toolbelt
+
+Renderer-first remains the approved strategy:
+
+- React/DOM/SVG — baseline;
+- Motion — semantic animation;
+- React Konva/Konva — spatial manipulation;
+- JSXGraph — mathematical visualization/construction;
+- MathLive — editable math input.
+
+CS-02 is the approved future installation/proof task but is currently BLOCKED. Presence in the technology catalog or lockfile never production-enables a learning capability. Models request semantic capabilities; application-owned Registry/adapters select the engine.
+
+Avoid arbitrary model-authored HTML/JS/SVG/code for routine visuals when typed renderers fit.
+
+## Model direction
+
+Current Product Owner decision for the active Tutor/Specialist track is **GPT-5.6 Luna**, behind Model Gateway. Provider/model remains replaceable architecture. Keep AIExecution tokens/latency/cost lineage observable. No direct provider coupling in domain code.
+
+## Optimization order
+
+For Canvas Specialist work:
+
+1. **Quality** — semantic fidelity, pedagogical usefulness, clarity, age/Grade appropriateness, Arabic/English correctness, natural personalization.
+2. **Speed** — measure Tutor/queue/Specialist/Scene/render latency after quality is acceptable.
+3. **Cost** — optimize context/calls/reuse/configuration without lowering accepted quality.
+
+Do not invent latency/cost pass thresholds before CS-06 establishes a real baseline.
 
 ## Child Safety
 
-All Student-facing paths — Tutor, Voice, Vision, annotations, artifacts, future web/reference tools — remain subject to `docs/CHILD_SAFETY_POLICY.md`.
+All Student-facing Tutor/Canvas/Voice/Vision/artifact paths remain subject to `docs/CHILD_SAFETY_POLICY.md`. Parent settings may restrict further but never weaken the system baseline. Specialist output is untrusted semantic data until application validation; it never overrides Safety or Parent Boundaries.
 
-Parent settings may restrict family-sensitive topics further but may never weaken the non-overridable system safety baseline.
+## Verification / documentation rules
 
-Personal Facts must not become a route for storing unsafe sensitive information beyond the approved product/safety policy.
+A task is not complete because code exists or tests pass.
 
-## Verification Rules
+For every CS task follow `docs/CANVAS_SPECIALIST_ACCEPTANCE_SPEC.md`:
 
-A task is not complete because code exists. Before claiming completion:
+1. create `docs/reviews/<TASK-ID>/IMPLEMENTATION_RECORD.md` before code;
+2. record baseline, scope/non-scope, protected boundaries, expected paths and verification;
+3. distinguish static/unit/Postgres/mock/live-Luna/build/browser/controlled-Student/real-Lina/longitudinal evidence;
+4. record actual changed paths, exact test results, model call counts, browser/visual evidence and quality findings where applicable;
+5. record latency/tokens/cost when the task executes AI;
+6. state exactly what remains unverified;
+7. perform scope/protected-area review;
+8. submit for Product Owner review and update `docs/reviews/README.md`;
+9. only Product Owner acceptance marks DONE / ACCEPTED;
+10. update Project State/task overlay after acceptance and stop before the next task unless separately authorized.
 
-1. run the task's listed verification;
-2. run relevant unit/contract/integration tests;
-3. verify protected invariants remain intact;
-4. inspect changed-path runtime/log behavior when applicable;
-5. update the current bounded task overlay and/or historical `TASKS.md` only when appropriate;
-6. update `project-state/PROJECT_STATE.md` if current reality/next action changes;
-7. distinguish code review, automated execution, real-model verification, browser verification, limited historical Real-Lina use, stable daily Real-Lina use, and longitudinal validation;
-8. stop at the task boundary and return for Product Owner review before promoting the next task.
+Private raw evidence remains local; publish sanitized review artifacts only.
 
-When verification cannot be run, state exactly why and keep that evidence category unverified.
-
-## Protected Local Work / Secrets
+## Protected local work / worktree
 
 Implementation work belongs in the isolated worktree:
 
 `/Users/haitham/development/lina-learning-ctx03`
 
-The original checkout may be inspected **read only** for existing local configuration when the isolated worktree lacks it. Never implement changes in the original checkout.
+Original checkout may be inspected read-only for existing configuration when needed. Do not stash/reset/clean/overwrite protected unrelated work. Do not copy `.env`; report required configuration only as present/absent/invalid.
 
-Known protected original-checkout Eureka-related dirty files must not be stashed, reset, cleaned, overwritten, formatted, or modified.
+## Current next action
 
-Never print, echo, copy, expose, commit, or hardcode secret values. Do not copy an original `.env` into the isolated worktree. Report only whether required configuration is present/absent/invalid when auditing configuration.
+Read:
 
-## Current Next Action
+1. `project-state/PROJECT_STATE.md`
+2. `project-state/DAILY_USE_RELEASE_TASKS.md`
+3. `docs/CANVAS_SPECIALIST_EXECUTION_CONTRACT.md`
+4. `docs/CANVAS_SPECIALIST_IMPLEMENTATION_PLAN.md`
+5. `docs/CANVAS_SPECIALIST_ACCEPTANCE_SPEC.md`
 
-Read `project-state/PROJECT_STATE.md` and `project-state/DAILY_USE_RELEASE_TASKS.md`, then execute **only the single task marked `READY` there**.
-
-Stop after that task's verification/report. Do not execute or promote the next task in the same run unless the Product Owner explicitly authorizes it.
-
-## Learning Studio — Approved Direction, Still Gated
-
-Read `docs/STUDIO_IMPLEMENTATION_PLAN.md` for the approved production-intent
-Learning Studio direction. Preserve these boundaries: Studio Core is
-application-owned and subject-agnostic; Canvas/Workspace is a first-class
-Student input/output surface but browser state is never durable authority;
-durable truth is a semantic Event Log plus rebuildable Materialized Current
-Snapshot; Tutor remains the sole Student-facing teaching authority; existing
-Tutor SSE remains Chat authority while production Studio uses its own
-authenticated resumable feed; deterministic known activities and validators do
-not create Evidence directly; and an optional `CUSTOM_COMPOSE` Canvas
-Specialist is proposal-only with no direct persistence, Safety, Evidence, or
-Tutor authority. Original Student media remains source authority.
-
-The uncommitted FE-02 `/student/daily` prototype is protected evidence, not
-accepted product architecture. Execute only the Studio task explicitly marked
-ready after its predecessor is accepted.
+Then execute **CS-01 only** and stop after its verification/report.
