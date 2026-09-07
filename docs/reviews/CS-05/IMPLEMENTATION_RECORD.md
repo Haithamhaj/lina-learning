@@ -107,3 +107,12 @@ recorded with the review checkpoint.
 
 **AWAITING PRODUCT OWNER REVIEW.** This record does not mark CS-05 accepted
 and does not authorize CS-06.
+
+## Correction checkpoint
+
+The Product Owner required a durable-proposal boundary and truthful production
+trace reconciliation. Settlement now commits the completed Specialist proposal
+before opening a separate deterministic acceptance transaction; acceptance
+failure cannot erase the proposal or trigger another generation. Production
+`TRACE_RELATION` now persists `tracing_relation_id` in authoritative Process
+state so the existing ProcessView renders its established trace after reload.

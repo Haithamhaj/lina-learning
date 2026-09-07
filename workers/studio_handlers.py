@@ -82,6 +82,7 @@ def _preflight(factory: sessionmaker[Session], job: Job, payload: dict[str, obje
 
 
 def _settle(factory: sessionmaker[Session], run_id: UUID, proposal: dict[str, object], execution_id: UUID | None) -> dict[str, object]:
+    durable_result: dict[str, object]
     with factory.begin() as session:
         unguarded_run = session.get(StudioCanvasSpecialistRun, run_id)
         if unguarded_run is None:
@@ -104,8 +105,15 @@ def _settle(factory: sessionmaker[Session], run_id: UUID, proposal: dict[str, ob
         # Studio projection.  Keep the durable proposal; production acceptance
         # fails closed until the existing lifecycle has an authoritative Snapshot.
         has_snapshot = session.execute(select(StudioSnapshot.id).where(StudioSnapshot.studio_runtime_id == run.studio_runtime_id)).scalar_one_or_none() is not None
-        scene = accept_completed_process_run(session, run.id) if has_snapshot else None
-        return {"run_id": str(run.id), "run_status": run.status, "proposal_digest": run.proposal_digest, "scene_id": None if scene is None else str(scene.id)}
+        durable_result = {"run_id": str(run.id), "run_status": run.status, "proposal_digest": run.proposal_digest, "scene_id": None}
+    # Proposal durability is the boundary: acceptance is a separate short
+    # deterministic transaction and may fail without erasing provider success.
+    if has_snapshot:
+        with factory.begin() as acceptance_session:
+            scene = accept_completed_process_run(acceptance_session, run_id)
+            if scene is not None:
+                durable_result["scene_id"] = str(scene.id)
+    return durable_result
 
 
 def _fail(factory: sessionmaker[Session], run_id: UUID, code: str, execution_id: UUID | None = None) -> None:

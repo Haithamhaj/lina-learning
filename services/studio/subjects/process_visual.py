@@ -226,6 +226,7 @@ def reduce_process(snapshot, event):
         if target not in relation_ids:
             raise ValueError("Unknown relation target.")
         current["highlighted_relation_ids"] = [target]
+        current["tracing_relation_id"] = target
     elif event.action_key == "REQUEST_EXPLANATION":
         if target not in stage_ids | relation_ids:
             raise ValueError("Unknown explanation target.")

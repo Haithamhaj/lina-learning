@@ -6,7 +6,7 @@ import type { StudioOperation } from "@/lib/studio/contracts";
 
 function readState(value: Record<string, unknown> | null, scene: NonNullable<ReturnType<typeof readProcessScene>>): ProcessViewState | null {
   if (!value) return initialProcessState();
-  const allowed = new Set(["selected_stage_id", "focused_stage_id", "active_explanation_stage_id", "revealed_stage_ids", "highlighted_relation_ids"]);
+  const allowed = new Set(["selected_stage_id", "focused_stage_id", "active_explanation_stage_id", "revealed_stage_ids", "highlighted_relation_ids", "tracing_relation_id"]);
   if (Object.keys(value).some((key) => !allowed.has(key))) return null;
   const stageIds = new Set(scene.stages.map((stage) => stage.id)); const relationIds = new Set(scene.relations.map((relation) => relation.id));
   const ids = (key: string, permitted: Set<string>) => Array.isArray(value[key]) && value[key].every((id) => typeof id === "string" && permitted.has(id)) && new Set(value[key] as string[]).size === value[key].length ? value[key] as string[] : null;
@@ -15,7 +15,7 @@ function readState(value: Record<string, unknown> | null, scene: NonNullable<Ret
   if (revealed === null || highlighted === null || ["selected_stage_id", "focused_stage_id", "active_explanation_stage_id"].some((key) => value[key] !== null && value[key] !== undefined && nullable(key) === null)) return null;
   return { selectedId: nullable("selected_stage_id"), focusedStageId: nullable("focused_stage_id"),
     activeExplanationStageId: nullable("active_explanation_stage_id"), revealedIds: revealed,
-    highlightedRelationIds: highlighted, highlightedStageIds: nullable("focused_stage_id") ? [nullable("focused_stage_id")!] : [], tracingRelationId: null };
+    highlightedRelationIds: highlighted, highlightedStageIds: nullable("focused_stage_id") ? [nullable("focused_stage_id")!] : [], tracingRelationId: value.tracing_relation_id === null || value.tracing_relation_id === undefined ? null : typeof value.tracing_relation_id === "string" && relationIds.has(value.tracing_relation_id) ? value.tracing_relation_id : null };
 }
 
 export function ProcessProductionWorkspace({ sceneId, sceneVersion, seed, state, onOperation }: { sceneId: string; sceneVersion: number; seed: Record<string, unknown>; state: Record<string, unknown> | null; onOperation: (operation: StudioOperation) => Promise<void> }) {
