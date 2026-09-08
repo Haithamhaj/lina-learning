@@ -199,7 +199,7 @@ def test_student_can_transcribe_owned_daily_audio_without_durable_audio_or_learn
     [
         ("empty.webm", "audio/webm", b"", 422),
         ("voice.txt", "text/plain", b"words", 415),
-        ("huge.wav", "audio/wav", b"x" * (5 * 1024 * 1024 + 1), 413),
+        ("huge.wav", "audio/wav", b"x" * (24 * 1024 * 1024 + 1), 413),
     ],
     ids=("empty", "unsupported-media", "oversized"),
 )

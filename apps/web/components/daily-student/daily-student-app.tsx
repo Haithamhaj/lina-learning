@@ -4,6 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import { StudioRendererHost } from "@/components/daily-student/studio-renderer-host";
+import { DailyVoiceInput } from "@/components/daily-student/daily-voice-input";
 import { Button } from "@/components/ui/button";
 import {
   createStudioController,
@@ -74,6 +75,7 @@ export function DailyStudentApp() {
   const [studioConnection, setStudioConnection] = useState<"connecting" | "connected" | "reconnecting" | "error">("connecting");
   const [error, setError] = useState("");
   const [draft, setDraft] = useState("");
+  const [voiceBusy, setVoiceBusy] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [sessionEnded, setSessionEnded] = useState(false);
   const [surfaceDirection, setSurfaceDirection] = useState<"ltr" | "rtl">("ltr");
@@ -444,10 +446,11 @@ export function DailyStudentApp() {
             <div className="mt-4 min-h-[26rem] max-h-[calc(100vh-19rem)] overflow-y-auto rounded-[1.5rem] bg-[#fafbfe] p-3 sm:p-4" aria-live="polite">
               {learningSession?.messages.length ? <div className="grid gap-4">{learningSession.messages.map((message) => <div key={message.id}><ChatBubble message={message} pending={chatSending} />{message.role === "tutor" && message.id === latestTutor?.id && message.suggested_actions.length > 0 ? <div className="ml-12 mt-2 flex flex-wrap gap-2" aria-label="Tutor suggested actions">{message.suggested_actions.map((action) => <Button key={`${action.kind}:${action.label}`} className="h-auto min-h-10 rounded-full px-3 py-2 text-left" type="button" variant="secondary" disabled={chatSending} onClick={() => void sendChat(action.label, { suggestedAction: true })}><span dir="auto">{action.label}</span></Button>)}</div> : null}{message.role === "tutor" && message.id === latestTutor?.id && message.guided_check ? <div className="ml-12 mt-3 rounded-2xl border border-emerald-100 bg-white p-3"><p className="text-sm font-semibold" dir="auto">{message.guided_check.prompt}</p><div className="mt-2 flex flex-wrap gap-2">{message.guided_check.choices.map((choice) => <Button key={choice.label} type="button" variant="secondary" disabled={chatSending} onClick={() => void sendChat(choice.label, { guidedCheckId: message.guided_check?.id })}>{choice.label}</Button>)}</div></div> : null}</div>)}</div> : <div className="grid min-h-80 place-items-center px-5 text-center"><div className="max-w-sm"><div aria-hidden="true" className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#e9f7f3] text-2xl text-[#328577]">✎</div><h3 className="mt-4 font-display text-2xl">What are you working through?</h3><p className="mt-2 text-sm leading-6 text-slate-600">Start with a question, an answer you tried, or something you would like to understand more clearly.</p></div></div>}
             </div>
-            <form className="mt-4 grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-3 sm:grid-cols-[1fr_auto] sm:items-center" onSubmit={submit}>
+            <form className="mt-4 grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-3 sm:grid-cols-[auto_1fr_auto] sm:items-center" onSubmit={submit}>
               <label className="sr-only" htmlFor="daily-learning-message">Your message for Tutor</label>
-              <input ref={composerRef} id="daily-learning-message" dir="auto" value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={4000} placeholder="Ask a question or share what you tried" className="h-12 rounded-2xl bg-slate-50 px-4 text-sm outline-none ring-[#7d70df] transition focus:ring-2" />
-              <Button className="min-h-12" type="submit" disabled={!draft.trim() || chatSending}>{chatSending ? "Tutor is thinking…" : "Send"}</Button>
+              <DailyVoiceInput apiBaseUrl={publicConfig.apiBaseUrl} learningSessionId={learningSession?.learning_session_id ?? null} draft={draft} chatSending={chatSending} getToken={getToken} onActiveChange={setVoiceBusy} onTranscript={(transcript) => { setDraft(transcript); window.requestAnimationFrame(() => composerRef.current?.focus()); }} />
+              <input ref={composerRef} id="daily-learning-message" dir="auto" value={draft} onChange={(event) => setDraft(event.target.value)} disabled={voiceBusy} maxLength={4000} placeholder="Ask a question or share what you tried" className="order-2 h-12 min-w-0 rounded-2xl bg-slate-50 px-4 text-sm outline-none ring-[#7d70df] transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60" />
+              <Button className="order-3 min-h-12" type="submit" disabled={!draft.trim() || chatSending || voiceBusy}>{chatSending ? "Tutor is thinking…" : "Send"}</Button>
             </form>
           </section>
           {workspaceVisible || canvasCompositionPending ? <aside aria-label="Adaptive Learning Workspace" className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a6b42]">Adaptive Learning Workspace</p><h2 ref={workspaceHeadingRef} tabIndex={-1} className="mt-1 font-display text-2xl outline-none">{workspaceVisible ? "Work with the current scene" : "Preparing a visual explanation"}</h2></div>{operationPending ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900" role="status">Saving…</span> : null}</div>{canvasCompositionPending ? <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" role="status">Tutor is preparing the visual explanation. You can keep chatting while it arrives.</p> : null}{workspaceVisible && snapshot ? <StudioRendererHost snapshot={snapshot} operationPending={operationPending} onOperation={submitOperation} onReload={() => { void reloadSnapshot(); }} /> : null}</aside> : null}

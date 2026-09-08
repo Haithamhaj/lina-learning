@@ -56,4 +56,4 @@ def test_speech_to_text_configuration_has_a_bounded_default_upload_size() -> Non
     settings = Settings(_env_file=None)
 
     assert settings.transcription_model_name == "gpt-transcribe"
-    assert settings.transcription_max_audio_bytes == 5 * 1024 * 1024
+    assert settings.transcription_max_audio_bytes == 24 * 1024 * 1024
