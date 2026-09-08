@@ -44,6 +44,19 @@ test("the renderer host resolves the accepted exact Math and Science contracts",
   }), "SCIENCE_PROCESS_SEQUENCE");
 });
 
+test("the renderer host resolves the exact production Process contract", () => {
+  assert.equal(resolveApprovedStudioRenderer({
+    ...englishScene,
+    subject_key: "SCIENCE",
+    subject_profile_version: "process-visual-production-profile-v1",
+    activity_key: "process_visual_production",
+    activity_contract_version: "process-visual-production-activity-v1",
+    renderer_key: "process-visual-production",
+    renderer_version: "process-visual-production-renderer-v1",
+    payload_schema_version: "process-visual-production-seed-v1",
+  }), "SCIENCE_PROCESS_PRODUCTION");
+});
+
 test("the renderer host resolves only the exact Arabic sentence-ordering contract", () => {
   assert.equal(resolveApprovedStudioRenderer({
     ...englishScene,

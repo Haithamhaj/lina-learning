@@ -94,6 +94,36 @@ def _v2_proposal(*, invalid: bool = False) -> dict[str, object]:
     return proposal
 
 
+def _v2_cycle_pack() -> dict[str, object]:
+    pack = _v2_pack()
+    pack.update(
+        topology="CYCLE",
+        allowed_motion_intents=["REVEAL_IN_ORDER", "TRACE_CYCLE", "TRANSITION_FOCUS", "EMPHASIZE_RELATION"],
+    )
+    return pack
+
+
+def _v2_cycle_proposal() -> dict[str, object]:
+    return {
+        "version": "canvas-specialist-process-proposal-v2", "pattern": "PROCESS", "topology": "CYCLE",
+        "title": "The water cycle", "subtitle": "Water returns to where it started.",
+        "stages": [
+            {"semantic_key": "evaporate", "label": "Evaporate", "detail": "Water rises as vapor.", "support_ids": ["F1"], "art_handle": "drop"},
+            {"semantic_key": "condense", "label": "Condense", "detail": "Vapor forms clouds.", "support_ids": ["F2"], "art_handle": "filter"},
+            {"semantic_key": "collect", "label": "Collect", "detail": "Water returns to Earth.", "support_ids": ["F1"], "art_handle": "drop"},
+        ],
+        "relations": [
+            {"relation_key": "evaporate-to-condense", "source_semantic_key": "evaporate", "target_semantic_key": "condense", "label": "then", "support_ids": ["R1"]},
+            {"relation_key": "condense-to-collect", "source_semantic_key": "condense", "target_semantic_key": "collect", "label": "then", "support_ids": ["R1"]},
+            {"relation_key": "collect-to-evaporate", "source_semantic_key": "collect", "target_semantic_key": "evaporate", "label": "returns", "support_ids": ["R1"]},
+        ],
+        "text_equivalent": "Water evaporates, condenses, collects, and returns to evaporation.",
+        "focus_intent": None,
+        "motion_intents": ["REVEAL_IN_ORDER", "TRACE_CYCLE", "TRANSITION_FOCUS", "EMPHASIZE_RELATION"],
+        "interaction_affordances": ["FOCUS_OBJECT", "REVEAL_OBJECT_DETAIL", "TRACE_RELATION"],
+    }
+
+
 def _v2_pending_run(factory: sessionmaker[Session]) -> tuple[object, object, object, object, object]:
     student_id, learning_id, runtime_id, run_id = _run(factory)
     with factory.begin() as session:
@@ -118,6 +148,76 @@ def test_v2_worker_persists_motion_scene_and_fresh_rebuild(factory: sessionmaker
         run = session.get(m.StudioCanvasSpecialistRun, run_id); scene = session.get(m.StudioScene, run.scene_id)
         replay = StudioStateService(session).rebuild_snapshot(runtime_id=runtime_id, student_id=student_id)
         assert calls == 1 and run.proposal_payload == _v2_proposal() and scene.seed_payload["motion_intents"] == _v2_proposal()["motion_intents"] and replay["state_payload"]["scene_seed"]["motion_intents"] == _v2_proposal()["motion_intents"]
+
+
+def test_v2_cycle_worker_settles_into_snapshot_and_replays_semantic_operations(factory: sessionmaker[Session]) -> None:
+    """CS-04 Worker and CS-05 acceptance preserve one real V2 cycle end to end."""
+    student_id, learning_id, runtime_id, run_id, job_id = _v2_pending_run(factory)
+    with factory.begin() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id); assert run is not None
+        source = session.get(m.LearningMessage, run.source_message_id); assert source is not None
+        pack = _v2_cycle_pack(); digest = sha256(json.dumps(pack, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+        source.payload = {"workspace_visual": {"status": "ADMITTED", "order_digest": digest, "frozen_composition_pack": pack}}
+        run.order_digest = digest
+        job = session.get(m.Job, job_id); assert job is not None
+        job.payload = {**job.payload, "order_digest": digest}
+
+    calls = 0
+
+    class Provider:
+        def execute(self, route, payload):
+            nonlocal calls
+            calls += 1
+            return ModelResult(output=_v2_cycle_proposal())
+
+    registry = JobHandlerRegistry()
+    register_canvas_specialist_handlers(
+        registry,
+        session_factory=factory,
+        gateway_factory=lambda session: ModelGateway(
+            session,
+            routes={ModelTask.CANVAS_SPECIALIST: ModelRoute("fixture", "v2")},
+            providers={"fixture": Provider()},
+        ),
+    )
+    assert run_once(factory, registry, worker_id="v2-cycle") == m.JobStatus.COMPLETED
+
+    with factory.begin() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id); assert run is not None and run.scene_id is not None
+        scene = session.get(m.StudioScene, run.scene_id); assert scene is not None
+        state = StudioStateService(session)
+        state.append_event(AppendStudioEventCommand(
+            runtime_id=runtime_id, student_id=student_id, learning_session_id=learning_id,
+            event_kind=None, event_schema_version=None, actor=StudioActor.STUDENT,
+            payload_schema_version="process-visual-production-action-v1", payload={"target_id": "evaporate"},
+            scene_id=scene.id, base_scene_version=scene.scene_version, action_key="FOCUS_OBJECT",
+            idempotency_key="cs04-cs05-cycle-focus",
+        ))
+        scene = session.get(m.StudioScene, scene.id); assert scene is not None
+        state.append_event(AppendStudioEventCommand(
+            runtime_id=runtime_id, student_id=student_id, learning_session_id=learning_id,
+            event_kind=None, event_schema_version=None, actor=StudioActor.STUDENT,
+            payload_schema_version="process-visual-production-action-v1", payload={"target_id": "collect-to-evaporate"},
+            scene_id=scene.id, base_scene_version=scene.scene_version, action_key="TRACE_RELATION",
+            idempotency_key="cs04-cs05-cycle-trace",
+        ))
+
+    with factory() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id); job = session.get(m.Job, job_id)
+        assert run is not None and run.scene_id is not None and run.status == "COMPLETED"
+        scene = session.get(m.StudioScene, run.scene_id); assert scene is not None
+        replay = StudioStateService(session).rebuild_snapshot(runtime_id=runtime_id, student_id=student_id)
+        process_state = replay["state_payload"]["process_visual_production"]
+        assert calls == 1 and job is not None and job.max_attempts == job.attempt_count == 1
+        assert scene.status == "ACTIVE" and scene.seed_payload["topology"] == "cycle"
+        assert scene.seed_payload["motion_intents"] == _v2_cycle_proposal()["motion_intents"]
+        assert "TRACE_CYCLE" in scene.seed_payload["motion_intents"] and "TRACE_SEQUENCE" not in scene.seed_payload["motion_intents"]
+        assert {relation["id"] for relation in scene.seed_payload["relations"]} >= {"collect-to-evaporate"}
+        assert replay["current_scene_id"] == scene.id and replay["state_payload"]["scene_seed"] == scene.seed_payload
+        assert process_state["focused_stage_id"] == "evaporate" and process_state["tracing_relation_id"] == "collect-to-evaporate"
+        assert session.scalar(select(m.CandidateEvent).where(m.CandidateEvent.session_id == learning_id)) is None
+        assert session.scalar(select(m.PersonalFact).where(m.PersonalFact.student_id == student_id)) is None
+        assert session.scalar(select(m.LearnerIntelligenceCard).where(m.LearnerIntelligenceCard.student_id == student_id)) is None
 
 
 def test_v2_invalid_motion_is_terminal_without_regeneration(factory: sessionmaker[Session]) -> None:
