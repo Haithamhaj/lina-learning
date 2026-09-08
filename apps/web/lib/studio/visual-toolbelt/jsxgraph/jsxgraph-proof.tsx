@@ -44,7 +44,7 @@ export function JsxGraphProof({ value, onValueChange }: { value: GridPoint; onVa
   useEffect(() => { const exact = exactGridPoint(value.x, value.y); point.current?.moveTo([exact.x, exact.y], 0); }, [value.x, value.y]);
   const exact = exactGridPoint(value.x, value.y);
   return <section className="toolbelt-card" data-engine="jsxgraph">
-    <span className="toolbelt-eyebrow">03 · الإحداثيات</span><h2>حرّك النقطة · Explore coordinates</h2>
+    <span className="toolbelt-eyebrow">الإحداثيات</span><h2>حرّك النقطة · Explore coordinates</h2>
     <p>حرّك P إلى تقاطع، أو غيّر القيم الصحيحة من −4 إلى 4.</p>
     <div ref={host} id={id} className="jxgbox toolbelt-graph" dir="ltr" role="img" aria-label={`Coordinate plane. P at (${exact.x}, ${exact.y})`}/>
     {failed && <p role="status">تعذر تحميل الرسم. استخدم حقول الإحداثيات.</p>}

@@ -1660,3 +1660,10 @@ Vision, Canvas, Parent Dashboard expansion, Track B, or other frozen work.
 **Scope:** Hardened the four existing visual adapters with controlled semantic state, client-only entry points, lifecycle cleanup and coherent wrappers. Native Process/SVG renderers remain unchanged.
 **Verification:** 18 isolated Chrome engine cases, 12 focused/package/renderer checks, web typecheck, production build and `git diff --check` passed. Authenticated Daily was not run because Clerk configuration is unavailable.
 **Reference:** `apps/web/lib/studio/visual-toolbelt/README.md`; `output/playwright/cs07-toolbelt/results.json`.
+
+## CANVAS-FINALIZATION — Lina-ready visual experience
+**Status:** COMPLETE (2026-09-08)
+**Scope:** One application-owned semantic selector and direct review surface compose the accepted Process SEQUENCE/CYCLE plus spatial fraction placement, exact coordinate construction and controlled fraction-expression input.
+**Integration:** Process remains the live Studio/Daily pattern. The three new patterns remain review-only until an authorized activity defines server-owned Scene, Snapshot and operation contracts.
+**Verification:** Focused selection/toolbelt/Process regressions, isolated Chrome interaction proof, web typecheck, production build and `git diff --check` passed.
+**Reference:** `apps/web/components/studio/canvas-final-review.tsx`; `apps/web/lib/studio/visual-toolbelt/README.md`; `output/playwright/canvas-finalization/results.json`.

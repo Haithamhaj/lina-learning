@@ -47,7 +47,7 @@ export function MathLiveProof({ value, onValueChange, onSubmit }: {
     setSubmitted(null); setError(null);
   }, [value]);
   return <section className="toolbelt-card" data-engine="mathlive">
-    <span className="toolbelt-eyebrow">04 · التعبير الرياضي</span><h2>اكتب كسرًا · Write a fraction</h2>
+    <span className="toolbelt-eyebrow">التعبير الرياضي</span><h2>اكتب كسرًا · Write a fraction</h2>
     <p>اكتب تعبيرك، ثم أرسله عندما تكون مستعدًا.</p>
     <div className="toolbelt-math" dir="ltr" ref={host}/>
     {failed && <label>LaTeX<input dir="ltr" aria-label="Mathematical expression input" value={value} onChange={event => onValueChange(event.target.value)}/></label>}

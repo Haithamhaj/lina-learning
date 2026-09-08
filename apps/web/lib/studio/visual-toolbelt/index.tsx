@@ -9,3 +9,5 @@ export const SpatialPlacement = dynamic(() => import("./konva/konva-proof").then
 export const CoordinateConstruction = dynamic(() => import("./jsxgraph/jsxgraph-proof").then(m => m.JsxGraphProof), { ssr: false });
 export const MathExpressionInput = dynamic(() => import("./mathlive/mathlive-proof").then(m => m.MathLiveProof), { ssr: false });
 export type { SemanticPlacement, GridPoint, RelationFocus, MathInput } from "./contracts";
+export { resolveCanvasPattern, selectCanvasCapability } from "./visual-selection";
+export type { CanvasCapabilitySelection, CanvasPattern, CanvasVisualIntent } from "./visual-selection";

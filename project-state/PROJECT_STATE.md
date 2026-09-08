@@ -14,6 +14,10 @@ First useful real Daily Tutor → Canvas → Tutor learning experience.
 - CS-07 visual Toolbelt primitives are hardened: controlled Motion focus, Konva
   placement, exact JSXGraph coordinates and MathLive input; isolated Chrome proof
   passed. Authenticated Daily remains unverified (Clerk secret unavailable).
+- Canvas now has one direct product-review surface for four finalized patterns:
+  Process (sequence/cycle), spatial manipulation, mathematical construction and
+  math expression. A strict semantic selector owns pattern choice. Process is
+  live in Daily; the other three await activity-specific durable contracts.
 - V2 PostgreSQL lifecycle and replay proof exists.
 - Canvas interaction returns to the same Primary Tutor.
 - Real live quality and use still need practical validation.

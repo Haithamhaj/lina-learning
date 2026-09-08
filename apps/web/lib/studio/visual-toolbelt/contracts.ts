@@ -1,16 +1,29 @@
 /** Local application inputs/results. Never part of the Specialist proposal schema. */
-export type SemanticPlacement = { objectId: "object-a"; targetId: "target-b" | null };
+export type SemanticPlacement = { objectId: string; targetId: string | null };
 export type GridPoint = { x: number; y: number };
 export type RelationFocus = "source" | "target";
 export type MathInput = { format: "latex"; value: string };
 
-export const semanticPlacement = (insideTarget: boolean): SemanticPlacement => ({
-  objectId: "object-a", targetId: insideTarget ? "target-b" : null,
+export const semanticPlacement = (
+  insideTarget: boolean,
+  objectId = "object-a",
+  targetId = "target-b",
+): SemanticPlacement => ({
+  objectId, targetId: insideTarget ? targetId : null,
 });
 
 // Private presentation-space hit testing. Only the semantic IDs leave the adapter.
-export function placementFromPoint(x: number, y: number): SemanticPlacement {
-  return semanticPlacement(Number.isFinite(x) && Number.isFinite(y) && x >= 210 && x <= 295 && y >= 45 && y <= 130);
+export function placementFromPoint(
+  x: number,
+  y: number,
+  objectId = "object-a",
+  targetId = "target-b",
+): SemanticPlacement {
+  return semanticPlacement(
+    Number.isFinite(x) && Number.isFinite(y) && x >= 210 && x <= 295 && y >= 45 && y <= 130,
+    objectId,
+    targetId,
+  );
 }
 
 export function exactGridPoint(x: number, y: number): GridPoint {

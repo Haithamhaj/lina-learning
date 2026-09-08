@@ -12,6 +12,17 @@ test('placement maps a bounded hit to stable semantic IDs and rejects non-finite
   for (const point of [[20, 90], [NaN, 90], [250, Infinity]])
     assert.deepEqual(model.placementFromPoint(...point), { objectId: 'object-a', targetId: null });
 });
+
+test('placement preserves application-owned learning object and target IDs', () => {
+  assert.deepEqual(
+    model.placementFromPoint(250, 90, 'fraction-three-quarters', 'less-than-one'),
+    { objectId: 'fraction-three-quarters', targetId: 'less-than-one' },
+  );
+  assert.deepEqual(
+    model.placementFromPoint(20, 90, 'fraction-three-quarters', 'less-than-one'),
+    { objectId: 'fraction-three-quarters', targetId: null },
+  );
+});
 test('coordinate construction quantizes once to exact bounded integers', () => {
   assert.equal(typeof model.exactGridPoint, 'function');
   assert.deepEqual(model.exactGridPoint(1.9999999, -2.01), { x: 2, y: -2 });

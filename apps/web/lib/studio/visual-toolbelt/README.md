@@ -86,3 +86,35 @@ its own activity-specific accessibility, semantics and end-to-end verification.
 Final verification: 18 Chrome browser cases and 12 focused/package/renderer checks
 passed; web typecheck, production build and diff whitespace checks passed.
 Saved browser evidence: `output/playwright/cs07-toolbelt/` at the repository root.
+
+## Final Canvas product surface
+
+`CanvasFinalReview` composes the accepted ProcessView and the three interactive
+capabilities into one direct review surface at `/studio/visual-toolbelt-review`.
+It uses `selectCanvasCapability()` as the small application-owned selection
+layer. The selector returns the public pattern plus the private local adapter:
+
+| Semantic input | Selected pattern | Semantic output |
+| --- | --- | --- |
+| `{type: "explain_process", topology: "sequence" or "cycle"}` | `PROCESS` | `{topology, state: ProcessViewState, explanationStageId}` |
+| `{type: "place_object", relation: "inside"}` | `SPATIAL_MANIPULATION` | `{objectId, targetId}` |
+| `{type: "construct_coordinate", domain: "integer_grid"}` | `MATH_VISUALIZATION` | exact `{x, y}` integers from −4 through 4 |
+| `{type: "author_math", format: "latex"}` | `MATH_INPUT` | explicit submit returns `{format: "latex", value}` |
+
+The selector validates exact semantic shapes and rejects extra technology or
+renderer fields. Its local choices are `process-view`, `spatial-placement`,
+`coordinate-construction` and `math-expression-input`; no library name enters
+the semantic input. The Process examples use the production ProcessView with one
+SEQUENCE and one CYCLE. Spatial manipulation uses the Grade-5 fraction example
+`¾ → less-than-one`; coordinate construction and fraction expression input use
+the application-controlled CS-07 adapters.
+
+Process is already wired through the production Studio/Daily path. The other
+three patterns are production-capable local components with semantic results,
+but remain review-only until a future authorized activity supplies its own
+server-owned Scene, Snapshot and operation contract. The finalization does not
+invent those durable contracts or imply Student persistence.
+
+Final review evidence is saved under
+`output/playwright/canvas-finalization/`: overview screenshots plus separate
+Sequence, Cycle, spatial, coordinate and expression states, and `results.json`.
