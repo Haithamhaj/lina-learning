@@ -17,6 +17,7 @@ from services.platform.db import models as m
 from services.platform.db.models import ModelTask
 from services.platform.db.connection import normalize_database_url
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
+from services.model_gateway.factory import create_canvas_specialist_gateway
 from services.studio.canvas_specialist import admit_committed_visual_order
 from services.studio.contracts import AppendStudioEventCommand, CreateSceneCommand, StudioActor
 from services.studio.interactions import StudioInteractionTutorService
@@ -98,6 +99,7 @@ def _v2_cycle_pack() -> dict[str, object]:
     pack = _v2_pack()
     pack.update(
         topology="CYCLE",
+        admitted_order={"objective": "Explain the water cycle: evaporation, condensation, collection, and the return to evaporation."},
         allowed_motion_intents=["REVEAL_IN_ORDER", "TRACE_CYCLE", "TRANSITION_FOCUS", "EMPHASIZE_RELATION"],
     )
     return pack
@@ -218,6 +220,31 @@ def test_v2_cycle_worker_settles_into_snapshot_and_replays_semantic_operations(f
         assert session.scalar(select(m.CandidateEvent).where(m.CandidateEvent.session_id == learning_id)) is None
         assert session.scalar(select(m.PersonalFact).where(m.PersonalFact.student_id == student_id)) is None
         assert session.scalar(select(m.LearnerIntelligenceCard).where(m.LearnerIntelligenceCard.student_id == student_id)) is None
+
+
+@pytest.mark.skipif(os.getenv("LIVE_CANVAS_SPECIALIST_PROOF") != "1", reason="explicit live proof only")
+@pytest.mark.parametrize(("topology", "proposal"), [("SEQUENCE", _v2_proposal), ("CYCLE", _v2_cycle_proposal)])
+def test_live_luna_v2_worker_path(factory: sessionmaker[Session], topology: str, proposal) -> None:
+    student_id, _, runtime_id, run_id, job_id = _v2_pending_run(factory)
+    if topology == "CYCLE":
+        with factory.begin() as session:
+            run = session.get(m.StudioCanvasSpecialistRun, run_id); source = session.get(m.LearningMessage, run.source_message_id)
+            assert run is not None and source is not None
+            pack = _v2_cycle_pack(); digest = sha256(json.dumps(pack, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+            source.payload = {"workspace_visual": {"status": "ADMITTED", "order_digest": digest, "frozen_composition_pack": pack}}
+            run.order_digest = digest
+            job = session.get(m.Job, job_id); assert job is not None
+            job.payload = {**job.payload, "order_digest": digest}
+    registry = JobHandlerRegistry(); register_canvas_specialist_handlers(registry, session_factory=factory, gateway_factory=create_canvas_specialist_gateway)
+    assert run_once(factory, registry, worker_id=f"live-{topology.lower()}") == m.JobStatus.COMPLETED
+    with factory() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id); job = session.get(m.Job, job_id)
+        assert run is not None and job is not None and run.status == "COMPLETED" and run.scene_id is not None
+        scene = session.get(m.StudioScene, run.scene_id); execution = session.get(m.AIExecution, run.ai_execution_id)
+        replay = StudioStateService(session).rebuild_snapshot(runtime_id=runtime_id, student_id=student_id)
+        allowed_motion = {"REVEAL_IN_ORDER", "TRACE_SEQUENCE", "TRANSITION_FOCUS", "EMPHASIZE_RELATION"} if topology == "SEQUENCE" else {"REVEAL_IN_ORDER", "TRACE_CYCLE", "TRANSITION_FOCUS", "EMPHASIZE_RELATION"}
+        assert scene is not None and scene.seed_payload["topology"] == topology.lower() and set(scene.seed_payload["motion_intents"]).issubset(allowed_motion)
+        assert job.max_attempts == job.attempt_count == 1 and execution is not None and execution.provider == "openai" and execution.success and replay["current_scene_id"] == scene.id
 
 
 def test_v2_invalid_motion_is_terminal_without_regeneration(factory: sessionmaker[Session]) -> None:

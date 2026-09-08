@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SPECIALIST_SKILL = ROOT / "runtime/canvas-specialist/SKILL.md"
 CAPABILITY_PACK = ROOT / "runtime/canvas-specialist/visual-capability-pack-v1.md"
 EXECUTION_PACK = ROOT / "runtime/canvas-specialist/process-capability-pack-v1.md"
+EXECUTION_PACK_V2 = ROOT / "runtime/canvas-specialist/process-capability-pack-v2.md"
 DEVELOPMENT_SKILL = ROOT / "skills/lina-educational-visuals/SKILL.md"
 
 
@@ -72,3 +73,15 @@ def test_v2_worker_instructions_preserve_v1_skill_and_add_motion_contract():
     assert "CANVAS_SPECIALIST_VISUAL_LEARNING_COMPOSER_V1" in instructions
     assert "allowed_motion_intents" in instructions
     assert "PROCESS_CAPABILITY_PACK_V2" in instructions
+
+
+def test_v2_cycle_instructions_require_a_closed_supported_cycle():
+    pack = " ".join(EXECUTION_PACK_V2.read_text().split())
+    for marker in (
+        "For N stages, output exactly N relations",
+        "final relation connects the last stage to the first stage",
+        "Every relation must use admitted semantic support",
+        "never use `TRACE_SEQUENCE` for CYCLE",
+        "For SEQUENCE, output exactly N-1 forward relations",
+    ):
+        assert marker in pack
