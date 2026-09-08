@@ -103,10 +103,11 @@ Do not break or silently reinterpret:
 
 ## Next action
 
-**CS-05 — Process Production Integration: IMPLEMENTED / AWAITING PRODUCT OWNER REVIEW.**
+**CS-05 — Process Production Integration: IMPLEMENTED / UNDER PRODUCT OWNER AUDIT.**
 
-CS-01 through CS-04 are DONE / ACCEPTED. CS-05 is implemented and awaiting
-Product Owner review. CS-06 through CS-07 remain BLOCKED.
+CS-01 through CS-04 are DONE / ACCEPTED. **CS-05M — Semantic Motion
+Intelligence is READY / EXPLICITLY AUTHORIZED** as the bounded AUD-03 corrective
+subtask inside CS-05. CS-06 through CS-07 remain BLOCKED.
 
 ## Critical references
 

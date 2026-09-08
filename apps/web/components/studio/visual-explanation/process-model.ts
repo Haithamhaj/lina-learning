@@ -1,6 +1,7 @@
 export type ProcessArt = 'drop' | 'filter' | 'vessel' | 'egg' | 'larva' | 'pupa' | 'butterfly' | 'idea' | 'draft' | 'review';
 export type ProcessStage = {id:string; label:string; detail:string; art:ProcessArt};
-export type ProcessScene = {title:string; subtitle:string; locale:'en'|'ar'; topology:'sequence'|'cycle'; stages:ProcessStage[]; relations:{id:string;from:string;to:string;label:string}[]; sourceLabel:string; sourceUrl?:string};
+export type ProcessMotionIntent='REVEAL_IN_ORDER'|'TRACE_SEQUENCE'|'TRACE_CYCLE'|'TRANSITION_FOCUS'|'EMPHASIZE_RELATION';
+export type ProcessScene = {title:string; subtitle:string; locale:'en'|'ar'; topology:'sequence'|'cycle'; stages:ProcessStage[]; relations:{id:string;from:string;to:string;label:string}[]; sourceLabel:string; sourceUrl?:string;motion_intents?:ProcessMotionIntent[]};
 export type ProcessViewState = {
  selectedId:string|null; revealedIds:string[]; focusedStageId:string|null;
  highlightedStageIds:string[]; highlightedRelationIds:string[];
@@ -38,11 +39,13 @@ export function nextViewState(scene:Pick<ProcessScene,'stages'|'relations'>,stat
 export function readProcessScene(value:unknown):ProcessScene|null {
  if(!value||typeof value!=='object'||Array.isArray(value))return null;
  const o=value as Record<string,unknown>;
- const keys=['title','subtitle','locale','topology','stages','relations','sourceLabel','sourceUrl'];
+ const keys=['title','subtitle','locale','topology','stages','relations','sourceLabel','sourceUrl','motion_intents'];
  if(Object.keys(o).some(k=>!keys.includes(k))||!['en','ar'].includes(String(o.locale)))return null;
  if(['title','subtitle','sourceLabel'].some(k=>typeof o[k]!=='string'||!(o[k] as string).length||(o[k] as string).length>500))return null;
  if(o.sourceUrl!==undefined&&(typeof o.sourceUrl!=='string'||!o.sourceUrl.startsWith('https://')))return null;
  if(!Array.isArray(o.stages)||!Array.isArray(o.relations))return null;
+ const motions=['REVEAL_IN_ORDER','TRACE_SEQUENCE','TRACE_CYCLE','TRANSITION_FOCUS','EMPHASIZE_RELATION'];
+ if(o.motion_intents!==undefined&&(!Array.isArray(o.motion_intents)||o.motion_intents.some(m=>typeof m!=='string'||!motions.includes(m))||new Set(o.motion_intents).size!==o.motion_intents.length||(o.topology==='sequence'&&o.motion_intents.includes('TRACE_CYCLE'))||(o.topology==='cycle'&&o.motion_intents.includes('TRACE_SEQUENCE'))))return null;
  const arts=['drop','filter','vessel','egg','larva','pupa','butterfly','idea','draft','review'];
  if(o.stages.some(s=>!s||typeof s!=='object'||Object.keys(s).sort().join(',')!=='art,detail,id,label'||['id','label','detail','art'].some(k=>typeof s[k]!=='string')||s.id.length>64||!arts.includes(s.art)))return null;
  if(o.relations.some(r=>!r||typeof r!=='object'||Object.keys(r).sort().join(',')!=='from,id,label,to'||['id','from','to','label'].some(k=>typeof r[k]!=='string')))return null;

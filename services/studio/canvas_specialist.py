@@ -21,6 +21,8 @@ from services.studio.visual_order import contains_implementation_control
 
 CANVAS_SPECIALIST_PROCESS_PROPOSAL_SCHEMA_VERSION = "canvas-specialist-process-proposal-v1"
 PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY = "process-capability-pack-v1"
+CANVAS_SPECIALIST_PROCESS_PROPOSAL_V2_SCHEMA_VERSION = "canvas-specialist-process-proposal-v2"
+PROCESS_EXECUTION_CAPABILITY_PACK_V2_IDENTITY = "process-capability-pack-v2"
 CANVAS_SPECIALIST_COMPOSE_JOB = "studio.canvas_specialist.compose.v1"
 CANVAS_SPECIALIST_DEADLINE = timedelta(minutes=2)
 
@@ -83,11 +85,28 @@ class CanvasSpecialistProcessProposal(BaseModel):
         return self
 
 
+class CanvasSpecialistProcessProposalV2(CanvasSpecialistProcessProposal):
+    """Additive semantic-motion proposal; V1 remains the durable historical contract."""
+    version: Literal[CANVAS_SPECIALIST_PROCESS_PROPOSAL_V2_SCHEMA_VERSION]
+    motion_intents: list[Literal["REVEAL_IN_ORDER", "TRACE_SEQUENCE", "TRACE_CYCLE", "TRANSITION_FOCUS", "EMPHASIZE_RELATION"]] = Field(..., max_length=8)
+
+
+def proposal_contract(capability_identity: str, schema_version: str):
+    pairs = {
+        (PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY, CANVAS_SPECIALIST_PROCESS_PROPOSAL_SCHEMA_VERSION): CanvasSpecialistProcessProposal,
+        (PROCESS_EXECUTION_CAPABILITY_PACK_V2_IDENTITY, CANVAS_SPECIALIST_PROCESS_PROPOSAL_V2_SCHEMA_VERSION): CanvasSpecialistProcessProposalV2,
+    }
+    proposal = pairs.get((capability_identity, schema_version))
+    if proposal is None:
+        raise ValueError("unsupported Canvas Specialist execution identity")
+    return proposal
+
+
 class CanvasSpecialistAdmissionError(ValueError):
     pass
 
 
-def validate_proposal_against_frozen_pack(proposal: CanvasSpecialistProcessProposal, pack: dict[str, object]) -> None:
+def validate_proposal_against_frozen_pack(proposal: CanvasSpecialistProcessProposal | CanvasSpecialistProcessProposalV2, pack: dict[str, object]) -> None:
     """Bound semantic-support validation; this is not general factual inference."""
     if pack.get("pattern") != proposal.pattern or pack.get("topology") != proposal.topology:
         raise ValueError("proposal does not match frozen pattern/topology")
@@ -111,8 +130,13 @@ def validate_proposal_against_frozen_pack(proposal: CanvasSpecialistProcessPropo
     allowed = pack.get("allowed_affordances")
     if not isinstance(allowed, list) or not set(proposal.interaction_affordances).issubset(set(allowed)):
         raise ValueError("proposal affordance is not allowed by the frozen pack")
-    if proposal.motion_intents:
-        raise ValueError("proposal requests capability not enabled by the frozen pack")
+    allowed_motion = pack.get("allowed_motion_intents", [])
+    if not isinstance(allowed_motion, list) or not set(proposal.motion_intents).issubset(set(allowed_motion)):
+        raise ValueError("proposal motion is not allowed by the frozen pack")
+    if proposal.topology == "SEQUENCE" and "TRACE_CYCLE" in proposal.motion_intents:
+        raise ValueError("proposal motion is incompatible with topology")
+    if proposal.topology == "CYCLE" and "TRACE_SEQUENCE" in proposal.motion_intents:
+        raise ValueError("proposal motion is incompatible with topology")
     allowed_art_handles = pack.get("allowed_art_handles", [])
     if not isinstance(allowed_art_handles, list) or any(
         stage.art_handle is not None and stage.art_handle not in allowed_art_handles
@@ -143,13 +167,15 @@ def admit_committed_visual_order(session: Session, *, student_id: UUID, learning
     if sha256(json.dumps(pack, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest() != digest:
         raise CanvasSpecialistAdmissionError("ORDER_DIGEST_INVALID")
     capability = pack.get("capability_pack")
-    if not isinstance(capability, dict) or capability.get("identity") != PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY:
+    if not isinstance(capability, dict) or capability.get("identity") not in (PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY, PROCESS_EXECUTION_CAPABILITY_PACK_V2_IDENTITY):
         return None
     admitted_messages = session.scalars(select(LearningMessage).where(LearningMessage.session_id == learning_session_id, LearningMessage.role == "tutor").order_by(LearningMessage.created_at.desc(), LearningMessage.id.asc()).with_for_update())
     newest = next((candidate for candidate in admitted_messages if isinstance(candidate.payload, dict) and isinstance(candidate.payload.get("workspace_visual"), dict) and candidate.payload["workspace_visual"].get("status") == "ADMITTED"), None)
     if newest is None or newest.id != message.id:
         return None
-    existing = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.source_message_id == source_message_id, StudioCanvasSpecialistRun.order_digest == digest, StudioCanvasSpecialistRun.capability_profile_version == PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY)).scalar_one_or_none()
+    capability_identity = capability["identity"]
+    schema_version = CANVAS_SPECIALIST_PROCESS_PROPOSAL_V2_SCHEMA_VERSION if capability_identity == PROCESS_EXECUTION_CAPABILITY_PACK_V2_IDENTITY else CANVAS_SPECIALIST_PROCESS_PROPOSAL_SCHEMA_VERSION
+    existing = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.source_message_id == source_message_id, StudioCanvasSpecialistRun.order_digest == digest, StudioCanvasSpecialistRun.capability_profile_version == capability_identity)).scalar_one_or_none()
     if existing is not None:
         return existing
     # A later admitted order is the sole current composition intent. Pending
@@ -177,19 +203,19 @@ def admit_committed_visual_order(session: Session, *, student_id: UUID, learning
                 prior_job.status = "FAILED"
                 prior_job.completed_at = superseded_at
                 prior_job.last_error = "Superseded by a newer admitted Canvas Specialist order."
-    key = f"canvas-specialist:{source_message_id}:{digest}:{PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY}"
-    job = enqueue_job(session, job_type=CANVAS_SPECIALIST_COMPOSE_JOB, payload={"student_id": str(student_id), "learning_session_id": str(learning_session_id), "source_message_id": str(source_message_id), "order_digest": digest, "capability_identity": PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY}, idempotency_key=key, max_attempts=1)
+    key = f"canvas-specialist:{source_message_id}:{digest}:{capability_identity}"
+    job = enqueue_job(session, job_type=CANVAS_SPECIALIST_COMPOSE_JOB, payload={"student_id": str(student_id), "learning_session_id": str(learning_session_id), "source_message_id": str(source_message_id), "order_digest": digest, "capability_identity": capability_identity}, idempotency_key=key, max_attempts=1)
     if before_run_create is not None:
         before_run_create()
     try:
         with session.begin_nested():
             active_scene = session.execute(select(StudioScene).where(StudioScene.studio_runtime_id == runtime.id, StudioScene.status == "ACTIVE").with_for_update()).scalar_one_or_none()
-            run = StudioCanvasSpecialistRun(studio_runtime_id=runtime.id, student_id=student_id, learning_session_id=learning_session_id, source_message_id=source_message_id, scene_id=None, base_scene_id=None if active_scene is None else active_scene.id, base_scene_version=0 if active_scene is None else active_scene.scene_version, subject_key="PROCESS", capability_profile_version=PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY, status="PENDING", job_id=job.id, output_schema_version=CANVAS_SPECIALIST_PROCESS_PROPOSAL_SCHEMA_VERSION, accepted_scene_version=None, deadline_at=(now or datetime.now(UTC)) + CANVAS_SPECIALIST_DEADLINE, order_digest=digest)
+            run = StudioCanvasSpecialistRun(studio_runtime_id=runtime.id, student_id=student_id, learning_session_id=learning_session_id, source_message_id=source_message_id, scene_id=None, base_scene_id=None if active_scene is None else active_scene.id, base_scene_version=0 if active_scene is None else active_scene.scene_version, subject_key="PROCESS", capability_profile_version=capability_identity, status="PENDING", job_id=job.id, output_schema_version=schema_version, accepted_scene_version=None, deadline_at=(now or datetime.now(UTC)) + CANVAS_SPECIALIST_DEADLINE, order_digest=digest)
             session.add(run)
             session.flush()
             return run
     except IntegrityError:
-        existing = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.source_message_id == source_message_id, StudioCanvasSpecialistRun.order_digest == digest, StudioCanvasSpecialistRun.capability_profile_version == PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY)).scalar_one_or_none()
+        existing = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.source_message_id == source_message_id, StudioCanvasSpecialistRun.order_digest == digest, StudioCanvasSpecialistRun.capability_profile_version == capability_identity)).scalar_one_or_none()
         if existing is None:
             raise CanvasSpecialistAdmissionError("EXECUTION_IDENTITY_CONFLICT") from None
         return existing

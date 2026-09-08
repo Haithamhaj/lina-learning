@@ -5,7 +5,7 @@ from __future__ import annotations
 from copy import deepcopy
 from collections.abc import Mapping
 
-from services.studio.canvas_specialist import CanvasSpecialistProcessProposal, validate_proposal_against_frozen_pack
+from services.studio.canvas_specialist import proposal_contract, validate_proposal_against_frozen_pack
 from services.studio.subjects import process_visual as awareness
 from services.studio.subjects.contracts import (
     ActivityActionContract, ActivityContract, InteractionPolicy, PayloadValidatorContract,
@@ -28,7 +28,11 @@ def proposal_to_scene_seed(proposal_payload: Mapping[str, object], pack: Mapping
     """Map only an already durable, frozen-supported proposal to safe renderer data."""
     if locale not in ("en", "ar") or direction not in ("ltr", "rtl", "auto"):
         raise ValueError("Unsupported production Process locale/direction.")
-    proposal = CanvasSpecialistProcessProposal.model_validate(proposal_payload)
+    capability = pack.get("capability_pack")
+    if not isinstance(capability, Mapping):
+        raise ValueError("Missing Process capability identity.")
+    identity = capability.get("identity") or "process-capability-pack-v1"
+    proposal = proposal_contract(str(identity), str(proposal_payload.get("version"))).model_validate(proposal_payload)
     validate_proposal_against_frozen_pack(proposal, dict(pack))
     topology = proposal.topology.lower()
     fallback_art = "idea"
@@ -49,13 +53,20 @@ def proposal_to_scene_seed(proposal_payload: Mapping[str, object], pack: Mapping
              "to": item.target_semantic_key, "label": item.label or "then"}
             for item in proposal.relations
         ],
+        "motion_intents": list(proposal.motion_intents),
     }
-    awareness.validate_seed(seed)
+    validate_seed(seed)
     return seed
 
 
 def validate_seed(seed: Mapping[str, object]) -> None:
-    awareness.validate_seed(seed)
+    historical = dict(seed)
+    motion = historical.pop("motion_intents", [])
+    topology = historical.get("topology")
+    permitted = {"REVEAL_IN_ORDER", "TRACE_SEQUENCE", "TRANSITION_FOCUS", "EMPHASIZE_RELATION"} if topology == "sequence" else {"REVEAL_IN_ORDER", "TRACE_CYCLE", "TRANSITION_FOCUS", "EMPHASIZE_RELATION"}
+    if not isinstance(motion, list) or any(not isinstance(value, str) or value not in permitted for value in motion) or len(set(motion)) != len(motion):
+        raise ValueError("Invalid Process motion intents.")
+    awareness.validate_seed(historical)
 
 
 def validate_action(payload: Mapping[str, object]) -> None:
@@ -134,7 +145,9 @@ def reduce_process(snapshot: dict[str, object], event: object) -> dict[str, obje
 def project_visual(seed: Mapping[str, object], state: Mapping[str, object]) -> dict[str, object]:
     normalized = view_state(seed, state)
     normalized.pop("tracing_relation_id")
-    return awareness.project_visual(seed, normalized)
+    projected = awareness.project_visual({key: value for key, value in seed.items() if key != "motion_intents"}, normalized)
+    projected["motion_intents"] = list(seed.get("motion_intents", []))
+    return projected
 
 
 def make_profile():

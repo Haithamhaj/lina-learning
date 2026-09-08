@@ -39,10 +39,11 @@ Normally execute only the single task explicitly marked `READY` in the current o
 
 ## Current active task
 
-**CS-05 — Process Production Integration: IMPLEMENTED / AWAITING PRODUCT OWNER REVIEW.**
+**CS-05 — Process Production Integration: IMPLEMENTED / UNDER PRODUCT OWNER AUDIT.**
 
-CS-01 through CS-04 are **DONE / ACCEPTED**. CS-05 is awaiting Product Owner review.
-CS-06 through CS-07 remain BLOCKED.
+CS-01 through CS-04 are **DONE / ACCEPTED**. **CS-05M — Semantic Motion
+Intelligence is READY / EXPLICITLY AUTHORIZED** as a bounded corrective subtask
+inside CS-05. CS-06 through CS-07 remain BLOCKED.
 
 Do not start CS-06 without Product Owner acceptance of CS-05.
 
@@ -221,5 +222,5 @@ Read:
 4. `docs/CANVAS_SPECIALIST_IMPLEMENTATION_PLAN.md`
 5. `docs/CANVAS_SPECIALIST_ACCEPTANCE_SPEC.md`
 
-The current next action is **CS-05 Product Owner review only**. CS-06 through CS-07 remain BLOCKED;
+The current next action is **CS-05M implementation and Product Owner audit**. CS-06 through CS-07 remain BLOCKED;
 do not start CS-06 without Product Owner acceptance of CS-05.

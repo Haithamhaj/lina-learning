@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from services.model_gateway.factory import create_canvas_specialist_gateway
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
 from services.platform.db.models import AIExecution, Job, JobStatus, LearningMessage, LearningSession, ModelTask, StudioCanvasSpecialistRun, StudioRuntime, StudioSnapshot
-from services.studio.canvas_specialist import CANVAS_SPECIALIST_COMPOSE_JOB, CANVAS_SPECIALIST_PROCESS_PROPOSAL_SCHEMA_VERSION, PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY, CanvasSpecialistProcessProposal, validate_proposal_against_frozen_pack
+from services.studio.canvas_specialist import CANVAS_SPECIALIST_COMPOSE_JOB, proposal_contract, validate_proposal_against_frozen_pack
 from services.studio.process_production_acceptance import accept_completed_process_run
 
 if TYPE_CHECKING:
@@ -33,7 +33,8 @@ def register_canvas_specialist_handlers(registry: "JobHandlerRegistry", *, sessi
             return {"run_status": "SKIPPED"}
         # Fresh session: no Phase-A database transaction/lock exists during execute.
         with session_factory() as provider_session:
-            request = {"instructions": _instructions(), "input": execution.input, "response_schema": {"name": CANVAS_SPECIALIST_PROCESS_PROPOSAL_SCHEMA_VERSION, "schema": CanvasSpecialistProcessProposal.model_json_schema()}, "max_output_tokens": 1800}
+            contract = proposal_contract(execution.capability_identity, execution.proposal_schema_version)
+            request = {"instructions": _instructions(execution.capability_identity), "input": execution.input, "response_schema": {"name": execution.proposal_schema_version, "schema": contract.model_json_schema()}, "max_output_tokens": 1800}
             try:
                 result = gateway_factory(provider_session).execute(ModelTask.CANVAS_SPECIALIST, request, lineage=AIExecutionLineage(operation="canvas_specialist_compose", operation_id=execution.run_id, student_id=execution.student_id, learning_session_id=execution.session_id, source_message_id=execution.message_id, parent_execution_id=execution.parent_execution_id))
                 provider_session.commit()
@@ -48,7 +49,7 @@ def register_canvas_specialist_handlers(registry: "JobHandlerRegistry", *, sessi
                 _fail(session_factory, execution.run_id, "PROVIDER_FAILURE", failed_execution_id)
                 raise
         try:
-            validated = CanvasSpecialistProcessProposal.model_validate(result.output)
+            validated = proposal_contract(execution.capability_identity, execution.proposal_schema_version).model_validate(result.output)
             validate_proposal_against_frozen_pack(validated, execution.pack)
             proposal = validated.model_dump(mode="json")
         except Exception:
@@ -71,7 +72,7 @@ def _preflight(factory: sessionmaker[Session], job: Job, payload: dict[str, obje
         if run is None or run.status in {"COMPLETED", "FAILED", "CANCELLED", "SUPERSEDED", "REJECTED"}: return None
         if run.deadline_at and run.deadline_at <= datetime.now(UTC):
             run.status, run.failure_metadata, run.completed_at = "FAILED", {"code": "DEADLINE_EXCEEDED"}, datetime.now(UTC); return None
-        if payload.get("order_digest") != run.order_digest or payload.get("capability_identity") != PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY:
+        if payload.get("order_digest") != run.order_digest or payload.get("capability_identity") != run.capability_profile_version:
             run.status, run.failure_metadata, run.completed_at = "FAILED", {"code": "LINEAGE_INVALID"}, datetime.now(UTC); return None
         run.status, run.started_at = "RUNNING", run.started_at or datetime.now(UTC)
         message = session.get(LearningMessage, run.source_message_id)
@@ -81,7 +82,13 @@ def _preflight(factory: sessionmaker[Session], job: Job, payload: dict[str, obje
         pack = visual.get("frozen_composition_pack") if isinstance(visual, dict) else None
         if not isinstance(pack, dict) or visual.get("status") != "ADMITTED" or visual.get("order_digest") != run.order_digest or sha256(json.dumps(pack, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest() != run.order_digest:
             run.status, run.failure_metadata, run.completed_at = "FAILED", {"code": "FROZEN_PACK_INVALID"}, datetime.now(UTC); return None
-        return SpecialistExecutionEnvelope(run.id, run.student_id, run.learning_session_id, run.source_message_id, message.ai_execution_id, run.order_digest, PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY, run.output_schema_version, json.dumps(pack, sort_keys=True, ensure_ascii=False, separators=(",", ":")), pack)
+        try:
+            proposal_contract(run.capability_profile_version, run.output_schema_version)
+        except ValueError:
+            run.status, run.failure_metadata, run.completed_at = "FAILED", {"code": "CAPABILITY_IDENTITY_INVALID"}, datetime.now(UTC); return None
+        if not isinstance(pack.get("capability_pack"), dict) or pack["capability_pack"].get("identity") != run.capability_profile_version:
+            run.status, run.failure_metadata, run.completed_at = "FAILED", {"code": "CAPABILITY_IDENTITY_INVALID"}, datetime.now(UTC); return None
+        return SpecialistExecutionEnvelope(run.id, run.student_id, run.learning_session_id, run.source_message_id, message.ai_execution_id, run.order_digest, run.capability_profile_version, run.output_schema_version, json.dumps(pack, sort_keys=True, ensure_ascii=False, separators=(",", ":")), pack)
 
 
 def _settle(factory: sessionmaker[Session], run_id: UUID, proposal: dict[str, object], execution_id: UUID | None) -> dict[str, object]:
@@ -236,7 +243,9 @@ def reconcile_canvas_specialist_runs(session: Session, *, now: datetime | None =
     return changed
 
 
-def _instructions() -> str:
+def _instructions(capability_identity: str = "process-capability-pack-v1") -> str:
     from pathlib import Path
     root = Path(__file__).resolve().parents[1]
-    return (root / "runtime/canvas-specialist/SKILL.md").read_text() + "\n\n" + (root / "runtime/canvas-specialist/process-capability-pack-v1.md").read_text()
+    suffix = "v2" if capability_identity == "process-capability-pack-v2" else "v1"
+    skill = "SKILL-v2.md" if suffix == "v2" else "SKILL.md"
+    return (root / "runtime/canvas-specialist" / skill).read_text() + "\n\n" + (root / "runtime/canvas-specialist" / f"process-capability-pack-{suffix}.md").read_text()

@@ -10,8 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.platform.db.models import LearningMessage, StudioCanvasSpecialistRun, StudioRuntime, StudioScene
-from services.studio.canvas_specialist import (CANVAS_SPECIALIST_PROCESS_PROPOSAL_SCHEMA_VERSION,
-    PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY)
+from services.studio.canvas_specialist import proposal_contract
 from services.studio.contracts import AppendStudioEventCommand, CreateSceneCommand, StudioActor
 from services.studio.reducer import CORE_EVENT_SCHEMA_VERSION
 from services.studio.service import StudioStateService
@@ -50,10 +49,12 @@ def accept_completed_process_run(session: Session, run_id, *, before_commit=None
         pack = visual.get("frozen_composition_pack") if isinstance(visual, dict) else None
         if not isinstance(pack, dict) or visual.get("status") != "ADMITTED" or visual.get("order_digest") != run.order_digest or sha256(json.dumps(pack, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest() != run.order_digest:
             run.status, run.failure_metadata = "REJECTED", {"code": "CAUSAL_ORDER_STALE"}; return None
-        if (run.subject_key != "PROCESS" or run.capability_profile_version != PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY
-                or run.output_schema_version != CANVAS_SPECIALIST_PROCESS_PROPOSAL_SCHEMA_VERSION
-                or not isinstance(pack.get("capability_pack"), dict)
-                or pack["capability_pack"].get("identity") != PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY):
+        try:
+            proposal_contract(run.capability_profile_version, run.output_schema_version)
+        except ValueError:
+            run.status, run.failure_metadata = "REJECTED", {"code": "CAPABILITY_IDENTITY_INVALID"}; return None
+        if (run.subject_key != "PROCESS" or not isinstance(pack.get("capability_pack"), dict)
+                or pack["capability_pack"].get("identity") != run.capability_profile_version):
             run.status, run.failure_metadata = "REJECTED", {"code": "CAPABILITY_IDENTITY_INVALID"}; return None
         admitted_messages = session.scalars(
             select(LearningMessage).where(LearningMessage.session_id == run.learning_session_id, LearningMessage.role == "tutor")

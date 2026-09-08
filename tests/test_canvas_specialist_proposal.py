@@ -3,8 +3,30 @@ import pytest
 from services.studio.canvas_specialist import (
     CANVAS_SPECIALIST_PROCESS_PROPOSAL_SCHEMA_VERSION,
     CanvasSpecialistProcessProposal,
+    CanvasSpecialistProcessProposalV2,
     validate_proposal_against_frozen_pack,
 )
+
+
+def test_v2_motion_grammar_is_topology_bound_by_the_frozen_pack():
+    proposal = {
+        "version": "canvas-specialist-process-proposal-v2", "pattern": "PROCESS", "topology": "SEQUENCE",
+        "title": "Water", "subtitle": None,
+        "stages": [
+            {"semantic_key": "collect", "label": "Collect", "detail": None, "support_ids": ["s1"], "art_handle": "drop"},
+            {"semantic_key": "filter", "label": "Filter", "detail": None, "support_ids": ["s2"], "art_handle": "filter"},
+        ],
+        "relations": [{"relation_key": "then", "source_semantic_key": "collect", "target_semantic_key": "filter", "label": "Then", "support_ids": ["r1"]}],
+        "text_equivalent": "Collect then filter.", "focus_intent": None,
+        "motion_intents": ["REVEAL_IN_ORDER", "TRACE_SEQUENCE", "TRANSITION_FOCUS", "EMPHASIZE_RELATION"],
+        "interaction_affordances": ["FOCUS_OBJECT"],
+    }
+    pack = {"pattern": "PROCESS", "topology": "SEQUENCE", "capability_pack": {"identity": "process-capability-pack-v2", "process_stage_limit": [2, 8]}, "semantic_alignment": {"required_semantics": [{"id": "s1"}, {"id": "s2"}], "required_relations": [{"id": "r1"}], "must_not_imply": []}, "allowed_affordances": ["FOCUS_OBJECT"], "allowed_motion_intents": proposal["motion_intents"], "allowed_art_handles": ["drop", "filter"]}
+    validated = CanvasSpecialistProcessProposalV2.model_validate(proposal)
+    validate_proposal_against_frozen_pack(validated, pack)
+    proposal["motion_intents"] = ["TRACE_CYCLE"]
+    with pytest.raises(ValueError, match="motion"):
+        validate_proposal_against_frozen_pack(CanvasSpecialistProcessProposalV2.model_validate(proposal), pack)
 
 
 def test_process_proposal_schema_is_recursively_strict_and_required() -> None:
