@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
 import json
+import logging
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -21,6 +22,8 @@ from services.studio.process_production_acceptance import accept_completed_proce
 if TYPE_CHECKING:
     from workers.job_worker import JobHandlerRegistry
 
+
+_logger = logging.getLogger(__name__)
 
 def register_canvas_specialist_handlers(registry: "JobHandlerRegistry", *, session_factory: sessionmaker[Session], gateway_factory: Callable[[Session], ModelGateway] = create_canvas_specialist_gateway) -> None:
     def handle(job: Job) -> dict[str, object]:
@@ -109,11 +112,44 @@ def _settle(factory: sessionmaker[Session], run_id: UUID, proposal: dict[str, ob
     # Proposal durability is the boundary: acceptance is a separate short
     # deterministic transaction and may fail without erasing provider success.
     if has_snapshot:
-        with factory.begin() as acceptance_session:
-            scene = accept_completed_process_run(acceptance_session, run_id)
-            if scene is not None:
-                durable_result["scene_id"] = str(scene.id)
+        try:
+            with factory.begin() as acceptance_session:
+                scene = accept_completed_process_run(acceptance_session, run_id)
+                if scene is not None:
+                    durable_result["scene_id"] = str(scene.id)
+        except Exception:
+            # The provider result is already durable.  Scene settlement is a
+            # separate deterministic effect and must never convert that result
+            # into a false compose/provider failure.
+            _logger.exception("Canvas Specialist Scene settlement deferred for run %s", run_id)
+            _mark_scene_settlement_deferred(factory, run_id)
+    with factory() as session:
+        run = session.get(StudioCanvasSpecialistRun, run_id)
+        if run is None:
+            raise ValueError("SPECIALIST_RUN_MISSING")
+        durable_result["run_status"] = run.status
+        durable_result["scene_id"] = str(run.scene_id) if run.scene_id is not None else None
     return durable_result
+
+
+def _mark_scene_settlement_deferred(factory: sessionmaker[Session], run_id: UUID) -> None:
+    """Keep a retryable settlement failure visible without changing compose truth."""
+    with factory.begin() as session:
+        unguarded_run = session.get(StudioCanvasSpecialistRun, run_id)
+        if unguarded_run is None:
+            return
+        session.execute(
+            select(StudioRuntime)
+            .where(StudioRuntime.id == unguarded_run.studio_runtime_id)
+            .with_for_update()
+        ).scalar_one()
+        run = session.execute(
+            select(StudioCanvasSpecialistRun)
+            .where(StudioCanvasSpecialistRun.id == run_id)
+            .with_for_update()
+        ).scalar_one()
+        if run.status == "COMPLETED" and run.scene_id is None:
+            run.failure_metadata = {"code": "SCENE_SETTLEMENT_DEFERRED"}
 
 
 def _fail(factory: sessionmaker[Session], run_id: UUID, code: str, execution_id: UUID | None = None) -> None:
@@ -132,18 +168,45 @@ def reconcile_canvas_specialist_runs(session: Session, *, now: datetime | None =
     """
     clock = now or datetime.now(UTC)
     changed = 0
-    runs = session.scalars(
-        select(StudioCanvasSpecialistRun)
+    # Do not bulk-lock Runs here: Scene acceptance/admission use Runtime ->
+    # Run.  Candidate IDs are intentionally unlocked; each candidate is then
+    # re-read under that same canonical order.
+    run_ids = session.scalars(
+        select(StudioCanvasSpecialistRun.id)
         .where(StudioCanvasSpecialistRun.status.in_(("PENDING", "RUNNING", "COMPLETED")))
-        .with_for_update(skip_locked=True)
-    )
-    for run in runs:
+    ).all()
+    for run_id in run_ids:
+        unguarded_run = session.get(StudioCanvasSpecialistRun, run_id)
+        if unguarded_run is None:
+            continue
+        runtime = session.execute(
+            select(StudioRuntime)
+            .where(StudioRuntime.id == unguarded_run.studio_runtime_id)
+            .with_for_update(skip_locked=True)
+        ).scalar_one_or_none()
+        if runtime is None:
+            continue
+        run = session.execute(
+            select(StudioCanvasSpecialistRun)
+            .where(StudioCanvasSpecialistRun.id == run_id)
+            .with_for_update(skip_locked=True)
+        ).scalar_one_or_none()
+        if run is None:
+            continue
         job = session.get(Job, run.job_id, with_for_update=True) if run.job_id is not None else None
         if run.status == "COMPLETED":
             has_snapshot = session.execute(select(StudioSnapshot.id).where(StudioSnapshot.studio_runtime_id == run.studio_runtime_id)).scalar_one_or_none() is not None
             if run.scene_id is None and isinstance(run.proposal_payload, dict) and has_snapshot:
-                accept_completed_process_run(session, run.id)
-            if job is not None and job.status == JobStatus.RUNNING.value and job.lease_expires_at is not None and job.lease_expires_at <= clock:
+                try:
+                    accept_completed_process_run(session, run.id)
+                except Exception:
+                    _logger.exception("Canvas Specialist reconciliation deferred Scene settlement for run %s", run.id)
+                    run.failure_metadata = {"code": "SCENE_SETTLEMENT_DEFERRED"}
+                    continue
+            if job is not None and (
+                job.status == JobStatus.FAILED.value
+                or (job.status == JobStatus.RUNNING.value and job.lease_expires_at is not None and job.lease_expires_at <= clock)
+            ):
                 job.status = JobStatus.COMPLETED.value
                 job.result = {"run_id": str(run.id), "run_status": run.status, "proposal_digest": run.proposal_digest}
                 job.completed_at = clock

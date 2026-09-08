@@ -33,7 +33,14 @@ def accept_completed_process_run(session: Session, run_id, *, before_commit=None
         run = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.id == run_id).with_for_update()).scalar_one()
         if run.scene_id is not None:
             return session.get(StudioScene, run.scene_id)
-        if run.status != "COMPLETED" or not isinstance(run.proposal_payload, dict) or run.deadline_at and run.deadline_at <= datetime.now(UTC):
+        # The generation deadline governs provider/proposal completion.  A
+        # proposal already committed within that deadline remains settleable
+        # after a worker crash or later reconciliation.
+        completed_after_deadline = (
+            run.deadline_at is not None
+            and (run.completed_at is None or run.completed_at >= run.deadline_at)
+        )
+        if run.status != "COMPLETED" or not isinstance(run.proposal_payload, dict) or completed_after_deadline:
             if run.status == "COMPLETED":
                 run.status, run.failure_metadata = "REJECTED", {"code": "STALE_OR_INCOMPLETE_ACCEPTANCE"}
             return None

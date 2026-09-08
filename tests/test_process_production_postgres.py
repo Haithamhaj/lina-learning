@@ -1,9 +1,12 @@
 """CS-05 atomic Process Scene acceptance on the disposable PostgreSQL database."""
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 import json
 import os
+from threading import Barrier
 from uuid import uuid4
 
 import pytest
@@ -11,6 +14,7 @@ from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from services.platform.db import models as m
+from services.platform.db.models import ModelTask
 from services.platform.db.connection import normalize_database_url
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
 from services.studio.canvas_specialist import admit_committed_visual_order
@@ -20,6 +24,9 @@ from services.studio.process_production_acceptance import ProcessAcceptanceFailu
 from services.studio.reducer import CORE_EVENT_SCHEMA_VERSION
 from services.studio.service import StudioStateService
 from services.studio.subjects import process_visual as awareness
+from workers.studio_handlers import _settle
+from workers.job_worker import JobHandlerRegistry, run_once
+from workers.studio_handlers import reconcile_canvas_specialist_runs, register_canvas_specialist_handlers
 
 
 pytestmark = pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="PostgreSQL DATABASE_URL is required")
@@ -101,7 +108,7 @@ def _run(factory: sessionmaker[Session], *, with_active: bool = True) -> tuple[o
         session.add(message); session.flush()
         run = admit_committed_visual_order(session, student_id=student.id, learning_session_id=learning.id, source_message_id=message.id)
         assert run is not None
-        run.status, run.proposal_payload = "COMPLETED", _proposal()
+        run.status, run.proposal_payload, run.completed_at = "COMPLETED", _proposal(), datetime.now(UTC)
         return student.id, learning.id, runtime.id, run.id
 
 
@@ -159,6 +166,258 @@ def test_stale_result_is_rejected_without_replacing_active_scene(factory: sessio
         active = session.scalar(select(m.StudioScene).where(m.StudioScene.studio_runtime_id == runtime_id, m.StudioScene.status == "ACTIVE"))
         assert run is not None and run.status == "REJECTED" and run.failure_metadata == {"code": "ACTIVE_SCENE_CHANGED"}
         assert active is not None and active.activity_key == awareness.ACTIVITY_KEY
+
+
+def test_aud01_settle_reports_deterministic_scene_rejection_not_stale_completed_status(
+    factory: sessionmaker[Session],
+) -> None:
+    """A committed proposal's job result reflects the later deterministic Run truth."""
+    _, _, _, run_id = _run(factory)
+    with factory.begin() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert run is not None
+        run.status = "RUNNING"
+        run.proposal_payload = None
+        run.base_scene_version += 1
+
+    result = _settle(factory, run_id, _proposal(), None)
+
+    with factory() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert run is not None and run.status == "REJECTED"
+        assert result["run_status"] == "REJECTED"
+        assert result["scene_id"] is None
+
+
+def test_aud01_completed_within_generation_deadline_can_settle_after_restart(
+    factory: sessionmaker[Session],
+) -> None:
+    """Acceptance judges the durable completion instant, never reconciliation wall time."""
+    from datetime import UTC, datetime, timedelta
+
+    _, _, _, run_id = _run(factory)
+    with factory.begin() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert run is not None
+        run.deadline_at = datetime.now(UTC) - timedelta(seconds=1)
+        run.completed_at = run.deadline_at - timedelta(seconds=1)
+
+        scene = accept_completed_process_run(session, run_id)
+        assert scene is not None
+
+
+def test_aud01_scene_rejection_keeps_successful_compose_job_truthful(
+    factory: sessionmaker[Session],
+) -> None:
+    """A deterministic CS-05 rejection is not a false provider failure."""
+    _, _, _, run_id = _run(factory)
+    with factory.begin() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert run is not None and run.job_id is not None
+        run.status, run.proposal_payload, run.base_scene_version = "PENDING", None, run.base_scene_version + 1
+        job_id = run.job_id
+    calls = 0
+
+    class Provider:
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            nonlocal calls
+            calls += 1
+            return ModelResult(output=_proposal())
+
+    registry = JobHandlerRegistry()
+    register_canvas_specialist_handlers(
+        registry, session_factory=factory,
+        gateway_factory=lambda session: ModelGateway(
+            session, routes={ModelTask.CANVAS_SPECIALIST: ModelRoute("fixture", "gpt-5.6-luna")}, providers={"fixture": Provider()},
+        ),
+    )
+    assert run_once(factory, registry, worker_id="aud01-rejected") == m.JobStatus.COMPLETED
+    with factory() as session:
+        run, job = session.get(m.StudioCanvasSpecialistRun, run_id), session.get(m.Job, job_id)
+        assert calls == 1
+        assert run is not None and run.status == "REJECTED" and isinstance(run.proposal_payload, dict)
+        assert job is not None and job.status == "COMPLETED"
+        assert job.result is not None and job.result["run_status"] == "REJECTED"
+
+
+def test_aud01_transient_settlement_defers_without_regeneration_then_reconciles(
+    factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed deterministic effect is retryable from the committed proposal only."""
+    _, _, _, run_id = _run(factory)
+    with factory.begin() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert run is not None and run.job_id is not None
+        run.status, run.proposal_payload = "PENDING", None
+        job_id = run.job_id
+    calls = 0
+
+    class Provider:
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            nonlocal calls
+            calls += 1
+            return ModelResult(output=_proposal())
+
+    def injected_failure(session: Session, run_id: object):
+        raise ProcessAcceptanceFailure("injected transient settlement failure")
+
+    monkeypatch.setattr("workers.studio_handlers.accept_completed_process_run", injected_failure)
+    registry = JobHandlerRegistry()
+    register_canvas_specialist_handlers(
+        registry, session_factory=factory,
+        gateway_factory=lambda session: ModelGateway(
+            session, routes={ModelTask.CANVAS_SPECIALIST: ModelRoute("fixture", "gpt-5.6-luna")}, providers={"fixture": Provider()},
+        ),
+    )
+    assert run_once(factory, registry, worker_id="aud01-deferred") == m.JobStatus.COMPLETED
+    with factory() as session:
+        run, job = session.get(m.StudioCanvasSpecialistRun, run_id), session.get(m.Job, job_id)
+        assert calls == 1
+        assert run is not None and run.status == "COMPLETED" and isinstance(run.proposal_payload, dict)
+        assert run.scene_id is None and run.failure_metadata == {"code": "SCENE_SETTLEMENT_DEFERRED"}
+        assert job is not None and job.status == "COMPLETED"
+
+    monkeypatch.setattr("workers.studio_handlers.accept_completed_process_run", accept_completed_process_run)
+    with factory.begin() as session:
+        assert reconcile_canvas_specialist_runs(session) == 0
+    with factory() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert calls == 1
+        assert run is not None and run.status == "COMPLETED" and run.scene_id is not None
+
+
+def test_aud01_reconciliation_repairs_false_failed_job_after_durable_proposal(
+    factory: sessionmaker[Session],
+) -> None:
+    """A crash after proposal commit cannot leave accepted Scene truth paired with Job FAILED."""
+    _, _, _, run_id = _run(factory)
+    with factory.begin() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert run is not None and run.job_id is not None
+        job = session.get(m.Job, run.job_id)
+        assert job is not None
+        job.status, job.last_error = "FAILED", "old settlement exception"
+        job_id = job.id
+
+    with factory.begin() as session:
+        assert reconcile_canvas_specialist_runs(session) == 1
+    with factory() as session:
+        run, job = session.get(m.StudioCanvasSpecialistRun, run_id), session.get(m.Job, job_id)
+        assert run is not None and run.status == "COMPLETED" and run.scene_id is not None
+        assert job is not None and job.status == "COMPLETED" and job.last_error is None
+        assert job.result is not None and job.result["run_status"] == "COMPLETED"
+
+
+def test_aud01_reconciliation_and_newer_admission_terminate_without_lock_inversion(
+    factory: sessionmaker[Session],
+) -> None:
+    """PostgreSQL proves reconciliation no longer holds Run while acquiring Runtime."""
+    student_id, learning_id, _, old_run_id = _run(factory)
+    with factory.begin() as session:
+        old = session.get(m.StudioCanvasSpecialistRun, old_run_id)
+        assert old is not None
+        source = session.get(m.LearningMessage, old.source_message_id)
+        assert source is not None
+        pack = dict(source.payload["workspace_visual"]["frozen_composition_pack"])
+        pack["admitted_order"] = {"objective": "Explain the newer process."}
+        digest = sha256(json.dumps(pack, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+        message = m.LearningMessage(
+            session_id=learning_id, role="tutor", content="Newer Tutor order",
+            payload={"workspace_visual": {"status": "ADMITTED", "order_digest": digest, "frozen_composition_pack": pack}},
+            created_at=source.created_at + timedelta(microseconds=1),
+        )
+        session.add(message); session.flush()
+        newer_message_id = message.id
+    gate = Barrier(2)
+
+    def reconcile() -> int:
+        gate.wait(timeout=2)
+        with factory.begin() as session:
+            session.execute(text("SET LOCAL lock_timeout = '1000ms'"))
+            return reconcile_canvas_specialist_runs(session)
+
+    def admit_newer() -> object:
+        with factory.begin() as session:
+            gate.wait(timeout=2)
+            return admit_committed_visual_order(
+                session, student_id=student_id, learning_session_id=learning_id, source_message_id=newer_message_id,
+            )
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        reconciled = pool.submit(reconcile)
+        newer = pool.submit(admit_newer)
+        assert reconciled.result(timeout=5) >= 0
+        new_run = newer.result(timeout=5)
+    assert new_run is not None
+    with factory() as session:
+        old = session.get(m.StudioCanvasSpecialistRun, old_run_id)
+        newest = session.get(m.StudioCanvasSpecialistRun, new_run.id)
+        assert old is not None and old.status in {"REJECTED", "SUPERSEDED"} and old.scene_id is None
+        assert newest is not None and newest.source_message_id == newer_message_id and newest.status == "PENDING"
+
+
+def test_aud01_genuinely_late_provider_result_is_terminal_without_scene_or_regeneration(
+    factory: sessionmaker[Session],
+) -> None:
+    """The protected post-provider deadline check still rejects a late model result."""
+    _, _, _, run_id = _run(factory)
+    with factory.begin() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert run is not None and run.job_id is not None
+        run.status, run.proposal_payload = "PENDING", None
+        job_id = run.job_id
+    calls = 0
+
+    class LateProvider:
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            nonlocal calls
+            calls += 1
+            with factory.begin() as session:
+                run = session.get(m.StudioCanvasSpecialistRun, run_id)
+                assert run is not None
+                run.deadline_at = datetime.now(UTC) - timedelta(seconds=1)
+            return ModelResult(output=_proposal())
+
+    registry = JobHandlerRegistry()
+    register_canvas_specialist_handlers(
+        registry, session_factory=factory,
+        gateway_factory=lambda session: ModelGateway(
+            session, routes={ModelTask.CANVAS_SPECIALIST: ModelRoute("fixture", "gpt-5.6-luna")}, providers={"fixture": LateProvider()},
+        ),
+    )
+    assert run_once(factory, registry, worker_id="aud01-late") == m.JobStatus.COMPLETED
+    assert run_once(factory, registry, worker_id="aud01-late-again") is None
+    with factory() as session:
+        run, job = session.get(m.StudioCanvasSpecialistRun, run_id), session.get(m.Job, job_id)
+        assert calls == 1
+        assert run is not None and run.status == "FAILED" and run.scene_id is None and run.proposal_payload is None
+        assert job is not None and job.status == "COMPLETED"
+
+
+def test_aud01_unusable_completed_run_cannot_poison_other_reconciliation_work(
+    factory: sessionmaker[Session],
+) -> None:
+    """One deterministic rejection leaves the same poll usable for another eligible completion."""
+    _, _, _, bad_run_id = _run(factory)
+    _, _, _, good_run_id = _run(factory)
+    clock = datetime.now(UTC)
+    with factory.begin() as session:
+        bad = session.get(m.StudioCanvasSpecialistRun, bad_run_id)
+        good = session.get(m.StudioCanvasSpecialistRun, good_run_id)
+        assert bad is not None and good is not None and good.job_id is not None
+        bad.base_scene_version += 1
+        good_job = session.get(m.Job, good.job_id)
+        assert good_job is not None
+        good_job.status, good_job.attempt_count, good_job.lease_expires_at = "RUNNING", 1, clock - timedelta(seconds=1)
+        good_job_id = good_job.id
+
+    with factory.begin() as session:
+        assert reconcile_canvas_specialist_runs(session, now=clock) == 1
+    with factory() as session:
+        bad, good, good_job = session.get(m.StudioCanvasSpecialistRun, bad_run_id), session.get(m.StudioCanvasSpecialistRun, good_run_id), session.get(m.Job, good_job_id)
+        assert bad is not None and bad.status == "REJECTED" and bad.scene_id is None
+        assert good is not None and good.status == "COMPLETED" and good.scene_id is not None
+        assert good_job is not None and good_job.status == "COMPLETED"
 
 
 def test_relation_explanation_uses_one_runtime03_tutor_turn_with_exact_source(factory: sessionmaker[Session]) -> None:
