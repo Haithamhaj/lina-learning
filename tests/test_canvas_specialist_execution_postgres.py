@@ -229,8 +229,8 @@ def test_newer_admitted_order_supersedes_pending_work_before_provider_execution(
         pack["admitted_order"] = {"objective": "Explain a newer process."}
         digest = sha256(json.dumps(pack, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
         newer_message = m.LearningMessage(
-            session_id=older.learning_session_id, role="tutor", content="Newer Tutor", ai_execution_id=message.ai_execution_id,
-            payload={"workspace_visual": {"status": "ADMITTED", "order_digest": digest, "frozen_composition_pack": pack}},
+                session_id=older.learning_session_id, role="tutor", content="Newer Tutor", ai_execution_id=message.ai_execution_id,
+                payload={"workspace_visual": {"status": "ADMITTED", "order_digest": digest, "frozen_composition_pack": pack}}, created_at=message.created_at + timedelta(microseconds=1),
         )
         session.add(newer_message); session.flush()
         newer = admit_committed_visual_order(

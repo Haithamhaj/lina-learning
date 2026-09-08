@@ -140,6 +140,9 @@ def reconcile_canvas_specialist_runs(session: Session, *, now: datetime | None =
     for run in runs:
         job = session.get(Job, run.job_id, with_for_update=True) if run.job_id is not None else None
         if run.status == "COMPLETED":
+            has_snapshot = session.execute(select(StudioSnapshot.id).where(StudioSnapshot.studio_runtime_id == run.studio_runtime_id)).scalar_one_or_none() is not None
+            if run.scene_id is None and isinstance(run.proposal_payload, dict) and has_snapshot:
+                accept_completed_process_run(session, run.id)
             if job is not None and job.status == JobStatus.RUNNING.value and job.lease_expires_at is not None and job.lease_expires_at <= clock:
                 job.status = JobStatus.COMPLETED.value
                 job.result = {"run_id": str(run.id), "run_status": run.status, "proposal_digest": run.proposal_digest}

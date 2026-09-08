@@ -145,8 +145,9 @@ def admit_committed_visual_order(session: Session, *, student_id: UUID, learning
     capability = pack.get("capability_pack")
     if not isinstance(capability, dict) or capability.get("identity") != PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY:
         return None
-    admitted_messages = session.scalars(select(LearningMessage).where(LearningMessage.session_id == learning_session_id, LearningMessage.role == "tutor").with_for_update())
-    if any(candidate.id != message.id and candidate.created_at > message.created_at and isinstance(candidate.payload, dict) and isinstance(candidate.payload.get("workspace_visual"), dict) and candidate.payload["workspace_visual"].get("status") == "ADMITTED" for candidate in admitted_messages):
+    admitted_messages = session.scalars(select(LearningMessage).where(LearningMessage.session_id == learning_session_id, LearningMessage.role == "tutor").order_by(LearningMessage.created_at.desc(), LearningMessage.id.asc()).with_for_update())
+    newest = next((candidate for candidate in admitted_messages if isinstance(candidate.payload, dict) and isinstance(candidate.payload.get("workspace_visual"), dict) and candidate.payload["workspace_visual"].get("status") == "ADMITTED"), None)
+    if newest is None or newest.id != message.id:
         return None
     existing = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.source_message_id == source_message_id, StudioCanvasSpecialistRun.order_digest == digest, StudioCanvasSpecialistRun.capability_profile_version == PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY)).scalar_one_or_none()
     if existing is not None:

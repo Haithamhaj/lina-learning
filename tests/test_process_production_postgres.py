@@ -75,7 +75,7 @@ def _proposal() -> dict[str, object]:
     }
 
 
-def _run(factory: sessionmaker[Session]) -> tuple[object, object, object, object]:
+def _run(factory: sessionmaker[Session], *, with_active: bool = True) -> tuple[object, object, object, object]:
     with factory.begin() as session:
         user = m.User(identity_provider="cs05", external_subject=uuid4().hex)
         session.add(user); session.flush()
@@ -91,7 +91,8 @@ def _run(factory: sessionmaker[Session]) -> tuple[object, object, object, object
             renderer_key=awareness.RENDERER_KEY, renderer_version=awareness.RENDERER_VERSION, activity_contract_version=awareness.ACTIVITY_VERSION,
             payload_schema_version=awareness.SEED_VERSION, seed_payload=_seed(), accessibility_payload={}, locale="en", direction="ltr",
         ))
-        state.append_event(AppendStudioEventCommand(runtime_id=runtime.id, student_id=student.id, learning_session_id=learning.id,
+        if with_active:
+            state.append_event(AppendStudioEventCommand(runtime_id=runtime.id, student_id=student.id, learning_session_id=learning.id,
             event_kind="studio.scene.activated", event_schema_version=CORE_EVENT_SCHEMA_VERSION, actor=StudioActor.SYSTEM,
             payload_schema_version="studio-scene-activated-v1", payload={}, scene_id=old.id, base_scene_version=old.scene_version,
             idempotency_key="cs05-old-activate"))
@@ -118,6 +119,19 @@ def test_atomic_replacement_is_replayable_and_idempotent(factory: sessionmaker[S
         assert run is not None and run.scene_id == active.id and run.accepted_scene_version == active.scene_version
         assert old is not None and active.activity_key == "process_visual_production"
         assert replay["current_scene_id"] == active.id and replay["state_payload"]["scene_seed"] == active.seed_payload
+
+
+def test_first_activation_without_prior_active_scene_is_authoritative(factory: sessionmaker[Session]) -> None:
+    student_id, _, runtime_id, run_id = _run(factory, with_active=False)
+    with factory.begin() as session:
+        scene = accept_completed_process_run(session, run_id)
+        assert scene is not None
+    with factory() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id)
+        active = session.scalar(select(m.StudioScene).where(m.StudioScene.studio_runtime_id == runtime_id, m.StudioScene.status == "ACTIVE"))
+        replay = StudioStateService(session).rebuild_snapshot(runtime_id=runtime_id, student_id=student_id)
+        assert run is not None and active is not None and run.scene_id == active.id and run.accepted_scene_version == active.scene_version
+        assert replay["current_scene_id"] == active.id
 
 
 def test_rollback_keeps_prior_active_scene_usable(factory: sessionmaker[Session]) -> None:
@@ -167,7 +181,10 @@ def test_relation_explanation_uses_one_runtime03_tutor_turn_with_exact_source(fa
         def stream(self, route, payload):
             self.calls.append(payload)
             source = payload["studio_interaction_context"]["current_interaction"]
-            assert source == {"action": "REQUEST_EXPLANATION", "target_id": "collect-to-filter", "target_kind": "relation", "from": "collect", "to": "filter", "meaning": "then"}
+            if len(self.calls) == 1:
+                assert source == {"action": "REQUEST_EXPLANATION", "target_id": "collect-to-filter", "target_kind": "relation", "from": "collect", "to": "filter", "meaning": "then"}
+            else:
+                assert source == {"action": "REQUEST_EXPLANATION", "target_id": "collect", "target_kind": "object", "label": "Collect", "detail": "Collect water."}
             output = {"text": "Collect comes before filter in this process.", "workspace_intent": None, "suggested_actions": [], "guided_check": None,
                 "teaching_mode": None, "teaching_strategy": None, "teaching_method_id": None, "prior_method_relation": None,
                 "candidate_metadata": None, "provisional_broad_subject": None, "segment_relation": None, "structured_segment_state": None}
@@ -185,9 +202,23 @@ def test_relation_explanation_uses_one_runtime03_tutor_turn_with_exact_source(fa
     turn = service.persist_canvas_turn(admission=admission, result=result, student_id=student_id)
     service.finalize_delivered_turn(admission=admission, turn=turn, student_id=student_id)
 
+    with factory.begin() as session:
+        current = session.get(m.StudioScene, scene.id)
+        stage_event = StudioStateService(session).append_event(AppendStudioEventCommand(
+            runtime_id=runtime_id, student_id=student_id, learning_session_id=learning_id, event_kind=None, actor=StudioActor.STUDENT,
+            event_schema_version=None, payload_schema_version="process-visual-production-action-v1", payload={"target_id": "collect"},
+            scene_id=current.id, base_scene_version=current.scene_version, action_key="REQUEST_EXPLANATION", idempotency_key="cs05-stage-explain"))
+        stage_interaction_id = stage_event.interaction.id
+    stage_admission = service.admit(student_id=student_id, learning_session_id=learning_id, runtime_id=runtime_id, interaction_id=stage_interaction_id)
+    stage_events = list(service.stream_admitted(admission=stage_admission, student_id=student_id))
+    stage_result = next(item.result for item in stage_events if isinstance(item, StreamComplete))
+    stage_turn = service.persist_canvas_turn(admission=stage_admission, result=stage_result, student_id=student_id)
+    service.finalize_delivered_turn(admission=stage_admission, turn=stage_turn, student_id=student_id)
+
     with factory() as session:
         interaction = session.get(m.StudioStudentInteraction, interaction_id)
-        assert len(provider.calls) == 1 and interaction is not None and interaction.status == "COMPLETED"
+        stage_interaction = session.get(m.StudioStudentInteraction, stage_interaction_id)
+        assert len(provider.calls) == 2 and interaction is not None and interaction.status == "COMPLETED" and stage_interaction is not None and stage_interaction.status == "COMPLETED"
         assert session.scalar(select(m.LearningMessage).where(m.LearningMessage.session_id == learning_id, m.LearningMessage.role == "student")) is None
 
 

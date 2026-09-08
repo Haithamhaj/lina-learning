@@ -49,7 +49,7 @@ def accept_completed_process_run(session: Session, run_id, *, before_commit=None
             run.status, run.failure_metadata = "REJECTED", {"code": "CAPABILITY_IDENTITY_INVALID"}; return None
         admitted_messages = session.scalars(
             select(LearningMessage).where(LearningMessage.session_id == run.learning_session_id, LearningMessage.role == "tutor")
-            .order_by(LearningMessage.created_at.desc())
+            .order_by(LearningMessage.created_at.desc(), LearningMessage.id.asc())
         )
         newest = next((candidate for candidate in admitted_messages if isinstance(candidate.payload, dict)
                        and isinstance(candidate.payload.get("workspace_visual"), dict)
@@ -62,14 +62,17 @@ def accept_completed_process_run(session: Session, run_id, *, before_commit=None
             run.status, run.failure_metadata = "REJECTED", {"code": "ACTIVE_SCENE_CHANGED"}; return None
         if active is None and (run.base_scene_id is not None or run.base_scene_version != 0):
             run.status, run.failure_metadata = "REJECTED", {"code": "ACTIVE_SCENE_MISSING"}; return None
-        locale = "ar" if pack.get("locale") == "ar" else "en"
-        seed = proposal_to_scene_seed(run.proposal_payload, pack, locale=locale, direction="rtl" if locale == "ar" else "ltr")
+        locale = pack.get("locale")
+        direction = pack.get("direction")
+        if not isinstance(locale, str) or not isinstance(direction, str):
+            run.status, run.failure_metadata = "REJECTED", {"code": "FROZEN_LOCALE_DIRECTION_INVALID"}; return None
+        seed = proposal_to_scene_seed(run.proposal_payload, pack, locale="ar" if locale.startswith("ar") else "en", direction=direction)
         state = StudioStateService(session)
         scene = state.accept_scene(CreateSceneCommand(student_id=run.student_id, learning_session_id=run.learning_session_id,
             subject_key="SCIENCE", subject_profile_version=PROFILE_VERSION, concept_keys=tuple(stage["id"] for stage in seed["stages"]),
             activity_key=ACTIVITY_KEY, artifact_type="visual-explanation", renderer_key=RENDERER_KEY, renderer_version=RENDERER_VERSION,
             activity_contract_version=ACTIVITY_VERSION, payload_schema_version=SCENE_PAYLOAD_SCHEMA_VERSION, seed_payload=seed,
-            accessibility_payload={"contract": "process-visual-production-v1"}, locale=locale, direction="rtl" if locale == "ar" else "ltr",
+            accessibility_payload={"contract": "process-visual-production-v1"}, locale=locale, direction=direction,
             source_message_id=message.id, source_segment_id=message.segment_id))
         if active is not None:
             state.append_event(AppendStudioEventCommand(runtime_id=run.studio_runtime_id, student_id=run.student_id, learning_session_id=run.learning_session_id,
