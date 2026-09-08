@@ -10,6 +10,7 @@ export function KonvaProof({
   onSemanticPlacement,
   object = { id: "object-a", label: "A" },
   target = { id: "target-b", label: "B" },
+  allowReturn = true,
   title = "ضع A في B · Place and explore",
   prompt = "اسحب الدائرة إلى المنطقة الخضراء، أو استخدم الأزرار.",
 }: {
@@ -17,6 +18,7 @@ export function KonvaProof({
   onSemanticPlacement: (value: SemanticPlacement) => void;
   object?: { id: string; label: string };
   target?: { id: string; label: string };
+  allowReturn?: boolean;
   title?: string;
   prompt?: string;
 }) {
@@ -48,7 +50,7 @@ export function KonvaProof({
         </Group>
       </Layer></Stage>
     </div>
-    <div className="toolbelt-actions"><button aria-label={`Place ${object.label} in ${target.label}`} aria-pressed={placed} onClick={() => onSemanticPlacement(semanticPlacement(true, object.id, target.id))}>ضع {object.label} في {target.label}</button><button aria-label={`Return ${object.label}`} onClick={() => onSemanticPlacement(semanticPlacement(false, object.id, target.id))}>أعد {object.label}</button></div>
+    <div className="toolbelt-actions"><button aria-label={`Place ${object.label} in ${target.label}`} aria-pressed={placed} onClick={() => onSemanticPlacement(semanticPlacement(true, object.id, target.id))}>ضع {object.label} في {target.label}</button>{allowReturn ? <button aria-label={`Return ${object.label}`} onClick={() => onSemanticPlacement(semanticPlacement(false, object.id, target.id))}>أعد {object.label}</button> : null}</div>
     <output aria-live="polite">{placed ? `${object.label} داخل ${target.label}` : `${object.label} خارج ${target.label}`}</output>
   </section>;
 }

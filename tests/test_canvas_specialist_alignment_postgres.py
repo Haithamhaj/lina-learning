@@ -230,6 +230,40 @@ def test_null_and_admitted_visual_orders_round_trip_with_one_automatic_specialis
         assert run is not None and run.status == "PENDING" and run.job_id == job.id
 
 
+@pytest.mark.parametrize(("pattern", "goal"), [
+    ("SPATIAL_MANIPULATION", "PLACE_OBJECT"),
+    ("MATH_VISUALIZATION", "CONSTRUCT_POINT"),
+    ("MATH_INPUT", "AUTHOR_EXPRESSION"),
+])
+def test_primary_tutor_naturally_admits_each_non_process_composition_once(
+    factory: sessionmaker[Session], pattern: str, goal: str,
+) -> None:
+    with factory.begin() as session:
+        learning_session = _learning_session(session)
+        session.add(m.StudioRuntime(student_id=learning_session.student_id, learning_session_id=learning_session.id))
+        session.flush()
+        order = _order(
+            version="workspace-visual-order-v2", pattern=pattern, topology=None,
+            interaction_goal=goal, objective=f"Grade 5 objective for {pattern}",
+            required_semantics=["Show the exact named learning object.", "Keep its educational meaning explicit."],
+            required_relations=["Preserve the stated educational relation."],
+            must_not_imply=[], source_references=[], personal_fact_keys=[], use_display_name=False,
+        )
+        runtime, provider = _runtime(session, order)
+        list(runtime.stream_turn(
+            learning_session=learning_session,
+            question=f"Can we work through this {pattern.lower().replace('_', ' ')} task visually?",
+        ))
+        session.flush()
+        visual = _tutor_message(session, learning_session).payload["workspace_visual"]
+        runs = session.scalars(select(m.StudioCanvasSpecialistRun)).all()
+        jobs = session.scalars(select(m.Job)).all()
+        assert provider.calls == 1 and visual["status"] == "ADMITTED"
+        assert visual["admitted_order"]["pattern"] == pattern
+        assert visual["frozen_composition_pack"]["capability_pack"]["identity"].startswith("canvas-")
+        assert len(runs) == len(jobs) == 1 and runs[0].job_id == jobs[0].id
+
+
 def test_rejection_and_parent_redirect_persist_no_admitted_pack(factory: sessionmaker[Session]) -> None:
     with factory.begin() as session:
         learning_session = _learning_session(session)

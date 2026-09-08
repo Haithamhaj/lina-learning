@@ -71,3 +71,37 @@ def test_no_source_order_is_admitted_with_explicit_model_knowledge_grounding() -
         core_profile={},
     )
     assert admitted.frozen_composition_pack["grounding"] == {"origin": "ADMITTED_TUTOR_ORDER", "excerpts": []}
+
+
+@pytest.mark.parametrize(
+    "pattern,interaction_goal,expected_identity",
+    [
+        ("SPATIAL_MANIPULATION", "PLACE_OBJECT", "canvas-spatial-capability-pack-v1"),
+        ("MATH_VISUALIZATION", "CONSTRUCT_POINT", "canvas-math-visualization-capability-pack-v1"),
+        ("MATH_INPUT", "AUTHOR_EXPRESSION", "canvas-math-input-capability-pack-v1"),
+    ],
+)
+def test_v2_admission_freezes_exact_non_process_capability_without_technology(pattern, interaction_goal, expected_identity):
+    order = _order(
+        version="workspace-visual-order-v2",
+        pattern=pattern,
+        topology=None,
+        interaction_goal=interaction_goal,
+        source_references=[],
+        personal_fact_keys=[],
+    )
+    admitted = admit_visual_order(order, authorized_source_references={}, visual_personalization_catalog={}, core_profile={"grade_level": "5"})
+    pack = admitted.frozen_composition_pack
+    assert pack["version"] == "frozen-composition-pack-v3"
+    assert pack["capability_pack"]["identity"] == expected_identity
+    assert not any(name in repr(pack).lower() for name in ("konva", "jsxgraph", "mathlive", "renderer"))
+
+
+def test_v2_pattern_and_interaction_goal_must_match():
+    with pytest.raises(VisualOrderAdmissionError):
+        admit_visual_order(
+            _order(version="workspace-visual-order-v2", pattern="MATH_INPUT", topology=None, interaction_goal="PLACE_OBJECT"),
+            authorized_source_references={"book#butterfly": {"text": "A larva becomes a pupa."}},
+            visual_personalization_catalog={"favorite:butterfly": {"category": "FAVORITE", "display_statement": "Likes butterflies"}},
+            core_profile={},
+        )

@@ -250,4 +250,6 @@ def _instructions(capability_identity: str = "process-capability-pack-v1") -> st
     base = (directory / "SKILL.md").read_text()
     if capability_identity == "process-capability-pack-v2":
         return base + "\n\n" + (directory / "SKILL-v2.md").read_text() + "\n\n" + (directory / "process-capability-pack-v2.md").read_text()
+    if capability_identity.startswith("canvas-"):
+        return base + "\n\n" + (directory / "canvas-production-capability-pack-v1.md").read_text()
     return base + "\n\n" + (directory / "process-capability-pack-v1.md").read_text()

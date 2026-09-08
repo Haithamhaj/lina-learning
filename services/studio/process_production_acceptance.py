@@ -21,8 +21,8 @@ class ProcessAcceptanceFailure(RuntimeError):
     pass
 
 
-def accept_completed_process_run(session: Session, run_id, *, before_commit=None) -> StudioScene | None:
-    """Accept one valid current completion. This makes no model call and is idempotent."""
+def accept_completed_canvas_run(session: Session, run_id, *, before_commit=None) -> StudioScene | None:
+    """Accept one valid current Canvas completion without another model call."""
     with session.begin_nested():
         unguarded_run = session.get(StudioCanvasSpecialistRun, run_id)
         if unguarded_run is None:
@@ -53,7 +53,8 @@ def accept_completed_process_run(session: Session, run_id, *, before_commit=None
             proposal_contract(run.capability_profile_version, run.output_schema_version)
         except ValueError:
             run.status, run.failure_metadata = "REJECTED", {"code": "CAPABILITY_IDENTITY_INVALID"}; return None
-        if (run.subject_key != "PROCESS" or not isinstance(pack.get("capability_pack"), dict)
+        expected_subject = "PROCESS" if run.capability_profile_version.startswith("process-") else "MATH"
+        if (run.subject_key != expected_subject or not isinstance(pack.get("capability_pack"), dict)
                 or pack["capability_pack"].get("identity") != run.capability_profile_version
                 or not frozen_pack_identity_is_valid(pack, run.capability_profile_version)):
             run.status, run.failure_metadata = "REJECTED", {"code": "CAPABILITY_IDENTITY_INVALID"}; return None
@@ -80,33 +81,70 @@ def accept_completed_process_run(session: Session, run_id, *, before_commit=None
         # durable proposal.  Its validation failures are permanent proposal
         # rejection, unlike database/transaction failures later in settlement.
         try:
-            seed = proposal_to_scene_seed(
-                run.proposal_payload,
-                pack,
-                locale="ar" if locale.startswith("ar") else "en",
-                direction=direction,
-            )
+            if run.capability_profile_version.startswith("process-"):
+                seed = proposal_to_scene_seed(
+                    run.proposal_payload,
+                    pack,
+                    locale="ar" if locale.startswith("ar") else "en",
+                    direction=direction,
+                )
+                scene_contract = {
+                    "subject_key": "SCIENCE", "profile_version": PROFILE_VERSION,
+                    "concept_keys": tuple(stage["id"] for stage in seed["stages"]),
+                    "activity_key": ACTIVITY_KEY, "activity_version": ACTIVITY_VERSION,
+                    "renderer_key": RENDERER_KEY, "renderer_version": RENDERER_VERSION,
+                    "seed_version": SCENE_PAYLOAD_SCHEMA_VERSION, "artifact_type": "visual-explanation",
+                    "accessibility": "process-visual-production-v1",
+                }
+            else:
+                from services.studio.subjects.canvas_production import PROFILE_VERSION as CANVAS_PROFILE_VERSION, contract_for_pattern, proposal_to_scene_contract
+                seed = proposal_to_scene_contract(
+                    run.proposal_payload,
+                    pack,
+                    locale="ar" if locale.startswith("ar") else "en",
+                    direction=direction,
+                )
+                bounded = contract_for_pattern(str(seed["pattern"]))
+                if seed["pattern"] == "SPATIAL_MANIPULATION":
+                    concept_keys = tuple(item["semantic_key"] for item in (*seed["objects"], *seed["targets"]))
+                elif seed["pattern"] == "MATH_VISUALIZATION":
+                    concept_keys = (seed["point"]["semantic_key"],)
+                else:
+                    concept_keys = ("math-expression",)
+                scene_contract = {
+                    "subject_key": "MATH", "profile_version": CANVAS_PROFILE_VERSION,
+                    "concept_keys": concept_keys,
+                    "activity_key": bounded["activity_key"], "activity_version": bounded["activity_version"],
+                    "renderer_key": bounded["renderer_key"], "renderer_version": bounded["renderer_version"],
+                    "seed_version": bounded["seed_version"], "artifact_type": "interactive-activity",
+                    "accessibility": "canvas-production-v1",
+                }
         except (ValidationError, ValueError):
             run.status, run.failure_metadata = "REJECTED", {"code": "PROPOSAL_TO_SCENE_INVALID"}
             return None
         state = StudioStateService(session)
         scene = state.accept_scene(CreateSceneCommand(student_id=run.student_id, learning_session_id=run.learning_session_id,
-            subject_key="SCIENCE", subject_profile_version=PROFILE_VERSION, concept_keys=tuple(stage["id"] for stage in seed["stages"]),
-            activity_key=ACTIVITY_KEY, artifact_type="visual-explanation", renderer_key=RENDERER_KEY, renderer_version=RENDERER_VERSION,
-            activity_contract_version=ACTIVITY_VERSION, payload_schema_version=SCENE_PAYLOAD_SCHEMA_VERSION, seed_payload=seed,
-            accessibility_payload={"contract": "process-visual-production-v1"}, locale=locale, direction=direction,
+            subject_key=scene_contract["subject_key"], subject_profile_version=scene_contract["profile_version"], concept_keys=scene_contract["concept_keys"],
+            activity_key=scene_contract["activity_key"], artifact_type=scene_contract["artifact_type"], renderer_key=scene_contract["renderer_key"], renderer_version=scene_contract["renderer_version"],
+            activity_contract_version=scene_contract["activity_version"], payload_schema_version=scene_contract["seed_version"], seed_payload=seed,
+            accessibility_payload={"contract": scene_contract["accessibility"]}, locale=locale, direction=direction,
             source_message_id=message.id, source_segment_id=message.segment_id))
         if active is not None:
             state.append_event(AppendStudioEventCommand(runtime_id=run.studio_runtime_id, student_id=run.student_id, learning_session_id=run.learning_session_id,
                 event_kind="studio.scene.status_changed", event_schema_version=CORE_EVENT_SCHEMA_VERSION, actor=StudioActor.SYSTEM,
                 payload_schema_version="studio-scene-status-v1", payload={"status": "SUPERSEDED"}, scene_id=active.id,
                 base_scene_version=active.scene_version, source_message_id=message.id, source_segment_id=message.segment_id,
-                idempotency_key=f"process-production-supersede:{run.id}"))
+                idempotency_key=f"canvas-production-supersede:{run.id}"))
         state.append_event(AppendStudioEventCommand(runtime_id=run.studio_runtime_id, student_id=run.student_id, learning_session_id=run.learning_session_id,
             event_kind="studio.scene.activated", event_schema_version=CORE_EVENT_SCHEMA_VERSION, actor=StudioActor.SYSTEM,
             payload_schema_version="studio-scene-activated-v1", payload={}, scene_id=scene.id, base_scene_version=scene.scene_version,
-            source_message_id=message.id, source_segment_id=message.segment_id, idempotency_key=f"process-production-activate:{run.id}"))
+            source_message_id=message.id, source_segment_id=message.segment_id, idempotency_key=f"canvas-production-activate:{run.id}"))
         run.scene_id, run.accepted_scene_version = scene.id, scene.scene_version
         if before_commit is not None:
             before_commit()
         return scene
+
+
+def accept_completed_process_run(session: Session, run_id, *, before_commit=None) -> StudioScene | None:
+    """Backward-compatible name retained for accepted Process callers."""
+    return accept_completed_canvas_run(session, run_id, before_commit=before_commit)

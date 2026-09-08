@@ -6,6 +6,9 @@ export type ApprovedStudioRenderer =
   | "MATH_DECIMAL_PLACE_VALUE"
   | "SCIENCE_PROCESS_SEQUENCE"
   | "SCIENCE_PROCESS_PRODUCTION"
+  | "CANVAS_SPATIAL_MANIPULATION"
+  | "CANVAS_MATH_VISUALIZATION"
+  | "CANVAS_MATH_INPUT"
   | "ENGLISH_SENTENCE_ORDERING"
   | "ARABIC_SENTENCE_ORDERING";
 
@@ -14,6 +17,21 @@ type ApprovedContract = Omit<StudioActiveSceneContract, "scene_id" | "scene_vers
 };
 
 const approvedContracts: readonly ApprovedContract[] = [
+  {
+    renderer: "CANVAS_SPATIAL_MANIPULATION", subject_key: "MATH", subject_profile_version: "canvas-production-profile-v1",
+    activity_key: "canvas_spatial_manipulation", activity_contract_version: "canvas-spatial-activity-v1",
+    renderer_key: "canvas-spatial-placement", renderer_version: "canvas-spatial-placement-renderer-v1", payload_schema_version: "canvas-spatial-scene-v1",
+  },
+  {
+    renderer: "CANVAS_MATH_VISUALIZATION", subject_key: "MATH", subject_profile_version: "canvas-production-profile-v1",
+    activity_key: "canvas_math_visualization", activity_contract_version: "canvas-math-visualization-activity-v1",
+    renderer_key: "canvas-coordinate-construction", renderer_version: "canvas-coordinate-construction-renderer-v1", payload_schema_version: "canvas-math-visualization-scene-v1",
+  },
+  {
+    renderer: "CANVAS_MATH_INPUT", subject_key: "MATH", subject_profile_version: "canvas-production-profile-v1",
+    activity_key: "canvas_math_input", activity_contract_version: "canvas-math-input-activity-v1",
+    renderer_key: "canvas-math-expression-input", renderer_version: "canvas-math-expression-input-renderer-v1", payload_schema_version: "canvas-math-input-scene-v1",
+  },
   {
     renderer: "SCIENCE_PROCESS_PRODUCTION", subject_key: "SCIENCE", subject_profile_version: "process-visual-production-profile-v1",
     activity_key: "process_visual_production", activity_contract_version: "process-visual-production-activity-v1",

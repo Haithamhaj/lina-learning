@@ -1664,6 +1664,13 @@ Vision, Canvas, Parent Dashboard expansion, Track B, or other frozen work.
 ## CANVAS-FINALIZATION — Lina-ready visual experience
 **Status:** COMPLETE (2026-09-08)
 **Scope:** One application-owned semantic selector and direct review surface compose the accepted Process SEQUENCE/CYCLE plus spatial fraction placement, exact coordinate construction and controlled fraction-expression input.
-**Integration:** Process remains the live Studio/Daily pattern. The three new patterns remain review-only until an authorized activity defines server-owned Scene, Snapshot and operation contracts.
+**Integration:** This review milestone was subsequently promoted to the real Studio/Daily runtime by CANVAS-PRODUCTION-FINAL.
 **Verification:** Focused selection/toolbelt/Process regressions, isolated Chrome interaction proof, web typecheck, production build and `git diff --check` passed.
 **Reference:** `apps/web/components/studio/canvas-final-review.tsx`; `apps/web/lib/studio/visual-toolbelt/README.md`; `output/playwright/canvas-finalization/results.json`.
+
+## CANVAS-PRODUCTION-FINAL — Production composition and Daily integration
+**Status:** COMPLETE (2026-09-08)
+**Scope:** `workspace-visual-order-v2` and a strict versioned Specialist proposal union promote Spatial Manipulation, Math Visualization, and Math Input through the existing Worker/Gateway, server-owned Scene/Event/Snapshot runtime, exact Daily Renderer Host contracts, and Runtime-03 same-Tutor continuation. Historical Process proposal/runtime compatibility remains intact.
+**Verification:** Real GPT-5.6 Luna Worker/Gateway composition passed for all three new patterns and one Process regression. PostgreSQL tests cover natural Tutor admission, one-call composition, strict failure/stale replacement behavior, reducer/Event/Snapshot rebuild and reload, ownership, zero-call non-admission, and same-Tutor continuation. The production Renderer Host Chrome matrix passed all four patterns in Arabic/English, narrow/wide, reduced-motion, explicit-submit, semantic-operation, and reload states; web typecheck/build and `git diff --check` passed.
+**Limit:** Authenticated Daily browser proof remains unavailable because local Clerk configuration is absent; the browser proof uses exact production Scene/Snapshot contracts and the actual Daily `StudioRendererHost` in an authentication-independent harness.
+**Reference:** `services/studio/subjects/canvas_production.py`; `apps/web/components/studio/canvas-production-workspaces.tsx`; `output/playwright/canvas-production-final/results.json`.

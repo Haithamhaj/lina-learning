@@ -109,12 +109,19 @@ SEQUENCE and one CYCLE. Spatial manipulation uses the Grade-5 fraction example
 `¾ → less-than-one`; coordinate construction and fraction expression input use
 the application-controlled CS-07 adapters.
 
-Process is already wired through the production Studio/Daily path. The other
-three patterns are production-capable local components with semantic results,
-but remain review-only until a future authorized activity supplies its own
-server-owned Scene, Snapshot and operation contract. The finalization does not
-invent those durable contracts or imply Student persistence.
+All four patterns are now wired through the production Studio/Daily path. The
+three non-Process adapters receive only exact `canvas-production-profile-v1`
+Scene contracts from the Daily Renderer Host. Their server-owned reducers persist
+semantic placement, exact mathematical coordinates, or explicit LaTeX submission;
+browser pixel positions and unsubmitted keystrokes remain local.
 
 Final review evidence is saved under
 `output/playwright/canvas-finalization/`: overview screenshots plus separate
 Sequence, Cycle, spatial, coordinate and expression states, and `results.json`.
+
+Production integration evidence is saved under
+`output/playwright/canvas-production-final/`. Its authenticated-independent
+Chrome harness mounts the exact `StudioRendererHost` used by `/student/daily`
+with production Scene/Snapshot contracts because local Clerk configuration is
+absent. PostgreSQL tests separately prove durable Event/Snapshot replay, reload,
+stale replacement rejection, and same-Primary-Tutor continuation.

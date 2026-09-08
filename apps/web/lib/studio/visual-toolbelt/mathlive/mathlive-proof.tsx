@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import type { MathfieldElement } from "mathlive";
 import { serializeMathInput, type MathInput } from "../contracts";
 
-export function MathLiveProof({ value, onValueChange, onSubmit }: {
-  value: string; onValueChange: (value: string) => void; onSubmit?: (value: MathInput) => void;
+export function MathLiveProof({ value, onValueChange, onSubmit, title = "اكتب كسرًا · Write a fraction", prompt = "اكتب تعبيرك، ثم أرسله عندما تكون مستعدًا." }: {
+  value: string; onValueChange: (value: string) => void; onSubmit?: (value: MathInput) => void; title?: string; prompt?: string;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const field = useRef<MathfieldElement | null>(null);
@@ -47,8 +47,8 @@ export function MathLiveProof({ value, onValueChange, onSubmit }: {
     setSubmitted(null); setError(null);
   }, [value]);
   return <section className="toolbelt-card" data-engine="mathlive">
-    <span className="toolbelt-eyebrow">التعبير الرياضي</span><h2>اكتب كسرًا · Write a fraction</h2>
-    <p>اكتب تعبيرك، ثم أرسله عندما تكون مستعدًا.</p>
+    <span className="toolbelt-eyebrow">التعبير الرياضي</span><h2>{title}</h2>
+    <p>{prompt}</p>
     <div className="toolbelt-math" dir="ltr" ref={host}/>
     {failed && <label>LaTeX<input dir="ltr" aria-label="Mathematical expression input" value={value} onChange={event => onValueChange(event.target.value)}/></label>}
     <div className="toolbelt-actions"><button aria-label="Submit expression" onClick={() => {

@@ -57,6 +57,26 @@ test("the renderer host resolves the exact production Process contract", () => {
   }), "SCIENCE_PROCESS_PRODUCTION");
 });
 
+test("the renderer host resolves the three exact non-Process Canvas production contracts", () => {
+  const contracts = [
+    ["canvas_spatial_manipulation", "canvas-spatial-activity-v1", "canvas-spatial-placement", "canvas-spatial-placement-renderer-v1", "canvas-spatial-scene-v1", "CANVAS_SPATIAL_MANIPULATION"],
+    ["canvas_math_visualization", "canvas-math-visualization-activity-v1", "canvas-coordinate-construction", "canvas-coordinate-construction-renderer-v1", "canvas-math-visualization-scene-v1", "CANVAS_MATH_VISUALIZATION"],
+    ["canvas_math_input", "canvas-math-input-activity-v1", "canvas-math-expression-input", "canvas-math-expression-input-renderer-v1", "canvas-math-input-scene-v1", "CANVAS_MATH_INPUT"],
+  ] as const;
+  for (const [activity_key, activity_contract_version, renderer_key, renderer_version, payload_schema_version, expected] of contracts) {
+    assert.equal(resolveApprovedStudioRenderer({
+      ...englishScene,
+      subject_key: "MATH",
+      subject_profile_version: "canvas-production-profile-v1",
+      activity_key,
+      activity_contract_version,
+      renderer_key,
+      renderer_version,
+      payload_schema_version,
+    }), expected);
+  }
+});
+
 test("the renderer host resolves only the exact Arabic sentence-ordering contract", () => {
   assert.equal(resolveApprovedStudioRenderer({
     ...englishScene,

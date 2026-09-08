@@ -1,0 +1,23 @@
+html { background: #eaf2ef; }
+body { margin: 0; }
+.production-proof { box-sizing: border-box; min-height: 100vh; padding: clamp(14px, 3vw, 32px); color: #203f45; font-family: system-ui, sans-serif; }
+.production-proof * { box-sizing: border-box; }
+.production-proof > header { max-width: 1100px; margin: 0 auto 16px; padding: clamp(22px, 5vw, 42px); border-radius: 28px; color: #f7fffc; background: linear-gradient(135deg, #173f46, #28675d); box-shadow: 0 18px 44px #173f4624; }
+.production-proof > header span { color: #bce1d5; font-size: 12px; font-weight: 800; }
+.production-proof h1 { margin: 5px 0; font-size: clamp(28px, 5vw, 46px); }
+.production-proof > header p { margin: 0; color: #dcece7; }
+.production-proof nav, .proof-meta { display: flex; flex-wrap: wrap; gap: 9px; max-width: 1100px; margin: 12px auto; }
+.production-proof button { min-height: 44px; padding: 8px 15px; border: 1px solid #afcac2; border-radius: 12px; color: #234d46; background: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.production-proof button[aria-pressed="true"] { color: white; border-color: #245e51; background: #245e51; }
+.production-proof button:focus-visible, .production-proof input:focus-visible { outline: 3px solid #3563b5; outline-offset: 3px; }
+.proof-meta { align-items: center; padding: 10px 14px; border-radius: 16px; background: #f7fbf9; }
+.proof-meta span { margin-inline-end: auto; color: #5a7372; }
+.daily-shell { max-width: 1100px; min-width: 0; margin: 14px auto; padding: clamp(10px, 2vw, 20px); border: 1px solid #d5e3df; border-radius: 28px; background: #fff; box-shadow: 0 9px 28px #173f460c; }
+.daily-shell .space-y-3 > * + * { margin-top: 12px; }
+.daily-shell .flex { display: flex; }
+.daily-shell .flex-wrap { flex-wrap: wrap; }
+.daily-shell .gap-2 { gap: 8px; }
+.proof-audit { max-width: 1100px; margin: 14px auto; padding: 14px 18px; border-inline-start: 4px solid #5a9e89; border-radius: 12px; background: #f7fbf9; overflow-wrap: anywhere; }
+.proof-audit p { margin: 4px 0; }
+@media (max-width: 520px) { .production-proof { padding: 8px; } .production-proof > header, .daily-shell { border-radius: 20px; } }
+@media (prefers-reduced-motion: reduce) { .production-proof *, .production-proof *::before, .production-proof *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
