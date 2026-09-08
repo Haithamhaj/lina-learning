@@ -913,6 +913,8 @@ class StudioInteractionTutorService:
                 "Canvas-originated Studio interaction (server-owned bounded semantic control; no Chat Student message exists):\n"
                 f"{json.dumps(encoded_context, ensure_ascii=False)}\n\n"
                 "Respond naturally to the persisted semantic action and current Workspace state. "
+                "Complete any explanation requested by the semantic action or Scene prompt in this response; "
+                "do not announce an explanation and defer it. "
                 "Do not invent a Student question, explanation, reasoning, or source message. "
                 f"The result is internal and not yet a delivered Tutor turn.{workspace_input}"
             ),

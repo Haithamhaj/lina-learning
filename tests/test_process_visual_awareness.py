@@ -367,3 +367,50 @@ def test_cross_activity_current_process_gets_final_capacity_guard(monkeypatch):
         ]
         == "pupa"
     )
+
+
+def test_canvas_continuation_requires_requested_explanation_in_current_response(monkeypatch):
+    """A Tutor must not acknowledge a Canvas explanation request and defer the explanation."""
+    from types import SimpleNamespace
+    from services.studio import interactions
+    from services.studio.interactions import (
+        StudioInteractionTutorContext,
+        StudioInteractionTutorService,
+    )
+
+    context = StudioInteractionTutorContext(
+        uuid4(),
+        uuid4(),
+        uuid4(),
+        {
+            "event": {
+                "activity_key": "canvas_spatial_manipulation",
+                "action_key": "PLACE_OBJECT",
+                "action_payload": {
+                    "object_id": "three-quarters",
+                    "target_id": "less-than-one",
+                },
+            }
+        },
+        {
+            "active_activity_key": "canvas_spatial_manipulation",
+            "state": {
+                "scene_seed": {
+                    "prompt": "Explain why the placement is correct."
+                }
+            },
+        },
+    )
+    monkeypatch.setattr(
+        interactions,
+        "get_settings",
+        lambda: SimpleNamespace(tutor_max_output_tokens=1000),
+    )
+
+    payload = StudioInteractionTutorService(
+        bind=None,
+        gateway_factory=lambda _: None,
+    )._model_payload(context)
+
+    assert "Complete any explanation requested" in payload["input"]
+    assert "do not announce an explanation and defer it" in payload["input"]
