@@ -286,6 +286,43 @@ def test_aud01_transient_settlement_defers_without_regeneration_then_reconciles(
         assert run is not None and run.status == "COMPLETED" and run.scene_id is not None
 
 
+def test_aud01_corrupt_durable_proposal_is_rejected_and_never_reconciled(
+    factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Only infrastructure failures defer; proposal-to-seed invalidity is terminal."""
+    _, _, runtime_id, run_id = _run(factory)
+    with factory.begin() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert run is not None and run.job_id is not None
+        job = session.get(m.Job, run.job_id)
+        assert job is not None
+        run.proposal_payload = {"corrupt": "durable proposal"}
+        job.status = "COMPLETED"
+        job_id = job.id
+
+        assert accept_completed_process_run(session, run_id) is None
+
+    with factory() as session:
+        run, job = session.get(m.StudioCanvasSpecialistRun, run_id), session.get(m.Job, job_id)
+        active = session.scalar(select(m.StudioScene).where(m.StudioScene.studio_runtime_id == runtime_id, m.StudioScene.status == "ACTIVE"))
+        assert run is not None and run.status == "REJECTED" and run.scene_id is None
+        assert run.failure_metadata == {"code": "PROPOSAL_TO_SCENE_INVALID"}
+        assert run.proposal_payload == {"corrupt": "durable proposal"}
+        assert job is not None and job.status == "COMPLETED"
+        assert active is not None and active.activity_key == awareness.ACTIVITY_KEY
+
+    attempts = 0
+    def settlement_must_not_run(session: Session, run_id: object):
+        nonlocal attempts
+        attempts += 1
+        raise AssertionError("REJECTED runs must not re-enter settlement")
+
+    monkeypatch.setattr("workers.studio_handlers.accept_completed_process_run", settlement_must_not_run)
+    with factory.begin() as session:
+        assert reconcile_canvas_specialist_runs(session) == 0
+    assert attempts == 0
+
+
 def test_aud01_reconciliation_repairs_false_failed_job_after_durable_proposal(
     factory: sessionmaker[Session],
 ) -> None:
@@ -418,6 +455,36 @@ def test_aud01_unusable_completed_run_cannot_poison_other_reconciliation_work(
         assert bad is not None and bad.status == "REJECTED" and bad.scene_id is None
         assert good is not None and good.status == "COMPLETED" and good.scene_id is not None
         assert good_job is not None and good_job.status == "COMPLETED"
+
+
+def test_aud01_rejected_corrupt_run_is_skipped_while_another_completion_settles(
+    factory: sessionmaker[Session],
+) -> None:
+    """A prior terminal proposal rejection cannot poison later polling work."""
+    _, _, _, rejected_run_id = _run(factory)
+    _, _, _, eligible_run_id = _run(factory)
+    clock = datetime.now(UTC)
+    with factory.begin() as session:
+        rejected = session.get(m.StudioCanvasSpecialistRun, rejected_run_id)
+        eligible = session.get(m.StudioCanvasSpecialistRun, eligible_run_id)
+        assert rejected is not None and eligible is not None and eligible.job_id is not None
+        rejected.proposal_payload = {"corrupt": "poisoned durable proposal"}
+        assert accept_completed_process_run(session, rejected_run_id) is None
+        assert rejected.status == "REJECTED"
+        eligible_job = session.get(m.Job, eligible.job_id)
+        assert eligible_job is not None
+        eligible_job.status, eligible_job.attempt_count, eligible_job.lease_expires_at = "RUNNING", 1, clock - timedelta(seconds=1)
+        eligible_job_id = eligible_job.id
+
+    with factory.begin() as session:
+        assert reconcile_canvas_specialist_runs(session, now=clock) == 1
+    with factory() as session:
+        rejected = session.get(m.StudioCanvasSpecialistRun, rejected_run_id)
+        eligible = session.get(m.StudioCanvasSpecialistRun, eligible_run_id)
+        eligible_job = session.get(m.Job, eligible_job_id)
+        assert rejected is not None and rejected.status == "REJECTED" and rejected.scene_id is None
+        assert eligible is not None and eligible.status == "COMPLETED" and eligible.scene_id is not None
+        assert eligible_job is not None and eligible_job.status == "COMPLETED"
 
 
 def test_relation_explanation_uses_one_runtime03_tutor_turn_with_exact_source(factory: sessionmaker[Session]) -> None:

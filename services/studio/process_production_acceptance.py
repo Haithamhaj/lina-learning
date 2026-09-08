@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from hashlib import sha256
 import json
 
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -73,7 +74,19 @@ def accept_completed_process_run(session: Session, run_id, *, before_commit=None
         direction = pack.get("direction")
         if not isinstance(locale, str) or not isinstance(direction, str):
             run.status, run.failure_metadata = "REJECTED", {"code": "FROZEN_LOCALE_DIRECTION_INVALID"}; return None
-        seed = proposal_to_scene_seed(run.proposal_payload, pack, locale="ar" if locale.startswith("ar") else "en", direction=direction)
+        # This is the narrow application-owned conversion boundary for a
+        # durable proposal.  Its validation failures are permanent proposal
+        # rejection, unlike database/transaction failures later in settlement.
+        try:
+            seed = proposal_to_scene_seed(
+                run.proposal_payload,
+                pack,
+                locale="ar" if locale.startswith("ar") else "en",
+                direction=direction,
+            )
+        except (ValidationError, ValueError):
+            run.status, run.failure_metadata = "REJECTED", {"code": "PROPOSAL_TO_SCENE_INVALID"}
+            return None
         state = StudioStateService(session)
         scene = state.accept_scene(CreateSceneCommand(student_id=run.student_id, learning_session_id=run.learning_session_id,
             subject_key="SCIENCE", subject_profile_version=PROFILE_VERSION, concept_keys=tuple(stage["id"] for stage in seed["stages"]),
