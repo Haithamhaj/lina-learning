@@ -22,6 +22,8 @@ export type StudioOperationResult = {
   student_interaction_status: string | null;
 };
 
+export type StudioCompositionStatus = "IDLE" | "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "SUPERSEDED";
+
 type ControllerOptions = {
   apiBaseUrl: string;
   getToken: () => Promise<string | null>;
@@ -33,6 +35,7 @@ type ControllerOptions = {
 export type StudioController = {
   open: (learningSessionId: string) => Promise<RuntimeOpen>;
   snapshot: (runtimeId: string) => Promise<StudioSnapshotFrame>;
+  compositionStatus: (runtimeId: string) => Promise<StudioCompositionStatus>;
   submit: (runtimeId: string, operation: StudioOperation) => Promise<StudioOperationResult>;
   connect: (runtimeId: string) => { close: () => void; done: Promise<void> };
   latestSequence: () => number;
@@ -95,6 +98,13 @@ export function createStudioController(options: ControllerOptions): StudioContro
       return frame;
     },
 
+    async compositionStatus(runtimeId) {
+      const response = await request(`/v1/student/studio/${encodeURIComponent(runtimeId)}/composition-status`);
+      const payload = await response.json() as { status?: unknown };
+      if (!isCompositionStatus(payload.status)) throw new StudioProtocolParseError("Invalid Studio composition status.");
+      return payload.status;
+    },
+
     async submit(runtimeId, operation) {
       const response = await request(`/v1/student/studio/${encodeURIComponent(runtimeId)}/operations`, {
         method: "POST",
@@ -147,4 +157,8 @@ export function createStudioController(options: ControllerOptions): StudioContro
 
     latestSequence: () => sequence,
   };
+}
+
+function isCompositionStatus(value: unknown): value is StudioCompositionStatus {
+  return value === "IDLE" || value === "PENDING" || value === "RUNNING" || value === "COMPLETED" || value === "FAILED" || value === "SUPERSEDED";
 }

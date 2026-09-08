@@ -145,6 +145,7 @@ class TutorTurn:
     studio_observation_id: UUID | None = None
     studio_ai_execution_id: UUID | None = None
     studio_source_message_id: UUID | None = None
+    workspace_visual_status: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1373,6 +1374,7 @@ class TutorRuntime:
             None if context is None or context.studio_workspace is None else context.studio_workspace.observation_id,
             ai_execution_id,
             None if context is None or context.studio_workspace is None else context.debug.current_turn_message_id,
+            visual_audit.get("status") if isinstance(visual_audit, dict) else None,
         )
 
 

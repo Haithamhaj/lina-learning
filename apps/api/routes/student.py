@@ -241,6 +241,7 @@ def _stream_student_tutor_turn(
     not_found_detail: str,
     session_resolver: Callable[..., LearningSession | None] = owned_open_math_session,
     admit_before_response: bool = False,
+    include_canvas_composition: bool = False,
 ) -> StreamingResponse:
     """Forward provider-produced Tutor deltas over the authenticated Student SSE path."""
 
@@ -335,7 +336,14 @@ def _stream_student_tutor_turn(
             stream_session.commit()
             committed = True
             if final_turn is not None:
-                yield f"event: turn\ndata: {json.dumps({'text': final_turn.text, 'suggested_actions': [action.model_dump() for action in final_turn.suggested_actions], 'guided_check': final_turn.guided_check.model_dump(mode='json') if final_turn.guided_check is not None else None})}\n\n"
+                terminal_payload = {
+                    "text": final_turn.text,
+                    "suggested_actions": [action.model_dump() for action in final_turn.suggested_actions],
+                    "guided_check": final_turn.guided_check.model_dump(mode="json") if final_turn.guided_check is not None else None,
+                }
+                if include_canvas_composition:
+                    terminal_payload["canvas_composition"] = "PENDING" if final_turn.workspace_visual_status == "ADMITTED" else None
+                yield f"event: turn\ndata: {json.dumps(terminal_payload)}\n\n"
                 if final_turn.studio_observation_id is not None:
                     acknowledge_studio_tutor_observation(
                         bind=bind,
@@ -406,6 +414,7 @@ def stream_daily_tutor_turn(
         not_found_detail="Open Daily session not found.",
         session_resolver=owned_open_daily_session,
         admit_before_response=True,
+        include_canvas_composition=True,
     )
 
 

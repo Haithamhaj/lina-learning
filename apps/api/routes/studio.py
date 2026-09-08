@@ -10,10 +10,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.platform.auth import AuthenticatedPrincipal, UserRole, require_role
 from services.platform.db.session import get_session
+from services.platform.db.models import StudioCanvasSpecialistRun
 from services.platform.student_identity import resolve_student_for_authenticated_identity
 from services.studio.feed import StudioEventFeed
 from services.studio.protocol import (
@@ -46,6 +48,10 @@ class StudioOperationResponse(BaseModel):
     replayed: bool
     student_interaction_id: UUID | None
     student_interaction_status: str | None
+
+
+class StudioCompositionStatusResponse(BaseModel):
+    status: str
 
 
 def _student_id(session: Session, principal: AuthenticatedPrincipal) -> UUID:
@@ -115,6 +121,30 @@ def get_studio_snapshot(
         )
     except StudioResourceNotFound as error:
         raise _not_found(error) from None
+
+
+@router.get("/{runtime_id}/composition-status", response_model=StudioCompositionStatusResponse)
+def get_studio_composition_status(
+    runtime_id: UUID,
+    principal: AuthenticatedPrincipal = Depends(require_role(UserRole.STUDENT)),
+    session: Session = Depends(get_session),
+) -> StudioCompositionStatusResponse:
+    """Expose only the current run lifecycle needed to settle Daily's transient waiting UI."""
+
+    student_id = _student_id(session, principal)
+    try:
+        StudioProtocolService(session).runtime(student_id=student_id, runtime_id=runtime_id)
+    except StudioResourceNotFound as error:
+        raise _not_found(error) from None
+    run = session.scalar(
+        select(StudioCanvasSpecialistRun)
+        .where(
+            StudioCanvasSpecialistRun.studio_runtime_id == runtime_id,
+            StudioCanvasSpecialistRun.student_id == student_id,
+        )
+        .order_by(StudioCanvasSpecialistRun.created_at.desc(), StudioCanvasSpecialistRun.id.desc())
+    )
+    return StudioCompositionStatusResponse(status="IDLE" if run is None else run.status)
 
 
 @router.post("/{runtime_id}/operations", response_model=StudioOperationResponse)

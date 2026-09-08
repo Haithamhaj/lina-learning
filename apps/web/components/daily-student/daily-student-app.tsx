@@ -29,7 +29,7 @@ type ChatMessage = {
   guided_check?: GuidedCheck | null;
 };
 type DailySession = { learning_session_id: string; status: string; messages: ChatMessage[] };
-type TutorTurn = { text: string; suggested_actions: SuggestedAction[]; guided_check?: GuidedCheck | null };
+type TutorTurn = { text: string; suggested_actions: SuggestedAction[]; guided_check?: GuidedCheck | null; canvas_composition?: "PENDING" | null };
 type StudioConnection = { close: () => void; done: Promise<void> };
 
 function studentEndpoint(path: string): string {
@@ -70,6 +70,7 @@ export function DailyStudentApp() {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [chatSending, setChatSending] = useState(false);
   const [operationPending, setOperationPending] = useState(false);
+  const [canvasCompositionPending, setCanvasCompositionPending] = useState(false);
   const [studioConnection, setStudioConnection] = useState<"connecting" | "connected" | "reconnecting" | "error">("connecting");
   const [error, setError] = useState("");
   const [draft, setDraft] = useState("");
@@ -89,6 +90,7 @@ export function DailyStudentApp() {
     if (next.latest_event_sequence < required) return false;
     appliedSnapshotSequenceRef.current = next.latest_event_sequence;
     setSnapshot(next);
+    if (next.active_scene_contract !== null) setCanvasCompositionPending(false);
     return true;
   };
 
@@ -219,6 +221,20 @@ export function DailyStudentApp() {
     };
   }, [getToken, isLoaded, loadAttempt]);
 
+  useEffect(() => {
+    if (!canvasCompositionPending) return;
+    const timer = window.setInterval(() => {
+      const controller = controllerRef.current;
+      const runtimeId = runtimeIdRef.current;
+      if (!controller || !runtimeId) return;
+      void controller.compositionStatus(runtimeId).then((status) => {
+        if (status === "COMPLETED") void reloadSnapshot();
+        if (status === "IDLE" || status === "COMPLETED" || status === "FAILED" || status === "SUPERSEDED") setCanvasCompositionPending(false);
+      }).catch(() => undefined);
+    }, 2_000);
+    return () => window.clearInterval(timer);
+  }, [canvasCompositionPending]);
+
   const workspaceVisible = snapshot?.active_scene_contract !== null && snapshot !== null;
   useEffect(() => {
     const previous = priorWorkspaceVisible.current;
@@ -310,6 +326,7 @@ export function DailyStudentApp() {
           if (type === "turn") {
             const turn = payload as TutorTurn;
             terminalReceived = true;
+            if (turn.canvas_composition === "PENDING") setCanvasCompositionPending(true);
             updateTutor(provisionalTutorId, (message) => ({
               ...message,
               content: turn.text,
@@ -421,7 +438,7 @@ export function DailyStudentApp() {
           <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#5d7d78]">Daily learning</p><h1 className="mt-1 font-display text-3xl tracking-tight">A calm place to think out loud.</h1></div>
           <p className="text-sm text-slate-600" role="status">Studio {studioConnection === "connected" ? "connected" : studioConnection === "reconnecting" ? "reconnecting" : studioConnection}</p>
         </header>
-        <div className={`grid items-start gap-5 ${workspaceVisible ? "xl:grid-cols-[minmax(0,0.92fr)_minmax(420px,1.08fr)]" : ""}`}>
+        <div className={`grid items-start gap-5 ${workspaceVisible || canvasCompositionPending ? "xl:grid-cols-[minmax(0,0.92fr)_minmax(420px,1.08fr)]" : ""}`}>
           <section aria-label="Learning Chat" className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5">
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4"><div><h2 className="font-display text-2xl">Learning Chat</h2><p className="mt-1 text-sm leading-6 text-slate-600">Ask, explain what you tried, or choose a next step with your Tutor.</p></div><span aria-hidden="true" className="grid size-10 place-items-center rounded-2xl bg-[#e8f6f1] text-[#2e766a]">✦</span></div>
             <div className="mt-4 min-h-[26rem] max-h-[calc(100vh-19rem)] overflow-y-auto rounded-[1.5rem] bg-[#fafbfe] p-3 sm:p-4" aria-live="polite">
@@ -433,7 +450,7 @@ export function DailyStudentApp() {
               <Button className="min-h-12" type="submit" disabled={!draft.trim() || chatSending}>{chatSending ? "Tutor is thinking…" : "Send"}</Button>
             </form>
           </section>
-          {workspaceVisible && snapshot ? <aside aria-label="Adaptive Learning Workspace" className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a6b42]">Adaptive Learning Workspace</p><h2 ref={workspaceHeadingRef} tabIndex={-1} className="mt-1 font-display text-2xl outline-none">Work with the current scene</h2></div>{operationPending ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900" role="status">Saving…</span> : null}</div><StudioRendererHost snapshot={snapshot} operationPending={operationPending} onOperation={submitOperation} onReload={() => { void reloadSnapshot(); }} /></aside> : null}
+          {workspaceVisible || canvasCompositionPending ? <aside aria-label="Adaptive Learning Workspace" className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a6b42]">Adaptive Learning Workspace</p><h2 ref={workspaceHeadingRef} tabIndex={-1} className="mt-1 font-display text-2xl outline-none">{workspaceVisible ? "Work with the current scene" : "Preparing a visual explanation"}</h2></div>{operationPending ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900" role="status">Saving…</span> : null}</div>{canvasCompositionPending ? <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" role="status">Tutor is preparing the visual explanation. You can keep chatting while it arrives.</p> : null}{workspaceVisible && snapshot ? <StudioRendererHost snapshot={snapshot} operationPending={operationPending} onOperation={submitOperation} onReload={() => { void reloadSnapshot(); }} /> : null}</aside> : null}
         </div>
         {error ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert"><span>{error}</span><Button type="button" variant="secondary" onClick={() => setLoadAttempt((value) => value + 1)}>Reconnect</Button></div> : null}
       </div>

@@ -510,6 +510,67 @@ def test_daily_turn_passes_unknown_live_subject_scope_to_the_existing_tutor_runt
     assert getattr(live_subject, "origin") is LiveSubjectOrigin.UNKNOWN
 
 
+def test_daily_turn_exposes_an_admitted_canvas_composition_as_pending_without_blocking_chat(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Daily tells its client that the independent Canvas composition is pending."""
+
+    class _AdmittedCanvasRuntime:
+        def admit_turn(self, **_: object):
+            return SimpleNamespace(id=uuid4())
+
+        def stream_turn(self, *, learning_session: LearningSession, question: str, **_: object):
+            del learning_session, question
+            turn = TutorTurn("Start with the first stage.", [], [], [], None, None, {})
+            object.__setattr__(turn, "workspace_visual_status", "ADMITTED")
+            yield turn
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "daily-canvas-pending")
+        learning_session = LearningSession(student_id=student.id, subject="SCIENCE", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    from apps.api.routes import student as student_routes
+
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", lambda _: _AdmittedCanvasRuntime())
+    client = _client(postgres_session_factory, subject="daily-canvas-pending")
+    try:
+        response = client.post(
+            f"/api/v1/student/daily/session/{session_id}/turn/stream",
+            json={"content": "Show me the water cycle."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    terminal = response.text.split("event: turn\ndata: ", 1)[1].split("\n\n", 1)[0]
+    assert json.loads(terminal)["canvas_composition"] == "PENDING"
+
+
+def test_daily_workspace_composition_status_is_authoritative_and_idle_without_a_run(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "daily-composition-status")
+        learning_session = LearningSession(student_id=student.id, subject="SCIENCE", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        runtime = StudioStateService(session).get_or_create_runtime(student_id=student.id, learning_session_id=learning_session.id)
+        runtime_id = runtime.id
+
+    client = _client(postgres_session_factory, subject="daily-composition-status")
+    try:
+        response = client.get(f"/api/v1/student/studio/{runtime_id}/composition-status")
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "IDLE"}
+
+
 def test_daily_turn_rejects_before_admission_without_persisting_or_leaving_a_retry_duplicate(
     postgres_session_factory: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,
