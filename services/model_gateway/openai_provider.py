@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import base64
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from typing import Any
@@ -149,6 +150,17 @@ def _request_body(route: ModelRoute, payload: dict[str, object]) -> dict[str, ob
     }
     if "max_output_tokens" in payload:
         body["max_output_tokens"] = int(payload["max_output_tokens"])
+    source_input = payload.get("source_input")
+    if source_input is not None:
+        body["input"] = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "input_text", "text": str(payload["input"])},
+                    _source_content_part(source_input),
+                ],
+            }
+        ]
     response_schema = payload.get("response_schema")
     if isinstance(response_schema, dict):
         name = response_schema.get("name")
@@ -163,6 +175,47 @@ def _request_body(route: ModelRoute, payload: dict[str, object]) -> dict[str, ob
                 }
             }
     return body
+
+
+def _source_content_part(source_input: object) -> dict[str, object]:
+    if not isinstance(source_input, dict):
+        raise ValueError("source_input must be a validated mapping.")
+    kind = source_input.get("kind")
+    filename = source_input.get("filename")
+    content_type = source_input.get("content_type")
+    content = source_input.get("content")
+    if (
+        kind not in {"IMAGE", "PDF", "DOCUMENT"}
+        or not isinstance(filename, str)
+        or not filename
+        or not isinstance(content_type, str)
+        or not content_type
+        or not isinstance(content, bytes)
+        or not content
+    ):
+        raise ValueError("source_input is incomplete or malformed.")
+    encoded = base64.b64encode(content).decode("ascii")
+    data_url = f"data:{content_type};base64,{encoded}"
+    if kind == "IMAGE":
+        if content_type not in {"image/jpeg", "image/png", "image/webp"}:
+            raise ValueError("source_input image type is unsupported.")
+        return {
+            "type": "input_image",
+            "image_url": data_url,
+            "detail": "original",
+        }
+    part: dict[str, object] = {
+        "type": "input_file",
+        "filename": filename,
+        "file_data": data_url,
+    }
+    if kind == "PDF":
+        if content_type != "application/pdf":
+            raise ValueError("source_input PDF type is unsupported.")
+        part["detail"] = "high"
+    elif content_type != "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        raise ValueError("source_input document type is unsupported.")
+    return part
 
 
 def _model_result(route: ModelRoute, result: object, output: dict[str, object]) -> ModelResult:

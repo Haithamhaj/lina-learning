@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import base64
 
 import pytest
 
@@ -140,6 +141,123 @@ def test_openai_responses_provider_returns_text_usage_and_luna_cost() -> None:
     assert result.cached_input_tokens == 0
     assert result.output_tokens == 143
     assert result.estimated_cost_usd == 0.000625
+
+
+@pytest.mark.parametrize(
+    ("source_input", "expected_part"),
+    [
+        (
+            {
+                "kind": "IMAGE",
+                "filename": "work.png",
+                "content_type": "image/png",
+                "content": b"\x89PNG\r\nfixture",
+            },
+            {
+                "type": "input_image",
+                "image_url": "data:image/png;base64,"
+                + base64.b64encode(b"\x89PNG\r\nfixture").decode("ascii"),
+                "detail": "original",
+            },
+        ),
+        (
+            {
+                "kind": "PDF",
+                "filename": "lesson.pdf",
+                "content_type": "application/pdf",
+                "content": b"%PDF-fixture",
+            },
+            {
+                "type": "input_file",
+                "filename": "lesson.pdf",
+                "file_data": "data:application/pdf;base64,"
+                + base64.b64encode(b"%PDF-fixture").decode("ascii"),
+                "detail": "high",
+            },
+        ),
+        (
+            {
+                "kind": "DOCUMENT",
+                "filename": "notes.docx",
+                "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "content": b"PK-docx-fixture",
+            },
+            {
+                "type": "input_file",
+                "filename": "notes.docx",
+                "file_data": "data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,"
+                + base64.b64encode(b"PK-docx-fixture").decode("ascii"),
+            },
+        ),
+    ],
+)
+def test_openai_responses_provider_builds_bounded_multimodal_input(
+    source_input: dict[str, object], expected_part: dict[str, object]
+) -> None:
+    """A validated server source becomes one application-owned content part."""
+
+    captured: dict[str, object] = {}
+
+    class FakeResponse:
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return json.dumps(
+                {
+                    "output": [{"type": "message", "content": [{"type": "output_text", "text": "I can help."}]}],
+                    "usage": {"input_tokens": 10, "output_tokens": 2},
+                }
+            ).encode()
+
+    def send(request: object, *, timeout: float) -> FakeResponse:
+        del timeout
+        captured["request"] = request
+        return FakeResponse()
+
+    OpenAIResponsesProvider(api_key="test-key", request_sender=send).execute(
+        ModelRoute(provider="openai", model="gpt-5.6-luna"),
+        {"instructions": "Teach calmly.", "input": "Help with this.", "source_input": source_input},
+    )
+
+    body = json.loads(captured["request"].data.decode())
+    assert body["store"] is False
+    assert body["input"] == [
+        {
+            "role": "user",
+            "content": [
+                {"type": "input_text", "text": "Help with this."},
+                expected_part,
+            ],
+        }
+    ]
+
+
+def test_openai_responses_provider_rejects_malformed_source_before_network() -> None:
+    """Missing bytes cannot degrade into a provider request with invented input."""
+
+    called = False
+
+    def send(request: object, *, timeout: float) -> object:
+        nonlocal called
+        del request, timeout
+        called = True
+        raise AssertionError("network must not be called")
+
+    provider = OpenAIResponsesProvider(api_key="test-key", request_sender=send)
+    with pytest.raises(ValueError, match="source_input"):
+        provider.execute(
+            ModelRoute(provider="openai", model="gpt-5.6-luna"),
+            {
+                "instructions": "Teach calmly.",
+                "input": "Help with this.",
+                "source_input": {"kind": "IMAGE", "filename": "work.png", "content_type": "image/png"},
+            },
+        )
+    assert called is False
 
 
 def test_openai_canvas_specialist_request_sends_the_exact_strict_schema() -> None:

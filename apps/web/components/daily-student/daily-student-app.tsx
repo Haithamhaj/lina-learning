@@ -5,6 +5,11 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import { StudioRendererHost } from "@/components/daily-student/studio-renderer-host";
 import { DailyVoiceInput } from "@/components/daily-student/daily-voice-input";
+import {
+  DailySourceInput,
+  StudentSourceCard,
+  sourceMetadataFromFile,
+} from "@/components/daily-student/daily-source-input";
 import { Button } from "@/components/ui/button";
 import {
   createStudioController,
@@ -18,6 +23,11 @@ import {
   replaceDailyStudentMessageId,
   settleDailyChatAttempt,
 } from "@/lib/daily-chat-admission";
+import {
+  buildDailySourceSubmission,
+  latestActiveStudentSource,
+  type StudentSourceAsset,
+} from "@/lib/daily-source";
 
 type SuggestedAction = { label: string; kind: "NAVIGATION" | "ANSWER_CHOICE" };
 type GuidedCheck = { id: string; prompt: string; choices: Array<{ label: string }> };
@@ -28,6 +38,7 @@ type ChatMessage = {
   created_at: string;
   suggested_actions: SuggestedAction[];
   guided_check?: GuidedCheck | null;
+  source_asset?: StudentSourceAsset | null;
 };
 type DailySession = { learning_session_id: string; status: string; messages: ChatMessage[] };
 type TutorTurn = { text: string; suggested_actions: SuggestedAction[]; guided_check?: GuidedCheck | null; canvas_composition?: "PENDING" | null };
@@ -46,7 +57,7 @@ function tutorMessage(id: string): ChatMessage {
   return { id, role: "tutor", content: "", created_at: new Date().toISOString(), suggested_actions: [] };
 }
 
-function ChatBubble({ message, pending }: { message: ChatMessage; pending: boolean }) {
+function ChatBubble({ message, pending, getToken }: { message: ChatMessage; pending: boolean; getToken: () => Promise<string | null> }) {
   const tutor = message.role === "tutor";
   return (
     <article className={`flex gap-3 ${tutor ? "justify-start" : "justify-end"}`}>
@@ -54,6 +65,7 @@ function ChatBubble({ message, pending }: { message: ChatMessage; pending: boole
       <div className={`max-w-[85%] rounded-[1.35rem] px-4 py-3 text-sm leading-6 shadow-sm ${tutor ? "rounded-bl-md border border-[#cde7df] bg-[#effaf7] text-[#173d3a]" : "rounded-br-md bg-[#6658d3] text-white"}`}>
         <p className={`text-xs font-bold ${tutor ? "text-[#37796f]" : "text-[#ebe8ff]"}`}>{tutor ? "Tutor" : "You"}</p>
         {tutor && !message.content && pending ? <p className="mt-1.5">Tutor is thinking…</p> : <p dir="auto" className="mt-1.5 whitespace-pre-wrap">{message.content}</p>}
+        {!tutor && message.source_asset ? <StudentSourceCard source={message.source_asset} apiBaseUrl={publicConfig.apiBaseUrl} getToken={getToken} /> : null}
       </div>
       {!tutor ? <span aria-hidden="true" className="mt-1 grid size-9 shrink-0 place-items-center rounded-2xl bg-[#ece7ff] text-sm text-[#524596] shadow-sm">●</span> : null}
     </article>
@@ -76,6 +88,8 @@ export function DailyStudentApp() {
   const [error, setError] = useState("");
   const [draft, setDraft] = useState("");
   const [voiceBusy, setVoiceBusy] = useState(false);
+  const [selectedSource, setSelectedSource] = useState<File | null>(null);
+  const [activeSource, setActiveSource] = useState<StudentSourceAsset | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [sessionEnded, setSessionEnded] = useState(false);
   const [surfaceDirection, setSurfaceDirection] = useState<"ltr" | "rtl">("ltr");
@@ -145,6 +159,8 @@ export function DailyStudentApp() {
         if (cancelled) return;
         window.history.replaceState(window.history.state, "", dailySessionUrl(window.location.href, daily.learning_session_id));
         setLearningSession(daily);
+        setActiveSource(latestActiveStudentSource(daily.messages));
+        setSelectedSource(null);
 
         const refreshSnapshot = async () => {
           const controller = controllerRef.current;
@@ -256,12 +272,16 @@ export function DailyStudentApp() {
   const streamTutorTurn = async ({
     path,
     body,
+    form,
     studentContent,
+    provisionalSource,
     restoreDraftOnPreAdmission = false,
   }: {
     path: string;
     body?: Record<string, unknown>;
+    form?: FormData;
     studentContent?: string;
+    provisionalSource?: StudentSourceAsset | null;
     restoreDraftOnPreAdmission?: boolean;
   }): Promise<boolean> => {
     const provisionalTutorId = `daily-tutor-${crypto.randomUUID()}`;
@@ -278,6 +298,7 @@ export function DailyStudentApp() {
           content: studentContent,
           created_at: new Date().toISOString(),
           suggested_actions: [],
+          source_asset: provisionalSource ?? null,
         }] : []),
         tutorMessage(provisionalTutorId),
       ],
@@ -290,11 +311,12 @@ export function DailyStudentApp() {
           ...(body ? { "Content-Type": "application/json" } : {}),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        ...(body ? { body: JSON.stringify(body) } : {}),
+        ...(form ? { body: form } : body ? { body: JSON.stringify(body) } : {}),
       });
       if (!response.ok) throw await errorFrom(response);
       admitted = true;
       const durableStudentMessageId = admittedDailyStudentMessageId(response);
+      const durableSourceAssetId = response.headers.get("X-Lina-Source-Asset-ID");
       if (studentMessageId && durableStudentMessageId) {
         const temporaryStudentMessageId = studentMessageId;
         studentMessageId = durableStudentMessageId;
@@ -306,6 +328,19 @@ export function DailyStudentApp() {
             durableStudentMessageId,
           ),
         } : current);
+      }
+      if (studentMessageId && provisionalSource && durableSourceAssetId && learningSession) {
+        const durableSource = {
+          ...provisionalSource,
+          id: durableSourceAssetId,
+          preview_url: `/daily/session/${learningSession.learning_session_id}/source/${durableSourceAssetId}`,
+        };
+        setLearningSession((current) => current ? {
+          ...current,
+          messages: current.messages.map((message) => message.id === studentMessageId ? { ...message, source_asset: durableSource } : message),
+        } : current);
+        setActiveSource(durableSource);
+        setSelectedSource(null);
       }
       if (!response.body) throw new Error("The Tutor response stream was unavailable.");
       const reader = response.body.getReader();
@@ -362,20 +397,36 @@ export function DailyStudentApp() {
     options: { suggestedAction?: boolean; guidedCheckId?: string } = {},
   ) => {
     const trimmed = content.trim();
-    if (!learningSession || !trimmed || chatSending) return;
+    if (!learningSession || (!trimmed && !selectedSource) || chatSending) return;
     setChatSending(true);
     setError("");
     setDraft("");
-    await streamTutorTurn({
-      path: `/daily/session/${learningSession.learning_session_id}/turn/stream`,
-      body: {
+    const useSource = !options.suggestedAction && !options.guidedCheckId && (selectedSource !== null || activeSource !== null);
+    if (useSource) {
+      const submission = buildDailySourceSubmission({
         content: trimmed,
-        suggested_action: options.suggestedAction ?? false,
-        guided_check_id: options.guidedCheckId ?? null,
-      },
-      studentContent: trimmed,
-      restoreDraftOnPreAdmission: !options.suggestedAction && !options.guidedCheckId,
-    });
+        file: selectedSource,
+        activeSourceId: selectedSource ? null : activeSource?.id ?? null,
+      });
+      await streamTutorTurn({
+        path: `/daily/session/${learningSession.learning_session_id}/source/turn/stream`,
+        form: submission.form,
+        studentContent: submission.studentContent,
+        provisionalSource: selectedSource ? sourceMetadataFromFile(selectedSource) : activeSource,
+        restoreDraftOnPreAdmission: true,
+      });
+    } else {
+      await streamTutorTurn({
+        path: `/daily/session/${learningSession.learning_session_id}/turn/stream`,
+        body: {
+          content: trimmed,
+          suggested_action: options.suggestedAction ?? false,
+          guided_check_id: options.guidedCheckId ?? null,
+        },
+        studentContent: trimmed,
+        restoreDraftOnPreAdmission: !options.suggestedAction && !options.guidedCheckId,
+      });
+    }
     setChatSending(false);
   };
 
@@ -444,13 +495,15 @@ export function DailyStudentApp() {
           <section aria-label="Learning Chat" className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5">
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4"><div><h2 className="font-display text-2xl">Learning Chat</h2><p className="mt-1 text-sm leading-6 text-slate-600">Ask, explain what you tried, or choose a next step with your Tutor.</p></div><span aria-hidden="true" className="grid size-10 place-items-center rounded-2xl bg-[#e8f6f1] text-[#2e766a]">✦</span></div>
             <div className="mt-4 min-h-[26rem] max-h-[calc(100vh-19rem)] overflow-y-auto rounded-[1.5rem] bg-[#fafbfe] p-3 sm:p-4" aria-live="polite">
-              {learningSession?.messages.length ? <div className="grid gap-4">{learningSession.messages.map((message) => <div key={message.id}><ChatBubble message={message} pending={chatSending} />{message.role === "tutor" && message.id === latestTutor?.id && message.suggested_actions.length > 0 ? <div className="ml-12 mt-2 flex flex-wrap gap-2" aria-label="Tutor suggested actions">{message.suggested_actions.map((action) => <Button key={`${action.kind}:${action.label}`} className="h-auto min-h-10 rounded-full px-3 py-2 text-left" type="button" variant="secondary" disabled={chatSending} onClick={() => void sendChat(action.label, { suggestedAction: true })}><span dir="auto">{action.label}</span></Button>)}</div> : null}{message.role === "tutor" && message.id === latestTutor?.id && message.guided_check ? <div className="ml-12 mt-3 rounded-2xl border border-emerald-100 bg-white p-3"><p className="text-sm font-semibold" dir="auto">{message.guided_check.prompt}</p><div className="mt-2 flex flex-wrap gap-2">{message.guided_check.choices.map((choice) => <Button key={choice.label} type="button" variant="secondary" disabled={chatSending} onClick={() => void sendChat(choice.label, { guidedCheckId: message.guided_check?.id })}>{choice.label}</Button>)}</div></div> : null}</div>)}</div> : <div className="grid min-h-80 place-items-center px-5 text-center"><div className="max-w-sm"><div aria-hidden="true" className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#e9f7f3] text-2xl text-[#328577]">✎</div><h3 className="mt-4 font-display text-2xl">What are you working through?</h3><p className="mt-2 text-sm leading-6 text-slate-600">Start with a question, an answer you tried, or something you would like to understand more clearly.</p></div></div>}
+              {learningSession?.messages.length ? <div className="grid gap-4">{learningSession.messages.map((message) => <div key={message.id}><ChatBubble message={message} pending={chatSending} getToken={getToken} />{message.role === "tutor" && message.id === latestTutor?.id && message.suggested_actions.length > 0 ? <div className="ml-12 mt-2 flex flex-wrap gap-2" aria-label="Tutor suggested actions">{message.suggested_actions.map((action) => <Button key={`${action.kind}:${action.label}`} className="h-auto min-h-10 rounded-full px-3 py-2 text-left" type="button" variant="secondary" disabled={chatSending} onClick={() => void sendChat(action.label, { suggestedAction: true })}><span dir="auto">{action.label}</span></Button>)}</div> : null}{message.role === "tutor" && message.id === latestTutor?.id && message.guided_check ? <div className="ml-12 mt-3 rounded-2xl border border-emerald-100 bg-white p-3"><p className="text-sm font-semibold" dir="auto">{message.guided_check.prompt}</p><div className="mt-2 flex flex-wrap gap-2">{message.guided_check.choices.map((choice) => <Button key={choice.label} type="button" variant="secondary" disabled={chatSending} onClick={() => void sendChat(choice.label, { guidedCheckId: message.guided_check?.id })}>{choice.label}</Button>)}</div></div> : null}</div>)}</div> : <div className="grid min-h-80 place-items-center px-5 text-center"><div className="max-w-sm"><div aria-hidden="true" className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#e9f7f3] text-2xl text-[#328577]">✎</div><h3 className="mt-4 font-display text-2xl">What are you working through?</h3><p className="mt-2 text-sm leading-6 text-slate-600">Start with a question, an answer you tried, or something you would like to understand more clearly.</p></div></div>}
             </div>
             <form className="mt-4 grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-3 sm:grid-cols-[auto_1fr_auto] sm:items-center" onSubmit={submit}>
               <label className="sr-only" htmlFor="daily-learning-message">Your message for Tutor</label>
+              <DailySourceInput file={selectedSource} activeSource={activeSource} disabled={chatSending || voiceBusy} onFile={setSelectedSource} onDismissActive={() => setActiveSource(null)} onError={setError} />
+              {selectedSource && !draft.trim() ? <p className="order-1 text-xs text-slate-600 sm:col-span-3">Sending without a question will ask: “Help me with this.”</p> : null}
               <DailyVoiceInput apiBaseUrl={publicConfig.apiBaseUrl} learningSessionId={learningSession?.learning_session_id ?? null} draft={draft} chatSending={chatSending} getToken={getToken} onActiveChange={setVoiceBusy} onTranscript={(transcript) => { setDraft(transcript); window.requestAnimationFrame(() => composerRef.current?.focus()); }} />
-              <input ref={composerRef} id="daily-learning-message" dir="auto" value={draft} onChange={(event) => setDraft(event.target.value)} disabled={voiceBusy} maxLength={4000} placeholder="Ask a question or share what you tried" className="order-2 h-12 min-w-0 rounded-2xl bg-slate-50 px-4 text-sm outline-none ring-[#7d70df] transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60" />
-              <Button className="order-3 min-h-12" type="submit" disabled={!draft.trim() || chatSending || voiceBusy}>{chatSending ? "Tutor is thinking…" : "Send"}</Button>
+              <input ref={composerRef} id="daily-learning-message" dir="auto" value={draft} onChange={(event) => setDraft(event.target.value)} disabled={voiceBusy || chatSending} maxLength={4000} placeholder="Ask a question or share what you tried" className="order-2 h-12 min-w-0 rounded-2xl bg-slate-50 px-4 text-sm outline-none ring-[#7d70df] transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60" />
+              <Button className="order-3 min-h-12" type="submit" disabled={(!draft.trim() && !selectedSource) || chatSending || voiceBusy}>{chatSending ? "Tutor is thinking…" : "Send"}</Button>
             </form>
           </section>
           {workspaceVisible || canvasCompositionPending ? <aside aria-label="Adaptive Learning Workspace" className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a6b42]">Adaptive Learning Workspace</p><h2 ref={workspaceHeadingRef} tabIndex={-1} className="mt-1 font-display text-2xl outline-none">{workspaceVisible ? "Work with the current scene" : "Preparing a visual explanation"}</h2></div>{operationPending ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900" role="status">Saving…</span> : null}</div>{canvasCompositionPending ? <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" role="status">Tutor is preparing the visual explanation. You can keep chatting while it arrives.</p> : null}{workspaceVisible && snapshot ? <StudioRendererHost snapshot={snapshot} operationPending={operationPending} onOperation={submitOperation} onReload={() => { void reloadSnapshot(); }} /> : null}</aside> : null}

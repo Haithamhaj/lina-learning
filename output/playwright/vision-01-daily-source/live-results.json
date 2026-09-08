@@ -1,0 +1,43 @@
+{
+  "provider": "openai",
+  "model": "gpt-5.6-luna",
+  "application_path": "authenticated FastAPI Daily source turn route with PostgreSQL and private ObjectStorage",
+  "tutor_call_count": 3,
+  "execution_source_asset_ids": [
+    "21fe7bb4-4da6-4603-8ce3-0a3b94d3f665",
+    "21fe7bb4-4da6-4603-8ce3-0a3b94d3f665",
+    "9ccb1fd9-2316-43c0-9dde-de3e0e0be75b"
+  ],
+  "student_message_source_asset_ids": [
+    "21fe7bb4-4da6-4603-8ce3-0a3b94d3f665",
+    "21fe7bb4-4da6-4603-8ce3-0a3b94d3f665",
+    "9ccb1fd9-2316-43c0-9dde-de3e0e0be75b"
+  ],
+  "image": {
+    "source_meaning": "3/4 + 1/4 = 4/8; submitted answer 4/8",
+    "response": "Your submitted answer exactly was: ‘4/8’. The mistake was adding the denominators. Since both fractions already have the same denominator, keep 4 and add only the numerators: 3/4 + 1/4 = 4/4 = 1."
+  },
+  "followup": {
+    "source_asset_id": "21fe7bb4-4da6-4603-8ce3-0a3b94d3f665",
+    "response_summary": "Reused the same source and explained why adding both denominators produced the wrong 4/8 answer."
+  },
+  "pdf": {
+    "source_meaning": "Friday height is 18 cm",
+    "response": "According to the page, the plant’s height on Friday was 18 cm."
+  },
+  "originals": [
+    {
+      "asset_id": "21fe7bb4-4da6-4603-8ce3-0a3b94d3f665",
+      "kind": "IMAGE",
+      "bytes_match_checksum": true,
+      "source_message_id": "60ceded3-f45f-4adf-ab85-942f271fcf78"
+    },
+    {
+      "asset_id": "9ccb1fd9-2316-43c0-9dde-de3e0e0be75b",
+      "kind": "PDF",
+      "bytes_match_checksum": true,
+      "source_message_id": "b335a5cd-fa89-4fb0-9d2e-2a97c5e59e15"
+    }
+  ],
+  "cleanup": "Disposable database rows and private objects were deleted after assertions."
+}

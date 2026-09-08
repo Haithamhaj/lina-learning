@@ -1900,14 +1900,15 @@ def test_studio_migration_downgrade_and_reupgrade_round_trip_on_disposable_postg
         with factory.begin() as session:
             student = _student(session, "migration-preserved")
             learning_session = _session(session, student)
-            message = LearningMessage(
-                session_id=learning_session.id,
-                role="student",
-                content="pre-Studio history remains intact",
+            message_id = uuid4()
+            session.execute(
+                text(
+                    "INSERT INTO learning_messages (id, session_id, role, content, metadata) "
+                    "VALUES (:id, :session_id, 'student', :content, '{}'::jsonb)"
+                ),
+                {"id": message_id, "session_id": learning_session.id, "content": "pre-Studio history remains intact"},
             )
-            session.add(message)
-            session.flush()
-            expected_ids = (student.id, learning_session.id, message.id)
+            expected_ids = (student.id, learning_session.id, message_id)
         alembic_command.upgrade(config, "head")
         tables = set(inspect(engine).get_table_names())
         assert "studio_runtimes" in tables

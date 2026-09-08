@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from io import BytesIO
 import json
 import os
 from types import SimpleNamespace
@@ -12,6 +13,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -33,6 +35,7 @@ from services.platform.db.models import (
     StudioRuntime,
     StudioTutorObservation,
     Student,
+    StudentSourceAsset,
     User,
 )
 from services.platform.db.session import get_session
@@ -40,6 +43,7 @@ from services.platform.config import Settings
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
 from services.platform.db.models import ModelTask
 from services.platform.safety import SafetyPolicyService
+from services.platform.storage import LocalObjectStorage, StorageError
 from services.retrieval.service import RetrievalService
 from services.studio.contracts import AppendStudioEventCommand, CreateSceneCommand, StudioActor
 from services.studio.reducer import CORE_EVENT_SCHEMA_VERSION
@@ -158,6 +162,12 @@ def _clear_overrides() -> None:
 
     app.dependency_overrides.pop(get_session, None)
     app.dependency_overrides.pop(get_current_principal, None)
+
+
+def _small_png() -> bytes:
+    output = BytesIO()
+    Image.new("RGB", (32, 24), "white").save(output, format="PNG")
+    return output.getvalue()
 
 
 class _DeltaThenFailureTutorProvider:
@@ -508,6 +518,230 @@ def test_daily_turn_passes_unknown_live_subject_scope_to_the_existing_tutor_runt
     live_subject = captured[0]
     assert getattr(live_subject, "broad_subject") is None
     assert getattr(live_subject, "origin") is LiveSubjectOrigin.UNKNOWN
+
+
+def test_daily_source_turn_preserves_original_and_passes_one_owned_source_to_tutor(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    captured: list[dict[str, object]] = []
+
+    class _SourceRuntime:
+        def __init__(self, db: Session) -> None:
+            self.db = db
+
+        def admit_turn(self, *, learning_session: LearningSession, question: str, **_: object):
+            message = LearningMessage(session_id=learning_session.id, role="student", content=question)
+            self.db.add(message)
+            self.db.flush()
+            return message
+
+        def stream_turn(self, *, learning_session: LearningSession, question: str, **kwargs: object):
+            del learning_session, question
+            captured.append(kwargs)
+            yield TutorTurn("I can see the source.", [], [], [], None, None, {})
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "daily-source")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    from apps.api.routes import student as student_routes
+
+    storage = LocalObjectStorage(tmp_path / "student-sources", signing_secret="fixture")
+    monkeypatch.setattr(student_routes, "create_object_storage", lambda *_: storage)
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", lambda db: _SourceRuntime(db))
+    original = _small_png()
+    client = _client(postgres_session_factory, subject="daily-source")
+    try:
+        response = client.post(
+            f"/api/v1/student/daily/session/{session_id}/source/turn/stream",
+            files={"source": ("worksheet.png", original, "image/png")},
+            data={"content": ""},
+        )
+        with postgres_session_factory() as session:
+            durable_asset = session.query(StudentSourceAsset).one()
+            durable_asset_id = durable_asset.id
+        restored = client.get(f"/api/v1/student/daily/session/{session_id}")
+        preview = client.get(
+            f"/api/v1/student/daily/session/{session_id}/source/{durable_asset_id}"
+        )
+        followup = client.post(
+            f"/api/v1/student/daily/session/{session_id}/source/turn/stream",
+            data={"content": "Which part should I use?", "source_asset_id": str(durable_asset_id)},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert response.headers["x-lina-student-message-id"]
+    assert len(captured) == 2
+    assert captured[0]["source_input"]["content"] == original
+    assert captured[0]["source_asset_id"] is not None
+    assert captured[1]["source_asset_id"] == captured[0]["source_asset_id"]
+    assert restored.json()["messages"][0]["source_asset"] == {
+        "id": str(durable_asset_id),
+        "kind": "IMAGE",
+        "filename": "worksheet.png",
+        "content_type": "image/png",
+        "size_bytes": len(original),
+        "preview_url": f"/daily/session/{session_id}/source/{durable_asset_id}",
+    }
+    assert "storage_key" not in json.dumps(restored.json())
+    assert preview.status_code == 200
+    assert preview.content == original
+    assert preview.headers["cache-control"] == "private, no-store"
+    assert followup.status_code == 200
+    other_client = _client(postgres_session_factory, subject="daily-source-other")
+    try:
+        denied = other_client.get(
+            f"/api/v1/student/daily/session/{session_id}/source/{durable_asset_id}"
+        )
+    finally:
+        _clear_overrides()
+    assert denied.status_code == 404
+    with postgres_session_factory() as session:
+        asset = session.query(StudentSourceAsset).one()
+        messages = session.query(LearningMessage).filter_by(role="student").order_by(LearningMessage.created_at).all()
+        assert [message.content for message in messages] == ["Help me with this.", "Which part should I use?"]
+        assert all(message.source_asset_id == asset.id for message in messages)
+        assert storage.get(asset.storage_key).content == original
+
+
+def test_daily_source_uses_one_primary_tutor_call_with_exact_source_lineage(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "daily-source-lineage")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    from apps.api.routes import student as student_routes
+
+    storage = LocalObjectStorage(tmp_path / "student-sources", signing_secret="fixture")
+    provider = _ImmediateSuccessfulTutorProvider()
+    monkeypatch.setattr(student_routes, "create_object_storage", lambda *_: storage)
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    client = _client(postgres_session_factory, subject="daily-source-lineage")
+    try:
+        response = client.post(
+            f"/api/v1/student/daily/session/{session_id}/source/turn/stream",
+            files={"source": ("worksheet.png", _small_png(), "image/png")},
+            data={"content": "What do you see?"},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert "event: turn" in response.text, response.text
+    assert provider.call_count == 1
+    assert provider.payloads[0]["source_input"]["kind"] == "IMAGE"
+    with postgres_session_factory() as session:
+        asset = session.query(StudentSourceAsset).one()
+        message = session.query(LearningMessage).filter_by(role="student").one()
+        execution = session.query(AIExecution).filter_by(task="tutor").one()
+        assert execution.source_asset_id == asset.id == message.source_asset_id
+        assert execution.source_message_id == message.id
+        assert execution.learning_session_id == session_id
+        assert session.query(CandidateEvent).count() == 0
+        assert session.query(LearningEvidence).count() == 0
+        assert session.query(LearningEvent).count() == 0
+        assert session.query(LearnerIntelligenceCard).count() == 0
+
+
+def test_daily_source_commit_failure_rolls_back_message_and_compensates_storage(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "daily-source-commit-failure")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    from apps.api.routes import student as student_routes
+
+    storage_root = tmp_path / "student-sources"
+    storage = LocalObjectStorage(storage_root, signing_secret="fixture")
+    monkeypatch.setattr(student_routes, "create_object_storage", lambda *_: storage)
+    original_commit = Session.commit
+    failed = False
+
+    def fail_first_commit(db: Session) -> None:
+        nonlocal failed
+        if not failed:
+            failed = True
+            raise RuntimeError("commit unavailable")
+        original_commit(db)
+
+    monkeypatch.setattr(Session, "commit", fail_first_commit)
+    client = _client(
+        postgres_session_factory,
+        subject="daily-source-commit-failure",
+        raise_server_exceptions=False,
+    )
+    try:
+        response = client.post(
+            f"/api/v1/student/daily/session/{session_id}/source/turn/stream",
+            files={"source": ("worksheet.png", _small_png(), "image/png")},
+            data={"content": "Help"},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 500
+    assert failed is True
+    assert not [
+        path for path in storage_root.rglob("*")
+        if path.is_file() and ".locks" not in path.parts
+    ]
+    with postgres_session_factory() as session:
+        assert session.query(StudentSourceAsset).count() == 0
+        assert session.query(LearningMessage).count() == 0
+
+
+def test_daily_source_storage_failure_is_recoverable_and_rolls_back_admission(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "daily-source-storage-failure")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    from apps.api.routes import student as student_routes
+
+    class _UnavailableStorage:
+        def put(self, *_: object, **__: object) -> None:
+            raise StorageError("storage unavailable")
+
+    monkeypatch.setattr(student_routes, "create_object_storage", lambda *_: _UnavailableStorage())
+    client = _client(postgres_session_factory, subject="daily-source-storage-failure")
+    try:
+        response = client.post(
+            f"/api/v1/student/daily/session/{session_id}/source/turn/stream",
+            files={"source": ("worksheet.png", _small_png(), "image/png")},
+            data={"content": "Help"},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Student source is temporarily unavailable."}
+    with postgres_session_factory() as session:
+        assert session.query(StudentSourceAsset).count() == 0
+        assert session.query(LearningMessage).count() == 0
 
 
 def test_daily_turn_exposes_an_admitted_canvas_composition_as_pending_without_blocking_chat(

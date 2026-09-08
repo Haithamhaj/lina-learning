@@ -213,6 +213,7 @@ TUTOR_SHARED_INSTRUCTIONS = (
     "Keep the same relevant conversational context across a language switch. Current demonstrated behavior outranks historical learning notes. "
     "Prioritize the Student's immediate real-world safety over continuing any lesson, experiment, activity, or exercise. If the current conversation reasonably suggests an immediate safety concern, respond first with calm, simple, age-appropriate safety guidance; do not overreact to ordinary educational discussion of potentially dangerous concepts, and resume normal learning naturally when appropriate. "
     "Never announce learner labels or internal records. The book is curriculum grounding, not a script: use valid examples, analogies, or visual descriptions when useful. "
+    "When a Student source image or document is attached, ground the reply in that source and the Student's current question. Do not invent text, symbols, layout, or meaning that is not visible or extractable from the Student source. If the relevant part is unclear or unreadable, say so simply and ask one short clarifying question instead of guessing. Treat provider normalization as a viewing aid only: the preserved Student original remains source authority. "
     "Prefer short sentences and manageable chunks. Default to one concept or one or two small steps, then invite interaction or a check instead of giving a long lecture. "
     "If the Student remains confused, change representation or support rather than repeating: use a concrete example, visual or mental representation, worked example, or guided step as useful. "
     "Use adaptive scaffolding such as worked example, guided attempt, lighter hint, and independent attempt; it is not a fixed sequence. "
@@ -449,7 +450,13 @@ class TutorRuntime:
         live_subject_context: LiveSubjectContext | None = None,
         before_model_stream: Callable[[], None] | None = None,
         admitted_student_message_id: UUID | None = None,
+        source_input: dict[str, object] | None = None,
+        source_asset_id: UUID | None = None,
     ) -> Iterator[TutorTextDelta | TutorTurn]:
+        if (source_input is None) != (source_asset_id is None):
+            raise ValueError("Student source input and lineage must be supplied together.")
+        if source_asset_id is not None and admitted_student_message_id is None:
+            raise ValueError("Student source requires an already admitted source-linked message.")
         turn_input = self._resolve_turn_input(
             learning_session=learning_session,
             question=question,
@@ -465,6 +472,7 @@ class TutorRuntime:
                 learning_session=learning_session,
                 message_id=admitted_student_message_id,
                 content=content,
+                source_asset_id=source_asset_id,
             )
             if admitted_student_message_id is not None
             else append_student_message(
@@ -579,6 +587,11 @@ class TutorRuntime:
             raise
         context = guarded.context
         payload = guarded.payload
+        if source_input is not None:
+            # Bytes are attached only after the deterministic context guardrail:
+            # they are neither serialized into context sizing nor persisted in
+            # Tutor payload records.
+            payload["source_input"] = source_input
         capacity_lineage = guarded.lineage
         model_stream = self._gateway.stream(
             ModelTask.TUTOR,
@@ -588,6 +601,7 @@ class TutorRuntime:
                 student_id=learning_session.student_id,
                 learning_session_id=learning_session.id,
                 source_message_id=student_message.id,
+                source_asset_id=source_asset_id,
             ),
         )
         # The authenticated API commits the durable Student-input admission at
@@ -755,6 +769,7 @@ class TutorRuntime:
         learning_session: LearningSession,
         message_id: UUID,
         content: str,
+        source_asset_id: UUID | None = None,
     ) -> LearningMessage:
         message = self._session.get(LearningMessage, message_id)
         if (
@@ -762,6 +777,7 @@ class TutorRuntime:
             or message.session_id != learning_session.id
             or message.role != "student"
             or message.content != content
+            or message.source_asset_id != source_asset_id
         ):
             raise ValueError("Admitted Student message is unavailable for this learning session.")
         return message

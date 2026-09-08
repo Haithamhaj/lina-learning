@@ -1,0 +1,12 @@
+* { box-sizing: border-box; }
+body { margin: 0; padding: 20px; color: #17334f; background: linear-gradient(135deg,#eef7f3,#f6f3ff 54%,#fff9f1); font-family: system-ui,sans-serif; }
+main { width: min(760px,100%); margin: auto; }
+header,section { margin-bottom: 18px; padding: 20px; border: 1px solid #d9e4ea; border-radius: 24px; background: #fff; box-shadow: 0 14px 38px #17334f14; }
+header p { margin: 0; color: #37796f; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+h1 { margin: 4px 0 0; font-size: clamp(25px,6vw,38px); } h2 { margin-top: 0; }
+form { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px; align-items: center; }
+form > div { grid-column: 1/-1; } form > div > div { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; } form > div > div > div { min-width: 0; padding: 8px 12px; border: 1px solid #d9d3ff; border-radius: 16px; background: #f6f3ff; color: #463b85; } form > div > img { width: auto; max-width: 256px; max-height: 160px; margin-top: 8px; border: 1px solid #d9d3ff; border-radius: 12px; object-fit: contain; } label,input[type=file] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+button,input { min-height: 48px; max-width: 100%; border: 1px solid #cdd9e2; border-radius: 14px; font: inherit; }
+button { padding: 8px 14px; color: #17334f; background: #eef4f8; font-weight: 700; } input { min-width: 0; padding: 0 14px; }
+img { display: block; max-width: 100%; } button:focus-visible,input:focus-visible { outline: 3px solid #6658d3; outline-offset: 2px; }
+@media(max-width:440px){body{padding:8px}header,section{padding:14px;border-radius:18px}form{grid-template-columns:1fr}form>button{width:100%}}

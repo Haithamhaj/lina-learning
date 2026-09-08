@@ -133,6 +133,12 @@ class Settings(BaseSettings):
     # Bound per-request memory while allowing long, low-bitrate browser
     # recordings without turning the safety bound into a short duration cap.
     transcription_max_audio_bytes: int = Field(default=24 * 1024 * 1024, gt=0)
+    # Application admission bounds for one immutable Student source original.
+    # Provider-side normalization is independent and never replaces the original.
+    student_source_max_bytes: int = Field(default=20 * 1024 * 1024, gt=0)
+    student_source_max_document_bytes: int = Field(default=10 * 1024 * 1024, gt=0)
+    student_source_max_image_pixels: int = Field(default=20_000_000, gt=0)
+    student_source_max_pdf_pages: int = Field(default=25, gt=0)
     embedding_model_name: str = "text-embedding-3-small"
     embedding_dimensions: int = Field(default=1536, ge=1)
 

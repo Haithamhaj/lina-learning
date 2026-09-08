@@ -2,11 +2,16 @@
 
 ## Current Goal
 
-Practical validation of the complete Daily Tutor → Canvas → Tutor learning experience.
+Practical validation of the complete multimodal Daily Tutor → Canvas → Tutor learning experience.
 
 ## Current Reality
 
 - The Primary Tutor runtime exists.
+- Daily text, microphone transcription, and Student source input now converge on
+  the same Primary Tutor. VISION-01 preserves immutable private image/PDF/DOCX
+  originals, exact Student-message and AI-execution lineage, same-source
+  follow-ups, and exact text-only behavior when no source is active. Bounded real
+  Luna image/PDF/follow-up proof passed with exactly three Tutor calls.
 - Studio durable state and runtime exist.
 - Canvas Specialist execution exists.
 - A production Process sequence/cycle exists.
@@ -43,4 +48,5 @@ Practical validation of the complete Daily Tutor → Canvas → Tutor learning e
 ## Next Practical Goal
 
 Provide local Clerk configuration, then run an authenticated disposable-Student
-Daily journey and fix any experience defects that appear in real use.
+Daily journey covering text, voice, image/PDF/DOCX source history, and Canvas;
+fix any experience defects that appear in real use.

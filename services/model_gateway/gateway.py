@@ -51,6 +51,7 @@ class AIExecutionLineage:
     student_id: UUID | None = None
     learning_session_id: UUID | None = None
     source_message_id: UUID | None = None
+    source_asset_id: UUID | None = None
     intelligence_processing_run_id: UUID | None = None
     document_id: UUID | None = None
     semantic_processing_run_id: UUID | None = None
@@ -267,6 +268,7 @@ class ModelGateway:
                 student_id=selected_lineage.student_id,
                 learning_session_id=selected_lineage.learning_session_id,
                 source_message_id=selected_lineage.source_message_id,
+                source_asset_id=selected_lineage.source_asset_id,
                 intelligence_processing_run_id=selected_lineage.intelligence_processing_run_id,
                 document_id=selected_lineage.document_id,
                 semantic_processing_run_id=selected_lineage.semantic_processing_run_id,

@@ -17,6 +17,22 @@
 
 ---
 
+## VISION-01 — Student Source Asset + Multimodal Primary Tutor
+**Status:** DONE / IMPLEMENTED / CODEX-VERIFIED
+**Approved result:** Daily supports one immutable Student-owned JPEG, PNG, WEBP,
+PDF, or DOCX source on the normal Student message. The private original and
+checksum remain authoritative; PostgreSQL stores only bounded metadata and exact
+message/session/AI-execution lineage. The same `ModelTask.TUTOR` call supplies
+transient application-built OpenAI image/file input with `store=false`; there is
+no OCR, Vision Agent, second Tutor call, ContentDocument ingestion, Evidence,
+Personal Facts, or Learning Intelligence write from upload. Source follow-ups use
+the owned Lina asset id; a new source supersedes it in the Daily client, and an
+explicit dismiss restores exact text-only behavior.
+**Verified:** focused source/provider/Tutor/Voice/PostgreSQL tests, TypeScript,
+production build, deterministic Chrome component proof, migration round-trip,
+and three bounded real `gpt-5.6-luna` Tutor calls (image, same-source follow-up,
+one-page PDF). Authenticated Clerk browser validation remains unavailable locally.
+
 # Learning Studio Governance Provenance — 2026-09-02
 
 **Authority:** `docs/STUDIO_IMPLEMENTATION_PLAN.md` and the current Studio

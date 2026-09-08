@@ -218,6 +218,15 @@ def test_tutor_instructions_require_calibrated_child_interaction_without_changin
         "copy the supporting student reasoning span",
     ):
         assert required_concept in instructions
+
+
+def test_primary_tutor_instructions_require_source_grounding_and_honest_ambiguity() -> None:
+    instructions = TUTOR_SHARED_INSTRUCTIONS.casefold()
+
+    assert "student source" in instructions
+    assert "do not invent" in instructions
+    assert "unclear or unreadable" in instructions
+    assert "ask one short clarifying question" in instructions
     assert "approximately 10-year-old" not in instructions
 
 

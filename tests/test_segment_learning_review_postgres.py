@@ -604,16 +604,17 @@ def test_segment_review_migration_backfills_legacy_lineage_and_safe_downgrade(
         with factory.begin() as session:
             student_id, learning_session_id = _legacy_lineage(session)
             processing_run = _processing_run(session, student_id)
-            message = LearningMessage(
-                session_id=learning_session_id,
-                role="student",
-                content="One half is the same as two fourths.",
+            message_id = uuid4()
+            session.execute(
+                text(
+                    "INSERT INTO learning_messages (id, session_id, role, content, metadata) "
+                    "VALUES (:id, :session_id, 'student', :content, '{}'::jsonb)"
+                ),
+                {"id": message_id, "session_id": learning_session_id, "content": "One half is the same as two fourths."},
             )
-            session.add(message)
-            session.flush()
             candidate = CandidateEvent(
                 session_id=learning_session_id,
-                message_id=message.id,
+                message_id=message_id,
                 event_type="attempt",
                 signal="fixture-signal",
             )
@@ -630,7 +631,7 @@ def test_segment_review_migration_backfills_legacy_lineage_and_safe_downgrade(
                     "run_id": processing_run.id,
                     "session_id": learning_session_id,
                     "candidate_id": candidate.id,
-                    "message_id": message.id,
+                    "message_id": message_id,
                 },
             )
 

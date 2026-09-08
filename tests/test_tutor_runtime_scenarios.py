@@ -896,10 +896,12 @@ class _DecisionFirstProvider:
     def __init__(self, *, applies: bool) -> None:
         self.calls = 0
         self.applies = applies
+        self.payloads: list[dict[str, object]] = []
 
     def stream(self, route: ModelRoute, payload: dict[str, object]):
-        del route, payload
+        del route
         self.calls += 1
+        self.payloads.append(payload)
         ordinary = "ORDINARY MODEL TEXT MUST NOT LEAK"
         decision = {
             "schema_version": PARENT_BOUNDARY_SCHEMA_VERSION,
@@ -980,6 +982,35 @@ def test_parent_redirect_discards_all_ordinary_stream_text_and_persists_only_ser
     }
     assert messages[-1].payload["workspace_visual"]["status"] == "NOT_REQUESTED"
     assert provider.calls == 1
+
+
+def test_multimodal_turn_uses_the_same_server_enforced_parent_boundary() -> None:
+    runtime, provider, session = _semantic_runtime(applies=True)
+    learning_session = SimpleNamespace(id=uuid4(), student_id=uuid4(), last_activity_at=None)
+    asset_id = uuid4()
+    student_message = LearningMessage(
+        id=uuid4(),
+        session_id=learning_session.id,
+        role="student",
+        content="Help me with this.",
+        source_asset_id=asset_id,
+    )
+    session.add(student_message)
+    events = list(runtime.stream_turn(
+        learning_session=learning_session,
+        question=student_message.content,
+        admitted_student_message_id=student_message.id,
+        source_asset_id=asset_id,
+        source_input={"kind": "IMAGE", "filename": "source.png", "content_type": "image/png", "content": b"image"},
+    ))
+
+    assert not [event for event in events if isinstance(event, TutorTextDelta)]
+    assert isinstance(events[-1], TutorTurn)
+    assert "ORDINARY MODEL TEXT" not in events[-1].text
+    assert provider.calls == 1
+    assert provider.payloads[0]["source_input"]["kind"] == "IMAGE"
+    execution = next(row for row in session.rows if type(row).__name__ == "AIExecution")
+    assert execution.source_asset_id == asset_id
 
 
 def test_allow_releases_buffered_text_and_persists_complete_parent_boundary_audit() -> None:

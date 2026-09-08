@@ -3,19 +3,20 @@
 from __future__ import annotations
 
 from datetime import datetime
+from urllib.parse import quote
 from uuid import UUID
 
 import json
 from collections.abc import Callable, Iterator
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from services.platform.auth import AuthenticatedPrincipal, UserRole, require_role
 from apps.api.routes.studio import get_studio_subject_registry
-from services.platform.db.models import LearningMessage, LearningSession
+from services.platform.db.models import LearningMessage, LearningSession, StudentSourceAsset
 from services.platform.db.session import get_session
 from services.platform.student_identity import resolve_student_for_authenticated_identity
 from services.studio.tutor_context import acknowledge_studio_tutor_observation
@@ -31,6 +32,7 @@ from services.model_gateway.factory import create_speech_to_text_gateway, create
 from services.model_gateway.gateway import StreamComplete, StreamDelta, StreamParentBoundaryDecision
 from services.model_gateway.openai_transcription_provider import TranscriptionProviderError
 from services.platform.config import get_settings
+from services.platform.storage import StorageError, create_object_storage
 from services.platform.safety import SafetyAction
 from services.tutor.candidate_events import (
     PersistedGuidedLearningCheck,
@@ -61,6 +63,17 @@ from services.voice.transcription import (
     transcribe_student_audio,
     validated_audio_payload,
 )
+from services.student_sources.service import (
+    link_source_to_message,
+    owned_source_asset,
+    provider_source_input,
+    store_source_asset,
+)
+from services.student_sources.validation import (
+    StudentSourceValidationError,
+    ValidatedStudentSource,
+    validate_student_source,
+)
 
 
 router = APIRouter(prefix="/api/v1/student", tags=["student"])
@@ -84,6 +97,15 @@ class StudentMessageRequest(BaseModel):
     guided_check_id: UUID | None = None
 
 
+class StudentSourceAssetResponse(BaseModel):
+    id: UUID
+    kind: str
+    filename: str
+    content_type: str
+    size_bytes: int
+    preview_url: str
+
+
 class StudentMessageResponse(BaseModel):
     id: UUID
     role: str
@@ -91,9 +113,14 @@ class StudentMessageResponse(BaseModel):
     created_at: datetime
     suggested_actions: list[SuggestedAction] = Field(default_factory=list)
     guided_check: PersistedGuidedLearningCheck | None = None
+    source_asset: StudentSourceAssetResponse | None = None
 
     @classmethod
-    def from_model(cls, message: LearningMessage) -> "StudentMessageResponse":
+    def from_model(
+        cls,
+        message: LearningMessage,
+        source_asset: StudentSourceAsset | None = None,
+    ) -> "StudentMessageResponse":
         payload = message.payload if isinstance(message.payload, dict) else {}
         return cls(
             id=message.id,
@@ -102,6 +129,18 @@ class StudentMessageResponse(BaseModel):
             created_at=message.created_at,
             suggested_actions=normalize_suggested_actions(payload.get("suggested_actions")) if message.role == "tutor" else [],
             guided_check=persisted_guided_learning_check(payload.get("guided_check")) if message.role == "tutor" else None,
+            source_asset=(
+                None
+                if source_asset is None
+                else StudentSourceAssetResponse(
+                    id=source_asset.id,
+                    kind=source_asset.kind,
+                    filename=source_asset.original_filename,
+                    content_type=source_asset.content_type,
+                    size_bytes=source_asset.size_bytes,
+                    preview_url=f"/daily/session/{source_asset.learning_session_id}/source/{source_asset.id}",
+                )
+            ),
         )
 
 
@@ -143,12 +182,19 @@ def _response(session: Session, learning_session: LearningSession) -> StudentSes
 
 
 def _daily_response(session: Session, learning_session: LearningSession) -> DailySessionResponse:
+    messages = ordered_messages(session, learning_session=learning_session)
     return DailySessionResponse(
         learning_session_id=learning_session.id,
         status=learning_session.status,
         opened_at=learning_session.opened_at,
         last_activity_at=learning_session.last_activity_at,
-        messages=[StudentMessageResponse.from_model(message) for message in ordered_messages(session, learning_session=learning_session)],
+        messages=[
+            StudentMessageResponse.from_model(
+                message,
+                None if message.source_asset_id is None else session.get(StudentSourceAsset, message.source_asset_id),
+            )
+            for message in messages
+        ],
     )
 
 
@@ -341,6 +387,8 @@ def _stream_student_tutor_turn(
     session_resolver: Callable[..., LearningSession | None] = owned_open_math_session,
     admit_before_response: bool = False,
     include_canvas_composition: bool = False,
+    validated_source: ValidatedStudentSource | None = None,
+    requested_source_asset_id: UUID | None = None,
 ) -> StreamingResponse:
     """Forward provider-produced Tutor deltas over the authenticated Student SSE path."""
 
@@ -348,6 +396,8 @@ def _stream_student_tutor_turn(
     learning_session = session_resolver(session, student_id=student.id, session_id=session_id)
     if learning_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=not_found_detail)
+    if validated_source is not None and requested_source_asset_id is not None:
+        raise HTTPException(status_code=422, detail="Choose either a new source or the current source.")
     content = request.content.strip()
     if not content:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Message content is required.")
@@ -386,23 +436,65 @@ def _stream_student_tutor_turn(
     )
     bind = session.get_bind()
     admitted_student_message_id: UUID | None = None
+    source_asset: StudentSourceAsset | None = None
+    source_input: dict[str, object] | None = None
+    storage = None
+    compensating_storage_key: str | None = None
     if admit_before_response:
         try:
-            admitted_student_message_id = create_tutor_runtime(session).admit_turn(
+            admitted_message = create_tutor_runtime(session).admit_turn(
                 learning_session=learning_session,
                 question=content,
                 suggested_action_kind=selected_action_kind,
                 suggested_action_source_tutor_message_id=selected_action_source_tutor_message_id,
                 guided_check_id=guided_check_id,
                 guided_check_source_tutor_message_id=guided_check_source_tutor_message_id,
-            ).id
+            )
+            admitted_student_message_id = admitted_message.id
+            if validated_source is not None or requested_source_asset_id is not None:
+                storage = create_object_storage(get_settings())
+            if validated_source is not None:
+                source_asset = store_source_asset(
+                    session,
+                    storage=storage,
+                    student_id=student.id,
+                    learning_session=learning_session,
+                    source_message=admitted_message,
+                    source=validated_source,
+                )
+                compensating_storage_key = source_asset.storage_key
+            elif requested_source_asset_id is not None:
+                source_asset = owned_source_asset(
+                    session,
+                    student_id=student.id,
+                    learning_session_id=learning_session.id,
+                    asset_id=requested_source_asset_id,
+                )
+                if source_asset is None:
+                    raise ValueError("Student source is unavailable for this learning session.")
+                link_source_to_message(admitted_message, asset=source_asset)
+                session.flush([admitted_message])
+            if source_asset is not None:
+                source_input = provider_source_input(storage=storage, asset=source_asset)
         except ValueError as error:
             session.rollback()
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)) from None
+        except StorageError:
+            session.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Student source is temporarily unavailable.",
+            ) from None
     # The generator owns a separate transaction. Finish all authenticated
     # request-side work. Daily commits its raw Student admission before SSE
     # response headers; legacy Math retains its established lazy stream path.
-    session.commit()
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        if compensating_storage_key is not None and storage is not None:
+            storage.delete(compensating_storage_key)
+        raise
 
     def events() -> Iterator[str]:
         stream_session = Session(bind)
@@ -426,6 +518,8 @@ def _stream_student_tutor_turn(
                 live_subject_context=live_subject_context,
                 before_model_stream=stream_session.commit,
                 admitted_student_message_id=admitted_student_message_id,
+                source_input=source_input,
+                source_asset_id=None if source_asset is None else source_asset.id,
             )
             for event in turn_stream:
                 if isinstance(event, TutorTextDelta):
@@ -469,6 +563,8 @@ def _stream_student_tutor_turn(
     headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
     if admitted_student_message_id is not None:
         headers["X-Lina-Student-Message-ID"] = str(admitted_student_message_id)
+    if source_asset is not None:
+        headers["X-Lina-Source-Asset-ID"] = str(source_asset.id)
     return StreamingResponse(
         events(),
         media_type="text/event-stream",
@@ -514,6 +610,96 @@ def stream_daily_tutor_turn(
         session_resolver=owned_open_daily_session,
         admit_before_response=True,
         include_canvas_composition=True,
+    )
+
+
+@router.post("/daily/session/{session_id}/source/turn/stream")
+async def stream_daily_source_tutor_turn(
+    session_id: UUID,
+    content: str = Form(default=""),
+    source: UploadFile | None = File(default=None),
+    source_asset_id: UUID | None = Form(default=None),
+    principal: AuthenticatedPrincipal = Depends(require_role(UserRole.STUDENT)),
+    session: Session = Depends(get_session),
+) -> StreamingResponse:
+    """Admit one owned source and use it in the same primary Daily Tutor call."""
+
+    if source is None and source_asset_id is None:
+        raise HTTPException(status_code=422, detail="A Student source is required.")
+    validated_source = None
+    if source is not None:
+        settings = get_settings()
+        try:
+            source_bytes = await source.read(settings.student_source_max_bytes + 1)
+        finally:
+            await source.close()
+        try:
+            validated_source = validate_student_source(
+                content=source_bytes,
+                filename=source.filename,
+                content_type=source.content_type,
+                max_bytes=settings.student_source_max_bytes,
+                max_document_bytes=settings.student_source_max_document_bytes,
+                max_image_pixels=settings.student_source_max_image_pixels,
+                max_pdf_pages=settings.student_source_max_pdf_pages,
+            )
+        except StudentSourceValidationError as error:
+            detail = str(error)
+            response_status = 413 if "exceeds the allowed" in detail else 422
+            if "unsupported" in detail or "MIME" in detail:
+                response_status = 415
+            raise HTTPException(status_code=response_status, detail=detail) from None
+    question = content.strip() or "Help me with this."
+    if len(question) > 4000:
+        raise HTTPException(status_code=422, detail="Message content is too long.")
+    return _stream_student_tutor_turn(
+        session_id,
+        StudentMessageRequest(content=question),
+        principal,
+        session,
+        live_subject_context=unknown_live_subject(),
+        not_found_detail="Open Daily session not found.",
+        session_resolver=owned_open_daily_session,
+        admit_before_response=True,
+        include_canvas_composition=True,
+        validated_source=validated_source,
+        requested_source_asset_id=source_asset_id,
+    )
+
+
+@router.get("/daily/session/{session_id}/source/{source_asset_id}")
+def get_daily_source_original(
+    session_id: UUID,
+    source_asset_id: UUID,
+    principal: AuthenticatedPrincipal = Depends(require_role(UserRole.STUDENT)),
+    session: Session = Depends(get_session),
+) -> Response:
+    """Return an authenticated, owner-scoped preview of the immutable original."""
+
+    student = _student_for_principal(session, principal)
+    learning_session = owned_open_daily_session(session, student_id=student.id, session_id=session_id)
+    if learning_session is None:
+        raise HTTPException(status_code=404, detail="Open Daily session not found.")
+    asset = owned_source_asset(
+        session,
+        student_id=student.id,
+        learning_session_id=learning_session.id,
+        asset_id=source_asset_id,
+    )
+    if asset is None:
+        raise HTTPException(status_code=404, detail="Student source not found.")
+    try:
+        stored = create_object_storage(get_settings()).get(asset.storage_key)
+    except StorageError:
+        raise HTTPException(status_code=503, detail="Student source is temporarily unavailable.") from None
+    return Response(
+        content=stored.content,
+        media_type=asset.content_type,
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Disposition": f"inline; filename*=UTF-8''{quote(asset.original_filename, safe='')}",
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 

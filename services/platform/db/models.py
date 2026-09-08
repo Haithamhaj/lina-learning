@@ -143,6 +143,7 @@ class AIExecution(Base):
         Index("ix_ai_executions_student_created", "student_id", "created_at"),
         Index("ix_ai_executions_session_created", "learning_session_id", "created_at"),
         Index("ix_ai_executions_operation", "operation_id"),
+        Index("ix_ai_executions_source_asset", "source_asset_id"),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -177,6 +178,9 @@ class AIExecution(Base):
     )
     source_message_id: Mapped[UUID | None] = mapped_column(
         PostgreSQLUUID(as_uuid=True), ForeignKey("learning_messages.id", ondelete="SET NULL")
+    )
+    source_asset_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("student_source_assets.id", ondelete="SET NULL")
     )
     intelligence_processing_run_id: Mapped[UUID | None] = mapped_column(
         PostgreSQLUUID(as_uuid=True),
@@ -553,6 +557,44 @@ class LearningSession(Base):
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class StudentSourceAsset(Base):
+    """Immutable Student original linked to the exact admitted source message."""
+
+    __tablename__ = "student_source_assets"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["learning_session_id", "student_id"],
+            ["learning_sessions.id", "learning_sessions.student_id"],
+            ondelete="CASCADE",
+            name="fk_student_source_assets_session_student",
+        ),
+        ForeignKeyConstraint(
+            ["source_message_id", "learning_session_id"],
+            ["learning_messages.id", "learning_messages.session_id"],
+            ondelete="CASCADE",
+            name="fk_student_source_assets_message_session",
+        ),
+        CheckConstraint("kind IN ('IMAGE', 'PDF', 'DOCUMENT')", name="ck_student_source_assets_kind"),
+        UniqueConstraint("source_message_id", name="uq_student_source_assets_source_message"),
+        UniqueConstraint("storage_key", name="uq_student_source_assets_storage_key"),
+        Index("ix_student_source_assets_student_session_created", "student_id", "learning_session_id", "created_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    learning_session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    source_message_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(255), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    storage_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
 class LearningSegment(Base):
     """Contiguous session-local conversation segment; raw messages remain authoritative."""
 
@@ -635,6 +677,7 @@ class LearningMessage(Base):
     __table_args__ = (
         UniqueConstraint("id", "session_id", name="uq_learning_messages_id_session"),
         Index("ix_learning_messages_session_created", "session_id", "created_at"),
+        Index("ix_learning_messages_source_asset", "source_asset_id"),
         Index(
             "ix_learning_messages_session_segment_created_id",
             "session_id",
@@ -655,6 +698,9 @@ class LearningMessage(Base):
     payload: Mapped[dict[str, object]] = mapped_column("metadata", JSONB, nullable=False, default=dict, server_default="{}")
     ai_execution_id: Mapped[UUID | None] = mapped_column(
         PostgreSQLUUID(as_uuid=True), ForeignKey("ai_executions.id", ondelete="SET NULL")
+    )
+    source_asset_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("student_source_assets.id", ondelete="SET NULL")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
