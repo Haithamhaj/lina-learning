@@ -2,11 +2,14 @@
 
 ## How to Use This File
 
-- Codex should execute only tasks marked `READY`.
-- Normally complete one task at a time.
-- A task becomes `DONE` only after its verification passes.
-- Future-phase tasks may remain `BLOCKED` until dependencies and decision gates are satisfied.
-- If implementation reality invalidates a task, update this file and `project-state/PROJECT_STATE.md`; do not silently improvise a new roadmap.
+- This file is a backlog, history, and reference for useful task context.
+- Statuses are informative only. Old `READY`, `BLOCKED`, review, promotion, and
+  acceptance labels never override an explicit current Product Owner
+  implementation request.
+- Tasks do not require promotion before implementation. Codex may complete the
+  multiple engineering steps needed for one requested working slice.
+- Keep useful historical detail; update current documentation when an
+  implementation materially changes reality.
 
 ### Status Values
 

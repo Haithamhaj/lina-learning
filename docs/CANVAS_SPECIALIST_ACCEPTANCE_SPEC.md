@@ -1,3 +1,8 @@
+# HISTORICAL / REFERENCE ONLY
+
+> **NOT CURRENT EXECUTION AUTHORITY**
+> **MUST NOT BLOCK AN EXPLICIT PRODUCT OWNER IMPLEMENTATION REQUEST**
+
 # Canvas Specialist Acceptance & Verification Specification
 
 **Status:** GOVERNING VERIFICATION SPEC — prepared from the Product Owner-accepted Canvas Specialist contract on 2026-09-07.  

@@ -1,3 +1,8 @@
+# HISTORICAL / REFERENCE ONLY
+
+> **NOT CURRENT EXECUTION AUTHORITY**
+> **MUST NOT BLOCK AN EXPLICIT PRODUCT OWNER IMPLEMENTATION REQUEST**
+
 # Daily-Use Lina Release 1 — Approved Decision Register
 
 **Status:** Product Owner approved on 2026-08-31  

@@ -1,3 +1,8 @@
+# HISTORICAL / REFERENCE ONLY
+
+> **NOT CURRENT EXECUTION AUTHORITY**
+> **MUST NOT BLOCK AN EXPLICIT PRODUCT OWNER IMPLEMENTATION REQUEST**
+
 # Canvas Specialist Implementation Plan
 
 **Status:** APPROVED EXECUTION PLAN — derived from the accepted Canvas Specialist contract and direct Product Owner instruction on 2026-09-07.  

@@ -1,3 +1,8 @@
+# HISTORICAL / REFERENCE ONLY
+
+> **NOT CURRENT EXECUTION AUTHORITY**
+> **MUST NOT BLOCK AN EXPLICIT PRODUCT OWNER IMPLEMENTATION REQUEST**
+
 # Documentation Reviews
 
 This is the small navigation and delivery index for Product Owner review, not a governing specification. Delivery convention approved on 2026-09-07.
