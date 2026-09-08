@@ -4,6 +4,7 @@ from services.studio.subjects.process_production import (
     ACTIVITY_KEY,
     PROFILE_VERSION,
     RENDERER_KEY,
+    reduce_process,
     proposal_to_scene_seed,
 )
 from services.studio.process_production_acceptance import ProcessAcceptanceFailure
@@ -81,6 +82,15 @@ def test_production_relation_explanation_keeps_exact_relation_provenance():
         "action": "REQUEST_EXPLANATION", "target_id": "collect-to-filter", "target_kind": "relation",
         "from": "collect", "to": "filter", "meaning": "then",
     }
+
+
+def test_aud02_production_trace_is_owned_by_production_reducer_and_focus_clears_it():
+    seed = {"title": "Water filtration", "subtitle": "Steps.", "locale": "en", "topology": "sequence", "sourceLabel": "Tutor-approved Process explanation", "sourceUrl": "https://lina.local/process", "stages": [{"id": "collect", "label": "Collect", "detail": "Collect water.", "art": "drop"}, {"id": "filter", "label": "Filter", "detail": "Filter particles.", "art": "filter"}], "relations": [{"id": "collect-to-filter", "from": "collect", "to": "filter", "label": "then"}]}
+    snapshot = {"state_payload": {"scene_seed": seed, ACTIVITY_KEY: {}}}
+    traced = reduce_process(snapshot, SimpleNamespace(payload={"target_id": "collect-to-filter"}, action_key="TRACE_RELATION", sequence=1, actor="STUDENT", id="event-1"))
+    assert traced["state_payload"][ACTIVITY_KEY]["tracing_relation_id"] == "collect-to-filter"
+    focused = reduce_process(traced, SimpleNamespace(payload={"target_id": "collect"}, action_key="FOCUS_OBJECT", sequence=2, actor="STUDENT", id="event-2"))
+    assert focused["state_payload"][ACTIVITY_KEY]["tracing_relation_id"] is None
 
 
 def test_semantic_support_keeps_stage_and_relation_provenance_separate_and_respects_must_not_imply():

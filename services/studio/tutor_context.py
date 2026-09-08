@@ -293,7 +293,8 @@ def _selected_visual(session, runtime, snapshot, capability):
     if seed != scene.seed_payload or scene.payload_schema_version != (visual.SEED_VERSION if capability.activity_key == visual.ACTIVITY_KEY else process_production.SEED_VERSION):
         return None
     try:
-        return visual.project_visual(seed, snapshot.state_payload.get(capability.activity_key, {}))
+        projector = visual.project_visual if capability.activity_key == visual.ACTIVITY_KEY else process_production.project_visual
+        return projector(seed, snapshot.state_payload.get(capability.activity_key, {}))
     except (ValueError, TypeError, KeyError):
         return None
 

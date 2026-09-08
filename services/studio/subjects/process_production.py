@@ -62,18 +62,79 @@ def validate_action(payload: Mapping[str, object]) -> None:
     awareness.validate_action(payload)
 
 
-def reduce_process(snapshot: dict[str, object], event: object) -> dict[str, object]:
-    # The historical reducer keys state by its activity. Preserve its exact semantic rules,
-    # then place the result in the additive production activity namespace.
-    clone = deepcopy(snapshot)
-    state = clone["state_payload"]
-    if ACTIVITY_KEY in state:
-        state[awareness.ACTIVITY_KEY] = state.pop(ACTIVITY_KEY)
-    result = awareness.reduce_process(clone, event)
-    state = result["state_payload"]
-    if awareness.ACTIVITY_KEY in state:
-        state[ACTIVITY_KEY] = state.pop(awareness.ACTIVITY_KEY)
+def view_state(seed: Mapping[str, object], state: Mapping[str, object]) -> dict[str, object]:
+    """Production-only additive Process state; historical V1 remains unchanged."""
+    ids = {stage["id"] for stage in seed["stages"]}
+    relations = {relation["id"] for relation in seed["relations"]}
+    result = {"selected_stage_id": None, "focused_stage_id": None, "active_explanation_stage_id": None,
+              "revealed_stage_ids": [], "highlighted_relation_ids": [], "tracing_relation_id": None}
+    if not isinstance(state, Mapping) or set(state) - set(result):
+        raise ValueError("Unknown production Process state.")
+    result.update(deepcopy(state))
+    for key in ("selected_stage_id", "focused_stage_id", "active_explanation_stage_id"):
+        if result[key] is not None and (not isinstance(result[key], str) or result[key] not in ids):
+            raise ValueError("Unknown selected stage.")
+    if result["tracing_relation_id"] is not None and (not isinstance(result["tracing_relation_id"], str) or result["tracing_relation_id"] not in relations):
+        raise ValueError("Unknown tracing relation.")
+    for key, allowed in (("revealed_stage_ids", ids), ("highlighted_relation_ids", relations)):
+        values = result[key]
+        if not isinstance(values, list) or len(values) > len(allowed) or any(not isinstance(value, str) or value not in allowed for value in values) or len(set(values)) != len(values):
+            raise ValueError("Unknown state identities.")
     return result
+
+
+def focus_state(seed: Mapping[str, object], state: Mapping[str, object], target: str) -> dict[str, object]:
+    result = view_state(seed, state)
+    if target not in {stage["id"] for stage in seed["stages"]}:
+        raise ValueError("Unknown focus target.")
+    result.update(selected_stage_id=target, focused_stage_id=target, active_explanation_stage_id=target,
+                  highlighted_relation_ids=[relation["id"] for relation in seed["relations"] if relation["from"] == target],
+                  tracing_relation_id=None)
+    if target not in result["revealed_stage_ids"]:
+        result["revealed_stage_ids"].append(target)
+    return result
+
+
+def reduce_process(snapshot: dict[str, object], event: object) -> dict[str, object]:
+    result = deepcopy(snapshot)
+    state = result["state_payload"]
+    seed = state["scene_seed"]
+    validate_seed(seed)
+    current = view_state(seed, state.get(ACTIVITY_KEY, {}))
+    validate_action(event.payload)
+    target = event.payload["target_id"]
+    stage_ids = {stage["id"] for stage in seed["stages"]}
+    relation_ids = {relation["id"] for relation in seed["relations"]}
+    if event.action_key in ("FOCUS_OBJECT", "REVEAL_OBJECT_DETAIL"):
+        if target not in stage_ids:
+            raise ValueError("Unknown stage target.")
+        if event.action_key == "FOCUS_OBJECT":
+            current = focus_state(seed, current, target)
+        else:
+            current["active_explanation_stage_id"] = target
+            if target not in current["revealed_stage_ids"]:
+                current["revealed_stage_ids"].append(target)
+    elif event.action_key == "TRACE_RELATION":
+        if target not in relation_ids:
+            raise ValueError("Unknown relation target.")
+        current["highlighted_relation_ids"] = [target]
+        current["tracing_relation_id"] = target
+    elif event.action_key == "REQUEST_EXPLANATION":
+        if target not in stage_ids | relation_ids:
+            raise ValueError("Unknown explanation target.")
+    else:
+        raise ValueError("Unsupported Process action.")
+    state[ACTIVITY_KEY] = current
+    result["latest_event_sequence"] = event.sequence
+    if event.actor == "STUDENT":
+        result["last_meaningful_student_event_id"] = event.id
+    return result
+
+
+def project_visual(seed: Mapping[str, object], state: Mapping[str, object]) -> dict[str, object]:
+    normalized = view_state(seed, state)
+    normalized.pop("tracing_relation_id")
+    return awareness.project_visual(seed, normalized)
 
 
 def make_profile():

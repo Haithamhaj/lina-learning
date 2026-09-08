@@ -279,6 +279,17 @@ def test_reveal_is_separate_from_focus_in_server_state():
     assert current["active_explanation_stage_id"] == "pupa"
 
 
+def test_aud02_historical_v1_state_is_exact_after_focus_reveal_and_trace():
+    from types import SimpleNamespace
+
+    snapshot = {"state_payload": {"scene_seed": seed(), v.ACTIVITY_KEY: {}}}
+    for sequence, action, target in ((1, "FOCUS_OBJECT", "larva"), (2, "REVEAL_OBJECT_DETAIL", "pupa"), (3, "TRACE_RELATION", "pupa-to-adult")):
+        snapshot = v.reduce_process(snapshot, SimpleNamespace(payload={"target_id": target}, action_key=action, sequence=sequence, actor="STUDENT", id=uuid4()))
+    state = snapshot["state_payload"][v.ACTIVITY_KEY]
+    assert set(state) == {"selected_stage_id", "focused_stage_id", "active_explanation_stage_id", "revealed_stage_ids", "highlighted_relation_ids"}
+    assert state["highlighted_relation_ids"] == ["pupa-to-adult"]
+
+
 def test_current_visual_is_sanitized_independently_of_interaction_source_activity():
     from services.studio.interactions import StudioInteractionTutorContext
 
