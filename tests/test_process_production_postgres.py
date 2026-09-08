@@ -82,6 +82,57 @@ def _proposal() -> dict[str, object]:
     }
 
 
+def _v2_pack() -> dict[str, object]:
+    pack = _pack()
+    pack.update(version="frozen-composition-pack-v2", capability_pack={"identity": "process-capability-pack-v2", "process_stage_limit": [2, 8]}, allowed_motion_intents=["REVEAL_IN_ORDER", "TRACE_SEQUENCE", "TRANSITION_FOCUS", "EMPHASIZE_RELATION"])
+    return pack
+
+
+def _v2_proposal(*, invalid: bool = False) -> dict[str, object]:
+    proposal = _proposal()
+    proposal.update(version="canvas-specialist-process-proposal-v2", motion_intents=["TRACE_CYCLE"] if invalid else ["REVEAL_IN_ORDER", "TRACE_SEQUENCE", "TRANSITION_FOCUS", "EMPHASIZE_RELATION"])
+    return proposal
+
+
+def _v2_pending_run(factory: sessionmaker[Session]) -> tuple[object, object, object, object, object]:
+    student_id, learning_id, runtime_id, run_id = _run(factory)
+    with factory.begin() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id); assert run is not None
+        source = session.get(m.LearningMessage, run.source_message_id); assert source is not None
+        pack = _v2_pack(); digest = sha256(json.dumps(pack, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+        source.payload = {"workspace_visual": {"status": "ADMITTED", "order_digest": digest, "frozen_composition_pack": pack}}
+        run.capability_profile_version, run.output_schema_version, run.order_digest, run.status, run.proposal_payload = "process-capability-pack-v2", "canvas-specialist-process-proposal-v2", digest, "PENDING", None
+        job = session.get(m.Job, run.job_id); assert job is not None
+        job.payload = {**job.payload, "order_digest": digest, "capability_identity": "process-capability-pack-v2"}
+        return student_id, learning_id, runtime_id, run_id, job.id
+
+
+def test_v2_worker_persists_motion_scene_and_fresh_rebuild(factory: sessionmaker[Session]) -> None:
+    student_id, _, runtime_id, run_id, _ = _v2_pending_run(factory); calls = 0
+    class Provider:
+        def execute(self, route, payload):
+            nonlocal calls; calls += 1; return ModelResult(output=_v2_proposal())
+    registry = JobHandlerRegistry(); register_canvas_specialist_handlers(registry, session_factory=factory, gateway_factory=lambda session: ModelGateway(session, routes={ModelTask.CANVAS_SPECIALIST: ModelRoute("fixture", "v2")}, providers={"fixture": Provider()}))
+    assert run_once(factory, registry, worker_id="v2-valid") == m.JobStatus.COMPLETED
+    with factory() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id); scene = session.get(m.StudioScene, run.scene_id)
+        replay = StudioStateService(session).rebuild_snapshot(runtime_id=runtime_id, student_id=student_id)
+        assert calls == 1 and run.proposal_payload == _v2_proposal() and scene.seed_payload["motion_intents"] == _v2_proposal()["motion_intents"] and replay["state_payload"]["scene_seed"]["motion_intents"] == _v2_proposal()["motion_intents"]
+
+
+def test_v2_invalid_motion_is_terminal_without_regeneration(factory: sessionmaker[Session]) -> None:
+    _, _, runtime_id, run_id, _ = _v2_pending_run(factory); calls = 0
+    class Provider:
+        def execute(self, route, payload):
+            nonlocal calls; calls += 1; return ModelResult(output=_v2_proposal(invalid=True))
+    registry = JobHandlerRegistry(); register_canvas_specialist_handlers(registry, session_factory=factory, gateway_factory=lambda session: ModelGateway(session, routes={ModelTask.CANVAS_SPECIALIST: ModelRoute("fixture", "v2")}, providers={"fixture": Provider()}))
+    assert run_once(factory, registry, worker_id="v2-invalid") == m.JobStatus.FAILED
+    assert run_once(factory, registry, worker_id="v2-invalid-again") is None
+    with factory() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id); active = session.scalar(select(m.StudioScene).where(m.StudioScene.studio_runtime_id == runtime_id, m.StudioScene.status == "ACTIVE"))
+        assert calls == 1 and run.status == "FAILED" and run.scene_id is None and active is not None and active.activity_key == awareness.ACTIVITY_KEY
+
+
 def _run(factory: sessionmaker[Session], *, with_active: bool = True) -> tuple[object, object, object, object]:
     with factory.begin() as session:
         user = m.User(identity_provider="cs05", external_subject=uuid4().hex)
