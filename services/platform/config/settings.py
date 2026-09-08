@@ -129,6 +129,8 @@ class Settings(BaseSettings):
     # deterministic serialized characters and deliberately never truncates.
     personal_facts_context_capacity: int = Field(default=64000, gt=0)
     personal_facts_model_name: str | None = None
+    transcription_model_name: str = "gpt-transcribe"
+    transcription_max_audio_bytes: int = Field(default=5 * 1024 * 1024, gt=0)
     embedding_model_name: str = "text-embedding-3-small"
     embedding_dimensions: int = Field(default=1536, ge=1)
 

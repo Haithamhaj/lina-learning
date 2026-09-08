@@ -8,7 +8,7 @@ from uuid import UUID
 import json
 from collections.abc import Callable, Iterator
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -27,8 +27,10 @@ from services.studio.interactions import (
 )
 from services.studio.protocol import StudioProtocolService, StudioResourceNotFound
 from services.studio.subjects.registry import SubjectCapabilityRegistry
-from services.model_gateway.factory import create_tutor_gateway
+from services.model_gateway.factory import create_speech_to_text_gateway, create_tutor_gateway
 from services.model_gateway.gateway import StreamComplete, StreamDelta, StreamParentBoundaryDecision
+from services.model_gateway.openai_transcription_provider import TranscriptionProviderError
+from services.platform.config import get_settings
 from services.platform.safety import SafetyAction
 from services.tutor.candidate_events import (
     PersistedGuidedLearningCheck,
@@ -52,6 +54,13 @@ from services.tutor.runtime import LocalTutorProvider, TutorModelStreamFailure, 
 from services.tutor.parent_boundaries import parse_parent_boundary_decision
 from services.tutor.capacity import TutorContextCapacityExceeded
 from services.tutor.context import LiveSubjectContext, legacy_math_live_subject, unknown_live_subject
+from services.voice.transcription import (
+    AudioTooLargeError,
+    EmptyAudioError,
+    UnsupportedAudioTypeError,
+    transcribe_student_audio,
+    validated_audio_payload,
+)
 
 
 router = APIRouter(prefix="/api/v1/student", tags=["student"])
@@ -61,6 +70,12 @@ def create_studio_interaction_tutor_gateway(session: Session):
     """Small test seam for the existing provider-neutral Tutor gateway."""
 
     return create_tutor_gateway(session, local_provider=LocalTutorProvider())
+
+
+def create_student_transcription_gateway(session: Session):
+    """Small test seam for the production speech-to-text gateway."""
+
+    return create_speech_to_text_gateway(session)
 
 
 class StudentMessageRequest(BaseModel):
@@ -109,6 +124,11 @@ class DailySessionResponse(BaseModel):
     opened_at: datetime
     last_activity_at: datetime
     messages: list[StudentMessageResponse]
+
+
+class StudentTranscriptionResponse(BaseModel):
+    transcript: str
+    transcription_execution_id: UUID
 
 
 def _response(session: Session, learning_session: LearningSession) -> StudentSessionResponse:
@@ -208,6 +228,85 @@ def get_daily_session(
     if learning_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Open Daily session not found.")
     return _daily_response(session, learning_session)
+
+
+@router.post(
+    "/daily/session/{session_id}/voice/transcribe",
+    response_model=StudentTranscriptionResponse,
+)
+async def transcribe_daily_voice(
+    session_id: UUID,
+    audio: UploadFile = File(...),
+    principal: AuthenticatedPrincipal = Depends(require_role(UserRole.STUDENT)),
+    session: Session = Depends(get_session),
+) -> StudentTranscriptionResponse:
+    """Transcribe owned-session audio without creating a Student statement."""
+
+    student = _student_for_principal(session, principal)
+    learning_session = owned_open_daily_session(
+        session,
+        student_id=student.id,
+        session_id=session_id,
+    )
+    if learning_session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Open Daily session not found.",
+        )
+
+    max_audio_bytes = get_settings().transcription_max_audio_bytes
+    try:
+        audio_bytes = await audio.read(max_audio_bytes + 1)
+    finally:
+        await audio.close()
+    try:
+        payload = validated_audio_payload(
+            audio=audio_bytes,
+            filename=audio.filename,
+            content_type=audio.content_type,
+            max_audio_bytes=max_audio_bytes,
+        )
+    except EmptyAudioError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Audio is required.",
+        ) from None
+    except UnsupportedAudioTypeError:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Audio type is not supported.",
+        ) from None
+    except AudioTooLargeError:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Audio exceeds the allowed size.",
+        ) from None
+
+    try:
+        result = transcribe_student_audio(
+            create_student_transcription_gateway(session),
+            student_id=student.id,
+            learning_session_id=learning_session.id,
+            payload=payload,
+        )
+    except TranscriptionProviderError as error:
+        # The Gateway has already flushed exactly one truthful failed execution.
+        # Commit it before the HTTP exception triggers dependency rollback.
+        session.commit()
+        response_status = (
+            status.HTTP_504_GATEWAY_TIMEOUT
+            if error.code == "timeout"
+            else status.HTTP_502_BAD_GATEWAY
+        )
+        raise HTTPException(
+            status_code=response_status,
+            detail="Voice transcription is temporarily unavailable.",
+        ) from None
+
+    return StudentTranscriptionResponse(
+        transcript=result.transcript,
+        transcription_execution_id=result.execution_id,
+    )
 
 
 @router.post("/math/session/{session_id}/messages", response_model=StudentMessageResponse)

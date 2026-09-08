@@ -54,6 +54,7 @@ class ModelTask(str, Enum):
     EMBEDDING = "embedding"
     PERSONAL_FACTS = "personal_facts"
     CANVAS_SPECIALIST = "canvas_specialist"
+    SPEECH_TO_TEXT = "speech_to_text"
 
 
 class Job(Base):

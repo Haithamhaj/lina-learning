@@ -52,6 +52,52 @@ def create_tutor_gateway(
     )
 
 
+def create_speech_to_text_gateway(
+    session: Session,
+    *,
+    local_provider: ModelProvider | None = None,
+    settings: Settings | None = None,
+    openai_provider: ModelProvider | None = None,
+) -> ModelGateway:
+    """Route transient Student audio through the application Model Gateway."""
+
+    configured = settings or get_settings()
+    if configured.model_provider == "openai":
+        provider = openai_provider
+        if provider is None:
+            if configured.model_api_key is None:
+                raise ValueError("MODEL_API_KEY is required for the OpenAI transcription route.")
+            from services.model_gateway.openai_transcription_provider import (
+                OpenAITranscriptionProvider,
+            )
+
+            provider = OpenAITranscriptionProvider(
+                api_key=configured.model_api_key.get_secret_value(),
+                base_url=configured.model_base_url,
+            )
+        return ModelGateway(
+            session,
+            routes={
+                ModelTask.SPEECH_TO_TEXT: ModelRoute(
+                    "openai", configured.transcription_model_name
+                )
+            },
+            providers={"openai": provider},
+        )
+
+    if local_provider is None:
+        raise ValueError("A local provider is required when MODEL_PROVIDER=mock.")
+    return ModelGateway(
+        session,
+        routes={
+            ModelTask.SPEECH_TO_TEXT: ModelRoute(
+                "local-demo", configured.transcription_model_name
+            )
+        },
+        providers={"local-demo": local_provider},
+    )
+
+
 def create_canvas_specialist_gateway(
     session: Session,
     *,
