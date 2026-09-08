@@ -64,3 +64,11 @@ def test_worker_uses_the_committed_execution_pack_not_the_disabled_historical_pa
     instructions = _instructions()
     assert EXECUTION_PACK.read_text() in instructions
     assert CAPABILITY_PACK.read_text() not in instructions
+
+
+def test_v2_worker_instructions_preserve_v1_skill_and_add_motion_contract():
+    from workers.studio_handlers import _instructions
+    instructions = _instructions("process-capability-pack-v2")
+    assert "CANVAS_SPECIALIST_VISUAL_LEARNING_COMPOSER_V1" in instructions
+    assert "allowed_motion_intents" in instructions
+    assert "PROCESS_CAPABILITY_PACK_V2" in instructions

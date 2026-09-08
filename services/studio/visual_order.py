@@ -13,7 +13,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 VISUAL_ORDER_SCHEMA_VERSION = "workspace-visual-order-v1"
 SEMANTIC_ALIGNMENT_SCHEMA_VERSION = "semantic-alignment-envelope-v1"
-FROZEN_COMPOSITION_PACK_SCHEMA_VERSION = "frozen-composition-pack-v1"
+FROZEN_COMPOSITION_PACK_V1_SCHEMA_VERSION = "frozen-composition-pack-v1"
+FROZEN_COMPOSITION_PACK_SCHEMA_VERSION = "frozen-composition-pack-v2"
 VISUAL_LEARNER_CONTEXT_SCHEMA_VERSION = "visual-learner-context-v1"
 _IMPLEMENTATION_CONTROL_PATTERNS = (
     re.compile(r"<\\s*/?\\s*(?:script|svg|html)\\b", re.IGNORECASE),

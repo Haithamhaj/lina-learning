@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.platform.db.models import LearningMessage, StudioCanvasSpecialistRun, StudioRuntime, StudioScene
-from services.studio.canvas_specialist import proposal_contract
+from services.studio.canvas_specialist import frozen_pack_identity_is_valid, proposal_contract
 from services.studio.contracts import AppendStudioEventCommand, CreateSceneCommand, StudioActor
 from services.studio.reducer import CORE_EVENT_SCHEMA_VERSION
 from services.studio.service import StudioStateService
@@ -54,7 +54,8 @@ def accept_completed_process_run(session: Session, run_id, *, before_commit=None
         except ValueError:
             run.status, run.failure_metadata = "REJECTED", {"code": "CAPABILITY_IDENTITY_INVALID"}; return None
         if (run.subject_key != "PROCESS" or not isinstance(pack.get("capability_pack"), dict)
-                or pack["capability_pack"].get("identity") != run.capability_profile_version):
+                or pack["capability_pack"].get("identity") != run.capability_profile_version
+                or not frozen_pack_identity_is_valid(pack, run.capability_profile_version)):
             run.status, run.failure_metadata = "REJECTED", {"code": "CAPABILITY_IDENTITY_INVALID"}; return None
         admitted_messages = session.scalars(
             select(LearningMessage).where(LearningMessage.session_id == run.learning_session_id, LearningMessage.role == "tutor")

@@ -23,6 +23,8 @@ CANVAS_SPECIALIST_PROCESS_PROPOSAL_SCHEMA_VERSION = "canvas-specialist-process-p
 PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY = "process-capability-pack-v1"
 CANVAS_SPECIALIST_PROCESS_PROPOSAL_V2_SCHEMA_VERSION = "canvas-specialist-process-proposal-v2"
 PROCESS_EXECUTION_CAPABILITY_PACK_V2_IDENTITY = "process-capability-pack-v2"
+FROZEN_COMPOSITION_PACK_V1_SCHEMA_VERSION = "frozen-composition-pack-v1"
+FROZEN_COMPOSITION_PACK_V2_SCHEMA_VERSION = "frozen-composition-pack-v2"
 CANVAS_SPECIALIST_COMPOSE_JOB = "studio.canvas_specialist.compose.v1"
 CANVAS_SPECIALIST_DEADLINE = timedelta(minutes=2)
 
@@ -102,6 +104,13 @@ def proposal_contract(capability_identity: str, schema_version: str):
     return proposal
 
 
+def frozen_pack_identity_is_valid(pack: dict[str, object], capability_identity: str) -> bool:
+    return (pack.get("version"), capability_identity) in {
+        (FROZEN_COMPOSITION_PACK_V1_SCHEMA_VERSION, PROCESS_EXECUTION_CAPABILITY_PACK_IDENTITY),
+        (FROZEN_COMPOSITION_PACK_V2_SCHEMA_VERSION, PROCESS_EXECUTION_CAPABILITY_PACK_V2_IDENTITY),
+    }
+
+
 class CanvasSpecialistAdmissionError(ValueError):
     pass
 
@@ -174,6 +183,8 @@ def admit_committed_visual_order(session: Session, *, student_id: UUID, learning
     if newest is None or newest.id != message.id:
         return None
     capability_identity = capability["identity"]
+    if not frozen_pack_identity_is_valid(pack, capability_identity):
+        raise CanvasSpecialistAdmissionError("FROZEN_PACK_IDENTITY_INVALID")
     schema_version = CANVAS_SPECIALIST_PROCESS_PROPOSAL_V2_SCHEMA_VERSION if capability_identity == PROCESS_EXECUTION_CAPABILITY_PACK_V2_IDENTITY else CANVAS_SPECIALIST_PROCESS_PROPOSAL_SCHEMA_VERSION
     existing = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.source_message_id == source_message_id, StudioCanvasSpecialistRun.order_digest == digest, StudioCanvasSpecialistRun.capability_profile_version == capability_identity)).scalar_one_or_none()
     if existing is not None:

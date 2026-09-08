@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from services.model_gateway.factory import create_canvas_specialist_gateway
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
 from services.platform.db.models import AIExecution, Job, JobStatus, LearningMessage, LearningSession, ModelTask, StudioCanvasSpecialistRun, StudioRuntime, StudioSnapshot
-from services.studio.canvas_specialist import CANVAS_SPECIALIST_COMPOSE_JOB, proposal_contract, validate_proposal_against_frozen_pack
+from services.studio.canvas_specialist import CANVAS_SPECIALIST_COMPOSE_JOB, frozen_pack_identity_is_valid, proposal_contract, validate_proposal_against_frozen_pack
 from services.studio.process_production_acceptance import accept_completed_process_run
 
 if TYPE_CHECKING:
@@ -86,7 +86,7 @@ def _preflight(factory: sessionmaker[Session], job: Job, payload: dict[str, obje
             proposal_contract(run.capability_profile_version, run.output_schema_version)
         except ValueError:
             run.status, run.failure_metadata, run.completed_at = "FAILED", {"code": "CAPABILITY_IDENTITY_INVALID"}, datetime.now(UTC); return None
-        if not isinstance(pack.get("capability_pack"), dict) or pack["capability_pack"].get("identity") != run.capability_profile_version:
+        if not isinstance(pack.get("capability_pack"), dict) or pack["capability_pack"].get("identity") != run.capability_profile_version or not frozen_pack_identity_is_valid(pack, run.capability_profile_version):
             run.status, run.failure_metadata, run.completed_at = "FAILED", {"code": "CAPABILITY_IDENTITY_INVALID"}, datetime.now(UTC); return None
         return SpecialistExecutionEnvelope(run.id, run.student_id, run.learning_session_id, run.source_message_id, message.ai_execution_id, run.order_digest, run.capability_profile_version, run.output_schema_version, json.dumps(pack, sort_keys=True, ensure_ascii=False, separators=(",", ":")), pack)
 
@@ -246,6 +246,8 @@ def reconcile_canvas_specialist_runs(session: Session, *, now: datetime | None =
 def _instructions(capability_identity: str = "process-capability-pack-v1") -> str:
     from pathlib import Path
     root = Path(__file__).resolve().parents[1]
-    suffix = "v2" if capability_identity == "process-capability-pack-v2" else "v1"
-    skill = "SKILL-v2.md" if suffix == "v2" else "SKILL.md"
-    return (root / "runtime/canvas-specialist" / skill).read_text() + "\n\n" + (root / "runtime/canvas-specialist" / f"process-capability-pack-{suffix}.md").read_text()
+    directory = root / "runtime/canvas-specialist"
+    base = (directory / "SKILL.md").read_text()
+    if capability_identity == "process-capability-pack-v2":
+        return base + "\n\n" + (directory / "SKILL-v2.md").read_text() + "\n\n" + (directory / "process-capability-pack-v2.md").read_text()
+    return base + "\n\n" + (directory / "process-capability-pack-v1.md").read_text()
