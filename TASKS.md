@@ -1654,3 +1654,9 @@ Vision, Canvas, Parent Dashboard expansion, Track B, or other frozen work.
 **Dependencies:** validated Lina UX  
 **Purpose:** Add only proven child-friendly celebrations/badges and polish.  
 **Verification:** no leaderboard, pressure streaks, points economy, or analytics shown to Lina.  
+
+## CS-07 — Visual Toolbelt capability completion
+**Status:** COMPLETE (2026-09-08)
+**Scope:** Hardened the four existing visual adapters with controlled semantic state, client-only entry points, lifecycle cleanup and coherent wrappers. Native Process/SVG renderers remain unchanged.
+**Verification:** 18 isolated Chrome engine cases, 12 focused/package/renderer checks, web typecheck, production build and `git diff --check` passed. Authenticated Daily was not run because Clerk configuration is unavailable.
+**Reference:** `apps/web/lib/studio/visual-toolbelt/README.md`; `output/playwright/cs07-toolbelt/results.json`.

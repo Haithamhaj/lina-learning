@@ -11,6 +11,9 @@ First useful real Daily Tutor → Canvas → Tutor learning experience.
 - Canvas Specialist execution exists.
 - A production Process sequence/cycle exists.
 - Semantic Process motion V2 exists.
+- CS-07 visual Toolbelt primitives are hardened: controlled Motion focus, Konva
+  placement, exact JSXGraph coordinates and MathLive input; isolated Chrome proof
+  passed. Authenticated Daily remains unverified (Clerk secret unavailable).
 - V2 PostgreSQL lifecycle and replay proof exists.
 - Canvas interaction returns to the same Primary Tutor.
 - Real live quality and use still need practical validation.

@@ -1,0 +1,18 @@
+.toolbelt-review { box-sizing: border-box; max-width: 760px; margin: 0 auto; padding: 28px 16px; color: #213f45; font-family: system-ui, sans-serif; background: #f3f7f6; line-height: 1.6; }
+.toolbelt-review *, .toolbelt-card * { box-sizing: border-box; }
+.toolbelt-review h1 { font-size: clamp(24px, 4vw, 32px); margin: 0 0 12px; }
+.toolbelt-card { min-width: 0; padding: clamp(16px, 4vw, 28px); margin: 20px 0; border: 1px solid #dce7e5; border-radius: 24px; background: #fff; color: #213f45; font-family: system-ui, sans-serif; line-height: 1.6; box-shadow: 0 6px 20px #163c3506; }
+.toolbelt-card h2 { font-size: clamp(18px, 3vw, 23px); margin: 5px 0; font-weight: 650; }
+.toolbelt-card p { margin: 6px 0 16px; color: #52686b; }
+.toolbelt-eyebrow { color: #376b61; font-size: 12px; font-weight: 700; }
+.toolbelt-surface { display: block; width: 100%; max-width: 640px; margin: 14px auto; background: #f5f8fb; border-radius: 16px; overflow: hidden; }
+.toolbelt-graph { width: 100%; aspect-ratio: 1; max-width: 640px; margin: 16px auto; border: 1px solid #dbe6e7; border-radius: 16px; overflow: hidden; touch-action: none; }
+.toolbelt-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+.toolbelt-card button, .toolbelt-review > button { min-height: 44px; padding: 8px 16px; color: #234d46; border: 1px solid #b7d0c9; border-radius: 12px; background: #f0f7f4; font: inherit; font-size: 14px; cursor: pointer; }
+.toolbelt-card button[aria-pressed="true"] { background: #245e51; color: white; border-color: #245e51; }
+.toolbelt-card :is(button,input):focus-visible, .toolbelt-review > button:focus-visible { outline: 3px solid #3563b5; outline-offset: 3px; }
+.toolbelt-card input { width: 90px; min-height: 44px; margin-inline-start: 8px; padding: 6px 10px; border: 1px solid #8daaa4; border-radius: 10px; font: inherit; background: white; color: #213f45; }
+.toolbelt-card output { display: block; overflow-wrap: anywhere; color: #355958; font-size: 14px; }
+.toolbelt-math math-field { display: block; width: 100%; min-height: 68px; padding: 12px; font-size: 25px; border: 1px solid #a8c4bd; border-radius: 14px; background: #fbfdfc; --selection-background-color: #dbe9ff; --caret-color: #315eaf; }
+.toolbelt-math:focus-within { outline: 3px solid #3563b5; outline-offset: 3px; border-radius: 14px; }
+.toolbelt-review pre { white-space: pre-wrap; overflow-wrap: anywhere; direction: ltr; font-size: 12px; }

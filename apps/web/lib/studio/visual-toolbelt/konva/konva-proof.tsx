@@ -1,10 +1,42 @@
 "use client";
 
-import { useState } from "react";
-import { Circle, Layer, Rect, Stage, Text } from "react-konva";
-import { semanticPlacement, type SemanticPlacement } from "../contracts";
+import { useEffect, useRef, useState } from "react";
+import { Circle, Group, Layer, Rect, Stage, Text } from "react-konva";
+import { placementFromPoint, semanticPlacement, type SemanticPlacement } from "../contracts";
 
-export function KonvaProof({ onSemanticPlacement }: { onSemanticPlacement?: (value: SemanticPlacement) => void }) {
-  const [result, setResult] = useState<SemanticPlacement>("outside-target");
-  return <section data-engine="konva"><h2>Spatial placement</h2><p>Drag the blue object into the green region. Pixels are not academic truth.</p><Stage width={320} height={180} aria-label="Konva placement proof"><Layer><Rect x={210} y={45} width={85} height={85} fill="#d1fae5" cornerRadius={12} /><Text x={220} y={78} text="Target" fill="#065f46" /><Circle x={70} y={90} radius={24} fill="#2563eb" draggable onDragEnd={(event) => { const position = event.target.position(); const next = semanticPlacement(position.x >= 210 && position.x <= 295 && position.y >= 45 && position.y <= 130); setResult(next); onSemanticPlacement?.(next); event.target.position({ x: 70, y: 90 }); }} /></Layer></Stage><output>{result === "target-region" ? "Object A moved to target region B." : "Object A has not reached target region B."}</output></section>;
+/** Bounded A→B placement. Canvas coordinates never leave this component. */
+export function KonvaProof({ value, onSemanticPlacement }: {
+  value: SemanticPlacement; onSemanticPlacement: (value: SemanticPlacement) => void;
+}) {
+  const host = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(320);
+  useEffect(() => {
+    if (!host.current) return;
+    const observer = new ResizeObserver(([entry]) => setWidth(Math.max(1, Math.min(640, entry.contentRect.width))));
+    observer.observe(host.current);
+    return () => observer.disconnect();
+  }, []);
+  const placed = value.targetId === "target-b";
+  const position = { x: placed ? 252 : 70, y: 90 };
+  return <section className="toolbelt-card" data-engine="konva">
+    <span className="toolbelt-eyebrow">02 · المكان والتجميع</span><h2>ضع A في B · Place and explore</h2>
+    <p>اسحب الدائرة إلى المنطقة الخضراء، أو استخدم الأزرار.</p>
+    <div className="toolbelt-surface" ref={host} dir="ltr" role="img" aria-label={placed ? "Object A in target B" : "Object A outside target B"}>
+      <Stage width={width} height={width * 180 / 320} scaleX={width / 320} scaleY={width / 320}><Layer>
+        <Rect x={210} y={45} width={85} height={85} fill="#d4f2e3" stroke="#559c80" cornerRadius={16}/>
+        <Text x={242} y={140} text="B" fontSize={16} fill="#23674e"/>
+        <Group {...position} draggable onDragEnd={(event) => {
+          const next = placementFromPoint(event.target.x(), event.target.y());
+          onSemanticPlacement(next);
+          // Restore the controlled value until the application accepts the result.
+          event.target.position(position);
+        }}>
+          <Circle radius={23} fill="#3563b5"/>
+          <Text x={-5} y={-7} text="A" fill="white" fontSize={15} listening={false}/>
+        </Group>
+      </Layer></Stage>
+    </div>
+    <div className="toolbelt-actions"><button aria-label="Place A in B" aria-pressed={placed} onClick={() => onSemanticPlacement(semanticPlacement(true))}>ضع A في B</button><button aria-label="Return A" onClick={() => onSemanticPlacement(semanticPlacement(false))}>أعد A</button></div>
+    <output aria-live="polite">{placed ? "A داخل B · A is in B" : "A خارج B · A is outside B"}</output>
+  </section>;
 }
