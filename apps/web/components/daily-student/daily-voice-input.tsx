@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { dailyPresentationCopy, type DailyPresentationCopy } from "@/lib/daily-presentation-copy";
 import {
   DailyVoiceRecorder,
   formatRecordingElapsed,
@@ -19,6 +20,7 @@ export function DailyVoiceInput({
   getToken,
   onTranscript,
   onActiveChange,
+  copy = dailyPresentationCopy("ltr").voice,
 }: {
   apiBaseUrl: string;
   learningSessionId: string | null;
@@ -27,6 +29,7 @@ export function DailyVoiceInput({
   getToken: () => Promise<string | null>;
   onTranscript: (transcript: string) => void;
   onActiveChange: (active: boolean) => void;
+  copy?: DailyPresentationCopy["voice"];
 }) {
   const [voiceState, setVoiceState] = useState<VoiceRecorderState>("IDLE");
   const [recordingElapsed, setRecordingElapsed] = useState(0);
@@ -39,7 +42,7 @@ export function DailyVoiceInput({
   const start = () => {
     if (!learningSessionId || !availability.canStart) return;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-      setVoiceError("Voice recording is not supported in this browser. You can keep typing.");
+      setVoiceError(copy.unsupported);
       return;
     }
     recorderRef.current?.dispose();
@@ -68,12 +71,12 @@ export function DailyVoiceInput({
   };
 
   return <>
-    <div className="order-1 flex min-h-12 items-center gap-2">
+    <div className="flex min-h-12 items-center gap-2">
       {voiceState === "RECORDING" ? <>
-        <Button type="button" variant="secondary" className="min-h-12 border border-rose-200 bg-rose-50 text-rose-900 focus-visible:ring-2 focus-visible:ring-rose-500" aria-label="Stop recording and transcribe" onClick={() => void recorderRef.current?.stop()}><span aria-hidden="true">■</span><span className="ml-2 tabular-nums">{formatRecordingElapsed(recordingElapsed)}</span></Button>
-        <Button type="button" variant="secondary" className="min-h-12 px-3 focus-visible:ring-2 focus-visible:ring-[#7d70df]" aria-label="Cancel recording" onClick={() => recorderRef.current?.cancel()}>Cancel</Button>
-      </> : <Button type="button" variant="secondary" className="min-h-12 min-w-12 px-3 focus-visible:ring-2 focus-visible:ring-[#7d70df]" aria-label={availability.reason} title={availability.reason} disabled={!availability.canStart || !learningSessionId} onClick={start}><span aria-hidden="true">{voiceState === "TRANSCRIBING" ? "…" : "🎙"}</span><span className="sr-only">{voiceState === "REQUESTING_PERMISSION" ? "Requesting microphone permission" : voiceState === "TRANSCRIBING" ? "Transcribing recording" : availability.reason}</span></Button>}
+        <Button type="button" variant="secondary" className="min-h-12 border border-rose-200 bg-rose-50 text-rose-900 focus-visible:ring-2 focus-visible:ring-rose-500" aria-label={copy.stop} onClick={() => void recorderRef.current?.stop()}><span aria-hidden="true">■</span><span className="ml-2 tabular-nums">{formatRecordingElapsed(recordingElapsed)}</span></Button>
+        <Button type="button" variant="secondary" className="min-h-12 px-3 focus-visible:ring-2 focus-visible:ring-[#7d70df]" aria-label={copy.cancel} onClick={() => recorderRef.current?.cancel()}>{copy.cancel}</Button>
+      </> : <Button type="button" variant="secondary" className="min-h-12 min-w-12 px-3 focus-visible:ring-2 focus-visible:ring-[#7d70df]" aria-label={availability.canStart ? copy.record : copy.unavailable} title={availability.canStart ? copy.record : copy.unavailable} disabled={!availability.canStart || !learningSessionId} onClick={start}><span aria-hidden="true">{voiceState === "TRANSCRIBING" ? "…" : "🎙"}</span><span className="sr-only">{voiceState === "REQUESTING_PERMISSION" ? copy.requestingPermission : voiceState === "TRANSCRIBING" ? copy.transcribing : copy.record}</span></Button>}
     </div>
-    <p className="order-4 text-xs text-slate-600 sm:col-span-3" role="status" aria-live="polite">{voiceState === "REQUESTING_PERMISSION" ? "Requesting microphone permission…" : voiceState === "RECORDING" ? `Recording ${formatRecordingElapsed(recordingElapsed)}. Stop when you are ready.` : voiceState === "TRANSCRIBING" ? "Transcribing your recording…" : voiceError || "Type a message or record one, then review it before sending."}</p>
+    {voiceState !== "IDLE" || voiceError ? <p className="col-span-full text-xs text-slate-600" role="status" aria-live="polite">{voiceState === "REQUESTING_PERMISSION" ? copy.requestingPermission : voiceState === "RECORDING" ? copy.recording(formatRecordingElapsed(recordingElapsed)) : voiceState === "TRANSCRIBING" ? copy.transcribing : voiceError}</p> : null}
   </>;
 }

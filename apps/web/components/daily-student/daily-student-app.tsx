@@ -29,6 +29,7 @@ import {
   type StudentSourceAsset,
 } from "@/lib/daily-source";
 import { nextWorkspacePresentation } from "@/lib/daily-workspace-presentation";
+import { dailyPresentationCopy, type DailyPresentationCopy } from "@/lib/daily-presentation-copy";
 
 type SuggestedAction = { label: string; kind: "NAVIGATION" | "ANSWER_CHOICE" };
 type GuidedCheck = { id: string; prompt: string; choices: Array<{ label: string }> };
@@ -58,15 +59,15 @@ function tutorMessage(id: string): ChatMessage {
   return { id, role: "tutor", content: "", created_at: new Date().toISOString(), suggested_actions: [] };
 }
 
-function ChatBubble({ message, pending, getToken }: { message: ChatMessage; pending: boolean; getToken: () => Promise<string | null> }) {
+function ChatBubble({ message, pending, getToken, copy }: { message: ChatMessage; pending: boolean; getToken: () => Promise<string | null>; copy: DailyPresentationCopy }) {
   const tutor = message.role === "tutor";
   return (
     <article className={`flex gap-3 ${tutor ? "justify-start" : "justify-end"}`}>
       {tutor ? <span aria-hidden="true" className="mt-1 grid size-9 shrink-0 place-items-center rounded-2xl bg-[#17334f] text-sm text-white shadow-sm">✦</span> : null}
       <div className={`max-w-[85%] rounded-[1.35rem] px-4 py-3 text-sm leading-6 shadow-sm ${tutor ? "rounded-bl-md border border-[#cde7df] bg-[#effaf7] text-[#173d3a]" : "rounded-br-md bg-[#6658d3] text-white"}`}>
-        <p className={`text-xs font-bold ${tutor ? "text-[#37796f]" : "text-[#ebe8ff]"}`}>{tutor ? "Lina" : "You"}</p>
-        {tutor && !message.content && pending ? <p className="mt-1.5">Lina is thinking…</p> : <p dir="auto" className="mt-1.5 whitespace-pre-wrap">{message.content}</p>}
-        {!tutor && message.source_asset ? <StudentSourceCard source={message.source_asset} apiBaseUrl={publicConfig.apiBaseUrl} getToken={getToken} /> : null}
+        <p className={`text-xs font-bold ${tutor ? "text-[#37796f]" : "text-[#ebe8ff]"}`}>{tutor ? "Lina" : copy.student}</p>
+        {tutor && !message.content && pending ? <p className="mt-1.5">{copy.linaThinking}</p> : <p dir="auto" className="mt-1.5 whitespace-pre-wrap">{message.content}</p>}
+        {!tutor && message.source_asset ? <StudentSourceCard source={message.source_asset} apiBaseUrl={publicConfig.apiBaseUrl} getToken={getToken} copy={copy.source} /> : null}
       </div>
       {!tutor ? <span aria-hidden="true" className="mt-1 grid size-9 shrink-0 place-items-center rounded-2xl bg-[#ece7ff] text-sm text-[#524596] shadow-sm">●</span> : null}
     </article>
@@ -259,6 +260,7 @@ export function DailyStudentApp() {
   const workspacePresentation = nextWorkspacePresentation(activeSceneId, hiddenSceneId);
   const workspaceVisible = workspacePresentation.visible;
   const isArabic = surfaceDirection === "rtl";
+  const presentationCopy = dailyPresentationCopy(surfaceDirection);
   const copy = isArabic ? {
     daily: "التعلّم اليومي",
     heading: "مساحة هادئة للتفكير بصوتٍ عالٍ.",
@@ -277,6 +279,11 @@ export function DailyStudentApp() {
     together: "نتعلّم معًا",
     visualHeading: "جرّب هذا النشاط",
     hideVisual: "إخفاء النشاط",
+    opening: "جارٍ فتح مساحة التعلّم اليومية…",
+    tryAgain: "لنحاول مرة أخرى.",
+    startNew: "ابدئي جلسة جديدة",
+    reload: "إعادة تحميل التعلّم اليومي",
+    reconnect: "إعادة الاتصال",
   } : {
     daily: "Daily learning",
     heading: "A calm place to think out loud.",
@@ -295,6 +302,11 @@ export function DailyStudentApp() {
     together: "Learning together",
     visualHeading: "Try this visual",
     hideVisual: "Hide visual",
+    opening: "Opening your Daily learning space…",
+    tryAgain: "Let’s try again.",
+    startNew: "Start a new session",
+    reload: "Reload Daily",
+    reconnect: "Reconnect",
   };
   useEffect(() => {
     if (hiddenSceneId !== null && activeSceneId !== hiddenSceneId) setHiddenSceneId(null);
@@ -520,38 +532,38 @@ export function DailyStudentApp() {
   };
 
   if (state === "loading") {
-    return <main className="grid min-h-screen place-items-center bg-[#f7f8fc] p-6 text-sm text-slate-600">Opening your Daily learning space…</main>;
+    return <main dir={surfaceDirection} className="grid min-h-screen place-items-center bg-[#f7f8fc] p-6 text-sm text-slate-600">{copy.opening}</main>;
   }
   if (state === "error" && !learningSession) {
-    return <main className="grid min-h-screen place-items-center bg-[#f7f8fc] p-6"><section className="max-w-md rounded-[2rem] bg-white p-7 text-center shadow-sm" role="alert"><h1 className="font-display text-2xl text-slate-900">Let’s try again.</h1><p className="mt-3 text-sm leading-6 text-slate-600">{error}</p><Button className="mt-5" type="button" onClick={() => {
+    return <main dir={surfaceDirection} className="grid min-h-screen place-items-center bg-[#f7f8fc] p-6"><section className="max-w-md rounded-[2rem] bg-white p-7 text-center shadow-sm" role="alert"><h1 className="font-display text-2xl text-slate-900">{copy.tryAgain}</h1><p className="mt-3 text-sm leading-6 text-slate-600">{error}</p><Button className="mt-5" type="button" onClick={() => {
       if (sessionEnded) window.history.replaceState(window.history.state, "", dailySessionUrl(window.location.href, null));
       setLoadAttempt((value) => value + 1);
-    }}>{sessionEnded ? "Start a new session" : "Reload Daily"}</Button></section></main>;
+    }}>{sessionEnded ? copy.startNew : copy.reload}</Button></section></main>;
   }
 
   return (
     <main dir={surfaceDirection} className="min-h-screen bg-[radial-gradient(circle_at_top_left,#eef7f3_0%,transparent_36%),linear-gradient(135deg,#fbfaff_0%,#f7fbff_54%,#fff9f1_100%)] px-4 py-5 text-slate-900 sm:px-7 sm:py-8">
       <div className="mx-auto max-w-[1500px]">
         <header className="mb-5 px-2 sm:px-3"><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#5d7d78]">{copy.daily}</p><h1 className="mt-1 font-display text-3xl tracking-tight">{copy.heading}</h1></header>
-        <div dir="ltr" className={`grid items-start gap-5 ${workspaceVisible ? "lg:h-[calc(100vh-10rem)] lg:grid-cols-[minmax(340px,47fr)_minmax(410px,53fr)] xl:grid-cols-[minmax(390px,43fr)_minmax(520px,57fr)]" : ""}`}>
-          <section dir={surfaceDirection} aria-label={copy.chat} className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5">
+        <div dir="ltr" className={`grid items-start gap-5 ${workspaceVisible ? "lg:h-[calc(100vh-10rem)] lg:min-h-0 lg:grid-cols-[minmax(340px,47fr)_minmax(410px,53fr)] xl:grid-cols-[minmax(390px,43fr)_minmax(520px,57fr)]" : ""}`}>
+          <section dir={surfaceDirection} aria-label={copy.chat} className={`rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5 ${workspaceVisible ? "lg:flex lg:h-full lg:min-h-0 lg:flex-col" : ""}`}>
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4"><div><h2 className="font-display text-2xl">{copy.chat}</h2><p className="mt-1 text-sm leading-6 text-slate-600">{copy.chatDescription}</p></div>{activeSceneId && !workspaceVisible ? <Button variant="secondary" type="button" onClick={() => setHiddenSceneId(null)}>{copy.showVisual}</Button> : null}</div>
             {canvasCompositionPending && !activeSceneId ? <p className="mt-3 text-sm text-[#2e766a]" role="status">{copy.preparing}</p> : null}
-            <div className={`mt-4 min-h-[26rem] overflow-y-auto rounded-[1.5rem] bg-[#fafbfe] p-3 sm:p-4 ${workspaceVisible ? "lg:max-h-[calc(100vh-19rem)]" : "max-h-[calc(100vh-19rem)]"}`} aria-live="polite">
-              {learningSession?.messages.length ? <div className="grid gap-4">{learningSession.messages.map((message) => <div key={message.id}><ChatBubble message={message} pending={chatSending} getToken={getToken} />{message.role === "tutor" && message.id === latestTutor?.id && message.suggested_actions.length > 0 ? <div className="ml-12 mt-2 flex flex-wrap gap-2" aria-label="Lina suggested actions">{message.suggested_actions.map((action) => <Button key={`${action.kind}:${action.label}`} className="h-auto min-h-10 rounded-full px-3 py-2 text-left" type="button" variant="secondary" disabled={chatSending} onClick={() => void sendChat(action.label, { suggestedAction: true })}><span dir="auto">{action.label}</span></Button>)}</div> : null}{message.role === "tutor" && message.id === latestTutor?.id && message.guided_check ? <div className="ml-12 mt-3 rounded-2xl border border-emerald-100 bg-white p-3"><p className="text-sm font-semibold" dir="auto">{message.guided_check.prompt}</p><div className="mt-2 flex flex-wrap gap-2">{message.guided_check.choices.map((choice) => <Button key={choice.label} type="button" variant="secondary" disabled={chatSending} onClick={() => void sendChat(choice.label, { guidedCheckId: message.guided_check?.id })}>{choice.label}</Button>)}</div></div> : null}</div>)}</div> : <div className="grid min-h-80 place-items-center px-5 text-center"><div className="max-w-sm"><div aria-hidden="true" className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#e9f7f3] text-2xl text-[#328577]">✎</div><h3 className="mt-4 font-display text-2xl">{copy.emptyHeading}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{copy.emptyDescription}</p></div></div>}
+            <div className={`mt-4 min-h-[26rem] overflow-y-auto rounded-[1.5rem] bg-[#fafbfe] p-3 sm:p-4 ${workspaceVisible ? "lg:min-h-0 lg:flex-1 lg:max-h-none" : "max-h-[calc(100vh-19rem)]"}`} aria-live="polite">
+              {learningSession?.messages.length ? <div className="grid gap-4">{learningSession.messages.map((message) => <div key={message.id}><ChatBubble message={message} pending={chatSending} getToken={getToken} copy={presentationCopy} />{message.role === "tutor" && message.id === latestTutor?.id && message.suggested_actions.length > 0 ? <div className="ml-12 mt-2 flex flex-wrap gap-2" aria-label="Lina suggested actions">{message.suggested_actions.map((action) => <Button key={`${action.kind}:${action.label}`} className="h-auto min-h-10 rounded-full px-3 py-2 text-left" type="button" variant="secondary" disabled={chatSending} onClick={() => void sendChat(action.label, { suggestedAction: true })}><span dir="auto">{action.label}</span></Button>)}</div> : null}{message.role === "tutor" && message.id === latestTutor?.id && message.guided_check ? <div className="ml-12 mt-3 rounded-2xl border border-emerald-100 bg-white p-3"><p className="text-sm font-semibold" dir="auto">{message.guided_check.prompt}</p><div className="mt-2 flex flex-wrap gap-2">{message.guided_check.choices.map((choice) => <Button key={choice.label} type="button" variant="secondary" disabled={chatSending} onClick={() => void sendChat(choice.label, { guidedCheckId: message.guided_check?.id })}>{choice.label}</Button>)}</div></div> : null}</div>)}</div> : <div className="grid min-h-80 place-items-center px-5 text-center"><div className="max-w-sm"><div aria-hidden="true" className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#e9f7f3] text-2xl text-[#328577]">✎</div><h3 className="mt-4 font-display text-2xl">{copy.emptyHeading}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{copy.emptyDescription}</p></div></div>}
             </div>
-            <form className="mt-4 grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-3 sm:grid-cols-[auto_1fr_auto] sm:items-center" onSubmit={submit}>
+            <form className="mt-4 grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-[1.35rem] border border-slate-200 bg-white p-2" onSubmit={submit}>
               <label className="sr-only" htmlFor="daily-learning-message">{copy.messageLabel}</label>
-              <DailySourceInput file={selectedSource} activeSource={activeSource} disabled={chatSending || voiceBusy} onFile={setSelectedSource} onDismissActive={() => setActiveSource(null)} onError={setError} />
-              {selectedSource && !draft.trim() ? <p className="order-1 text-xs text-slate-600 sm:col-span-3">{copy.sourceHint}</p> : null}
-              <DailyVoiceInput apiBaseUrl={publicConfig.apiBaseUrl} learningSessionId={learningSession?.learning_session_id ?? null} draft={draft} chatSending={chatSending} getToken={getToken} onActiveChange={setVoiceBusy} onTranscript={(transcript) => { setDraft(transcript); window.requestAnimationFrame(() => composerRef.current?.focus()); }} />
-              <input ref={composerRef} id="daily-learning-message" dir="auto" value={draft} onChange={(event) => setDraft(event.target.value)} disabled={voiceBusy || chatSending} maxLength={4000} placeholder={copy.placeholder} className="order-2 h-12 min-w-0 rounded-2xl bg-slate-50 px-4 text-sm outline-none ring-[#7d70df] transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60" />
-              <Button className="order-3 min-h-12" type="submit" disabled={(!draft.trim() && !selectedSource) || chatSending || voiceBusy}>{chatSending ? copy.thinking : copy.send}</Button>
+              <DailySourceInput file={selectedSource} activeSource={activeSource} disabled={chatSending || voiceBusy} onFile={setSelectedSource} onDismissActive={() => setActiveSource(null)} onError={setError} copy={presentationCopy.source} />
+              <input ref={composerRef} id="daily-learning-message" dir="auto" value={draft} onChange={(event) => setDraft(event.target.value)} disabled={voiceBusy || chatSending} maxLength={4000} placeholder={copy.placeholder} className="h-12 min-w-0 rounded-2xl bg-slate-50 px-4 text-sm outline-none ring-[#7d70df] transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60" />
+              <DailyVoiceInput apiBaseUrl={publicConfig.apiBaseUrl} learningSessionId={learningSession?.learning_session_id ?? null} draft={draft} chatSending={chatSending} getToken={getToken} onActiveChange={setVoiceBusy} onTranscript={(transcript) => { setDraft(transcript); window.requestAnimationFrame(() => composerRef.current?.focus()); }} copy={presentationCopy.voice} />
+              <Button className="min-h-12" type="submit" disabled={(!draft.trim() && !selectedSource) || chatSending || voiceBusy}>{chatSending ? copy.thinking : copy.send}</Button>
+              {selectedSource && !draft.trim() ? <p className="col-span-full text-xs text-slate-600">{copy.sourceHint}</p> : null}
             </form>
           </section>
-          {workspaceVisible ? <aside dir={surfaceDirection} aria-label={copy.workspace} className="min-h-0 overflow-y-auto rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a6b42]">{copy.together}</p><h2 ref={workspaceHeadingRef} tabIndex={-1} className="mt-1 font-display text-2xl outline-none">{copy.visualHeading}</h2></div><Button variant="secondary" type="button" onClick={() => setHiddenSceneId(activeSceneId)}>{copy.hideVisual}</Button></div>{snapshot ? <StudioRendererHost snapshot={snapshot} operationPending={operationPending} onOperation={submitOperation} onReload={() => { void reloadSnapshot(); }} /> : null}</aside> : null}
+          {workspaceVisible ? <aside dir={surfaceDirection} aria-label={copy.workspace} className="min-h-0 overflow-y-auto rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5 lg:h-full"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a6b42]">{copy.together}</p><h2 ref={workspaceHeadingRef} tabIndex={-1} className="mt-1 font-display text-2xl outline-none">{copy.visualHeading}</h2></div><Button variant="secondary" type="button" onClick={() => setHiddenSceneId(activeSceneId)}>{copy.hideVisual}</Button></div>{snapshot ? <StudioRendererHost snapshot={snapshot} operationPending={operationPending} onOperation={submitOperation} onReload={() => { void reloadSnapshot(); }} /> : null}</aside> : null}
         </div>
-        {error ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert"><span>{error}</span><Button type="button" variant="secondary" onClick={() => setLoadAttempt((value) => value + 1)}>Reconnect</Button></div> : null}
+        {error ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert"><span>{error}</span><Button type="button" variant="secondary" onClick={() => setLoadAttempt((value) => value + 1)}>{copy.reconnect}</Button></div> : null}
       </div>
     </main>
   );
