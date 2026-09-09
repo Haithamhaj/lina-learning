@@ -227,6 +227,11 @@ def test_primary_tutor_instructions_require_source_grounding_and_honest_ambiguit
     assert "do not invent" in instructions
     assert "unclear or unreadable" in instructions
     assert "ask one short clarifying question" in instructions
+    assert "set workspace_visual_order to null" in instructions
+    assert "do not infer missing work" in instructions
+    assert "student's written answer" in instructions
+    assert "adding a score" in instructions
+    assert "student source is not a curriculum citation" in instructions
     assert "approximately 10-year-old" not in instructions
 
 

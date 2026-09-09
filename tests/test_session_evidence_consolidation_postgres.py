@@ -34,6 +34,7 @@ from services.platform.db.models import (
     IntelligenceProcessingRun,
     ModelTask,
     Student,
+    StudentSourceAsset,
     User,
 )
 from services.platform.jobs import enqueue_job
@@ -309,6 +310,57 @@ def test_closed_session_uses_one_source_grounded_model_call_and_never_creates_la
         assert session.query(CurrentLearningState).count() == 0
         assert session.query(LearnerPattern).count() == 0
         assert session.query(LearnerIntelligenceCard).count() == 0
+
+
+def test_legitimate_source_linked_evidence_traces_transitively_to_immutable_asset(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """VISION-02: source provenance is additive access, not new Evidence authority."""
+
+    with postgres_session_factory.begin() as session:
+        learning_session = _closed_session(session)
+        candidate, source_message = _candidate(session, learning_session=learning_session)
+        asset = StudentSourceAsset(
+            student_id=learning_session.student_id,
+            learning_session_id=learning_session.id,
+            source_message_id=source_message.id,
+            kind="IMAGE",
+            original_filename="synthetic-fraction-work.png",
+            content_type="image/png",
+            size_bytes=321,
+            checksum_sha256="a" * 64,
+            storage_key=f"private/student-sources/{learning_session.student_id}/{uuid4()}.png",
+        )
+        session.add(asset)
+        session.flush()
+        source_message.source_asset_id = asset.id
+        provider = _Provider(_event_output(
+            candidate,
+            source_message,
+            dimensions=_dimensions(
+                understanding="demonstrated",
+                independence="independent",
+                reasoning_demonstration="coherent",
+            ),
+        ))
+        gateway = ModelGateway(
+            session,
+            routes={ModelTask.SESSION_EVIDENCE: ModelRoute("fixture", "fixture-evidence")},
+            providers={"fixture": provider},
+        )
+
+        consolidate_closed_session(session, learning_session=learning_session, gateway=gateway)
+
+        evidence = session.query(LearningEvidence).one()
+        event = session.get(LearningEvent, evidence.event_id)
+        traced_message = session.get(LearningMessage, event.source_message_id)
+        traced_asset = session.get(StudentSourceAsset, traced_message.source_asset_id)
+        assert event.candidate_event_id == candidate.id
+        assert traced_message.id == candidate.message_id == source_message.id
+        assert traced_asset.id == asset.id
+        assert traced_asset.source_message_id == traced_message.id
+        assert traced_asset.checksum_sha256 == "a" * 64
+        assert provider.calls == 1
 
 
 def test_session_consolidation_job_uses_the_closed_session_evidence_handler(

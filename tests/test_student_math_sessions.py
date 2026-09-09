@@ -32,9 +32,11 @@ from services.platform.db.models import (
     LearningEvent,
     LearnerIntelligenceCard,
     LearningSession,
+    Job,
     PersonalFact,
     SafetyAudit,
     StudioRuntime,
+    StudioCanvasSpecialistRun,
     StudioTutorObservation,
     Student,
     StudentSourceAsset,
@@ -207,18 +209,26 @@ class _DeltaThenFailureTutorProvider:
 class _ImmediateSuccessfulTutorProvider:
     """Deterministic one-call provider for the real Tutor streaming route."""
 
-    def __init__(self, *, workspace_intent: object | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        workspace_intent: object | None = None,
+        workspace_visual_order: object | None = None,
+        text: str = "Keep the denominator and add the numerators.",
+    ) -> None:
         self.called = Event()
         self.call_count = 0
         self.payloads: list[dict[str, object]] = []
         self.workspace_intent = workspace_intent
+        self.workspace_visual_order = workspace_visual_order
+        self.text = text
 
     def stream(self, route: ModelRoute, payload: dict[str, object]):
         del route
         self.call_count += 1
         self.payloads.append(payload)
         self.called.set()
-        text = "Keep the denominator and add the numerators."
+        text = self.text
         yield StreamDelta(text)
         yield StreamComplete(ModelResult(
             output={
@@ -234,6 +244,7 @@ class _ImmediateSuccessfulTutorProvider:
                 "segment_relation": None,
                 "structured_segment_state": None,
                 "workspace_intent": self.workspace_intent,
+                "workspace_visual_order": self.workspace_visual_order,
             },
             input_tokens=4,
             output_tokens=3,
@@ -707,6 +718,135 @@ def test_daily_source_uses_one_primary_tutor_call_with_exact_source_lineage(
         assert session.query(LearningEvidence).count() == 0
         assert session.query(LearningEvent).count() == 0
         assert session.query(LearnerIntelligenceCard).count() == 0
+
+
+def test_source_grounded_process_order_keeps_raw_source_outside_canvas_semantics(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    """VISION-02: existing outer lineage reaches the immutable source without copying it into Canvas."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "vision-02-source-canvas")
+        learning_session = LearningSession(student_id=student.id, subject="SCIENCE", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        StudioStateService(session).get_or_create_runtime(
+            student_id=student.id,
+            learning_session_id=learning_session.id,
+        )
+        session_id = learning_session.id
+
+    visual_order = {
+        "version": "workspace-visual-order-v1",
+        "operation": "COMPOSE",
+        "pattern": "PROCESS",
+        "topology": "CYCLE",
+        "objective": "Reconstruct the water cycle as a clean learning sequence.",
+        "required_semantics": ["Water evaporates.", "Water condenses into clouds.", "Water falls as precipitation."],
+        "required_relations": ["The stages form a repeating cycle."],
+        "must_not_imply": ["The source page itself is reproduced."],
+        "source_references": [],
+        "personal_fact_keys": [],
+        "locale": "en",
+        "direction": "ltr",
+        "use_display_name": False,
+    }
+    provider = _ImmediateSuccessfulTutorProvider(workspace_visual_order=visual_order)
+    from apps.api.routes import student as student_routes
+
+    storage = LocalObjectStorage(tmp_path / "student-sources", signing_secret="fixture")
+    monkeypatch.setattr(student_routes, "create_object_storage", lambda *_: storage)
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    original = _small_png()
+    client = _client(postgres_session_factory, subject="vision-02-source-canvas")
+    try:
+        response = client.post(
+            f"/api/v1/student/daily/session/{session_id}/source/turn/stream",
+            files={"source": ("water-cycle.png", original, "image/png")},
+            data={"content": "Please explain this cycle visually."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert provider.call_count == 1
+    with postgres_session_factory() as session:
+        asset = session.query(StudentSourceAsset).one()
+        student_message = session.query(LearningMessage).filter_by(role="student").one()
+        tutor_message = session.query(LearningMessage).filter_by(role="tutor").one()
+        execution = session.query(AIExecution).filter_by(task="tutor").one()
+        run = session.query(StudioCanvasSpecialistRun).one()
+        job = session.get(Job, run.job_id)
+        pack = tutor_message.payload["workspace_visual"]["frozen_composition_pack"]
+        serialized_pack = json.dumps(pack, ensure_ascii=False)
+
+        assert run.source_message_id == tutor_message.id
+        assert tutor_message.ai_execution_id == execution.id
+        assert execution.source_message_id == student_message.id
+        assert execution.source_asset_id == student_message.source_asset_id == asset.id
+        assert job is not None and run.job_id == job.id and run.status == "PENDING"
+        assert pack["grounding"] == {"origin": "ADMITTED_TUTOR_ORDER", "excerpts": []}
+        assert storage.get(asset.storage_key).content == original
+        assert asset.checksum_sha256 == storage.get(asset.storage_key).metadata.checksum_sha256
+        for forbidden in (asset.storage_key, str(asset.id), str(student_message.id), "base64", "provider_file", "pixel", "bounding"):
+            assert forbidden not in serialized_pack
+        assert session.query(CandidateEvent).count() == 0
+        assert session.query(LearningEvent).count() == 0
+        assert session.query(LearningEvidence).count() == 0
+        assert session.query(PersonalFact).count() == 0
+        assert session.query(LearnerIntelligenceCard).count() == 0
+
+
+def test_ambiguous_source_clarification_has_no_canvas_or_learning_derivations(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    """VISION-02: Luna's required null order keeps an ambiguous interpretation in Chat."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "vision-02-ambiguous-source")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        StudioStateService(session).get_or_create_runtime(
+            student_id=student.id,
+            learning_session_id=learning_session.id,
+        )
+        session_id = learning_session.id
+
+    provider = _ImmediateSuccessfulTutorProvider(
+        workspace_visual_order=None,
+        text="I can't tell whether that symbol is + or −. Could you send a clearer image?",
+    )
+    from apps.api.routes import student as student_routes
+
+    storage = LocalObjectStorage(tmp_path / "student-sources", signing_secret="fixture")
+    monkeypatch.setattr(student_routes, "create_object_storage", lambda *_: storage)
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    client = _client(postgres_session_factory, subject="vision-02-ambiguous-source")
+    try:
+        response = client.post(
+            f"/api/v1/student/daily/session/{session_id}/source/turn/stream",
+            files={"source": ("unclear-symbol.png", _small_png(), "image/png")},
+            data={"content": "What is the answer?"},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert "clearer image" in response.text
+    assert provider.call_count == 1
+    with postgres_session_factory() as session:
+        tutor = session.query(LearningMessage).filter_by(role="tutor").one()
+        assert tutor.payload["workspace_visual"]["status"] == "NOT_REQUESTED"
+        for model in (
+            StudioCanvasSpecialistRun, CandidateEvent, LearningEvent,
+            LearningEvidence, PersonalFact, LearnerIntelligenceCard,
+        ):
+            assert session.query(model).count() == 0
 
 
 def test_blocked_daily_source_has_one_moderation_and_zero_tutor_or_learning_writes(

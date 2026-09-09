@@ -32,7 +32,11 @@ def factory() -> sessionmaker[Session]:
     engine.dispose()
 
 
-def _admitted_run(session: Session) -> tuple[m.StudioCanvasSpecialistRun, m.Job]:
+def _admitted_run(
+    session: Session,
+    *,
+    with_student_source: bool = False,
+) -> tuple[m.StudioCanvasSpecialistRun, m.Job]:
     user = m.User(identity_provider="cs04-worker", external_subject=uuid4().hex)
     session.add(user); session.flush()
     student = m.Student(user_id=user.id, display_name="Specialist fixture")
@@ -51,7 +55,35 @@ def _admitted_run(session: Session) -> tuple[m.StudioCanvasSpecialistRun, m.Job]
         "allowed_affordances": [],
     }
     digest = sha256(json.dumps(pack, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
-    parent = m.AIExecution(task="tutor", provider="fixture", model="gpt-5.6-luna", latency_ms=1, success=True, student_id=student.id, learning_session_id=learning.id)
+    source_message = None
+    source_asset = None
+    if with_student_source:
+        source_message = m.LearningMessage(
+            session_id=learning.id,
+            role="student",
+            content="Please explain this source visually.",
+            payload={},
+        )
+        session.add(source_message); session.flush()
+        source_asset = m.StudentSourceAsset(
+            student_id=student.id,
+            learning_session_id=learning.id,
+            source_message_id=source_message.id,
+            kind="IMAGE",
+            original_filename="synthetic-source.png",
+            content_type="image/png",
+            size_bytes=123,
+            checksum_sha256="b" * 64,
+            storage_key=f"private/student-sources/{student.id}/{uuid4()}.png",
+        )
+        session.add(source_asset); session.flush()
+        source_message.source_asset_id = source_asset.id
+    parent = m.AIExecution(
+        task="tutor", provider="fixture", model="gpt-5.6-luna", latency_ms=1,
+        success=True, student_id=student.id, learning_session_id=learning.id,
+        source_message_id=None if source_message is None else source_message.id,
+        source_asset_id=None if source_asset is None else source_asset.id,
+    )
     session.add(parent); session.flush()
     message = m.LearningMessage(session_id=learning.id, role="tutor", content="Tutor", ai_execution_id=parent.id, payload={"workspace_visual": {"status": "ADMITTED", "order_digest": digest, "frozen_composition_pack": pack}})
     session.add(message); session.flush()
@@ -195,6 +227,56 @@ def test_success_uses_only_frozen_input_outside_the_preflight_transaction(factor
         assert run is not None and run.status == "COMPLETED"
         assert run.proposal_payload == CanvasSpecialistProcessProposal.model_validate(_valid_proposal()).model_dump(mode="json")
         assert execution is not None and execution.success is True and run.ai_execution_id == execution.id
+
+
+def test_source_derived_specialist_receives_only_semantic_pack_and_retains_outer_lineage(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        run, _job = _admitted_run(session, with_student_source=True)
+        run_id = run.id
+
+    seen_inputs: list[str] = []
+
+    class Provider:
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            del route
+            seen_inputs.append(str(payload["input"]))
+            return ModelResult(output=_valid_proposal())
+
+    registry = JobHandlerRegistry()
+    register_canvas_specialist_handlers(
+        registry,
+        session_factory=factory,
+        gateway_factory=lambda session: ModelGateway(
+            session,
+            routes={ModelTask.CANVAS_SPECIALIST: ModelRoute("fixture", "gpt-5.6-luna")},
+            providers={"fixture": Provider()},
+        ),
+    )
+    assert run_once(factory, registry, worker_id="vision-02-source-semantics") == m.JobStatus.COMPLETED
+
+    with factory() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id)
+        tutor_message = session.get(m.LearningMessage, run.source_message_id)
+        tutor_execution = session.get(m.AIExecution, tutor_message.ai_execution_id)
+        source_message = session.get(m.LearningMessage, tutor_execution.source_message_id)
+        source_asset = session.get(m.StudentSourceAsset, tutor_execution.source_asset_id)
+        assert source_message.source_asset_id == source_asset.id
+        assert source_asset.source_message_id == source_message.id
+        assert len(seen_inputs) == 1
+        serialized = seen_inputs[0]
+        for forbidden in (
+            source_asset.storage_key,
+            str(source_asset.id),
+            str(source_message.id),
+            "base64",
+            "provider_file",
+            "pixel",
+            "bounding",
+        ):
+            assert forbidden not in serialized
+        assert "Explain a two-stage process." in serialized
 
 
 def test_expired_final_attempt_is_reconciled_without_a_second_generation(factory: sessionmaker[Session]) -> None:
