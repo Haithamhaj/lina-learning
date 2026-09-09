@@ -182,8 +182,28 @@ def test_docx_text_and_embedded_images_are_moderated_without_layout_rendering() 
 
     assert decision.action is SafetyAction.ALLOW
     assert len(provider.calls) == 1
-    assert "Synthetic document safety text" in provider.calls[0]["text"]
+    assert provider.calls[0]["text"] == "Explain the notes.\nSynthetic document safety text"
     assert provider.calls[0]["images"][0].content == embedded
+
+
+def test_malformed_docx_fails_closed_before_moderation_or_tutor() -> None:
+    provider = _Provider(_signal())
+    service, session = _service(provider)
+
+    decision = service.evaluate(
+        student_id=uuid4(), source_message_id=uuid4(), source_asset_id=uuid4(),
+        student_text="Explain the notes.",
+        source_input={
+            "kind": "DOCUMENT", "filename": "notes.docx",
+            "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "content": b"malformed",
+        },
+    )
+
+    assert decision.action is SafetyAction.BLOCK
+    assert decision.reason_code == "SOURCE_MODERATION_UNAVAILABLE"
+    assert provider.calls == []
+    assert next(row for row in session.rows if isinstance(row, SafetyAudit)).action == "BLOCK"
 
 
 def test_sensitive_educational_word_is_not_a_new_keyword_block_rule() -> None:

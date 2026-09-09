@@ -18,6 +18,7 @@ from services.model_gateway.gateway import (
     StreamDelta,
     StreamParentBoundaryDecision,
 )
+from services.student_sources.docx import extract_docx_text
 
 
 @dataclass(frozen=True)
@@ -152,13 +153,29 @@ def _request_body(route: ModelRoute, payload: dict[str, object]) -> dict[str, ob
         body["max_output_tokens"] = int(payload["max_output_tokens"])
     source_input = payload.get("source_input")
     if source_input is not None:
+        source_part = _source_content_part(source_input)
+        source_content: list[dict[str, object]] = [
+            {"type": "input_text", "text": str(payload["input"])}
+        ]
+        if isinstance(source_input, dict) and source_input.get("kind") == "DOCUMENT":
+            content = source_input.get("content")
+            if not isinstance(content, bytes):
+                raise ValueError("source_input is incomplete or malformed.")
+            extracted_text = extract_docx_text(content)
+            if extracted_text:
+                source_content.append({
+                    "type": "input_text",
+                    "text": (
+                        "Application-extracted text from the attached Student DOCX; "
+                        "the immutable original file remains source authority:\n"
+                        f"{extracted_text}"
+                    ),
+                })
+        source_content.append(source_part)
         body["input"] = [
             {
                 "role": "user",
-                "content": [
-                    {"type": "input_text", "text": str(payload["input"])},
-                    _source_content_part(source_input),
-                ],
+                "content": source_content,
             }
         ]
     response_schema = payload.get("response_schema")

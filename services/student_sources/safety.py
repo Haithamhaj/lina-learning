@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from io import BytesIO
 from typing import Protocol
 from uuid import UUID
-from xml.etree import ElementTree
 from zipfile import BadZipFile, ZipFile
 
 from PIL import Image, UnidentifiedImageError
@@ -17,6 +16,7 @@ from services.model_gateway.openai_moderation_provider import (
     SourceModerationSignal,
 )
 from services.platform.safety import SafetyDecision, SafetyPolicyService
+from services.student_sources.docx import extract_docx_text
 
 
 _TEXT_CHUNK_CHARACTERS = 20_000
@@ -150,9 +150,8 @@ def _inspect_pdf(content: bytes) -> _TransientInspection:
 def _inspect_docx(content: bytes) -> _TransientInspection:
     images: list[ModerationImage] = []
     try:
+        text = extract_docx_text(content)
         with ZipFile(BytesIO(content)) as archive:
-            root = ElementTree.fromstring(archive.read("word/document.xml"))
-            text = " ".join(part.strip() for part in root.itertext() if part.strip())
             for filename in sorted(
                 name for name in archive.namelist() if name.startswith("word/media/")
             ):
@@ -166,7 +165,7 @@ def _inspect_docx(content: bytes) -> _TransientInspection:
                 content_type = _IMAGE_CONTENT_TYPES.get(image_format or "")
                 if content_type is not None:
                     images.append(ModerationImage(content_type, image_bytes))
-    except (BadZipFile, KeyError, ElementTree.ParseError, OSError) as error:
+    except (BadZipFile, KeyError, OSError) as error:
         raise SourceInspectionError("DOCX inspection failed.") from error
     if not text and not images:
         raise SourceInspectionError("DOCX contains no inspectable content.")

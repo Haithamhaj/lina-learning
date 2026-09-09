@@ -10,6 +10,7 @@ from types import SimpleNamespace
 from threading import Event, Thread
 from time import monotonic
 from uuid import UUID, uuid4
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 from fastapi.testclient import TestClient
@@ -170,6 +171,23 @@ def _clear_overrides() -> None:
 def _small_png() -> bytes:
     output = BytesIO()
     Image.new("RGB", (32, 24), "white").save(output, format="PNG")
+    return output.getvalue()
+
+
+def _small_docx(text: str) -> bytes:
+    output = BytesIO()
+    with ZipFile(output, "w", ZIP_DEFLATED) as archive:
+        archive.writestr(
+            "[Content_Types].xml",
+            '<?xml version="1.0"?><Types '
+            'xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>',
+        )
+        archive.writestr(
+            "word/document.xml",
+            '<?xml version="1.0"?><w:document '
+            'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+            f"<w:body><w:p><w:r><w:t>{text}</w:t></w:r></w:p></w:body></w:document>",
+        )
     return output.getvalue()
 
 
@@ -740,6 +758,67 @@ def test_blocked_daily_source_has_one_moderation_and_zero_tutor_or_learning_writ
         assert session.query(LearningEvidence).count() == 0
         assert session.query(LearningEvent).count() == 0
         assert session.query(LearnerIntelligenceCard).count() == 0
+
+
+def test_daily_docx_extracted_text_is_transient_and_not_persisted(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    extracted_fact = "The plant grew 18 cm on Friday."
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "daily-docx-transient")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    from apps.api.routes import student as student_routes
+
+    storage = LocalObjectStorage(tmp_path / "student-sources", signing_secret="fixture")
+    tutor_provider = _ImmediateSuccessfulTutorProvider()
+    monkeypatch.setattr(student_routes, "create_object_storage", lambda *_: storage)
+    monkeypatch.setattr(
+        student_routes,
+        "create_tutor_runtime",
+        _successful_streaming_runtime(tutor_provider),
+    )
+    client = _client(postgres_session_factory, subject="daily-docx-transient")
+    try:
+        response = client.post(
+            f"/api/v1/student/daily/session/{session_id}/source/turn/stream",
+            files={
+                "source": (
+                    "plant.docx",
+                    _small_docx(extracted_fact),
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+            },
+            data={"content": "How tall was the plant on Friday?"},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert tutor_provider.call_count == 1
+    assert "extracted_text" not in tutor_provider.payloads[0]["source_input"]
+    with postgres_session_factory() as session:
+        messages = session.query(LearningMessage).filter_by(session_id=session_id).all()
+        executions = session.query(AIExecution).filter_by(learning_session_id=session_id).all()
+        assert extracted_fact not in json.dumps(
+            [{"content": row.content, "payload": row.payload} for row in messages],
+            default=str,
+        )
+        assert extracted_fact not in json.dumps(
+            [
+                {
+                    column.name: getattr(row, column.name)
+                    for column in AIExecution.__table__.columns
+                }
+                for row in executions
+            ],
+            default=str,
+        )
 
 
 def test_daily_source_commit_failure_rolls_back_message_and_compensates_storage(

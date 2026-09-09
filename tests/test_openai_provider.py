@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import importlib
+from io import BytesIO
 import json
 import base64
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 
 from services.model_gateway.factory import create_tutor_gateway
 from services.model_gateway.gateway import ModelResult, ModelRoute, StaticModelProvider, StreamComplete, StreamDelta, StreamParentBoundaryDecision
-from services.model_gateway.openai_provider import OpenAIResponsesProvider
+from services.model_gateway.openai_provider import OpenAIResponsesProvider, _request_body
 from services.platform.config import Settings, reset_settings_cache
 from services.platform.db.models import ModelTask
 from services.studio.canvas_specialist import CanvasSpecialistProcessProposal
@@ -175,26 +177,12 @@ def test_openai_responses_provider_returns_text_usage_and_luna_cost() -> None:
                 "detail": "high",
             },
         ),
-        (
-            {
-                "kind": "DOCUMENT",
-                "filename": "notes.docx",
-                "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                "content": b"PK-docx-fixture",
-            },
-            {
-                "type": "input_file",
-                "filename": "notes.docx",
-                "file_data": "data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,"
-                + base64.b64encode(b"PK-docx-fixture").decode("ascii"),
-            },
-        ),
     ],
 )
 def test_openai_responses_provider_builds_bounded_multimodal_input(
     source_input: dict[str, object], expected_part: dict[str, object]
 ) -> None:
-    """A validated server source becomes one application-owned content part."""
+    """Validated image/PDF inputs preserve the established provider parts."""
 
     captured: dict[str, object] = {}
 
@@ -258,6 +246,44 @@ def test_openai_responses_provider_rejects_malformed_source_before_network() -> 
             },
         )
     assert called is False
+
+
+def test_docx_source_adds_deterministic_text_to_the_same_tutor_request() -> None:
+    """Removing the application text part would restore provider-only DOCX comprehension."""
+
+    output = BytesIO()
+    with ZipFile(output, "w", ZIP_DEFLATED) as archive:
+        archive.writestr(
+            "word/document.xml",
+            '<?xml version="1.0"?><w:document '
+            'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+            "<w:body><w:p><w:r><w:t>The plant grew 18 cm on Friday.</w:t>"
+            "</w:r></w:p></w:body></w:document>",
+        )
+
+    body = _request_body(
+        ModelRoute(provider="openai", model="gpt-5.6-luna"),
+        {
+            "instructions": "Teach calmly.",
+            "input": "How tall was the plant on Friday?",
+            "source_input": {
+                "kind": "DOCUMENT",
+                "filename": "plant.docx",
+                "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "content": output.getvalue(),
+            },
+        },
+    )
+
+    assert body["input"][0]["content"][1] == {
+        "type": "input_text",
+        "text": (
+            "Application-extracted text from the attached Student DOCX; "
+            "the immutable original file remains source authority:\n"
+            "The plant grew 18 cm on Friday."
+        ),
+    }
+    assert body["input"][0]["content"][2]["type"] == "input_file"
 
 
 def test_openai_canvas_specialist_request_sends_the_exact_strict_schema() -> None:

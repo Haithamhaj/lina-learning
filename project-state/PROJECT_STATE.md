@@ -20,6 +20,10 @@ Practical validation of the complete multimodal Daily Tutor → Canvas → Tutor
   no source bytes, raw provider response, or score dump. Live synthetic proof
   passed with four moderation calls, three allowed Tutor calls, and zero Tutor or
   learning-derived writes for the blocked image.
+- DOCX Tutor comprehension is deterministic: the Safety boundary and Tutor
+  adapter share one transient ordered-paragraph extractor, and the same Tutor
+  request receives that text plus the immutable original file. A one-call live
+  Luna proof read the DOCX-only `18 cm` fact; extracted text was not persisted.
 - Studio durable state and runtime exist.
 - Canvas Specialist execution exists.
 - A production Process sequence/cycle exists.

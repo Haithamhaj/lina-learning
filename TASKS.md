@@ -58,6 +58,13 @@ blocked path had zero learning-derived writes.
 **Full suite:** 1,247 passed and 12 skipped. The sole failure is the documented,
 out-of-scope Pattern Engine expectation that a contradicted candidate strategy
 immediately becomes `WEAKENING`; VISION-01S does not touch that subsystem.
+**DOCX comprehension closure:** DONE / CODEX-VERIFIED. Safety and the OpenAI
+Tutor adapter now share one deterministic `word/document.xml` text extractor.
+The transient ordered paragraph text is appended as application-owned
+`input_text` to the same Tutor request while the immutable DOCX remains the
+`input_file` authority. One bounded live `gpt-5.6-luna` call answered `18 cm`
+from a fact present only in the synthetic DOCX; PostgreSQL retained only the
+question, normal Tutor answer, source metadata/lineage, and AI execution ledger.
 
 # Learning Studio Governance Provenance — 2026-09-02
 
