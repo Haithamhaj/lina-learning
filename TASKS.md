@@ -6,9 +6,9 @@ Only `READY` tasks are executable. A completed/reviewed roadmap item is not auth
 
 | Task | Status | Scope and gate |
 | --- | --- | --- |
-| REPO-TRUTH-01 | IN_PROGRESS | Reconcile, canonicalize, and clean the repository; stop before main promotion. |
-| REPO-TRUTH-02 | BLOCKED | Canonical source-of-truth rewrite; part of the same approved reset sequence. |
-| REPO-TRUTH-03 | BLOCKED | Physical history/evidence/output cleanup and hygiene verification. |
+| REPO-TRUTH-01 | DONE | Reconciliation report records branch, document, capability, and contradiction evidence. |
+| REPO-TRUTH-02 | DONE | Canonical source-of-truth rewrite is complete. |
+| REPO-TRUTH-03 | DONE | Physical history/evidence/output cleanup and hygiene verification are complete. |
 | REPO-TRUTH-04 | BLOCKED — Product Owner approval | Fast-forward `main` only after the required stop-gate approval. |
 | REPO-TRUTH-05 | BLOCKED — Product Owner approval | Retire shadow branches and configure light protection after promotion. |
 

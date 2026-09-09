@@ -37,3 +37,4 @@ tmp/
 temp/
 .playwright-cli/
 .worktrees/
+output/

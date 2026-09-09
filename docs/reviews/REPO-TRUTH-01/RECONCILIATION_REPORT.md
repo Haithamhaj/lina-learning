@@ -100,3 +100,12 @@ supplementary current detail. History, reviews, and research are non-authoritati
   intentionally untouched outside this cleanup worktree.
 - Existing historical documents may retain old links/branch names when that is
   provenance; only current canonical links must be made current.
+
+## 8. Cleanup outcome
+
+The canonical rewrite is followed by a physical separation: the exact old
+`TASKS.md` is retained in `docs/history/task-history/`; historical plans,
+decisions, supplemental specifications, and acceptance reports move beneath
+`docs/history/`; technology/research material moves beneath `research/`; and
+the tracked generated `output/` tree is removed from the current checkout and
+ignored. The final hygiene commit records the exact file-level moves.
