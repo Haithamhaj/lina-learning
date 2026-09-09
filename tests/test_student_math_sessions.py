@@ -31,6 +31,7 @@ from services.platform.db.models import (
     LearningEvent,
     LearnerIntelligenceCard,
     LearningSession,
+    PersonalFact,
     SafetyAudit,
     StudioRuntime,
     StudioTutorObservation,
@@ -41,8 +42,10 @@ from services.platform.db.models import (
 from services.platform.db.session import get_session
 from services.platform.config import Settings
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
+from services.model_gateway.openai_moderation_provider import SourceModerationSignal
 from services.platform.db.models import ModelTask
 from services.platform.safety import SafetyPolicyService
+from services.student_sources.safety import StudentSourceSafetyService
 from services.platform.storage import LocalObjectStorage, StorageError
 from services.retrieval.service import RetrievalService
 from services.studio.contracts import AppendStudioEventCommand, CreateSceneCommand, StudioActor
@@ -219,6 +222,23 @@ class _ImmediateSuccessfulTutorProvider:
         ))
 
 
+class _FixtureModerationProvider:
+    model = "omni-moderation-latest"
+
+    def __init__(self, *categories: str) -> None:
+        self.categories = frozenset(categories)
+        self.calls: list[dict[str, object]] = []
+
+    def inspect(self, *, text: str, images: object) -> SourceModerationSignal:
+        self.calls.append({"text": text, "images": tuple(images)})
+        return SourceModerationSignal(
+            model=self.model,
+            flagged=bool(self.categories),
+            true_categories=self.categories,
+            applied_input_types={category: ("image",) for category in self.categories},
+        )
+
+
 class _BlockingTutorProvider(_ImmediateSuccessfulTutorProvider):
     """Holds the one primary provider call so a concurrent Studio append is observable."""
 
@@ -312,16 +332,24 @@ def _delta_then_failure_runtime(session: Session) -> TutorRuntime:
     )
 
 
-def _successful_streaming_runtime(provider: _ImmediateSuccessfulTutorProvider):
+def _successful_streaming_runtime(
+    provider: _ImmediateSuccessfulTutorProvider,
+    moderation_provider: _FixtureModerationProvider | None = None,
+):
     def create(session: Session) -> TutorRuntime:
+        safety_policy = SafetyPolicyService(session)
         return TutorRuntime(
             session,
             context_builder=TutorContextBuilder(session, retrieval_service=RetrievalService(session)),
-            safety_policy=SafetyPolicyService(session),
+            safety_policy=safety_policy,
             gateway=ModelGateway(
                 session,
                 routes={ModelTask.TUTOR: ModelRoute("fixture-stream", "fixture-success-model")},
                 providers={"fixture-stream": provider},
+            ),
+            source_safety=StudentSourceSafetyService(
+                provider=moderation_provider or _FixtureModerationProvider(),
+                policy=safety_policy,
             ),
         )
 
@@ -600,9 +628,16 @@ def test_daily_source_turn_preserves_original_and_passes_one_owned_source_to_tut
         denied = other_client.get(
             f"/api/v1/student/daily/session/{session_id}/source/{durable_asset_id}"
         )
+        other_session = other_client.post("/api/v1/student/daily/session")
+        cross_student_use = other_client.post(
+            f"/api/v1/student/daily/session/{other_session.json()['learning_session_id']}/source/turn/stream",
+            data={"content": "Use this source.", "source_asset_id": str(durable_asset_id)},
+        )
     finally:
         _clear_overrides()
     assert denied.status_code == 404
+    assert cross_student_use.status_code == 422
+    assert len(captured) == 2  # No cross-Student source reached inspection/Tutor streaming.
     with postgres_session_factory() as session:
         asset = session.query(StudentSourceAsset).one()
         messages = session.query(LearningMessage).filter_by(role="student").order_by(LearningMessage.created_at).all()
@@ -651,6 +686,57 @@ def test_daily_source_uses_one_primary_tutor_call_with_exact_source_lineage(
         assert execution.source_message_id == message.id
         assert execution.learning_session_id == session_id
         assert session.query(CandidateEvent).count() == 0
+        assert session.query(LearningEvidence).count() == 0
+        assert session.query(LearningEvent).count() == 0
+        assert session.query(LearnerIntelligenceCard).count() == 0
+
+
+def test_blocked_daily_source_has_one_moderation_and_zero_tutor_or_learning_writes(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "daily-source-blocked")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    from apps.api.routes import student as student_routes
+
+    storage = LocalObjectStorage(tmp_path / "student-sources", signing_secret="fixture")
+    tutor_provider = _ImmediateSuccessfulTutorProvider()
+    moderation_provider = _FixtureModerationProvider("self-harm/intent")
+    monkeypatch.setattr(student_routes, "create_object_storage", lambda *_: storage)
+    monkeypatch.setattr(
+        student_routes,
+        "create_tutor_runtime",
+        _successful_streaming_runtime(tutor_provider, moderation_provider),
+    )
+    client = _client(postgres_session_factory, subject="daily-source-blocked")
+    try:
+        response = client.post(
+            f"/api/v1/student/daily/session/{session_id}/source/turn/stream",
+            files={"source": ("unsafe.png", _small_png(), "image/png")},
+            data={"content": "Please inspect this."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert "event: turn" in response.text
+    assert len(moderation_provider.calls) == 1
+    assert tutor_provider.call_count == 0
+    with postgres_session_factory() as session:
+        source_audit = session.query(SafetyAudit).filter_by(
+            policy_source="SOURCE_MODERATION"
+        ).one()
+        assert source_audit.action == "BLOCK"
+        assert source_audit.reason_code == "SOURCE_SELF_HARM_INTENT"
+        assert session.query(AIExecution).filter_by(task="tutor").count() == 0
+        assert session.query(CandidateEvent).count() == 0
+        assert session.query(PersonalFact).count() == 0
         assert session.query(LearningEvidence).count() == 0
         assert session.query(LearningEvent).count() == 0
         assert session.query(LearnerIntelligenceCard).count() == 0

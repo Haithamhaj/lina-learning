@@ -12,6 +12,14 @@ Practical validation of the complete multimodal Daily Tutor → Canvas → Tutor
   originals, exact Student-message and AI-execution lineage, same-source
   follow-ups, and exact text-only behavior when no source is active. Bounded real
   Luna image/PDF/follow-up proof passed with exactly three Tutor calls.
+- VISION-01S closes the multimodal Child Safety gap before the Primary Tutor.
+  Owned images use their actual bytes; PDFs use transient extracted text and
+  rendered pages; DOCX uses transient XML text and supported embedded images.
+  `omni-moderation-latest` supplies signals, Lina's existing policy remains the
+  decision authority, inspection failure fails closed, and compact audits retain
+  no source bytes, raw provider response, or score dump. Live synthetic proof
+  passed with four moderation calls, three allowed Tutor calls, and zero Tutor or
+  learning-derived writes for the blocked image.
 - Studio durable state and runtime exist.
 - Canvas Specialist execution exists.
 - A production Process sequence/cycle exists.

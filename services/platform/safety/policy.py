@@ -13,6 +13,7 @@ from services.platform.db.models import SafetyAudit, StudentTopicBoundary
 from services.tutor.parent_boundaries import ParentBoundaryCategory, ParentBoundaryDecision
 
 POLICY_ENGINE_VERSION = 1
+SOURCE_MODERATION_POLICY_VERSION = 1
 
 AGE_APPROPRIATE_DIRECTIVE = (
     "Continue the conversation with simple, age-appropriate framing and without adult-level detail."
@@ -23,6 +24,27 @@ PARENT_REDIRECT_DIRECTIVE = (
 PROTECTED_BASELINE_DIRECTIVE = (
     "I can’t help with that. Please talk to a trusted grown-up who can support you."
 )
+SOURCE_MODERATION_UNAVAILABLE_DIRECTIVE = (
+    "I couldn't safely check that file right now. Please try again."
+)
+
+_SOURCE_BLOCK_REASONS = (
+    ("sexual/minors", "SOURCE_SEXUAL_MINORS"),
+    ("sexual", "SOURCE_SEXUAL_CONTENT"),
+    ("self-harm/instructions", "SOURCE_SELF_HARM_INSTRUCTIONS"),
+    ("self-harm/intent", "SOURCE_SELF_HARM_INTENT"),
+    ("illicit/violent", "SOURCE_DANGEROUS_ACTIVITY"),
+    ("violence/graphic", "SOURCE_GRAPHIC_VIOLENCE"),
+    ("hate/threatening", "SOURCE_THREATENING_HATE"),
+    ("harassment/threatening", "SOURCE_THREATENING_HARASSMENT"),
+)
+_SOURCE_AGE_APPROPRIATE_CATEGORIES = {
+    "harassment",
+    "hate",
+    "illicit",
+    "self-harm",
+    "violence",
+}
 
 
 class BoundaryState(str, Enum):
@@ -183,6 +205,80 @@ class SafetyPolicyService:
             else _DEFAULT_BOUNDARIES[category].value
             for category in TopicCategory
         }
+
+    def evaluate_source_signal(
+        self,
+        *,
+        student_id: UUID,
+        interaction_ref: str,
+        true_categories: frozenset[str],
+    ) -> SafetyDecision:
+        """Map provider signals into Lina's existing actions; ``flagged`` is not authority."""
+
+        for category, reason_code in _SOURCE_BLOCK_REASONS:
+            if category in true_categories:
+                return self._audit(
+                    student_id,
+                    interaction_ref,
+                    SafetyDecision(
+                        action=SafetyAction.BLOCK,
+                        category=None,
+                        policy_source="SOURCE_MODERATION",
+                        policy_version=SOURCE_MODERATION_POLICY_VERSION,
+                        reason_code=reason_code,
+                        age_handling="safe_redirect",
+                        directive=PROTECTED_BASELINE_DIRECTIVE,
+                    ),
+                )
+        if true_categories & _SOURCE_AGE_APPROPRIATE_CATEGORIES:
+            return self._audit(
+                student_id,
+                interaction_ref,
+                SafetyDecision(
+                    action=SafetyAction.AGE_APPROPRIATE_ONLY,
+                    category=None,
+                    policy_source="SOURCE_MODERATION",
+                    policy_version=SOURCE_MODERATION_POLICY_VERSION,
+                    reason_code="SOURCE_SENSITIVE_AGE_APPROPRIATE",
+                    age_handling="age_appropriate",
+                    directive=AGE_APPROPRIATE_DIRECTIVE,
+                ),
+            )
+        return self._audit(
+            student_id,
+            interaction_ref,
+            SafetyDecision(
+                action=SafetyAction.ALLOW,
+                category=None,
+                policy_source="SOURCE_MODERATION",
+                policy_version=SOURCE_MODERATION_POLICY_VERSION,
+                reason_code="SOURCE_NORMAL_LEARNING",
+                age_handling="normal",
+                directive=None,
+            ),
+        )
+
+    def fail_source_inspection(
+        self,
+        *,
+        student_id: UUID,
+        interaction_ref: str,
+    ) -> SafetyDecision:
+        """Fail closed without deleting or duplicating the authoritative original."""
+
+        return self._audit(
+            student_id,
+            interaction_ref,
+            SafetyDecision(
+                action=SafetyAction.BLOCK,
+                category=None,
+                policy_source="SOURCE_MODERATION",
+                policy_version=SOURCE_MODERATION_POLICY_VERSION,
+                reason_code="SOURCE_MODERATION_UNAVAILABLE",
+                age_handling="recoverable_retry",
+                directive=SOURCE_MODERATION_UNAVAILABLE_DIRECTIVE,
+            ),
+        )
 
     def resolve_parent_boundary(
         self,

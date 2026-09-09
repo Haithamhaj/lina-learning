@@ -33,6 +33,32 @@ production build, deterministic Chrome component proof, migration round-trip,
 and three bounded real `gpt-5.6-luna` Tutor calls (image, same-source follow-up,
 one-page PDF). Authenticated Clerk browser validation remains unavailable locally.
 
+## VISION-01S — Multimodal Child-Safety Closure
+**Status:** DONE / IMPLEMENTED / CODEX-VERIFIED
+**Approved result:** Every owned image/PDF/DOCX source now crosses a transient
+`omni-moderation-latest` boundary before the Primary Tutor. Provider categories
+are bounded signals only; the existing Lina policy maps them to the existing
+`SafetyAction`, writes a compact `SafetyAudit`, and preserves Parent Boundary as
+the final response authority. Inspection failure fails closed without deleting
+the immutable original. Blocked sources reach neither Tutor nor Canvas and do
+not create Evidence, Personal Facts, Learning Events, Candidate Events, or
+Learning Intelligence. There is no Safety Agent, Vision Agent, extra Tutor, or
+durable derived source copy.
+**File finding:** bounded live Responses probes detected a synthetic unsafe PDF
+but did not detect the same unsafe DOCX content. Production therefore uses one
+explicit deterministic fallback for all supported sources: the actual image;
+transient PDF text plus rendered pages; transient DOCX XML text plus supported
+embedded images. The fallback calls the official moderation endpoint directly.
+**Verified:** focused unit/runtime/Safety/PostgreSQL source tests, Python compile,
+and bounded synthetic live proofs. The live application path produced four
+moderation calls: safe image ALLOW plus one Tutor, unsafe image BLOCK plus zero
+Tutor, safe one-page PDF ALLOW plus one Tutor, and safe DOCX ALLOW plus one
+Tutor. Total Primary Tutor calls: three. All source audits were compact and the
+blocked path had zero learning-derived writes.
+**Full suite:** 1,247 passed and 12 skipped. The sole failure is the documented,
+out-of-scope Pattern Engine expectation that a contradicted candidate strategy
+immediately becomes `WEAKENING`; VISION-01S does not touch that subsystem.
+
 # Learning Studio Governance Provenance — 2026-09-02
 
 **Authority:** `docs/STUDIO_IMPLEMENTATION_PLAN.md` and the current Studio
