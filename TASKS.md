@@ -17,8 +17,8 @@ An explicit current Product Owner instruction authorizes its requested working s
 
 | Task | Status | Scope |
 | --- | --- | --- |
-| UI-REFINE-01 | NEXT | Refine the Daily Student experience using `docs/domains/FRONTEND.md`. |
-| DAILY-E2E-01 | PLANNED | Run an authenticated disposable-Student Daily journey across text, voice, sources, and Canvas. |
+| UI-REFINE-01 | DONE | Daily now presents conditional docked Workspace from the existing Studio Snapshot, with client-only scene hide/reopen behavior and fixed Chat-left/Workspace-right geometry. Local automated checks pass; authenticated Daily acceptance remains the next gate. |
+| DAILY-E2E-01 | NEXT | Run an authenticated disposable-Student Daily journey across text, voice, sources, and Canvas, including conditional Workspace, hide/reopen, Arabic direction, and real renderer evidence. |
 | REAL-LINA-01 | PLANNED | Conduct bounded real-use observation and record decisions without treating it as automatic product expansion. |
 
 ## Evidence and calibration

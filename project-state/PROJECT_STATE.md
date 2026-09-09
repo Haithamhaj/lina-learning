@@ -2,11 +2,11 @@
 
 ## Current goal
 
-Begin `UI-REFINE-01`: refine the Student interface using the canonical frontend direction while preserving current runtime contracts.
+Complete authenticated acceptance of the refined Daily learning experience, then use bounded real observation to inform later product decisions.
 
 ## Current reality
 
-`main` is the canonical branch. Product Identity & Philosophy are approved. The legacy shadow branches were retired; the intentionally preserved FE-02 prototype remains separate. The root `main` worktree still contains unrelated local changes and remains untouched.
+`main` is the canonical branch. Product Identity & Philosophy are approved. `UI-REFINE-01` is implemented on an isolated branch: Daily is full-width Chat without an active Scene, and becomes a responsive fixed Chat-left/Workspace-right dock only from the existing server-authored Studio Snapshot. The root `main` worktree still contains unrelated local changes and remains untouched.
 
 ## Active decisions
 
@@ -14,15 +14,15 @@ Begin `UI-REFINE-01`: refine the Student interface using the canonical frontend 
 
 ## Protected areas
 
-Safety/Parent Boundaries, ownership/privacy, Learning Intelligence semantics, raw provenance, Model Gateway routing, Studio/Canvas contracts, and runtime behavior are unchanged by this cleanup.
+Safety/Parent Boundaries, ownership/privacy, Learning Intelligence semantics, raw provenance, Model Gateway routing, Studio/Canvas contracts, and runtime behavior remain unchanged. Daily Workspace hiding is local presentation keyed only by Scene ID and does not mutate Studio authority.
 
 ## Active risks
 
-Authenticated Daily acceptance and longitudinal real Lina calibration remain unproven product gates.
+Authenticated Daily acceptance is still unproven because the local environment lacks `CLERK_PUBLISHABLE_KEY`; text, voice, source, existing Studio renderer, dock visibility, Arabic geometry, and focus behavior need browser evidence with a disposable Student. Longitudinal real Lina calibration also remains unproven.
 
 ## Next recommended action
 
-Start `UI-REFINE-01` with a bounded approved scope; then pursue authenticated Daily acceptance and real-use calibration.
+Run `DAILY-E2E-01` against an authenticated disposable Student, then pursue bounded real-use calibration without treating either result as automatic product expansion.
 
 ## Critical references
 

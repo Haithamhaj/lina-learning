@@ -28,6 +28,7 @@ import {
   latestActiveStudentSource,
   type StudentSourceAsset,
 } from "@/lib/daily-source";
+import { nextWorkspacePresentation } from "@/lib/daily-workspace-presentation";
 
 type SuggestedAction = { label: string; kind: "NAVIGATION" | "ANSWER_CHOICE" };
 type GuidedCheck = { id: string; prompt: string; choices: Array<{ label: string }> };
@@ -63,8 +64,8 @@ function ChatBubble({ message, pending, getToken }: { message: ChatMessage; pend
     <article className={`flex gap-3 ${tutor ? "justify-start" : "justify-end"}`}>
       {tutor ? <span aria-hidden="true" className="mt-1 grid size-9 shrink-0 place-items-center rounded-2xl bg-[#17334f] text-sm text-white shadow-sm">✦</span> : null}
       <div className={`max-w-[85%] rounded-[1.35rem] px-4 py-3 text-sm leading-6 shadow-sm ${tutor ? "rounded-bl-md border border-[#cde7df] bg-[#effaf7] text-[#173d3a]" : "rounded-br-md bg-[#6658d3] text-white"}`}>
-        <p className={`text-xs font-bold ${tutor ? "text-[#37796f]" : "text-[#ebe8ff]"}`}>{tutor ? "Tutor" : "You"}</p>
-        {tutor && !message.content && pending ? <p className="mt-1.5">Tutor is thinking…</p> : <p dir="auto" className="mt-1.5 whitespace-pre-wrap">{message.content}</p>}
+        <p className={`text-xs font-bold ${tutor ? "text-[#37796f]" : "text-[#ebe8ff]"}`}>{tutor ? "Lina" : "You"}</p>
+        {tutor && !message.content && pending ? <p className="mt-1.5">Lina is thinking…</p> : <p dir="auto" className="mt-1.5 whitespace-pre-wrap">{message.content}</p>}
         {!tutor && message.source_asset ? <StudentSourceCard source={message.source_asset} apiBaseUrl={publicConfig.apiBaseUrl} getToken={getToken} /> : null}
       </div>
       {!tutor ? <span aria-hidden="true" className="mt-1 grid size-9 shrink-0 place-items-center rounded-2xl bg-[#ece7ff] text-sm text-[#524596] shadow-sm">●</span> : null}
@@ -92,6 +93,7 @@ export function DailyStudentApp() {
   const [activeSource, setActiveSource] = useState<StudentSourceAsset | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [sessionEnded, setSessionEnded] = useState(false);
+  const [hiddenSceneId, setHiddenSceneId] = useState<string | null>(null);
   const [surfaceDirection, setSurfaceDirection] = useState<"ltr" | "rtl">("ltr");
   const controllerRef = useRef<StudioController | null>(null);
   const runtimeIdRef = useRef<string | null>(null);
@@ -253,7 +255,50 @@ export function DailyStudentApp() {
     return () => window.clearInterval(timer);
   }, [canvasCompositionPending]);
 
-  const workspaceVisible = snapshot?.active_scene_contract !== null && snapshot !== null;
+  const activeSceneId = snapshot?.active_scene_contract?.scene_id ?? null;
+  const workspacePresentation = nextWorkspacePresentation(activeSceneId, hiddenSceneId);
+  const workspaceVisible = workspacePresentation.visible;
+  const isArabic = surfaceDirection === "rtl";
+  const copy = isArabic ? {
+    daily: "التعلّم اليومي",
+    heading: "مساحة هادئة للتفكير بصوتٍ عالٍ.",
+    chat: "محادثة التعلّم",
+    chatDescription: "اسأل لينا أو اشرح ما الذي جرّبته.",
+    showVisual: "إظهار النشاط",
+    preparing: "تُحضّر لينا طريقةً أخرى للنظر إلى هذا.",
+    emptyHeading: "ما الذي تحاول فهمه؟",
+    emptyDescription: "ابدأ بسؤال، أو بإجابة جرّبتها، أو بشيء تريد فهمه بوضوح أكبر.",
+    messageLabel: "رسالتك إلى لينا",
+    sourceHint: "سيُرسل هذا مع عبارة: «ساعديني في هذا».",
+    placeholder: "اسأل سؤالًا أو شارك ما جرّبته",
+    thinking: "لينا تفكّر…",
+    send: "إرسال",
+    workspace: "مساحة التعلّم",
+    together: "نتعلّم معًا",
+    visualHeading: "جرّب هذا النشاط",
+    hideVisual: "إخفاء النشاط",
+  } : {
+    daily: "Daily learning",
+    heading: "A calm place to think out loud.",
+    chat: "Learning Chat",
+    chatDescription: "Ask Lina a question or explain what you tried.",
+    showVisual: "Show visual",
+    preparing: "Lina is preparing another way to look at this.",
+    emptyHeading: "What are you working through?",
+    emptyDescription: "Start with a question, an answer you tried, or something you would like to understand more clearly.",
+    messageLabel: "Your message for Lina",
+    sourceHint: "Sending without a question will ask: “Help me with this.”",
+    placeholder: "Ask a question or share what you tried",
+    thinking: "Lina is thinking…",
+    send: "Send",
+    workspace: "Learning Workspace",
+    together: "Learning together",
+    visualHeading: "Try this visual",
+    hideVisual: "Hide visual",
+  };
+  useEffect(() => {
+    if (hiddenSceneId !== null && activeSceneId !== hiddenSceneId) setHiddenSceneId(null);
+  }, [activeSceneId, hiddenSceneId]);
   useEffect(() => {
     const previous = priorWorkspaceVisible.current;
     priorWorkspaceVisible.current = workspaceVisible;
@@ -342,7 +387,7 @@ export function DailyStudentApp() {
         setActiveSource(durableSource);
         setSelectedSource(null);
       }
-      if (!response.body) throw new Error("The Tutor response stream was unavailable.");
+      if (!response.body) throw new Error("Lina's answer could not be completed.");
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -374,7 +419,7 @@ export function DailyStudentApp() {
         }
       }
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The Tutor response did not finish.");
+      setError(reason instanceof Error ? reason.message : "Lina's answer could not be completed.");
     }
     if (!terminalReceived) {
       setLearningSession((current) => current ? {
@@ -387,7 +432,7 @@ export function DailyStudentApp() {
         }),
       } : current);
       if (!admitted && studentContent && restoreDraftOnPreAdmission) setDraft(studentContent);
-      setError("The Tutor response did not finish.");
+      setError("Lina's answer could not be completed.");
     }
     return terminalReceived;
   };
@@ -460,7 +505,7 @@ export function DailyStudentApp() {
     } catch (reason) {
       // Re-read the durable Snapshot after a stale/rejected optimistic attempt.
       await reloadSnapshot();
-      const message = reason instanceof Error ? reason.message : "Studio could not save that action.";
+      const message = reason instanceof Error ? reason.message : "The visual activity could not save that yet.";
       setError(message);
       throw new Error(message);
     } finally {
@@ -487,26 +532,24 @@ export function DailyStudentApp() {
   return (
     <main dir={surfaceDirection} className="min-h-screen bg-[radial-gradient(circle_at_top_left,#eef7f3_0%,transparent_36%),linear-gradient(135deg,#fbfaff_0%,#f7fbff_54%,#fff9f1_100%)] px-4 py-5 text-slate-900 sm:px-7 sm:py-8">
       <div className="mx-auto max-w-[1500px]">
-        <header className="mb-5 flex flex-wrap items-end justify-between gap-4 rounded-[1.75rem] border border-white/90 bg-white/75 px-5 py-4 shadow-sm backdrop-blur sm:px-6">
-          <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#5d7d78]">Daily learning</p><h1 className="mt-1 font-display text-3xl tracking-tight">A calm place to think out loud.</h1></div>
-          <p className="text-sm text-slate-600" role="status">Studio {studioConnection === "connected" ? "connected" : studioConnection === "reconnecting" ? "reconnecting" : studioConnection}</p>
-        </header>
-        <div className={`grid items-start gap-5 ${workspaceVisible || canvasCompositionPending ? "xl:grid-cols-[minmax(0,0.92fr)_minmax(420px,1.08fr)]" : ""}`}>
-          <section aria-label="Learning Chat" className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4"><div><h2 className="font-display text-2xl">Learning Chat</h2><p className="mt-1 text-sm leading-6 text-slate-600">Ask, explain what you tried, or choose a next step with your Tutor.</p></div><span aria-hidden="true" className="grid size-10 place-items-center rounded-2xl bg-[#e8f6f1] text-[#2e766a]">✦</span></div>
-            <div className="mt-4 min-h-[26rem] max-h-[calc(100vh-19rem)] overflow-y-auto rounded-[1.5rem] bg-[#fafbfe] p-3 sm:p-4" aria-live="polite">
-              {learningSession?.messages.length ? <div className="grid gap-4">{learningSession.messages.map((message) => <div key={message.id}><ChatBubble message={message} pending={chatSending} getToken={getToken} />{message.role === "tutor" && message.id === latestTutor?.id && message.suggested_actions.length > 0 ? <div className="ml-12 mt-2 flex flex-wrap gap-2" aria-label="Tutor suggested actions">{message.suggested_actions.map((action) => <Button key={`${action.kind}:${action.label}`} className="h-auto min-h-10 rounded-full px-3 py-2 text-left" type="button" variant="secondary" disabled={chatSending} onClick={() => void sendChat(action.label, { suggestedAction: true })}><span dir="auto">{action.label}</span></Button>)}</div> : null}{message.role === "tutor" && message.id === latestTutor?.id && message.guided_check ? <div className="ml-12 mt-3 rounded-2xl border border-emerald-100 bg-white p-3"><p className="text-sm font-semibold" dir="auto">{message.guided_check.prompt}</p><div className="mt-2 flex flex-wrap gap-2">{message.guided_check.choices.map((choice) => <Button key={choice.label} type="button" variant="secondary" disabled={chatSending} onClick={() => void sendChat(choice.label, { guidedCheckId: message.guided_check?.id })}>{choice.label}</Button>)}</div></div> : null}</div>)}</div> : <div className="grid min-h-80 place-items-center px-5 text-center"><div className="max-w-sm"><div aria-hidden="true" className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#e9f7f3] text-2xl text-[#328577]">✎</div><h3 className="mt-4 font-display text-2xl">What are you working through?</h3><p className="mt-2 text-sm leading-6 text-slate-600">Start with a question, an answer you tried, or something you would like to understand more clearly.</p></div></div>}
+        <header className="mb-5 px-2 sm:px-3"><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#5d7d78]">{copy.daily}</p><h1 className="mt-1 font-display text-3xl tracking-tight">{copy.heading}</h1></header>
+        <div dir="ltr" className={`grid items-start gap-5 ${workspaceVisible ? "lg:h-[calc(100vh-10rem)] lg:grid-cols-[minmax(340px,47fr)_minmax(410px,53fr)] xl:grid-cols-[minmax(390px,43fr)_minmax(520px,57fr)]" : ""}`}>
+          <section dir={surfaceDirection} aria-label={copy.chat} className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4"><div><h2 className="font-display text-2xl">{copy.chat}</h2><p className="mt-1 text-sm leading-6 text-slate-600">{copy.chatDescription}</p></div>{activeSceneId && !workspaceVisible ? <Button variant="secondary" type="button" onClick={() => setHiddenSceneId(null)}>{copy.showVisual}</Button> : null}</div>
+            {canvasCompositionPending && !activeSceneId ? <p className="mt-3 text-sm text-[#2e766a]" role="status">{copy.preparing}</p> : null}
+            <div className={`mt-4 min-h-[26rem] overflow-y-auto rounded-[1.5rem] bg-[#fafbfe] p-3 sm:p-4 ${workspaceVisible ? "lg:max-h-[calc(100vh-19rem)]" : "max-h-[calc(100vh-19rem)]"}`} aria-live="polite">
+              {learningSession?.messages.length ? <div className="grid gap-4">{learningSession.messages.map((message) => <div key={message.id}><ChatBubble message={message} pending={chatSending} getToken={getToken} />{message.role === "tutor" && message.id === latestTutor?.id && message.suggested_actions.length > 0 ? <div className="ml-12 mt-2 flex flex-wrap gap-2" aria-label="Lina suggested actions">{message.suggested_actions.map((action) => <Button key={`${action.kind}:${action.label}`} className="h-auto min-h-10 rounded-full px-3 py-2 text-left" type="button" variant="secondary" disabled={chatSending} onClick={() => void sendChat(action.label, { suggestedAction: true })}><span dir="auto">{action.label}</span></Button>)}</div> : null}{message.role === "tutor" && message.id === latestTutor?.id && message.guided_check ? <div className="ml-12 mt-3 rounded-2xl border border-emerald-100 bg-white p-3"><p className="text-sm font-semibold" dir="auto">{message.guided_check.prompt}</p><div className="mt-2 flex flex-wrap gap-2">{message.guided_check.choices.map((choice) => <Button key={choice.label} type="button" variant="secondary" disabled={chatSending} onClick={() => void sendChat(choice.label, { guidedCheckId: message.guided_check?.id })}>{choice.label}</Button>)}</div></div> : null}</div>)}</div> : <div className="grid min-h-80 place-items-center px-5 text-center"><div className="max-w-sm"><div aria-hidden="true" className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#e9f7f3] text-2xl text-[#328577]">✎</div><h3 className="mt-4 font-display text-2xl">{copy.emptyHeading}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{copy.emptyDescription}</p></div></div>}
             </div>
             <form className="mt-4 grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-3 sm:grid-cols-[auto_1fr_auto] sm:items-center" onSubmit={submit}>
-              <label className="sr-only" htmlFor="daily-learning-message">Your message for Tutor</label>
+              <label className="sr-only" htmlFor="daily-learning-message">{copy.messageLabel}</label>
               <DailySourceInput file={selectedSource} activeSource={activeSource} disabled={chatSending || voiceBusy} onFile={setSelectedSource} onDismissActive={() => setActiveSource(null)} onError={setError} />
-              {selectedSource && !draft.trim() ? <p className="order-1 text-xs text-slate-600 sm:col-span-3">Sending without a question will ask: “Help me with this.”</p> : null}
+              {selectedSource && !draft.trim() ? <p className="order-1 text-xs text-slate-600 sm:col-span-3">{copy.sourceHint}</p> : null}
               <DailyVoiceInput apiBaseUrl={publicConfig.apiBaseUrl} learningSessionId={learningSession?.learning_session_id ?? null} draft={draft} chatSending={chatSending} getToken={getToken} onActiveChange={setVoiceBusy} onTranscript={(transcript) => { setDraft(transcript); window.requestAnimationFrame(() => composerRef.current?.focus()); }} />
-              <input ref={composerRef} id="daily-learning-message" dir="auto" value={draft} onChange={(event) => setDraft(event.target.value)} disabled={voiceBusy || chatSending} maxLength={4000} placeholder="Ask a question or share what you tried" className="order-2 h-12 min-w-0 rounded-2xl bg-slate-50 px-4 text-sm outline-none ring-[#7d70df] transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60" />
-              <Button className="order-3 min-h-12" type="submit" disabled={(!draft.trim() && !selectedSource) || chatSending || voiceBusy}>{chatSending ? "Tutor is thinking…" : "Send"}</Button>
+              <input ref={composerRef} id="daily-learning-message" dir="auto" value={draft} onChange={(event) => setDraft(event.target.value)} disabled={voiceBusy || chatSending} maxLength={4000} placeholder={copy.placeholder} className="order-2 h-12 min-w-0 rounded-2xl bg-slate-50 px-4 text-sm outline-none ring-[#7d70df] transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60" />
+              <Button className="order-3 min-h-12" type="submit" disabled={(!draft.trim() && !selectedSource) || chatSending || voiceBusy}>{chatSending ? copy.thinking : copy.send}</Button>
             </form>
           </section>
-          {workspaceVisible || canvasCompositionPending ? <aside aria-label="Adaptive Learning Workspace" className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a6b42]">Adaptive Learning Workspace</p><h2 ref={workspaceHeadingRef} tabIndex={-1} className="mt-1 font-display text-2xl outline-none">{workspaceVisible ? "Work with the current scene" : "Preparing a visual explanation"}</h2></div>{operationPending ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900" role="status">Saving…</span> : null}</div>{canvasCompositionPending ? <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" role="status">Tutor is preparing the visual explanation. You can keep chatting while it arrives.</p> : null}{workspaceVisible && snapshot ? <StudioRendererHost snapshot={snapshot} operationPending={operationPending} onOperation={submitOperation} onReload={() => { void reloadSnapshot(); }} /> : null}</aside> : null}
+          {workspaceVisible ? <aside dir={surfaceDirection} aria-label={copy.workspace} className="min-h-0 overflow-y-auto rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a6b42]">{copy.together}</p><h2 ref={workspaceHeadingRef} tabIndex={-1} className="mt-1 font-display text-2xl outline-none">{copy.visualHeading}</h2></div><Button variant="secondary" type="button" onClick={() => setHiddenSceneId(activeSceneId)}>{copy.hideVisual}</Button></div>{snapshot ? <StudioRendererHost snapshot={snapshot} operationPending={operationPending} onOperation={submitOperation} onReload={() => { void reloadSnapshot(); }} /> : null}</aside> : null}
         </div>
         {error ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert"><span>{error}</span><Button type="button" variant="secondary" onClick={() => setLoadAttempt((value) => value + 1)}>Reconnect</Button></div> : null}
       </div>
