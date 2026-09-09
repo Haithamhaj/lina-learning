@@ -18,6 +18,10 @@ Primary school → Middle school → Secondary school
 
 The daily user is the Student. The initial go-to-market is B2C, with the Parent as the initial buyer/payer and a meaningful partner in understanding learning. This does not define a future Parent Dashboard or institutional product.
 
+## Mission
+
+Build an AI-native learning environment that helps every Student understand deeply, build strong foundations, and grow in appropriate independence through natural tutoring, multimodal learning, interactive representation, and evidence-grounded personalization over time.
+
 ## Learning philosophy
 
 **Learning is the goal. The answer is only a tool.**
@@ -68,6 +72,8 @@ The accepted repository baseline includes:
 - durable Studio/Canvas runtime with Chat–Canvas–Tutor continuity;
 - current MATH, SCIENCE, ENGLISH, and ARABIC Studio support; and
 - the Daily Student surface.
+
+MATH, SCIENCE, ENGLISH, and ARABIC are the current structured Studio product subjects. Tutor and general conversation are not restricted to those four subjects; broader structured Studio support is not implied.
 
 Implementation is distinct from proof of long-term value. Authenticated Daily end-to-end acceptance, recurring real Lina use, and longitudinal personalization calibration remain separate gates.
 

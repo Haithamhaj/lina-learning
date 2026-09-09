@@ -8,11 +8,10 @@ The accepted baseline includes the primary Tutor, safety/Parent Boundaries, owne
 
 ## Current
 
-1. Repository Truth Reset: make `main` the clean canonical source after the explicit promotion gate.
-2. Student UI refinement: improve the Daily Student experience without reopening protected contracts.
-3. Authenticated Daily end-to-end acceptance: prove the complete disposable Student journey.
-4. Real Lina use: observe natural use before treating implementation as learning benefit.
-5. Evidence/personalization calibration: assess real, observable outcomes and revise only through approved work.
+1. Student UI refinement: improve the Daily Student experience without reopening protected contracts.
+2. Authenticated Daily end-to-end acceptance: prove the complete disposable Student journey.
+3. Real Lina use: observe natural use before treating implementation as learning benefit.
+4. Evidence/personalization calibration: assess real, observable outcomes and revise only through approved work.
 
 ## Near next, usage-driven
 
