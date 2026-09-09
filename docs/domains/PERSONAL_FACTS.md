@@ -11,4 +11,6 @@ Personal Facts use a Fact plus Observation History model. `support_count`, `firs
 
 Allowed categories are `PREFERENCE`, `FAVORITE`, `ACTIVITY`, `PET`, `RELATIONSHIP`, and `SAFE_PERSONAL_CONTEXT`. Personal Facts never hold temporary plans, psychology, personality, intelligence, learning style, inferred talent, mastery, misconception, or duplicated Core Profile information. They remain separate from curriculum RAG and Learning Evidence.
 
+Personal Facts may make examples more personally relevant, preserve safe interests/context, and help interaction feel natural. They never become Learning Evidence, a fixed learner profile, teaching authority, or an override of current Student context. Safe ordinary facts may contribute to Parent understanding where appropriate, while exact dashboard and privacy rules remain deferred.
+
 Current Student conversation and Core Profile authority outrank stale Personal Fact context. Facts retain provenance and lifecycle, remain bounded and reconcilable, and never bypass ownership, Parent Boundaries, or child-safety policy.

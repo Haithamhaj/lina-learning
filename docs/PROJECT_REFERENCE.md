@@ -2,44 +2,74 @@
 
 ## Authority and purpose
 
-This is the durable product reference. It owns product purpose, boundaries, and cross-domain decisions. `LEARNING_INTELLIGENCE_SPEC.md` owns Intelligence semantics, `CHILD_SAFETY_POLICY.md` owns Safety policy, and `IMPLEMENTATION_PLAN.md` owns technical architecture.
+This is durable product truth: identity, purpose, philosophy, roles, and cross-domain boundaries. `LEARNING_INTELLIGENCE_SPEC.md` owns Intelligence semantics, `CHILD_SAFETY_POLICY.md` owns Safety policy, and `IMPLEMENTATION_PLAN.md` owns technical architecture.
 
-## Product promise
+## Product identity, origin, and intended learners
 
-Lina is a personal learning companion for Lina, initially oriented around Grade 5. The Tutor responds to the current question naturally and safely. It uses available grounding and evidence-informed memory to improve help over time without turning a child into a score, diagnosis, or permanent label.
+Lina is the product name. It began with Lina, the founder's daughter, and Grade 5 as the first real-world proving ground. Lina is not permanently a one-child product: it is designed to grow into an AI-native personal learning system for school students across primary, middle, and secondary education.
 
-The current question is authoritative. Tutor availability is independent of curriculum/book availability. Books, trusted references, and Student-captured work are grounding sources, not Teaching Authority.
+Current proving ground and long-term vision are distinct. Current implementation and validation center on Lina/Grade 5. Primary-to-secondary, age/grade-aware longitudinal support is intended product direction, not an implemented claim.
 
-## Durable boundaries
+## Purpose and philosophy
 
-- Raw messages, original Student work, and source provenance are authoritative and rebuildable.
-- A Learning Thread is the session-local contiguous conversation Segment; there is no third Thread entity. Durable conversation topics are optional Grade-scoped navigation metadata, never Intelligence or Safety authority.
-- Candidate metadata is provisional. Session-authorized Evidence is distinct from Current State, Pattern, Card, and derived mastery/confidence views.
-- Current behavior outranks historical personalization. Patterns are priors, never commands.
-- TeachingMode, TeachingStrategy, TeachingMethod, conversation classification, safety, and curriculum semantics remain separate concerns.
-- The primary Tutor call semantically determines the turn-level mode, strategy, method, and relevant prior-method relation. Deterministic code validates canonical values, applies policy, manages persistence/lineage, and never substitutes keyword routing.
-- Selecting a teaching method is not evidence of effectiveness. Only an observable Lina outcome can support or challenge strategy effectiveness.
+Lina exists because easy access to answers does not answer whether a Student understood, built foundations, applied learning independently, retained it, or benefited from a teaching intervention. **Learning is the goal. The answer is only a tool.**
 
-## Safety, ownership, and multimodal learning
+The system helps the learner understand, build foundations, apply learning, retain it, and become appropriately more independent. It is not a homework-answer generator, generic school chatbot, book chatbot, test-prep-only system, or LMS. Teaching a solution is appropriate when a learner is stuck; Lina does not manufacture struggle by withholding help.
 
-Child safety is an explicit runtime policy, not a prompt-only behavior. Parent Learning Boundaries can restrict further but cannot weaken the baseline. Student ownership and privacy are enforced independently of a browser-supplied identity.
+The durable principles are: learning before answers; know the learner without labeling the learner; current evidence beats historical assumptions; personalize teaching, not just content; parents get insight, not surveillance; and teaching improves through observable outcomes.
 
-Text, voice, image, PDF, and DOCX sources may support one normal Tutor interaction. The original Student source remains private authority; AI-derived annotations or reconstructions are separate, derived artifacts. Safety applies before Tutor or Canvas work; blocked inputs create no learning-derived conclusion.
+## Student, Parent, and learner understanding
 
-## Studio and Canvas
+The Student is the daily user. The initial B2C direction has the Parent as buyer/payer and a meaningful partner in understanding learning. Future Parent product surfaces, controls, privacy rules, and dashboard design require separate work.
 
-Chat/Tutor is the language and reasoning authority. Canvas is a bounded educational representation surface that may clarify a Tutor-selected method; it must not block conversation or become a competing teaching agent. Chat, Canvas, and continuation share the same Tutor context.
+Four authorities must not collapse into one “student profile”:
 
-Studio’s primary product subjects are MATH, SCIENCE, ENGLISH, and ARABIC. General/unknown conversation remains allowed in Chat. Current accepted Math representation includes a Cartesian plane from `-10` to `10` on each axis. See `domains/STUDIO.md` and `domains/EDUCATIONAL_VISUALS.md`.
+- **Student Core Profile:** Parent/System-authoritative identity, age, and active Grade context.
+- **Personal Facts:** explicit, safe, durable context a Student states about themselves.
+- **Current Conversation Context:** what matters in the current interaction.
+- **Learning Intelligence:** what actual learning Evidence suggests over time.
 
-## Learning Intelligence
+Lina must not infer personality, psychology, intelligence, attention, permanent learning style, or talent labels. Personal Facts and Learning Intelligence remain distinct from raw conversation context and curriculum grounding.
 
-The learning loop is raw interaction → completed Segment review → session-authorized Event/Evidence → Current State/Patterns → compact Card → relevant later support. It is evidence-grounded, versioned, traceable, and rebuildable. The Card is a runtime projection, not source truth. See `LEARNING_INTELLIGENCE_SPEC.md`.
+## Personalization and Learning Intelligence
 
-## Architecture decisions
+Lina personalizes how a Student is taught, not only what content is shown. Teaching Mode, Teaching Strategy, Teaching Method, and representation/surface are separate. The primary Tutor semantically chooses the turn-level teaching direction; deterministic services validate, enforce policy, preserve lineage, and manage memory.
 
-Lina is a modular monolith: web client, FastAPI API, PostgreSQL/pgvector, object storage where needed, worker, and Model Gateway. Do not add a new agent framework, vector database, microservice, or core infrastructure service without demonstrated need and Product Owner approval.
+Historical learner intelligence is guidance, not a command. Current Student behavior outranks stale assumptions and personalization should feel natural rather than announce labels. A selected method is not Evidence of effectiveness; only an observable Student outcome can support or challenge teaching-effectiveness intelligence.
 
-## Current product reality and limits
+Learning Intelligence remains evidence-first and rebuildable:
 
-Primary Tutor, Intelligence foundations, Personal Facts/Core Profile, optional RAG, Voice/STT, Vision image/PDF/DOCX sources, multimodal Safety, durable Studio runtime, Canvas Specialist, production Canvas patterns, and Daily Student surface are implemented in the accepted baseline. Authenticated Daily acceptance, recurring real Lina use, and longitudinal calibration are not yet proven merely by that implementation.
+```text
+Raw interaction → completed Segment → semantic review → validated Learning Event
+→ Evidence → Current Learning State / Patterns → Learner Intelligence Card
+→ relevant later personalization
+```
+
+One interaction does not define the learner. Current State may change quickly; Patterns require repeated Evidence at the narrowest supported scope and may weaken, resolve, or be superseded. Historical information is not injected into every turn. **AI interprets meaning; the system governs memory.**
+
+## Parents and explainability
+
+Parents should gain meaningful insight into learning progress, important changes, foundational gaps, independence/support changes, teaching approaches that appear useful, and safe ordinary Personal Facts where appropriate. Important conclusions must be explainable through Evidence summary and relevant learning examples when appropriate—not default full-transcript monitoring.
+
+Parent disagreement/challenge does not manually rewrite Learning Intelligence; Evidence remains authoritative. Parent visibility into a Personal Fact does not make the Parent its source. Exact drill-down, dashboard, notification, subscription, goal-setting, and evolving Student privacy rules are intentionally deferred.
+
+## Teaching evolution
+
+The current Teaching Method/Strategy system is V1, not a final educational framework. It may evolve through real learner outcomes, Evidence, evaluation, validated educational research, and global evidence-based teaching practices. Lina does not adopt a named pedagogy merely by mentioning it.
+
+Future adoption follows: educational method/practice → research and evidence review → clear definition → bounded eligibility/context → observable learner outcome → evaluation → versioned adoption.
+
+## Durable product boundaries
+
+- The current question is authoritative; Tutor availability is independent of curriculum.
+- Books, trusted references, and Student work are grounding sources, not Teaching Authority.
+- Raw messages, original Student work, and provenance are authoritative and rebuildable.
+- Child safety and Parent Boundaries are explicit runtime policy; ownership/privacy are independent protected boundaries.
+- Chat/Tutor holds language and reasoning authority; Canvas is a bounded representation surface and must not block conversation.
+- Lina remains a modular monolith. New core infrastructure requires demonstrated need and approval.
+
+## Current reality and long-term vision
+
+The accepted baseline implements primary Tutor, safety/Parent Boundaries, ownership, optional content/RAG, Learning Intelligence foundations, Personal Facts/Core Profile, Voice/STT, Student image/PDF/DOCX sources, durable Studio/Canvas, and the Daily Student surface. Studio currently supports MATH, SCIENCE, ENGLISH, and ARABIC; ordinary Chat remains available more broadly.
+
+Authenticated Daily acceptance, recurring real Lina use, and longitudinal calibration remain unproven gates. Future product direction includes primary-to-secondary maturity, age/grade-aware evolution, broader content/reference coverage, and a separately designed Parent experience—only after real-use evidence.

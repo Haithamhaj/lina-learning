@@ -22,12 +22,13 @@ The accepted baseline includes the primary Tutor, safety/Parent Boundaries, owne
 
 ## Later
 
+- Age/grade-aware evolution and progression across school years toward primary-to-secondary product maturity.
 - Trusted-reference pilot.
 - Broader Science and language visual coverage.
-- Parent/Admin expansion.
+- A separately designed Parent experience/dashboard.
 - Grade transition.
 - Wider productization only after real-use evidence.
 
 ## Permanent sequencing rules
 
-Tutor availability never depends on curriculum. Current behavior outranks historical personalization. A visual surface must serve a Tutor-selected learning purpose. Strategy selection is not strategy-effectiveness evidence. No capability above authorizes new infrastructure or a broad architecture redesign.
+Tutor availability never depends on curriculum. Current behavior outranks historical personalization. A visual surface must serve a Tutor-selected learning purpose. Strategy selection is not strategy-effectiveness evidence. The initial go-to-market is B2C; any school/institution expansion is possible future context, not an active roadmap commitment. No capability above authorizes new infrastructure or a broad architecture redesign.

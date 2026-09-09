@@ -11,6 +11,7 @@ An explicit current Product Owner instruction authorizes its requested working s
 | REPO-TRUTH-03 | DONE | Physical history/evidence/output cleanup and hygiene verification are complete. |
 | REPO-TRUTH-04 | DONE | `main` was fast-forwarded to the approved cleanup truth and parity verified. |
 | REPO-TRUTH-05 | DONE | Shadow remote branches were retired; `main` now prevents force pushes and branch deletion. |
+| PRODUCT-IDENTITY-01 | REVIEW | Align canonical product identity and philosophy; review branch only, no runtime change. |
 
 ## Next
 

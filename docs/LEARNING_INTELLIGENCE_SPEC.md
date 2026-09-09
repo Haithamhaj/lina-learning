@@ -12,7 +12,7 @@
 
 # 1. Purpose & Authority
 
-This document defines how the Lina Personal Learning System converts real learning interactions into structured, explainable, revisable learner intelligence.
+This document defines how the Lina Personal Learning System converts each Student's real learning interactions into structured, explainable, revisable learner intelligence. The architecture is product-level: Lina and Grade 5 are its current proving ground, not a conceptual limit to one child.
 
 It is the governing contract for:
 
@@ -39,7 +39,7 @@ The system must not treat an AI-generated impression as learner truth.
 
 The durable source is the original interaction history. All higher-level intelligence is derived and must remain traceable and rebuildable.
 
-> **Learning Intelligence is an evidence-grounded interpretation of Lina's learning history, not a permanent label about Lina.**
+> **Learning Intelligence is an evidence-grounded interpretation of a learner's history, not a permanent label about that learner.**
 
 The detailed implementation may evolve, but it must preserve the contracts and invariants in this specification unless the project owner explicitly changes them.
 
@@ -88,7 +88,7 @@ The system separates **what happened**, **what it suggests**, **what has become 
 
 The original interaction record. Examples:
 
-- Lina's text message,
+- a Student's text message,
 - tutor response,
 - speech transcript,
 - uploaded homework image,
@@ -123,7 +123,7 @@ multiple `source_refs[]`, and `processing_run_id`. The accepted implementation
 supports this Segment/Finding/Event/Evidence lineage; historical legacy Session
 Evidence remains separately auditable for compatibility/reprocessing.
 
-It describes **what happened in that context**, not a general conclusion about Lina.
+It describes **what happened in that context**, not a general conclusion about the learner.
 
 ## 2.4 Evidence
 
@@ -152,7 +152,7 @@ A Learner Pattern must never be created from one ordinary interaction.
 
 ## 2.7 Learner Intelligence Card
 
-A compact, current, runtime-oriented representation of the most relevant learning intelligence about Lina.
+A compact, current, runtime-oriented representation of the most relevant learning intelligence about the learner.
 
 It is **not** a transcript summary and is **not** a complete archive.
 
@@ -1096,7 +1096,7 @@ Periodic full snapshots may be created for:
 
 The card represents:
 
-> **What currently matters about Lina's learning for a better interaction now?**
+> **What currently matters about this learner's learning for a better interaction now?**
 
 It is a compact materialized state derived from events, evidence, current states, and patterns.
 
@@ -1200,7 +1200,7 @@ The Tutor uses learner intelligence as contextual guidance, not mandatory behavi
 Priority order:
 
 ```text
-1. What Lina is demonstrating right now
+1. What the Student is demonstrating right now
 2. Current Learning State
 3. Relevant recent patterns
 4. Relevant stable historical patterns
@@ -1989,7 +1989,7 @@ Learning Intelligence must not create or preserve prohibited psychological/perso
 
 The subsystem should be judged by this question:
 
-> **Can we explain what the system currently believes about Lina's learning, show the evidence that led there, observe how that belief changes over time, and rebuild it when our analysis improves?**
+> **Can we explain what the system currently believes about a learner's learning, show the evidence that led there, observe how that belief changes over time, and rebuild it when our analysis improves?**
 
 If yes, the Learning Intelligence architecture is working as intended.
 

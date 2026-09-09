@@ -2,7 +2,7 @@
 
 ## Current goal
 
-Begin `UI-REFINE-01`: refine the Daily Student experience using the canonical frontend direction while preserving current runtime contracts.
+Prepare PRODUCT-IDENTITY-01 as a bounded documentation review candidate; do not begin UI-REFINE-01 until this review is resolved.
 
 ## Current reality
 
@@ -22,7 +22,7 @@ Authenticated Daily acceptance and longitudinal real Lina calibration remain unp
 
 ## Next recommended action
 
-Start `UI-REFINE-01` with a bounded approved scope; then pursue authenticated Daily acceptance and real-use calibration.
+Review PRODUCT-IDENTITY-01. After its approval, start `UI-REFINE-01` with a bounded approved scope; then pursue authenticated Daily acceptance and real-use calibration.
 
 ## Critical references
 
