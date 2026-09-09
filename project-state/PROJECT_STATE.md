@@ -2,11 +2,11 @@
 
 ## Current goal
 
-Prepare PRODUCT-IDENTITY-01 as a bounded documentation review candidate; do not begin UI-REFINE-01 until this review is resolved.
+Begin `UI-REFINE-01`: refine the Student interface using the canonical frontend direction while preserving current runtime contracts.
 
 ## Current reality
 
-`main` is the canonical branch at the approved Repository Truth Reset baseline. The legacy shadow branches were retired; the intentionally preserved FE-02 prototype remains separate. The root `main` worktree still contains unrelated local changes and remains untouched.
+`main` is the canonical branch. Product Identity & Philosophy are approved. The legacy shadow branches were retired; the intentionally preserved FE-02 prototype remains separate. The root `main` worktree still contains unrelated local changes and remains untouched.
 
 ## Active decisions
 
@@ -22,7 +22,7 @@ Authenticated Daily acceptance and longitudinal real Lina calibration remain unp
 
 ## Next recommended action
 
-Review PRODUCT-IDENTITY-01. After its approval, start `UI-REFINE-01` with a bounded approved scope; then pursue authenticated Daily acceptance and real-use calibration.
+Start `UI-REFINE-01` with a bounded approved scope; then pursue authenticated Daily acceptance and real-use calibration.
 
 ## Critical references
 
