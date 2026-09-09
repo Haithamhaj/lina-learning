@@ -20,6 +20,16 @@ for relative in CANONICAL:
         target = target.split("#", 1)[0]
         if target and not target.startswith(("http://", "https://", "mailto:")) and not (path.parent / target).exists():
             errors.append(f"unresolved canonical link: {relative} -> {target}")
+    text = path.read_text(encoding="utf-8").lower()
+    forbidden_build_mode = (
+        "only `ready` tasks are executable",
+        "execute only a concrete `ready` task",
+        "work becomes executable only when a concrete `ready`",
+    )
+    if any(phrase in text for phrase in forbidden_build_mode):
+        errors.append(f"obsolete READY-gate wording in {relative}")
+    if re.search(r"(?:only|must)\s+.*(?:task|work).*(?:ready).*?(?:executable|authorize)", text):
+        errors.append(f"equivalent READY-gate wording in {relative}")
 state_files = {path.name for path in (ROOT / "project-state").iterdir() if path.is_file()}
 if state_files != {"PROJECT_STATE.md", "SYSTEM_MAP.html"}:
     errors.append(f"unexpected project-state files: {sorted(state_files)}")

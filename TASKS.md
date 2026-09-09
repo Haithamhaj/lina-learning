@@ -1,6 +1,6 @@
 # Lina execution queue
 
-Only `READY` tasks are executable. A completed/reviewed roadmap item is not authorization for a new task. Detailed pre-reset task history is preserved in `docs/history/task-history/TASKS_PRE_TRUTH_RESET_2026-09-09.md`.
+An explicit current Product Owner instruction authorizes its requested working slice. This file is the current queue and reference; `READY`, `BLOCKED`, and `PLANNED` labels provide context and never override that instruction. Roadmap presence alone does not authorize implementation. Detailed pre-reset task history is preserved in `docs/history/task-history/TASKS_PRE_TRUTH_RESET_2026-09-09.md`.
 
 ## Current
 

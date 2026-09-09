@@ -1,6 +1,6 @@
 # Lina capability roadmap
 
-This roadmap sequences product evolution. It is not execution authority: work becomes executable only when a concrete `READY` scope appears in `TASKS.md` and required gates are met.
+This roadmap sequences product evolution. It is not execution authority: an explicit current Product Owner instruction authorizes its requested working slice, while this roadmap and `TASKS.md` provide planning/context. Historical status labels do not override that instruction.
 
 ## Completed foundation
 

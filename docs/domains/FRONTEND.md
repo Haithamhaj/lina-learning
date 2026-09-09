@@ -1,7 +1,7 @@
 # Daily Student frontend
 
-The Daily Student surface combines warm, intelligent personal chat with an adaptive workspace. It should feel suitable from roughly age 10 through adolescence: clear, calm, capable, and personal—not preschool/cartoonish, corporate, or visually noisy.
+The approved direction is **Learning Chat + Adaptive Learning Workspace** for roughly ages 10–18: warm, intelligent, personal, and visually engaging—not preschool/cartoonish, corporate, or noisy. Deep ink is the reading foundation; lavender expresses the Student, mint/teal guides with the Tutor, and restrained apricot/gold marks learning accents. Use soft rounded surfaces and roomy message groups.
 
-Chat is always understandable on its own. A workspace appears only when it materially improves the explanation or interaction, and it must preserve typed input, accessibility, reduced-motion behavior, narrow layouts, and the Student’s original source context.
+Tailwind plus current shadcn-style primitives is the functional baseline. Arabic, English, and mixed-direction interaction are first-class. External visual libraries are references or isolated capability choices, never application architecture.
 
-The current surface supports Tutor chat, voice capture, owned image/PDF/DOCX sources, and Studio/Canvas composition. `UI-REFINE-01` may improve this experience but must preserve ownership, safety, SSE/Tutor protocol, and Chat–Canvas continuity.
+Chat remains independently usable. A workspace appears only when visual or interactive representation materially improves learning, while preserving typed input, accessibility, reduced motion, narrow layouts, and original-source context. `UI-REFINE-01` must preserve current SSE, session, auth, Safety, and Studio contracts.

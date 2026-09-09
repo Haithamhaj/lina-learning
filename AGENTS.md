@@ -2,7 +2,9 @@
 
 ## Build mode
 
-Execute only a concrete `READY` task in `TASKS.md`, normally one bounded task or tightly related group at a time. A roadmap item is not executable merely because it is approved. Read `docs/PROJECT_REFERENCE.md`, `project-state/PROJECT_STATE.md`, and the relevant specialized contract before changing behavior.
+An explicit Product Owner request for an implementation, fix, improvement, feature, refactor, or bounded task authorizes that working slice. `TASKS.md` and the Roadmap provide current planning and context; their status labels do not override an explicit current Product Owner instruction. A roadmap item alone is not authorization.
+
+Stop only for a real blocker: a protected-area change, conflicting requirements, missing required credentials with no safe progress, or an irreversible/destructive action requiring consent. Do not stop merely for task promotion or status bookkeeping. Read `docs/PROJECT_REFERENCE.md`, `project-state/PROJECT_STATE.md`, and the relevant specialized contract before changing behavior.
 
 Use the smallest correct implementation. Preserve unrelated local work; never stash, reset, clean, overwrite, or absorb it. Use normal Git history and no force push. `main` is the canonical branch after REPO-TRUTH-01; branches are short-lived and must not become a shadow mainline.
 
@@ -14,7 +16,7 @@ Use the smallest correct implementation. Preserve unrelated local work; never st
 - `docs/CHILD_SAFETY_POLICY.md`: child safety and Parent Boundaries.
 - `docs/IMPLEMENTATION_PLAN.md`: current technical architecture.
 - `docs/LEARNING_PRODUCT_ROADMAP.md`: capability evolution, never execution authority.
-- `TASKS.md`: executable queue only.
+- `TASKS.md`: current queue and reference.
 - `project-state/PROJECT_STATE.md`: short live operational state.
 
 History, review evidence, and research are non-authoritative.
