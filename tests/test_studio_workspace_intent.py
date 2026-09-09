@@ -122,4 +122,125 @@ def test_open_workspace_advertises_bounded_custom_composition_before_subject_is_
     assert value["subject_key"] is None
     assert value["known_workspace_capabilities_available"] is False
     assert value["custom_compose_potentially_eligible"] is True
+    assert value["eligible_custom_composition_patterns"] == [
+        "PROCESS",
+        "SPATIAL_MANIPULATION",
+        "MATH_VISUALIZATION",
+        "MATH_INPUT",
+    ]
     assert value["authored_problem_sources"] == []
+
+
+@pytest.mark.parametrize(
+    ("subject_key", "expected_patterns"),
+    [
+        ("MATH", ["SPATIAL_MANIPULATION", "MATH_VISUALIZATION", "MATH_INPUT"]),
+        ("SCIENCE", ["PROCESS"]),
+        ("ENGLISH", []),
+        ("ARABIC", []),
+    ],
+)
+def test_known_primary_subject_exposes_only_matching_custom_composition_patterns(
+    subject_key: str,
+    expected_patterns: list[str],
+) -> None:
+    """A known subject narrows exact composition capability without becoming a blanket gate."""
+
+    from services.studio.workspace_capabilities import build_workspace_capability_context
+    from services.studio.tutor_context import StudioTutorWorkspaceContext
+
+    value = build_workspace_capability_context(
+        StudioTutorWorkspaceContext(
+            runtime_id=uuid4(), snapshot_schema_version="studio-snapshot-v1", through_sequence=0,
+            snapshot_sequence=0, current_scene_id=None, current_scene_version=None,
+            active_subject_key=subject_key, active_activity_key=None, state_payload={}, unseen_events=(), observation_id=None,
+        ),
+        authorized_source_references=(),
+    ).as_model_payload()
+
+    assert value["subject_key"] == subject_key
+    assert value["eligible_custom_composition_patterns"] == expected_patterns
+    assert value["custom_compose_potentially_eligible"] is bool(expected_patterns)
+    assert list(value["custom_composition_constraints"]) == expected_patterns
+
+
+@pytest.mark.parametrize(
+    ("known_subject", "matching_pattern"),
+    [("MATH", "MATH_VISUALIZATION"), ("SCIENCE", "PROCESS")],
+)
+def test_subject_becoming_known_preserves_a_matching_production_composition(
+    known_subject: str,
+    matching_pattern: str,
+) -> None:
+    """Classification may narrow candidates but must not remove an exact production fit."""
+
+    from services.studio.workspace_capabilities import build_workspace_capability_context
+    from services.studio.tutor_context import StudioTutorWorkspaceContext
+
+    def context(subject_key: str | None) -> dict[str, object]:
+        return build_workspace_capability_context(
+            StudioTutorWorkspaceContext(
+                runtime_id=uuid4(), snapshot_schema_version="studio-snapshot-v1", through_sequence=0,
+                snapshot_sequence=0, current_scene_id=None, current_scene_version=None,
+                active_subject_key=subject_key, active_activity_key=None, state_payload={}, unseen_events=(), observation_id=None,
+            ),
+            authorized_source_references=(),
+        ).as_model_payload()
+
+    before = context(None)
+    after = context(known_subject)
+
+    assert matching_pattern in before["eligible_custom_composition_patterns"]
+    assert matching_pattern in after["eligible_custom_composition_patterns"]
+
+
+def test_custom_composition_context_exposes_exact_academic_bounds_not_renderer_details() -> None:
+    """The Tutor can reject an out-of-range point before composition without seeing implementation IDs."""
+
+    from services.studio.workspace_capabilities import build_workspace_capability_context
+    from services.studio.tutor_context import StudioTutorWorkspaceContext
+
+    def constraints(subject_key: str) -> dict[str, object]:
+        value = build_workspace_capability_context(
+            StudioTutorWorkspaceContext(
+                runtime_id=uuid4(), snapshot_schema_version="studio-snapshot-v1", through_sequence=0,
+                snapshot_sequence=0, current_scene_id=None, current_scene_version=None,
+                active_subject_key=subject_key, active_activity_key=None, state_payload={}, unseen_events=(), observation_id=None,
+            ),
+            authorized_source_references=(),
+        ).as_model_payload()
+        return value["custom_composition_constraints"]
+
+    assert constraints("MATH")["MATH_VISUALIZATION"] == {
+        "construction_family": "CARTESIAN_POINT",
+        "coordinate_bounds": [-4, 4],
+        "point_count": 1,
+    }
+    assert constraints("SCIENCE")["PROCESS"] == {
+        "topologies": ["SEQUENCE", "CYCLE"],
+        "stage_count": [2, 8],
+    }
+
+
+@pytest.mark.parametrize("studio_subject", ["ENGLISH", "ARABIC"])
+def test_primary_studio_subject_outranks_its_broader_language_arts_scope(
+    studio_subject: str,
+) -> None:
+    """Broad Subject guides semantics; it must not masquerade as a Studio capability key."""
+
+    from services.studio.workspace_capabilities import build_workspace_capability_context
+    from services.studio.tutor_context import StudioTutorWorkspaceContext
+
+    value = build_workspace_capability_context(
+        StudioTutorWorkspaceContext(
+            runtime_id=uuid4(), snapshot_schema_version="studio-snapshot-v1", through_sequence=0,
+            snapshot_sequence=0, current_scene_id=None, current_scene_version=None,
+            active_subject_key=studio_subject, active_activity_key=None, state_payload={}, unseen_events=(), observation_id=None,
+        ),
+        current_subject_key="LANGUAGE_ARTS",
+        authorized_source_references=(),
+    ).as_model_payload()
+
+    assert value["subject_key"] == studio_subject
+    assert value["eligible_custom_composition_patterns"] == []
+    assert value["custom_compose_potentially_eligible"] is False

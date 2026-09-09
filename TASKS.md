@@ -66,6 +66,29 @@ The transient ordered paragraph text is appended as application-owned
 from a fact present only in the synthetic DOCX; PostgreSQL retained only the
 question, normal Tutor answer, source metadata/lineage, and AI execution ledger.
 
+## ARABIC-HANDWRITING-SUBJECT-CANVAS-CLOSURE — Live Source and Eligibility Pass
+**Status:** DONE / IMPLEMENTED / CODEX-VERIFIED
+**Approved result:** A real Arabic coordinate worksheet traversed immutable
+Student source, multimodal Safety, one Primary Tutor per Chat turn, bounded
+MATH_VISUALIZATION composition, one Canvas Specialist, durable Scene/Event/
+Snapshot state, and the same Primary Tutor continuation. The source point
+`A(-3, 5)` correctly stayed in Chat because the production plane is `[-4, 4]`;
+a separate exact `(3, 2)` construction completed through Canvas. A dense Arabic
+handwriting source completed the same safe one-call path, but Luna correctly
+requested a clearer crop rather than guessing an unreadable final fraction.
+**Subject closure:** MATH, SCIENCE, ENGLISH, and ARABIC remain the four Studio
+product subjects; the broader controlled taxonomy remains separate and does not
+gate ordinary Chat. Workspace composition now exposes exact subject-compatible
+patterns and academic bounds. Studio subject identity outranks its mapped Broad
+Subject when selecting capability, so known MATH/SCIENCE retain fitting
+production composition while ENGLISH/ARABIC and unknown/general turns stay in
+Chat unless an exact advertised capability fits. Safety and Parent Boundary
+continue to override representation.
+**Verified:** real `gpt-5.6-luna` application-path proof, 396 focused Python
+tests with 5 skips, 73 Web tests, TypeScript, production build, Python compile,
+and full suite with 1,271 passed and 12 skipped. The same six pre-existing,
+out-of-scope failures remain; no new failure appeared.
+
 # Learning Studio Governance Provenance — 2026-09-02
 
 **Authority:** `docs/STUDIO_IMPLEMENTATION_PLAN.md` and the current Studio

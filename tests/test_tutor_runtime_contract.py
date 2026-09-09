@@ -260,6 +260,10 @@ def test_canvas_representation_serves_the_existing_teaching_decision_framework()
         "an explicit request to show, draw, or use the workspace is a strong preference signal",
         "no accurate production capability fits",
         "custom_compose_potentially_eligible is true",
+        "eligible_custom_composition_patterns",
+        "subject context narrows this exact list",
+        "custom_composition_constraints",
+        "outside its declared academic bounds",
     ):
         assert required_concept in instructions
 

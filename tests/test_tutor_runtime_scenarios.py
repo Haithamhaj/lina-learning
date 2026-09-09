@@ -56,9 +56,15 @@ class _Session:
 
 
 class _ContextBuilder:
-    def __init__(self, immediate_exchange: ConversationExchangeContext | None = None) -> None:
+    def __init__(
+        self,
+        immediate_exchange: ConversationExchangeContext | None = None,
+        *,
+        subject: str | None = "MATH",
+    ) -> None:
         self.calls = 0
         self.immediate_exchange = immediate_exchange
+        self.subject = subject
         self.live_subject_contexts: list[object] = []
 
     def build(
@@ -80,7 +86,7 @@ class _ContextBuilder:
             concept_key="fractions", source_refs=("book#page=12",), page_numbers=(12,), matched=True,
         )
         return TutorContext(
-            question=question, subject="MATH", grade_level=5, focus=None,
+            question=question, subject=self.subject, grade_level=5, focus=None,
             session_messages=(SessionContextMessage(message_id, "student", question),),
             retrieval=(block,), intelligence=(),
             debug=TutorContextDebug(
@@ -196,9 +202,10 @@ def _runtime(
     workspace_visual_order: object | None = None,
     immediate_exchange: ConversationExchangeContext | None = None,
     source_decision: SafetyDecision | None = None,
+    context_subject: str | None = "MATH",
 ) -> tuple[TutorRuntime, _ContextBuilder, _Provider, _Session]:
     session = _Session()
-    context = _ContextBuilder(immediate_exchange)
+    context = _ContextBuilder(immediate_exchange, subject=context_subject)
     provider = _Provider(
         candidate_metadata=candidate_metadata,
         suggested_actions=suggested_actions,
@@ -312,6 +319,29 @@ def test_null_workspace_intent_and_visual_order_persist_as_no_request() -> None:
     assert provider.calls == 1
     assert tutor_message.payload["workspace"]["intent_status"] == "ABSENT"
     assert tutor_message.payload["workspace"]["intent"] is None
+    assert tutor_message.payload["workspace_visual"]["status"] == "NOT_REQUESTED"
+
+
+@pytest.mark.parametrize("subject", ["SCIENCE", "LANGUAGE_ARTS", None])
+def test_subject_context_without_a_fitting_visual_need_remains_normal_chat(
+    subject: str | None,
+) -> None:
+    """Science, language subjects, and unknown/general scope remain Chat-capable."""
+
+    runtime, _, provider, session = _runtime(
+        _decision(),
+        workspace_visual_order=None,
+        context_subject=subject,
+    )
+
+    events = list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), last_activity_at=None),
+        question="اشرحها بالكلام فقط.",
+    ))
+
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    assert isinstance(events[-1], TutorTurn)
+    assert provider.calls == 1
     assert tutor_message.payload["workspace_visual"]["status"] == "NOT_REQUESTED"
 
 

@@ -39,7 +39,15 @@ Practical validation of the complete multimodal Daily Tutor → Canvas → Tutor
   the Daily Renderer Host.
 - V2 PostgreSQL lifecycle and replay proof exists.
 - Canvas interaction returns to the same Primary Tutor.
-- Real live quality and use still need practical validation.
+- Real Arabic source validation now proves coordinate comprehension and the
+  full Chat → bounded Canvas → interaction → same-Tutor path. Workspace
+  capability selection keeps the four Studio subjects separate from Broad
+  Subject classification, advertises exact pattern bounds, and no longer loses
+  a valid MATH/SCIENCE composition merely because the subject becomes known.
+  Dense low-clarity handwriting remains source-quality limited: Luna asks for a
+  clearer crop instead of inventing unreadable mathematical text.
+- Broader authenticated end-user quality and usability still need practical
+  validation.
 
 ## Protected Areas
 

@@ -50,10 +50,15 @@ objective/facts/relations/must-not-imply constraints, authorized retrieved
 source references, locale/direction, and at most three exact keys from the
 supplied Visual Personalization Catalogue. Historical PROCESS v1 remains valid.
 When Workspace Capability Context says custom_compose_potentially_eligible is
-true, these four bounded composition patterns are available for a fitting need,
-including before a Daily turn has an established academic subject; admission
-still validates the exact pattern and Frozen Pack. When it is false, do not
-request a new composition.
+true, use only a pattern named in eligible_custom_composition_patterns and only
+for a fitting need. Subject context narrows this exact list; it must not remove
+a matching production capability merely because the subject became known.
+Before a Daily turn has an established academic subject, the list may expose all
+four bounded candidates, but the learning need and exact pattern contract still
+gate selection. custom_composition_constraints gives the exact academic shape
+and bounds for each listed pattern; stay in Chat when the requested meaning is
+outside its declared academic bounds. When the flag is false or the list is
+empty, do not request a new composition.
 Do not name a renderer, code, presentation pixels, CSS, SVG, technology,
 provider, Scene, Job, or execution. Mathematical coordinates are permitted only
 when they are the educational content. The order requests composition only; it
