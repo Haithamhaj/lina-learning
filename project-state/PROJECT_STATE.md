@@ -42,8 +42,13 @@ Practical validation of the complete multimodal Daily Tutor → Canvas → Tutor
 - Real Arabic source validation now proves coordinate comprehension and the
   full Chat → bounded Canvas → interaction → same-Tutor path. Workspace
   capability selection keeps the four Studio subjects separate from Broad
-  Subject classification, advertises exact pattern bounds, and no longer loses
-  a valid MATH/SCIENCE composition merely because the subject becomes known.
+  Subject classification. Unknown/general/other turns remain Chat-only with no
+  subject-drifting custom composition; known MATH and SCIENCE expose only their
+  exact compatible patterns, and a resolved Scene retains its authoritative
+  subject. The integer Cartesian plane is exactly `[-10,10] × [-10,10]`; the
+  real IMAGE-B point `A(-3,5)` passed source Safety, one Luna source turn,
+  admitted MATH_VISUALIZATION, one Specialist call, Scene/Event/Snapshot,
+  Student submission, and the same-model Tutor continuation.
   Dense low-clarity handwriting remains source-quality limited: Luna asks for a
   clearer crop instead of inventing unreadable mathematical text.
 - Broader authenticated end-user quality and usability still need practical

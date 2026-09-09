@@ -66,28 +66,37 @@ The transient ordered paragraph text is appended as application-owned
 from a fact present only in the synthetic DOCX; PostgreSQL retained only the
 question, normal Tutor answer, source metadata/lineage, and AI execution ledger.
 
-## ARABIC-HANDWRITING-SUBJECT-CANVAS-CLOSURE — Live Source and Eligibility Pass
+## SUBJECT-GATING + COORDINATE-RANGE CLOSURE
 **Status:** DONE / IMPLEMENTED / CODEX-VERIFIED
 **Approved result:** A real Arabic coordinate worksheet traversed immutable
 Student source, multimodal Safety, one Primary Tutor per Chat turn, bounded
 MATH_VISUALIZATION composition, one Canvas Specialist, durable Scene/Event/
-Snapshot state, and the same Primary Tutor continuation. The source point
-`A(-3, 5)` correctly stayed in Chat because the production plane is `[-4, 4]`;
-a separate exact `(3, 2)` construction completed through Canvas. A dense Arabic
-handwriting source completed the same safe one-call path, but Luna correctly
-requested a clearer crop rather than guessing an unreadable final fraction.
+Snapshot state, and the same Primary Tutor continuation. The production integer
+plane is now exactly `[-10, 10] × [-10, 10]`; the original source point
+`A(-3, 5)` completed through the real Canvas path without a substitute point.
+A dense Arabic handwriting source separately completed the safe one-call path,
+but Luna correctly requested a clearer crop rather than guessing an unreadable
+final fraction.
 **Subject closure:** MATH, SCIENCE, ENGLISH, and ARABIC remain the four Studio
 product subjects; the broader controlled taxonomy remains separate and does not
 gate ordinary Chat. Workspace composition now exposes exact subject-compatible
-patterns and academic bounds. Studio subject identity outranks its mapped Broad
-Subject when selecting capability, so known MATH/SCIENCE retain fitting
-production composition while ENGLISH/ARABIC and unknown/general turns stay in
-Chat unless an exact advertised capability fits. Safety and Parent Boundary
-continue to override representation.
-**Verified:** real `gpt-5.6-luna` application-path proof, 396 focused Python
-tests with 5 skips, 73 Web tests, TypeScript, production build, Python compile,
-and full suite with 1,271 passed and 12 skipped. The same six pre-existing,
-out-of-scope failures remain; no new failure appeared.
+patterns and academic bounds. Unknown, GENERAL_KNOWLEDGE, and OTHER advertise no
+custom composition and remain fully available in Chat; known MATH exposes only
+the three Math patterns, known SCIENCE exposes PROCESS, and ENGLISH/ARABIC keep
+their exact registered-activity-or-Chat behavior. A resolved active Scene keeps
+its authoritative subject. Safety and Parent Boundary continue to override
+representation.
+**Verified:** the real IMAGE-B application path passed source moderation and one
+source Tutor call on `gpt-5.6-luna` in an already authoritative Math workspace.
+Luna selected MATH / EXPLAIN_WITH_EXAMPLE / VISUAL_REPRESENTATION, admitted
+MATH_VISUALIZATION + CONSTRUCT_POINT, and one Specialist call/attempt created a
+Scene targeting `A(-3, 5)`. PLACE_POINT, SUBMIT_CONSTRUCTION, Snapshot reload,
+and the same-model Tutor continuation passed. Focused Python: 222 passed and 3
+skipped. Web: 74 passed. TypeScript, production build, Python compile,
+`git diff --check`, and the Chrome narrow/wide proof passed. Full Python suite:
+1,284 passed and 12 skipped; the same six pre-existing out-of-scope failures
+remain and no new failure appeared. Disposable source, user, asset, and execution
+records were removed after proof.
 
 # Learning Studio Governance Provenance — 2026-09-02
 

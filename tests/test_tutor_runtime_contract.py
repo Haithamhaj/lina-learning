@@ -262,6 +262,7 @@ def test_canvas_representation_serves_the_existing_teaching_decision_framework()
         "custom_compose_potentially_eligible is true",
         "eligible_custom_composition_patterns",
         "subject context narrows this exact list",
+        "must not use composition to assign a math or science subject",
         "custom_composition_constraints",
         "outside its declared academic bounds",
     ):

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { StudioOperation } from "@/lib/studio/contracts";
-import { CoordinateConstruction, MathExpressionInput, SpatialPlacement, type GridPoint, type MathInput, type SemanticPlacement } from "@/lib/studio/visual-toolbelt";
+import { CoordinateConstruction, isExactGridPoint, MathExpressionInput, SpatialPlacement, type GridPoint, type MathInput, type SemanticPlacement } from "@/lib/studio/visual-toolbelt";
 
 type CommonProps = {
   sceneId: string;
@@ -45,7 +45,8 @@ export function CanvasSpatialWorkspace(props: CommonProps) {
 export function CanvasMathVisualizationWorkspace(props: CommonProps) {
   const pointSeed = props.seed.point as { semantic_key?: unknown; label?: unknown } | undefined;
   const pointState = props.state?.point as { x?: unknown; y?: unknown } | undefined;
-  const current = pointState && Number.isInteger(pointState.x) && Number.isInteger(pointState.y) ? { x: pointState.x as number, y: pointState.y as number } : null;
+  const candidate = pointState && typeof pointState.x === "number" && typeof pointState.y === "number" ? { x: pointState.x, y: pointState.y } : null;
+  const current = candidate && isExactGridPoint(candidate) ? candidate : null;
   const [draft, setDraft] = useState<GridPoint>(current ?? { x: 0, y: 0 });
   useEffect(() => { if (current) setDraft(current); }, [props.sceneId, props.sceneVersion, current?.x, current?.y]);
   if (props.seed.pattern !== "MATH_VISUALIZATION" || typeof pointSeed?.semantic_key !== "string" || typeof pointSeed.label !== "string" || current === null) return <Failure onReload={props.onReload}/>;

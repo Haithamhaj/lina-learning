@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from services.platform.db.models import Job, LearningMessage, LearningSession, StudioCanvasSpecialistRun, StudioRuntime, StudioScene
 from services.platform.jobs import enqueue_job
+from services.studio.coordinate_plane import COORDINATE_MAX, COORDINATE_MIN, is_exact_coordinate_range
 from services.studio.visual_order import contains_implementation_control
 
 
@@ -155,8 +156,8 @@ class CanvasSpecialistSpatialProposal(BaseModel):
 
 class _IntegerRange(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    minimum: int = Field(ge=-4, le=4)
-    maximum: int = Field(ge=-4, le=4)
+    minimum: int = Field(ge=COORDINATE_MIN, le=COORDINATE_MAX)
+    maximum: int = Field(ge=COORDINATE_MIN, le=COORDINATE_MAX)
 
     @model_validator(mode="after")
     def ordered(self) -> "_IntegerRange":
@@ -166,14 +167,14 @@ class _IntegerRange(BaseModel):
 
 
 class _ConstructionPoint(_SemanticObject):
-    initial_x: int = Field(ge=-4, le=4)
-    initial_y: int = Field(ge=-4, le=4)
+    initial_x: int = Field(ge=COORDINATE_MIN, le=COORDINATE_MAX)
+    initial_y: int = Field(ge=COORDINATE_MIN, le=COORDINATE_MAX)
 
 
 class _TargetPoint(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    x: int = Field(ge=-4, le=4)
-    y: int = Field(ge=-4, le=4)
+    x: int = Field(ge=COORDINATE_MIN, le=COORDINATE_MAX)
+    y: int = Field(ge=COORDINATE_MIN, le=COORDINATE_MAX)
     support_ids: list[str] = Field(min_length=1, max_length=8)
 
 
@@ -194,8 +195,8 @@ class CanvasSpecialistMathVisualizationProposal(BaseModel):
     def semantic_only(self) -> "CanvasSpecialistMathVisualizationProposal":
         if set(self.interaction_affordances) != {"PLACE_POINT", "SUBMIT_CONSTRUCTION"}:
             raise ValueError("Both construction interactions are required")
-        if (self.x_range.minimum, self.x_range.maximum, self.y_range.minimum, self.y_range.maximum) != (-4, 4, -4, 4):
-            raise ValueError("The application supports the exact -4 to 4 coordinate plane")
+        if not is_exact_coordinate_range(self.x_range.minimum, self.x_range.maximum) or not is_exact_coordinate_range(self.y_range.minimum, self.y_range.maximum):
+            raise ValueError("The application supports the exact -10 to 10 coordinate plane")
         for x, y in ((self.point.initial_x, self.point.initial_y), (self.target.x, self.target.y)):
             if not self.x_range.minimum <= x <= self.x_range.maximum or not self.y_range.minimum <= y <= self.y_range.maximum:
                 raise ValueError("Point is outside the semantic axes")

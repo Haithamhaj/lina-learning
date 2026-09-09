@@ -39,7 +39,7 @@ const definitions: Record<Pattern, {
     subject: "MATH", profile: "canvas-production-profile-v1", activity: "canvas_math_visualization",
     activityVersion: "canvas-math-visualization-activity-v1", renderer: "canvas-coordinate-construction",
     rendererVersion: "canvas-coordinate-construction-renderer-v1", seedVersion: "canvas-math-visualization-scene-v1",
-    seed: { pattern: "MATH_VISUALIZATION", title: "حدّد النقطة P · Plot point P", prompt: "حرّك P إلى الإحداثيين (2, 3)، ثم احفظ وأرسل.", text_equivalent: "Point P belongs at (2, 3).", locale: "ar", direction: "rtl", point: { semantic_key: "point-p", label: "P", initial_x: 0, initial_y: 0 }, target: { x: 2, y: 3 }, x_range: { minimum: -4, maximum: 4 }, y_range: { minimum: -4, maximum: 4 } },
+    seed: { pattern: "MATH_VISUALIZATION", title: "حدّد النقطة A · Plot point A", prompt: "حرّك A إلى الإحداثيين (-3, 5)، ثم احفظ وأرسل.", text_equivalent: "Point A belongs at (-3, 5).", locale: "ar", direction: "rtl", point: { semantic_key: "point-a", label: "A", initial_x: 0, initial_y: 0 }, target: { x: -3, y: 5 }, x_range: { minimum: -10, maximum: 10 }, y_range: { minimum: -10, maximum: 10 } },
     state: { status: "IN_PROGRESS", point: { x: 0, y: 0 }, submitted: null },
   },
   MATH_INPUT: {
@@ -111,5 +111,8 @@ function App() {
   </main>;
 }
 
-Object.assign(window, { canvasEngineCounts: () => ({ stages: Konva.stages.length, boards: Object.keys(JXG.boards as Record<string, unknown>).length }) });
+Object.assign(window, {
+  canvasEngineCounts: () => ({ stages: Konva.stages.length, boards: Object.keys(JXG.boards as Record<string, unknown>).length }),
+  canvasCoordinateBounds: () => Object.values(JXG.boards as Record<string, { getBoundingBox: () => number[] }>)[0]?.getBoundingBox(),
+});
 createRoot(document.getElementById("root")!).render(<StrictMode><App/></StrictMode>);

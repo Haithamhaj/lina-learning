@@ -2,10 +2,10 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import type { Board, Point } from "jsxgraph";
-import { exactGridPoint, type GridPoint } from "../contracts";
+import { COORDINATE_MAX, COORDINATE_MIN, exactGridPoint, type GridPoint } from "../contracts";
 
 /** Integer coordinate construction, not a replacement for the decimal SVG number line. */
-export function JsxGraphProof({ value, onValueChange, title = "حرّك النقطة · Explore coordinates", prompt = "حرّك P إلى تقاطع، أو غيّر القيم الصحيحة من −4 إلى 4.", pointLabel = "P" }: { value: GridPoint; onValueChange: (value: GridPoint) => void; title?: string; prompt?: string; pointLabel?: string }) {
+export function JsxGraphProof({ value, onValueChange, title = "حرّك النقطة · Explore coordinates", prompt = "حرّك P إلى تقاطع، أو غيّر القيم الصحيحة من −10 إلى 10.", pointLabel = "P" }: { value: GridPoint; onValueChange: (value: GridPoint) => void; title?: string; prompt?: string; pointLabel?: string }) {
   const id = useId().replace(/:/g, "");
   const host = useRef<HTMLDivElement>(null);
   const board = useRef<Board | null>(null);
@@ -18,7 +18,8 @@ export function JsxGraphProof({ value, onValueChange, title = "حرّك النق
     import("jsxgraph").then(({ default: importedJXG }) => {
       if (!active || !host.current) return;
       const JXG = importedJXG;
-      const next = JXG.JSXGraph.initBoard(id, { boundingbox: [-5, 5, 5, -5], axis: true, grid: true, showNavigation: false, showCopyright: false, keepaspectratio: true, pan: {enabled: false}, zoom: {wheel: false, pinchHorizontal: false, pinchVertical: false, min: 1, max: 1} });
+      const margin = 1;
+      const next = JXG.JSXGraph.initBoard(id, { boundingbox: [COORDINATE_MIN - margin, COORDINATE_MAX + margin, COORDINATE_MAX + margin, COORDINATE_MIN - margin], axis: true, grid: true, showNavigation: false, showCopyright: false, keepaspectratio: true, pan: {enabled: false}, zoom: {wheel: false, pinchHorizontal: false, pinchVertical: false, min: 1, max: 1} });
       board.current = next;
       dispose = () => { if (board.current) JXG.JSXGraph.freeBoard(board.current); board.current = null; point.current = null; };
       const initial = exactGridPoint(current.current.value.x, current.current.value.y);
@@ -48,7 +49,7 @@ export function JsxGraphProof({ value, onValueChange, title = "حرّك النق
     <p>{prompt}</p>
     <div ref={host} id={id} className="jxgbox toolbelt-graph" dir="ltr" role="img" aria-label={`Coordinate plane. P at (${exact.x}, ${exact.y})`}/>
     {failed && <p role="status">تعذر تحميل الرسم. استخدم حقول الإحداثيات.</p>}
-    <div className="toolbelt-actions" dir="ltr">{(["x", "y"] as const).map(axis => <label key={axis}>{axis.toUpperCase()}<input aria-label={`${axis.toUpperCase()} coordinate`} type="number" min={-4} max={4} step={1} value={exact[axis]} onChange={event => {
+    <div className="toolbelt-actions" dir="ltr">{(["x", "y"] as const).map(axis => <label key={axis}>{axis.toUpperCase()}<input aria-label={`${axis.toUpperCase()} coordinate`} type="number" min={COORDINATE_MIN} max={COORDINATE_MAX} step={1} value={exact[axis]} onChange={event => {
       const number = event.currentTarget.valueAsNumber;
       if (Number.isFinite(number)) onValueChange(exactGridPoint(axis === "x" ? number : exact.x, axis === "y" ? number : exact.y));
     }}/></label>)}</div>

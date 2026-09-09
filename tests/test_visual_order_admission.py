@@ -105,3 +105,15 @@ def test_v2_pattern_and_interaction_goal_must_match():
             visual_personalization_catalog={"favorite:butterfly": {"category": "FAVORITE", "display_statement": "Likes butterflies"}},
             core_profile={},
         )
+
+
+def test_math_visualization_frozen_pack_advertises_the_exact_ten_unit_plane() -> None:
+    admitted = admit_visual_order(
+        _order(
+            version="workspace-visual-order-v2", pattern="MATH_VISUALIZATION", topology=None,
+            interaction_goal="CONSTRUCT_POINT", source_references=[], personal_fact_keys=[],
+        ),
+        authorized_source_references={}, visual_personalization_catalog={}, core_profile={},
+    )
+
+    assert admitted.frozen_composition_pack["capability_pack"]["coordinate_bounds"] == [-10, 10]

@@ -4,6 +4,9 @@ export type GridPoint = { x: number; y: number };
 export type RelationFocus = "source" | "target";
 export type MathInput = { format: "latex"; value: string };
 
+export const COORDINATE_MIN = -10;
+export const COORDINATE_MAX = 10;
+
 export const semanticPlacement = (
   insideTarget: boolean,
   objectId = "object-a",
@@ -28,8 +31,14 @@ export function placementFromPoint(
 
 export function exactGridPoint(x: number, y: number): GridPoint {
   if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error("Coordinates must be finite");
-  const integer = (value: number) => Math.max(-4, Math.min(4, Math.round(value))) || 0;
+  const integer = (value: number) => Math.max(COORDINATE_MIN, Math.min(COORDINATE_MAX, Math.round(value))) || 0;
   return { x: integer(x), y: integer(y) };
+}
+
+export function isExactGridPoint(value: GridPoint): boolean {
+  return Number.isInteger(value.x) && Number.isInteger(value.y)
+    && value.x >= COORDINATE_MIN && value.x <= COORDINATE_MAX
+    && value.y >= COORDINATE_MIN && value.y <= COORDINATE_MAX;
 }
 
 /** Preserve the exact emitted LaTeX; not an answer, evaluator or grading result. */

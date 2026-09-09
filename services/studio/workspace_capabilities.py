@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from services.studio.coordinate_plane import COORDINATE_MAX, COORDINATE_MIN
 from services.studio.subjects import PRODUCTION_CURRENT_PROFILE_VERSIONS, production_subject_registry
 from services.studio.subjects.registry import SubjectCapabilityError
 from services.studio.subjects.decimal_number_line import authored_problem_sources
@@ -12,12 +13,6 @@ from services.studio.tutor_context import StudioTutorWorkspaceContext
 
 
 WORKSPACE_CAPABILITY_CONTEXT_VERSION = "workspace-capability-context-v1"
-ALL_CUSTOM_COMPOSITION_PATTERNS = (
-    "PROCESS",
-    "SPATIAL_MANIPULATION",
-    "MATH_VISUALIZATION",
-    "MATH_INPUT",
-)
 CUSTOM_COMPOSITION_PATTERNS_BY_PRIMARY_SUBJECT = {
     "MATH": ("SPATIAL_MANIPULATION", "MATH_VISUALIZATION", "MATH_INPUT"),
     "SCIENCE": ("PROCESS",),
@@ -33,7 +28,7 @@ CUSTOM_COMPOSITION_CONSTRAINTS = {
     },
     "MATH_VISUALIZATION": {
         "construction_family": "CARTESIAN_POINT",
-        "coordinate_bounds": [-4, 4],
+        "coordinate_bounds": [COORDINATE_MIN, COORDINATE_MAX],
         "point_count": 1,
     },
     "MATH_INPUT": {"input_representation": "LATEX", "expression_max_length": 120},
@@ -89,7 +84,7 @@ def build_workspace_capability_context(
     subject_key = scene.subject_key if scene is not None else (studio_context.active_subject_key or current_subject_key)
     profile_version = scene.subject_profile_version if scene is not None else PRODUCTION_CURRENT_PROFILE_VERSIONS.get(subject_key or "")
     active_scene_status = "NO_ACTIVE_SCENE" if scene is None else scene.capability_status
-    eligible_custom_patterns = _eligible_custom_composition_patterns(subject_key, profile_version)
+    eligible_custom_patterns = _eligible_custom_composition_patterns(subject_key)
     if subject_key is None or profile_version is None:
         return WorkspaceCapabilityContext(
             subject_key, profile_version, None, active_scene_status, (), authorized_source_references,
@@ -113,12 +108,7 @@ def build_workspace_capability_context(
 
 def _eligible_custom_composition_patterns(
     subject_key: str | None,
-    profile_version: str | None,
 ) -> tuple[str, ...]:
-    """Narrow only authoritative primary subjects; uncertainty remains need-gated."""
+    """Expose composition only when its current Scene subject would stay truthful."""
 
-    if subject_key in CUSTOM_COMPOSITION_PATTERNS_BY_PRIMARY_SUBJECT:
-        return CUSTOM_COMPOSITION_PATTERNS_BY_PRIMARY_SUBJECT[subject_key]
-    if subject_key is None or profile_version is None:
-        return ALL_CUSTOM_COMPOSITION_PATTERNS
-    return ()
+    return CUSTOM_COMPOSITION_PATTERNS_BY_PRIMARY_SUBJECT.get(subject_key, ())

@@ -26,8 +26,15 @@ test('placement preserves application-owned learning object and target IDs', () 
 test('coordinate construction quantizes once to exact bounded integers', () => {
   assert.equal(typeof model.exactGridPoint, 'function');
   assert.deepEqual(model.exactGridPoint(1.9999999, -2.01), { x: 2, y: -2 });
-  assert.deepEqual(model.exactGridPoint(99, -99), { x: 4, y: -4 });
+  assert.deepEqual(model.exactGridPoint(-3, 5), { x: -3, y: 5 });
+  assert.deepEqual(model.exactGridPoint(99, -99), { x: 10, y: -10 });
   assert.throws(() => model.exactGridPoint(NaN, 2));
+});
+test('coordinate state accepts only exact integers inside the semantic plane', () => {
+  assert.equal(model.isExactGridPoint({ x: -10, y: 10 }), true);
+  assert.equal(model.isExactGridPoint({ x: -3, y: 5 }), true);
+  assert.equal(model.isExactGridPoint({ x: 11, y: 0 }), false);
+  assert.equal(model.isExactGridPoint({ x: 0.5, y: 0 }), false);
 });
 test('math serialization preserves the exact authored fraction without evaluation', () => {
   assert.equal(typeof model.serializeMathInput, 'function');

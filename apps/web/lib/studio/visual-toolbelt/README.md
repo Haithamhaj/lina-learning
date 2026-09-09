@@ -98,7 +98,7 @@ layer. The selector returns the public pattern plus the private local adapter:
 | --- | --- | --- |
 | `{type: "explain_process", topology: "sequence" or "cycle"}` | `PROCESS` | `{topology, state: ProcessViewState, explanationStageId}` |
 | `{type: "place_object", relation: "inside"}` | `SPATIAL_MANIPULATION` | `{objectId, targetId}` |
-| `{type: "construct_coordinate", domain: "integer_grid"}` | `MATH_VISUALIZATION` | exact `{x, y}` integers from −4 through 4 |
+| `{type: "construct_coordinate", domain: "integer_grid"}` | `MATH_VISUALIZATION` | exact `{x, y}` integers from −10 through 10 |
 | `{type: "author_math", format: "latex"}` | `MATH_INPUT` | explicit submit returns `{format: "latex", value}` |
 
 The selector validates exact semantic shapes and rejects extra technology or

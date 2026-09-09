@@ -56,11 +56,11 @@ PROPOSALS = {
     },
     "MATH_VISUALIZATION": {
         "version": "canvas-specialist-math-visualization-proposal-v1", "pattern": "MATH_VISUALIZATION",
-        "title": "Plot point P", "prompt": "Move P to (2, 3).",
-        "point": {"semantic_key": "point-p", "label": "P", "initial_x": 0, "initial_y": 0, "support_ids": ["F1"]},
-        "target": {"x": 2, "y": 3, "support_ids": ["F2", "R1"]},
-        "x_range": {"minimum": -4, "maximum": 4}, "y_range": {"minimum": -4, "maximum": 4},
-        "interaction_affordances": ["PLACE_POINT", "SUBMIT_CONSTRUCTION"], "text_equivalent": "Point P belongs at (2, 3).",
+        "title": "Plot point A", "prompt": "Move A to (-3, 5).",
+        "point": {"semantic_key": "point-p", "label": "A", "initial_x": 0, "initial_y": 0, "support_ids": ["F1"]},
+        "target": {"x": -3, "y": 5, "support_ids": ["F2", "R1"]},
+        "x_range": {"minimum": -10, "maximum": 10}, "y_range": {"minimum": -10, "maximum": 10},
+        "interaction_affordances": ["PLACE_POINT", "SUBMIT_CONSTRUCTION"], "text_equivalent": "Point A belongs at (-3, 5).",
     },
     "MATH_INPUT": {
         "version": "canvas-specialist-math-input-proposal-v1", "pattern": "MATH_INPUT",
@@ -125,7 +125,10 @@ def test_specialist_scene_event_snapshot_reload_and_same_tutor_continuation(fact
         if pattern == "SPATIAL_MANIPULATION":
             actions = [("PLACE_OBJECT", {"object_id": "three-quarters", "target_id": "less-than-one"})]
         elif pattern == "MATH_VISUALIZATION":
-            actions = [("PLACE_POINT", {"point_id": "point-p", "x": 2, "y": 3}), ("SUBMIT_CONSTRUCTION", {"point_id": "point-p", "x": 2, "y": 3})]
+            assert scene.seed_payload["target"] == {"x": -3, "y": 5}
+            assert scene.seed_payload["x_range"] == {"minimum": -10, "maximum": 10}
+            assert scene.seed_payload["y_range"] == {"minimum": -10, "maximum": 10}
+            actions = [("PLACE_POINT", {"point_id": "point-p", "x": -3, "y": 5}), ("SUBMIT_CONSTRUCTION", {"point_id": "point-p", "x": -3, "y": 5})]
         else:
             actions = [("SUBMIT_EXPRESSION", {"format": "latex", "value": r"\frac{3}{4}+\frac{1}{4}"})]
         interaction_id = None

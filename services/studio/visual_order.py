@@ -10,6 +10,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
+from services.studio.coordinate_plane import COORDINATE_MAX, COORDINATE_MIN
+
 
 VISUAL_ORDER_SCHEMA_VERSION = "workspace-visual-order-v1"
 VISUAL_ORDER_V2_SCHEMA_VERSION = "workspace-visual-order-v2"
@@ -186,7 +188,7 @@ def admit_visual_order(
     else:
         capabilities = {
             "SPATIAL_MANIPULATION": {"identity": "canvas-spatial-capability-pack-v1", "object_count_limit": [1, 1], "target_count_limit": [1, 1], "allowed_relations": ["INSIDE", "MATCH", "GROUP"], "allowed_interactions": ["PLACE_OBJECT"], "label_max_length": 40},
-            "MATH_VISUALIZATION": {"identity": "canvas-math-visualization-capability-pack-v1", "construction_family": "CARTESIAN_POINT", "coordinate_bounds": [-4, 4], "point_count_limit": [1, 1], "allowed_interactions": ["PLACE_POINT", "SUBMIT_CONSTRUCTION"], "label_max_length": 24},
+            "MATH_VISUALIZATION": {"identity": "canvas-math-visualization-capability-pack-v1", "construction_family": "CARTESIAN_POINT", "coordinate_bounds": [COORDINATE_MIN, COORDINATE_MAX], "point_count_limit": [1, 1], "allowed_interactions": ["PLACE_POINT", "SUBMIT_CONSTRUCTION"], "label_max_length": 24},
             "MATH_INPUT": {"identity": "canvas-math-input-capability-pack-v1", "input_representation": "LATEX", "expression_max_length": 120, "allowed_interactions": ["SUBMIT_EXPRESSION"]},
         }
         capability = capabilities[order.pattern]

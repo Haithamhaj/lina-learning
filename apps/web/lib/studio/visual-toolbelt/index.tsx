@@ -8,6 +8,7 @@ export const RelationFocusView = dynamic(() => import("./motion/motion-proof").t
 export const SpatialPlacement = dynamic(() => import("./konva/konva-proof").then(m => m.KonvaProof), { ssr: false });
 export const CoordinateConstruction = dynamic(() => import("./jsxgraph/jsxgraph-proof").then(m => m.JsxGraphProof), { ssr: false });
 export const MathExpressionInput = dynamic(() => import("./mathlive/mathlive-proof").then(m => m.MathLiveProof), { ssr: false });
+export { COORDINATE_MAX, COORDINATE_MIN, isExactGridPoint } from "./contracts";
 export type { SemanticPlacement, GridPoint, RelationFocus, MathInput } from "./contracts";
 export { resolveCanvasPattern, selectCanvasCapability } from "./visual-selection";
 export type { CanvasCapabilitySelection, CanvasPattern, CanvasVisualIntent } from "./visual-selection";

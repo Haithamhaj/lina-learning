@@ -103,8 +103,11 @@ def test_production_workspace_capability_context_is_honest_and_compact() -> None
     assert "renderers" not in value
 
 
-def test_open_workspace_advertises_bounded_custom_composition_before_subject_is_known() -> None:
-    """Daily can request a fitting frozen visual order without inventing a subject default."""
+@pytest.mark.parametrize("broad_subject", [None, "GENERAL_KNOWLEDGE", "OTHER"])
+def test_open_workspace_without_a_primary_subject_advertises_no_subject_drifting_composition(
+    broad_subject: str | None,
+) -> None:
+    """A general Canvas order must not silently manufacture a Math or Science identity."""
 
     from services.studio.workspace_capabilities import build_workspace_capability_context
     from services.studio.tutor_context import StudioTutorWorkspaceContext
@@ -116,18 +119,14 @@ def test_open_workspace_advertises_bounded_custom_composition_before_subject_is_
             active_subject_key=None, active_activity_key=None, state_payload={}, unseen_events=(), observation_id=None,
         ),
         authorized_source_references=(),
-        current_subject_key=None,
+        current_subject_key=broad_subject,
     ).as_model_payload()
 
-    assert value["subject_key"] is None
+    assert value["subject_key"] == broad_subject
     assert value["known_workspace_capabilities_available"] is False
-    assert value["custom_compose_potentially_eligible"] is True
-    assert value["eligible_custom_composition_patterns"] == [
-        "PROCESS",
-        "SPATIAL_MANIPULATION",
-        "MATH_VISUALIZATION",
-        "MATH_INPUT",
-    ]
+    assert value["custom_compose_potentially_eligible"] is False
+    assert value["eligible_custom_composition_patterns"] == []
+    assert value["custom_composition_constraints"] == {}
     assert value["authored_problem_sources"] == []
 
 
@@ -190,8 +189,37 @@ def test_subject_becoming_known_preserves_a_matching_production_composition(
     before = context(None)
     after = context(known_subject)
 
-    assert matching_pattern in before["eligible_custom_composition_patterns"]
+    assert before["eligible_custom_composition_patterns"] == []
     assert matching_pattern in after["eligible_custom_composition_patterns"]
+
+
+def test_active_resolved_scene_keeps_its_authoritative_subject_capabilities() -> None:
+    """Broad or stale Runtime labels cannot reclassify an already valid Scene."""
+
+    from services.studio.workspace_capabilities import build_workspace_capability_context
+    from services.studio.tutor_context import StudioTutorSceneCapability, StudioTutorWorkspaceContext
+
+    scene_id = uuid4()
+    value = build_workspace_capability_context(
+        StudioTutorWorkspaceContext(
+            runtime_id=uuid4(), snapshot_schema_version="studio-snapshot-v1", through_sequence=1,
+            snapshot_sequence=1, current_scene_id=scene_id, current_scene_version=2,
+            active_subject_key="SCIENCE", active_activity_key="stale-process", state_payload={}, unseen_events=(), observation_id=None,
+            current_scene_capability=StudioTutorSceneCapability(
+                scene_id=scene_id, subject_key="MATH", subject_profile_version="canvas-production-profile-v1",
+                activity_key="canvas_math_visualization", activity_version="canvas-math-visualization-activity-v1",
+                renderer_key="canvas-coordinate-construction", renderer_version="canvas-coordinate-construction-renderer-v1",
+                allowed_action_keys=("PLACE_POINT", "SUBMIT_CONSTRUCTION"), source_references=(),
+            ),
+        ),
+        current_subject_key="GENERAL_KNOWLEDGE",
+        authorized_source_references=(),
+    ).as_model_payload()
+
+    assert value["subject_key"] == "MATH"
+    assert value["eligible_custom_composition_patterns"] == [
+        "SPATIAL_MANIPULATION", "MATH_VISUALIZATION", "MATH_INPUT",
+    ]
 
 
 def test_custom_composition_context_exposes_exact_academic_bounds_not_renderer_details() -> None:
@@ -213,7 +241,7 @@ def test_custom_composition_context_exposes_exact_academic_bounds_not_renderer_d
 
     assert constraints("MATH")["MATH_VISUALIZATION"] == {
         "construction_family": "CARTESIAN_POINT",
-        "coordinate_bounds": [-4, 4],
+        "coordinate_bounds": [-10, 10],
         "point_count": 1,
     }
     assert constraints("SCIENCE")["PROCESS"] == {

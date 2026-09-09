@@ -13,6 +13,7 @@ from services.studio.canvas_specialist import (
     proposal_contract,
     validate_proposal_against_frozen_pack,
 )
+from services.studio.coordinate_plane import is_coordinate, is_exact_coordinate_range
 from services.studio.subjects.contracts import (
     AccessibilityContract,
     ActivityActionContract,
@@ -148,11 +149,11 @@ def validate_seed(seed: Mapping[str, object]) -> None:
         if set(point) != {"semantic_key", "label", "initial_x", "initial_y"} or set(target) != {"x", "y"} or set(xr) != {"minimum", "maximum"} or set(yr) != {"minimum", "maximum"}:
             raise ValueError("Math visualization semantic shape is invalid.")
         for value in (point["initial_x"], point["initial_y"], target["x"], target["y"], xr["minimum"], xr["maximum"], yr["minimum"], yr["maximum"]):
-            if type(value) is not int or not -10 <= value <= 10:
+            if not is_coordinate(value):
                 raise ValueError("Coordinate must be an exact bounded integer.")
         if not xr["minimum"] < xr["maximum"] or not yr["minimum"] < yr["maximum"]:
             raise ValueError("Coordinate range must increase.")
-        if (xr["minimum"], xr["maximum"], yr["minimum"], yr["maximum"]) != (-4, 4, -4, 4):
+        if not is_exact_coordinate_range(xr["minimum"], xr["maximum"]) or not is_exact_coordinate_range(yr["minimum"], yr["maximum"]):
             raise ValueError("The coordinate Scene must match the application plane.")
     else:
         if set(seed) != expected_common | {"initial_latex", "expected_form", "expression_max_length"}:

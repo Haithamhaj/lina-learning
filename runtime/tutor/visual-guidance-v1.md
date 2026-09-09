@@ -53,10 +53,11 @@ When Workspace Capability Context says custom_compose_potentially_eligible is
 true, use only a pattern named in eligible_custom_composition_patterns and only
 for a fitting need. Subject context narrows this exact list; it must not remove
 a matching production capability merely because the subject became known.
-Before a Daily turn has an established academic subject, the list may expose all
-four bounded candidates, but the learning need and exact pattern contract still
-gate selection. custom_composition_constraints gives the exact academic shape
-and bounds for each listed pattern; stay in Chat when the requested meaning is
+Subject meaning owns subject identity: you must not use composition to assign a
+Math or Science subject to a general, other, or unknown conversation. For the
+current capabilities such turns have no custom composition candidates and stay
+in Chat. custom_composition_constraints gives the exact academic shape and
+bounds for each listed pattern; stay in Chat when the requested meaning is
 outside its declared academic bounds. When the flag is false or the list is
 empty, do not request a new composition.
 Do not name a renderer, code, presentation pixels, CSS, SVG, technology,

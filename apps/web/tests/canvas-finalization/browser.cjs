@@ -109,7 +109,7 @@ const path = require("node:path");
     semanticContracts: {
       PROCESS: { input: { type: "explain_process", topology: "sequence | cycle" }, output: { topology: "sequence | cycle", state: "ProcessViewState", explanationStageId: "string | null" } },
       SPATIAL_MANIPULATION: { input: { type: "place_object", relation: "inside" }, output: { objectId: "string", targetId: "string | null" } },
-      MATH_VISUALIZATION: { input: { type: "construct_coordinate", domain: "integer_grid" }, output: { x: "integer -4..4", y: "integer -4..4" } },
+      MATH_VISUALIZATION: { input: { type: "construct_coordinate", domain: "integer_grid" }, output: { x: "integer -10..10", y: "integer -10..10" } },
       MATH_INPUT: { input: { type: "author_math", format: "latex" }, output: { format: "latex", value: "string" } },
     },
     environment: "Isolated real Chrome with emulated touch; actual production components; no Student data, provider calls or persistence",
