@@ -101,3 +101,25 @@ def test_production_workspace_capability_context_is_honest_and_compact() -> None
     assert len([p for p in value['authored_problem_sources'] if p['activity_hint']=='decimal_number_line']) == 11
     assert len([p for p in value['authored_problem_sources'] if p['activity_hint']=='decimal_place_value']) == 12
     assert "renderers" not in value
+
+
+def test_open_workspace_advertises_bounded_custom_composition_before_subject_is_known() -> None:
+    """Daily can request a fitting frozen visual order without inventing a subject default."""
+
+    from services.studio.workspace_capabilities import build_workspace_capability_context
+    from services.studio.tutor_context import StudioTutorWorkspaceContext
+
+    value = build_workspace_capability_context(
+        StudioTutorWorkspaceContext(
+            runtime_id=uuid4(), snapshot_schema_version="studio-snapshot-v1", through_sequence=0,
+            snapshot_sequence=0, current_scene_id=None, current_scene_version=None,
+            active_subject_key=None, active_activity_key=None, state_payload={}, unseen_events=(), observation_id=None,
+        ),
+        authorized_source_references=(),
+        current_subject_key=None,
+    ).as_model_payload()
+
+    assert value["subject_key"] is None
+    assert value["known_workspace_capabilities_available"] is False
+    assert value["custom_compose_potentially_eligible"] is True
+    assert value["authored_problem_sources"] == []

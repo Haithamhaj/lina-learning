@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from services.studio.subjects import PRODUCTION_CURRENT_PROFILE_VERSIONS, production_subject_registry
+from services.studio.subjects.canvas_production import PROFILE_VERSION as CANVAS_PRODUCTION_PROFILE_VERSION
 from services.studio.subjects.registry import SubjectCapabilityError
 from services.studio.subjects.decimal_number_line import authored_problem_sources
 from services.studio.subjects.decimal_place_value import authored_problem_sources as place_value_sources
@@ -56,7 +57,15 @@ def build_workspace_capability_context(
     profile_version = scene.subject_profile_version if scene is not None else PRODUCTION_CURRENT_PROFILE_VERSIONS.get(subject_key or "")
     active_scene_status = "NO_ACTIVE_SCENE" if scene is None else scene.capability_status
     if subject_key is None or profile_version is None:
-        return WorkspaceCapabilityContext(subject_key, profile_version, None, active_scene_status, (), authorized_source_references, False, False)
+        registry = production_subject_registry()
+        custom_compose_available = (
+            registry.resolve_profile("MATH", CANVAS_PRODUCTION_PROFILE_VERSION).canvas_specialist_profile_key
+            is not None
+        )
+        return WorkspaceCapabilityContext(
+            subject_key, profile_version, None, active_scene_status, (), authorized_source_references,
+            False, custom_compose_available,
+        )
     try:
         profile = production_subject_registry().resolve_profile(subject_key, profile_version)
     except SubjectCapabilityError:

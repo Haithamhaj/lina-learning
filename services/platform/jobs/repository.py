@@ -22,6 +22,10 @@ class JobStateError(RuntimeError):
     """Raised when a worker tries to settle a job it does not own."""
 
 
+class NonRetryableJobError(RuntimeError):
+    """Signals a diagnosed deterministic handler failure that must be terminal."""
+
+
 def enqueue_job(
     session: Session,
     *,
@@ -171,6 +175,7 @@ def fail_job(
     error: Exception,
     now: datetime | None = None,
     retry_delay: timedelta = DEFAULT_RETRY_DELAY,
+    retryable: bool = True,
 ) -> Job:
     """Record a handler failure and either schedule retry or mark it terminal."""
 
@@ -182,7 +187,7 @@ def fail_job(
     job.last_error = _safe_error_message(error)
     job.lease_token = None
     job.lease_expires_at = None
-    if job.attempt_count >= job.max_attempts:
+    if not retryable or job.attempt_count >= job.max_attempts:
         job.status = JobStatus.FAILED.value
         job.completed_at = failure_time
     else:

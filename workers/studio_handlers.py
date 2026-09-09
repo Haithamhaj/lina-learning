@@ -4,11 +4,13 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+import errno
 from hashlib import sha256
 import json
 import logging
 from typing import TYPE_CHECKING
 from uuid import UUID
+from urllib.error import HTTPError, URLError
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -16,6 +18,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from services.model_gateway.factory import create_canvas_specialist_gateway
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
 from services.platform.db.models import AIExecution, Job, JobStatus, LearningMessage, LearningSession, ModelTask, StudioCanvasSpecialistRun, StudioRuntime, StudioSnapshot
+from services.platform.jobs import NonRetryableJobError
 from services.studio.canvas_specialist import CANVAS_SPECIALIST_COMPOSE_JOB, frozen_pack_identity_is_valid, proposal_contract, validate_proposal_against_frozen_pack
 from services.studio.process_production_acceptance import accept_completed_process_run
 
@@ -38,37 +41,69 @@ def register_canvas_specialist_handlers(registry: "JobHandlerRegistry", *, sessi
             try:
                 result = gateway_factory(provider_session).execute(ModelTask.CANVAS_SPECIALIST, request, lineage=AIExecutionLineage(operation="canvas_specialist_compose", operation_id=execution.run_id, student_id=execution.student_id, learning_session_id=execution.session_id, source_message_id=execution.message_id, parent_execution_id=execution.parent_execution_id))
                 provider_session.commit()
-            except Exception:
+            except Exception as error:
                 provider_session.commit()
                 failed_execution_id = provider_session.scalar(
                     select(AIExecution.id).where(
                         AIExecution.operation_id == execution.run_id,
                         AIExecution.task == ModelTask.CANVAS_SPECIALIST.value,
-                    )
+                    ).order_by(AIExecution.created_at.desc(), AIExecution.id.desc())
                 )
-                _fail(session_factory, execution.run_id, "PROVIDER_FAILURE", failed_execution_id)
-                raise
+                code, retryable, metadata = _classify_provider_failure(error)
+                failure_metadata = {
+                    "code": code,
+                    "provider_attempt": execution.provider_attempt,
+                    **metadata,
+                }
+                if retryable and execution.provider_attempt < execution.provider_max_attempts:
+                    _record_retryable_failure(
+                        session_factory,
+                        execution.run_id,
+                        failure_metadata,
+                        failed_execution_id,
+                    )
+                    raise
+                if retryable:
+                    failure_metadata["retry_exhausted"] = True
+                _fail(
+                    session_factory,
+                    execution.run_id,
+                    code,
+                    failed_execution_id,
+                    metadata=failure_metadata,
+                )
+                raise NonRetryableJobError(code) from error
         try:
             validated = proposal_contract(execution.capability_identity, execution.proposal_schema_version).model_validate(result.output)
             validate_proposal_against_frozen_pack(validated, execution.pack)
             proposal = validated.model_dump(mode="json")
-        except Exception:
-            _fail(session_factory, execution.run_id, "PROPOSAL_INVALID", result.execution_id)
-            raise ValueError("Canvas Specialist proposal is invalid")
+        except Exception as error:
+            _fail(
+                session_factory,
+                execution.run_id,
+                "PROPOSAL_VALIDATION_FAILURE",
+                result.execution_id,
+                metadata={
+                    "code": "PROPOSAL_VALIDATION_FAILURE",
+                    "exception_type": type(error).__name__,
+                    "validation_detail": str(error)[:1000],
+                },
+            )
+            raise NonRetryableJobError("Canvas Specialist proposal is invalid")
         return _settle(session_factory, execution.run_id, proposal, result.execution_id)
     registry.register(CANVAS_SPECIALIST_COMPOSE_JOB, handle)
 
 
 @dataclass(frozen=True)
 class SpecialistExecutionEnvelope:
-    run_id: UUID; student_id: UUID; session_id: UUID; message_id: UUID; parent_execution_id: UUID | None; order_digest: str; capability_identity: str; proposal_schema_version: str; input: str; pack: dict[str, object]
+    run_id: UUID; student_id: UUID; session_id: UUID; message_id: UUID; parent_execution_id: UUID | None; order_digest: str; capability_identity: str; proposal_schema_version: str; input: str; pack: dict[str, object]; provider_attempt: int; provider_max_attempts: int
 
 
 def _preflight(factory: sessionmaker[Session], job: Job, payload: dict[str, object]) -> SpecialistExecutionEnvelope | None:
     with factory.begin() as session:
         claimed = session.get(Job, job.id)
         run = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.job_id == job.id).with_for_update()).scalar_one_or_none()
-        if claimed is None or claimed.job_type != CANVAS_SPECIALIST_COMPOSE_JOB or claimed.max_attempts != 1: raise ValueError("SPECIALIST_JOB_INVALID")
+        if claimed is None or claimed.job_type != CANVAS_SPECIALIST_COMPOSE_JOB or claimed.max_attempts != 2: raise ValueError("SPECIALIST_JOB_INVALID")
         if run is None or run.status in {"COMPLETED", "FAILED", "CANCELLED", "SUPERSEDED", "REJECTED"}: return None
         if run.deadline_at and run.deadline_at <= datetime.now(UTC):
             run.status, run.failure_metadata, run.completed_at = "FAILED", {"code": "DEADLINE_EXCEEDED"}, datetime.now(UTC); return None
@@ -88,7 +123,7 @@ def _preflight(factory: sessionmaker[Session], job: Job, payload: dict[str, obje
             run.status, run.failure_metadata, run.completed_at = "FAILED", {"code": "CAPABILITY_IDENTITY_INVALID"}, datetime.now(UTC); return None
         if not isinstance(pack.get("capability_pack"), dict) or pack["capability_pack"].get("identity") != run.capability_profile_version or not frozen_pack_identity_is_valid(pack, run.capability_profile_version):
             run.status, run.failure_metadata, run.completed_at = "FAILED", {"code": "CAPABILITY_IDENTITY_INVALID"}, datetime.now(UTC); return None
-        return SpecialistExecutionEnvelope(run.id, run.student_id, run.learning_session_id, run.source_message_id, message.ai_execution_id, run.order_digest, run.capability_profile_version, run.output_schema_version, json.dumps(pack, sort_keys=True, ensure_ascii=False, separators=(",", ":")), pack)
+        return SpecialistExecutionEnvelope(run.id, run.student_id, run.learning_session_id, run.source_message_id, message.ai_execution_id, run.order_digest, run.capability_profile_version, run.output_schema_version, json.dumps(pack, sort_keys=True, ensure_ascii=False, separators=(",", ":")), pack, claimed.attempt_count, claimed.max_attempts)
 
 
 def _settle(factory: sessionmaker[Session], run_id: UUID, proposal: dict[str, object], execution_id: UUID | None) -> dict[str, object]:
@@ -110,7 +145,7 @@ def _settle(factory: sessionmaker[Session], run_id: UUID, proposal: dict[str, ob
             run.completed_at = datetime.now(UTC)
             run.ai_execution_id = execution_id
             return {"run_id": str(run.id), "run_status": run.status}
-        run.proposal_payload, run.proposal_digest, run.ai_execution_id, run.status, run.completed_at = proposal, sha256(json.dumps(proposal, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest(), execution_id, "COMPLETED", datetime.now(UTC)
+        run.proposal_payload, run.proposal_digest, run.ai_execution_id, run.status, run.completed_at, run.failure_metadata = proposal, sha256(json.dumps(proposal, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest(), execution_id, "COMPLETED", datetime.now(UTC), None
         # CS-04 fixtures and corrupt historical runtimes can legitimately lack the
         # Studio projection.  Keep the durable proposal; production acceptance
         # fails closed until the existing lifecycle has an authoritative Snapshot.
@@ -159,19 +194,51 @@ def _mark_scene_settlement_deferred(factory: sessionmaker[Session], run_id: UUID
             run.failure_metadata = {"code": "SCENE_SETTLEMENT_DEFERRED"}
 
 
-def _fail(factory: sessionmaker[Session], run_id: UUID, code: str, execution_id: UUID | None = None) -> None:
+def _record_retryable_failure(
+    factory: sessionmaker[Session],
+    run_id: UUID,
+    metadata: dict[str, object],
+    execution_id: UUID | None,
+) -> None:
     with factory.begin() as session:
         run = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.id == run_id).with_for_update()).scalar_one_or_none()
         if run is not None and run.status not in {"COMPLETED", "SUPERSEDED", "CANCELLED", "REJECTED"}:
-            run.status, run.failure_metadata, run.completed_at, run.ai_execution_id = "FAILED", {"code": code}, datetime.now(UTC), execution_id
+            run.status = "PENDING"
+            run.failure_metadata = metadata
+            run.ai_execution_id = execution_id
+            run.completed_at = None
+
+
+def _fail(factory: sessionmaker[Session], run_id: UUID, code: str, execution_id: UUID | None = None, *, metadata: dict[str, object] | None = None) -> None:
+    with factory.begin() as session:
+        run = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.id == run_id).with_for_update()).scalar_one_or_none()
+        if run is not None and run.status not in {"COMPLETED", "SUPERSEDED", "CANCELLED", "REJECTED"}:
+            run.status, run.failure_metadata, run.completed_at, run.ai_execution_id = "FAILED", metadata or {"code": code}, datetime.now(UTC), execution_id
+
+
+def _classify_provider_failure(error: Exception) -> tuple[str, bool, dict[str, object]]:
+    if isinstance(error, HTTPError):
+        status = int(error.code)
+        if status == 429:
+            return "RATE_LIMIT", True, {"http_status": status}
+        if 500 <= status <= 599:
+            return "PROVIDER_SERVICE_FAILURE", True, {"http_status": status}
+        return "OTHER", False, {"http_status": status}
+    if isinstance(error, (TimeoutError, ConnectionError, URLError)):
+        return "TRANSIENT_PROVIDER_FAILURE", True, {}
+    if isinstance(error, OSError) and error.errno in {
+        errno.ECONNABORTED, errno.ECONNRESET, errno.ETIMEDOUT, errno.EPIPE,
+    }:
+        return "TRANSIENT_PROVIDER_FAILURE", True, {"errno": int(error.errno)}
+    return "OTHER", False, {"exception_type": type(error).__name__}
 
 
 def reconcile_canvas_specialist_runs(session: Session, *, now: datetime | None = None) -> int:
     """Close queue/handler crash windows without ever creating another model call.
 
     A completed durable proposal can repair a lost queue completion only after the
-    worker lease expires. A run without a durable proposal after its sole attempt
-    becomes an explicit terminal outcome rather than becoming claimable again.
+    worker lease expires. A run without a durable proposal after its bounded final
+    attempt becomes an explicit terminal outcome rather than claimable again.
     """
     clock = now or datetime.now(UTC)
     changed = 0

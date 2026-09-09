@@ -81,6 +81,9 @@ def test_v2_cycle_instructions_require_a_closed_supported_cycle():
         "For N stages, output exactly N relations",
         "final relation connects the last stage to the first stage",
         "Every relation must use admitted semantic support",
+        "copy each support `id` verbatim",
+        "union of all stage `support_ids` must equal",
+        "union of all relation `support_ids` must equal",
         "never use `TRACE_SEQUENCE` for CYCLE",
         "For SEQUENCE, output exactly N-1 forward relations",
     ):

@@ -48,7 +48,7 @@ def test_repeated_admission_is_one_job_and_one_run(factory: sessionmaker[Session
     with factory() as s:
         assert s.scalar(select(func.count()).select_from(m.Job)) == 1
         assert s.scalar(select(func.count()).select_from(m.StudioCanvasSpecialistRun)) == 1
-        assert s.scalar(select(m.Job.max_attempts)) == 1
+        assert s.scalar(select(m.Job.max_attempts)) == 2
 
 
 def test_non_executable_states_create_no_work(factory: sessionmaker[Session]) -> None:

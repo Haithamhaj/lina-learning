@@ -391,7 +391,7 @@ def admit_committed_visual_order(session: Session, *, student_id: UUID, learning
                 prior_job.completed_at = superseded_at
                 prior_job.last_error = "Superseded by a newer admitted Canvas Specialist order."
     key = f"canvas-specialist:{source_message_id}:{digest}:{capability_identity}"
-    job = enqueue_job(session, job_type=CANVAS_SPECIALIST_COMPOSE_JOB, payload={"student_id": str(student_id), "learning_session_id": str(learning_session_id), "source_message_id": str(source_message_id), "order_digest": digest, "capability_identity": capability_identity}, idempotency_key=key, max_attempts=1)
+    job = enqueue_job(session, job_type=CANVAS_SPECIALIST_COMPOSE_JOB, payload={"student_id": str(student_id), "learning_session_id": str(learning_session_id), "source_message_id": str(source_message_id), "order_digest": digest, "capability_identity": capability_identity}, idempotency_key=key, max_attempts=2)
     if before_run_create is not None:
         before_run_create()
     try:

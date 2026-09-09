@@ -210,7 +210,7 @@ def test_v2_cycle_worker_settles_into_snapshot_and_replays_semantic_operations(f
         scene = session.get(m.StudioScene, run.scene_id); assert scene is not None
         replay = StudioStateService(session).rebuild_snapshot(runtime_id=runtime_id, student_id=student_id)
         process_state = replay["state_payload"]["process_visual_production"]
-        assert calls == 1 and job is not None and job.max_attempts == job.attempt_count == 1
+        assert calls == 1 and job is not None and job.max_attempts == 2 and job.attempt_count == 1
         assert scene.status == "ACTIVE" and scene.seed_payload["topology"] == "cycle"
         assert scene.seed_payload["motion_intents"] == _v2_cycle_proposal()["motion_intents"]
         assert "TRACE_CYCLE" in scene.seed_payload["motion_intents"] and "TRACE_SEQUENCE" not in scene.seed_payload["motion_intents"]
@@ -244,7 +244,7 @@ def test_live_luna_v2_worker_path(factory: sessionmaker[Session], topology: str,
         replay = StudioStateService(session).rebuild_snapshot(runtime_id=runtime_id, student_id=student_id)
         allowed_motion = {"REVEAL_IN_ORDER", "TRACE_SEQUENCE", "TRANSITION_FOCUS", "EMPHASIZE_RELATION"} if topology == "SEQUENCE" else {"REVEAL_IN_ORDER", "TRACE_CYCLE", "TRANSITION_FOCUS", "EMPHASIZE_RELATION"}
         assert scene is not None and scene.seed_payload["topology"] == topology.lower() and set(scene.seed_payload["motion_intents"]).issubset(allowed_motion)
-        assert job.max_attempts == job.attempt_count == 1 and execution is not None and execution.provider == "openai" and execution.success and replay["current_scene_id"] == scene.id
+        assert job.max_attempts == 2 and job.attempt_count == 1 and execution is not None and execution.provider == "openai" and execution.success and replay["current_scene_id"] == scene.id
 
 
 def test_v2_invalid_motion_is_terminal_without_regeneration(factory: sessionmaker[Session]) -> None:

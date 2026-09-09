@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from services.model_gateway.factory import create_personal_facts_gateway, create_segment_evidence_gateway
 from services.platform.db.connection import get_engine
 from services.platform.db.models import Job, JobStatus
-from services.platform.jobs import claim_next_job, complete_job, fail_job
+from services.platform.jobs import NonRetryableJobError, claim_next_job, complete_job, fail_job
 from services.platform.storage import create_object_storage
 from services.tutor.session_lifecycle import (
     SessionLifecyclePolicy,
@@ -110,6 +110,7 @@ def run_once(
                 lease_token=job.lease_token,
                 error=error,
                 now=now,
+                retryable=not isinstance(error, NonRetryableJobError),
             )
         return JobStatus(failed.status)
 

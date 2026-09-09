@@ -232,7 +232,41 @@ def test_primary_tutor_instructions_require_source_grounding_and_honest_ambiguit
     assert "student's written answer" in instructions
     assert "adding a score" in instructions
     assert "student source is not a curriculum citation" in instructions
+    assert "do not conditionally solve one possible reading as the answer" in instructions
+    assert "end with one short request for the missing symbol or a clearer source" in instructions
     assert "approximately 10-year-old" not in instructions
+
+
+def test_canvas_representation_serves_the_existing_teaching_decision_framework() -> None:
+    """VISION-02: Canvas must be selected as a surface, never as an eighth method."""
+
+    payload = build_tutor_model_payload(
+        question="Show me this process visually; the last explanation still confuses me."
+    )
+    instructions = " ".join(str(payload["instructions"]).casefold().split())
+
+    for required_concept in (
+        "choose the teaching approach before choosing a representation surface",
+        "canvas is a representation surface serving the selected teachingmethod",
+        "visual_representation makes a fitting production canvas capability the primary candidate",
+        "worked_example benefits from canvas when several dependent steps",
+        "decomposition benefits from canvas when stages, groups, parts, relations, or sequence",
+        "socratic_focus normally starts in chat",
+        "proactively change to a meaningfully different teachingmethod or representation",
+        "did_not_help requires a different teachingmethod",
+        "explicit_repeat_request may reuse the same immediate teachingmethod",
+        "helped means build on the useful representation",
+        "short tutor framing, canvas structure, and a tutor follow-up",
+        "an explicit request to show, draw, or use the workspace is a strong preference signal",
+        "no accurate production capability fits",
+        "custom_compose_potentially_eligible is true",
+    ):
+        assert required_concept in instructions
+
+    assert set(payload["active_teaching_methods"]) == {
+        method.value for method in TeachingMethod
+    }
+    assert "CANVAS" not in payload["active_teaching_methods"]
 
 
 def test_candidate_guidance_contrastively_defines_support_for_the_observed_target_response() -> None:

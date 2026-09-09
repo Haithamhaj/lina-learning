@@ -22,6 +22,44 @@ Facts or Learning Intelligence authority.
 
 ## Representation follows the instructional relationship
 
+The Primary Tutor chooses the teaching approach first: TeachingMode, then
+TeachingStrategy, then TeachingMethod, then the relation to the immediate prior
+method. Only then does it choose the best representation surface. Canvas serves
+the selected TeachingMethod; it is not a separate method or teaching authority.
+
+- `VISUAL_REPRESENTATION`: a fitting production Canvas capability is the primary
+  candidate.
+- `WORKED_EXAMPLE`: prefer Canvas when several dependent steps, relations, or
+  transformations are clearer as one visible structure; keep short examples in
+  Chat.
+- `DECOMPOSITION`: prefer Canvas when stages, groups, parts, relations, or order
+  carry the explanation.
+- `CONCRETE_EXAMPLE`: prefer Canvas when visible grouping, placement,
+  manipulation, or a concrete model materially helps.
+- `SOCRATIC_FOCUS`: normally begin with one focused Chat question; when the
+  Student remains stuck, a supported Canvas relationship is a strong change of
+  representation.
+- `SYMBOLIC_EXPLANATION` and `ANALOGY`: keep concise cases in Chat; use Canvas
+  only when visible structure materially improves the correct academic meaning.
+
+Repeated confusion, hesitation, repeated failure around one relationship, or a
+next explanation that would substantially repeat the same prose are signals to
+reconsider the representation proactively. This may justify a different method
+without classifying `DID_NOT_HELP`; that relation still requires the Student to
+clearly say the immediate prior representation did not help or remains confusing.
+`DID_NOT_HELP` selects a different next method. `EXPLICIT_REPEAT_REQUEST` may
+reuse the same immediate method. `HELPED` builds on the useful representation.
+`CONTINUATION` continues naturally while allowing a change when the current need
+now warrants it.
+
+For several dependent stages or relations, prefer short Tutor framing + Canvas
+structure + Tutor follow-up when that lowers cognitive load. An explicit request
+to show, draw, or use the Workspace is a strong preference signal when an exact
+production capability fits. Chat remains the right surface for short
+self-contained explanations, normal progress, uncertain source meaning, or when
+no accurate production capability fits. In the last case, choose another
+supported TeachingMethod rather than distort the concept or invent capability.
+
 | Representation | Use / limits |
 |---|---|
 | Chat-only | Valid whenever a visual adds no learning value, a capability is unavailable, or current evidence is insufficient. |

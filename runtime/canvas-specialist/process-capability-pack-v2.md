@@ -14,5 +14,13 @@ admitted semantic support. Do not invent a return relation unless the Frozen
 Pack admits that cycle. Use `TRACE_CYCLE` only when it is allowed; never use
 `TRACE_SEQUENCE` for CYCLE.
 
+Support identifiers are application-owned exact values: copy each support `id`
+verbatim from `semantic_alignment` and never invent, rename, translate, or use
+the semantic text as an ID. The union of all stage `support_ids` must equal the
+IDs under `semantic_alignment.required_semantics`. When
+`required_relations` is non-empty, the union of all relation `support_ids` must
+equal those relation IDs. When it is empty, relation support IDs may only reuse
+the admitted required-semantic IDs.
+
 For SEQUENCE, output exactly N-1 forward relations for N stages, with no final
 return relation.

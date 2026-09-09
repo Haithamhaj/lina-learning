@@ -226,7 +226,7 @@ def test_null_and_admitted_visual_orders_round_trip_with_one_automatic_specialis
         )
         job = session.scalar(select(m.Job))
         run = session.scalar(select(m.StudioCanvasSpecialistRun))
-        assert job is not None and job.max_attempts == 1
+        assert job is not None and job.max_attempts == 2
         assert run is not None and run.status == "PENDING" and run.job_id == job.id
 
 
