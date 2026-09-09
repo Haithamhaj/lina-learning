@@ -1,77 +1,29 @@
-# Lina Personal Learning System — Project State
+# Project state
 
-## Current Goal
+## Current goal
 
-Practical validation of the complete multimodal Daily Tutor → Canvas → Tutor learning experience.
+Complete REPO-TRUTH-01 through 03: reconcile documentation and repository hygiene on `repo/truth-reset-01`, then stop for Product Owner approval before promoting `main`.
 
-## Current Reality
+## Current reality
 
-- The Primary Tutor runtime exists.
-- Daily text, microphone transcription, and Student source input now converge on
-  the same Primary Tutor. VISION-01 preserves immutable private image/PDF/DOCX
-  originals, exact Student-message and AI-execution lineage, same-source
-  follow-ups, and exact text-only behavior when no source is active. Bounded real
-  Luna image/PDF/follow-up proof passed with exactly three Tutor calls.
-- VISION-01S closes the multimodal Child Safety gap before the Primary Tutor.
-  Owned images use their actual bytes; PDFs use transient extracted text and
-  rendered pages; DOCX uses transient XML text and supported embedded images.
-  `omni-moderation-latest` supplies signals, Lina's existing policy remains the
-  decision authority, inspection failure fails closed, and compact audits retain
-  no source bytes, raw provider response, or score dump. Live synthetic proof
-  passed with four moderation calls, three allowed Tutor calls, and zero Tutor or
-  learning-derived writes for the blocked image.
-- DOCX Tutor comprehension is deterministic: the Safety boundary and Tutor
-  adapter share one transient ordered-paragraph extractor, and the same Tutor
-  request receives that text plus the immutable original file. A one-call live
-  Luna proof read the DOCX-only `18 cm` fact; extracted text was not persisted.
-- Studio durable state and runtime exist.
-- Canvas Specialist execution exists.
-- A production Process sequence/cycle exists.
-- Semantic Process motion V2 exists.
-- CS-07 visual Toolbelt primitives are hardened: controlled Motion focus, Konva
-  placement, exact JSXGraph coordinates and MathLive input; isolated Chrome proof
-  passed. Authenticated Daily remains unverified (Clerk secret unavailable).
-- Canvas supports four production patterns through one runtime: Process
-  (sequence/cycle), spatial manipulation, mathematical construction and math
-  expression. The Primary Tutor emits a strict semantic order, the Canvas
-  Specialist composes only supported meaning, and the application selects an
-  exact local renderer. All four use server-owned Scene/Event/Snapshot state in
-  the Daily Renderer Host.
-- V2 PostgreSQL lifecycle and replay proof exists.
-- Canvas interaction returns to the same Primary Tutor.
-- Real Arabic source validation now proves coordinate comprehension and the
-  full Chat → bounded Canvas → interaction → same-Tutor path. Workspace
-  capability selection keeps the four Studio subjects separate from Broad
-  Subject classification. Unknown/general/other turns remain Chat-only with no
-  subject-drifting custom composition; known MATH and SCIENCE expose only their
-  exact compatible patterns, and a resolved Scene retains its authoritative
-  subject. The integer Cartesian plane is exactly `[-10,10] × [-10,10]`; the
-  real IMAGE-B point `A(-3,5)` passed source Safety, one Luna source turn,
-  admitted MATH_VISUALIZATION, one Specialist call, Scene/Event/Snapshot,
-  Student submission, and the same-model Tutor continuation.
-  Dense low-clarity handwriting remains source-quality limited: Luna asks for a
-  clearer crop instead of inventing unreadable mathematical text.
-- Broader authenticated end-user quality and usability still need practical
-  validation.
+The accepted source baseline is `7ce6bcba41a6df92ff7862718a5d340925546415`; remote `main` is the older ancestor `b213e66f5e2505879610c0056f4bc5e576a01edc`. The current root `main` worktree contains unrelated local changes and is protected by an isolated cleanup worktree.
 
-## Protected Areas
+## Active decisions
 
-1. Child Safety baseline.
-2. Authentication, privacy, Student ownership, and data isolation.
-3. Learning Evidence / Learning Intelligence write authority and meaning.
-4. Destructive database, schema, or data-migration behavior.
-5. Irreversible external actions, including deployment, paid effects, and
-   destructive remote operations.
+`main` becomes the one canonical branch only after the stop gate. The FE-02 prototype remains preserved. Current truth is separated from history, review evidence, and research.
 
-## Current Risks
+## Protected areas
 
-- Authenticated Daily browser validation is blocked by absent local Clerk
-  configuration; exact production Renderer Host validation has passed in an
-  authentication-independent Chrome harness.
-- The real Student experience may expose usability defects.
+Safety/Parent Boundaries, ownership/privacy, Learning Intelligence semantics, raw provenance, Model Gateway routing, Studio/Canvas contracts, and runtime behavior are unchanged by this cleanup.
 
-## Next Practical Goal
+## Active risks
 
-Provide local Clerk configuration, then run an authenticated disposable-Student
-Daily journey covering text, voice, image/PDF/DOCX source history, and Canvas;
-fix any experience defects that appear in real use.
+Remote main protection is not yet inspected. Authenticated Daily acceptance and longitudinal real Lina calibration remain unproven product gates.
+
+## Next recommended action
+
+Finish the bounded repository cleanup and request Product Owner approval for main promotion. After promotion, begin `UI-REFINE-01`.
+
+## Critical references
+
+`README.md`, `AGENTS.md`, `docs/PROJECT_REFERENCE.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/LEARNING_INTELLIGENCE_SPEC.md`, `docs/CHILD_SAFETY_POLICY.md`, `TASKS.md`.
