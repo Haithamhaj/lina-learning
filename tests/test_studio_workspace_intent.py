@@ -36,6 +36,81 @@ def test_workspace_intent_v1_accepts_null_and_bounded_educational_need() -> None
         WorkspaceIntent.model_validate({**intent.model_dump(), "renderer_key": "number_line"})
 
 
+def test_canvas_brief_v1_is_strictly_educational_and_independent_of_workspace_intent() -> None:
+    from services.studio.canvas_brief import CanvasBriefV1, parse_canvas_brief
+
+    assert parse_canvas_brief(None) is None
+    brief = CanvasBriefV1.model_validate(
+        {
+            "version": "canvas-brief-v1",
+            "subject_key": "MATH",
+            "objective": "Compare 0.6 and 0.45 on a number line.",
+            "student_request": "Show them visually.",
+            "requested_representation": "number line",
+            "facts": [],
+            "relations": [],
+            "quantities": [
+                {"id": "decimal-a", "value": "0.6", "unit": None},
+                {"id": "decimal-b", "value": "0.45", "unit": None},
+            ],
+            "desired_student_action": "explore and compare",
+            "must_not_imply": [],
+            "source_references": [],
+            "locale": "en",
+            "direction": "ltr",
+        }
+    )
+
+    assert brief.quantities[0].value == "0.6"
+    with pytest.raises(ValueError):
+        CanvasBriefV1.model_validate({**brief.model_dump(), "tool_name": "create_math_board"})
+    with pytest.raises(ValueError):
+        CanvasBriefV1.model_validate({**brief.model_dump(), "requested_representation": "JSXGraph number line"})
+
+
+def test_canvas_brief_output_schema_inlines_nested_definitions_for_responses_api() -> None:
+    from services.studio.canvas_brief import canvas_brief_output_schema
+
+    schema = canvas_brief_output_schema()
+    assert "$defs" not in schema
+    assert "source_id" in schema["anyOf"][0]["properties"]["relations"]["items"]["properties"]
+
+
+def test_canvas_brief_schema_requires_nullable_quantity_unit_for_strict_responses() -> None:
+    from services.studio.canvas_brief import canvas_brief_output_schema
+
+    quantity = canvas_brief_output_schema()["anyOf"][0]["properties"]["quantities"]["items"]
+    assert "unit" in quantity["required"]
+
+
+def test_canvas_brief_admission_is_safety_gated_and_source_bounded() -> None:
+    from services.studio.canvas_brief import audit_canvas_brief
+
+    brief = {
+        "version": "canvas-brief-v1",
+        "subject_key": "MATH",
+        "objective": "Compare the fractions.",
+        "student_request": "Help me compare them.",
+        "requested_representation": "A fraction model.",
+        "facts": ["Both values are parts of one whole."],
+        "relations": [],
+        "quantities": [],
+        "desired_student_action": None,
+        "must_not_imply": [],
+        "source_references": ["source-1"],
+        "locale": "en",
+        "direction": "ltr",
+    }
+
+    admitted = audit_canvas_brief(brief, allowed_source_references={"source-1"}, safety_allows=True)
+    assert admitted["status"] == "ADMITTED"
+    assert len(admitted["brief_digest"]) == 64
+    assert admitted["brief"]["subject_key"] == "MATH"
+
+    assert audit_canvas_brief(brief, allowed_source_references={"other"}, safety_allows=True)["status"] == "REJECTED"
+    assert audit_canvas_brief(brief, allowed_source_references={"source-1"}, safety_allows=False)["status"] == "NOT_REQUESTED"
+
+
 def test_tutor_output_requires_nullable_workspace_intent_with_its_own_schema_version() -> None:
     """Structured Tutor output must carry the optional request without reinterpreting v8."""
 
@@ -44,7 +119,7 @@ def test_tutor_output_requires_nullable_workspace_intent_with_its_own_schema_ver
         TUTOR_OUTPUT_RESPONSE_SCHEMA,
     )
 
-    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v10"
+    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v11"
     assert "workspace_intent" in TUTOR_OUTPUT_JSON_SCHEMA["required"]
     schema = TUTOR_OUTPUT_JSON_SCHEMA["properties"]["workspace_intent"]
     assert schema["anyOf"][0]["additionalProperties"] is False

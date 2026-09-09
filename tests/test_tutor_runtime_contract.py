@@ -19,11 +19,11 @@ from services.tutor.teaching_methods import (
 )
 
 
-def test_tutor_turn_v10_requires_nullable_visual_order_without_rewriting_other_metadata() -> None:
+def test_tutor_turn_v11_requires_nullable_visual_order_without_rewriting_other_metadata() -> None:
     """SAFE-02 keeps one strict output contract for visible text and hidden decisions."""
 
-    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v10"
-    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject", "workspace_intent", "workspace_visual_order"]
+    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v11"
+    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject", "workspace_intent", "canvas_brief", "workspace_visual_order"]
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["provisional_broad_subject"] == {
         "type": ["string", "null"],
         "enum": [
@@ -130,6 +130,15 @@ def test_primary_tutor_contract_instructs_workspace_intent_and_local_provider_re
 
     assert "workspace_intent" in payload["response_schema"]["schema"]["properties"]
     assert result.output["workspace_intent"] is None
+
+
+def test_tutor_v11_requires_nullable_canvas_brief_and_keeps_workspace_intent() -> None:
+    from services.tutor.candidate_events import TUTOR_OUTPUT_JSON_SCHEMA, TUTOR_OUTPUT_RESPONSE_SCHEMA
+
+    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v11"
+    assert {"workspace_intent", "canvas_brief"}.issubset(TUTOR_OUTPUT_JSON_SCHEMA["required"])
+    canvas_brief = TUTOR_OUTPUT_JSON_SCHEMA["properties"]["canvas_brief"]
+    assert canvas_brief["anyOf"][0]["properties"]["version"]["const"] == "canvas-brief-v1"
 
 
 def test_tutor_payload_preserves_complete_within_budget_visual_personalization_catalog() -> None:
@@ -293,7 +302,7 @@ def test_candidate_guidance_contrastively_defines_support_for_the_observed_targe
         assert required_concept in instructions
 
     payload = build_tutor_model_payload(question="I solved the new task and can explain why.")
-    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v10"
+    assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v11"
     assert "candidate_classifier" not in payload
     assert "support_score" not in payload
     assert "support_threshold" not in payload

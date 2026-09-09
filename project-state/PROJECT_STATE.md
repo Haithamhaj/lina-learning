@@ -10,7 +10,7 @@ Begin `UI-REFINE-01`: refine the Student interface using the canonical frontend 
 
 ## Active decisions
 
-`main` is the one canonical branch. The FE-02 prototype remains preserved. Current truth is separated from history, review evidence, and research.
+`main` is the one canonical branch. The FE-02 prototype remains preserved. Current truth is separated from history, review evidence, and research. STUDIO-AGENTIC-01 is an explicitly Product Owner-authorized, isolated implementation correction: preserve the existing Studio Core while replacing new-write composition dependence on finite capability packs with the bounded Tutor-led Agentic Canvas path.
 
 ## Protected areas
 

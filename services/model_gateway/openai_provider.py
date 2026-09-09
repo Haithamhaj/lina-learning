@@ -300,7 +300,7 @@ def _normalize_output(
     try:
         parsed = json.loads(text)
     except json.JSONDecodeError:
-        if fallback_text and tutor_schema_name not in {"tutor_turn_v9", "tutor_turn_v10"}:
+        if fallback_text and tutor_schema_name not in {"tutor_turn_v9", "tutor_turn_v10", "tutor_turn_v11"}:
             return {
                 "text": fallback_text,
                 "suggested_actions": [],
@@ -314,12 +314,15 @@ def _normalize_output(
         return parsed
     if not isinstance(parsed.get("text"), str) or not parsed["text"].strip():
         raise ValueError("OpenAI structured Tutor output has no student-facing text.")
-    if tutor_schema_name in {"tutor_turn_v9", "tutor_turn_v10"} and "workspace_intent" not in parsed:
+    if tutor_schema_name in {"tutor_turn_v9", "tutor_turn_v10", "tutor_turn_v11"} and "workspace_intent" not in parsed:
         raise ValueError(f"OpenAI structured {tutor_schema_name} output is missing required workspace_intent.")
-    if tutor_schema_name == "tutor_turn_v10" and "workspace_visual_order" not in parsed:
-        raise ValueError("OpenAI structured tutor_turn_v10 output is missing required workspace_visual_order.")
+    if tutor_schema_name in {"tutor_turn_v10", "tutor_turn_v11"} and "workspace_visual_order" not in parsed:
+        raise ValueError(f"OpenAI structured {tutor_schema_name} output is missing required workspace_visual_order.")
+    if tutor_schema_name == "tutor_turn_v11" and "canvas_brief" not in parsed:
+        raise ValueError("OpenAI structured tutor_turn_v11 output is missing required canvas_brief.")
     workspace_intent = {"workspace_intent": parsed["workspace_intent"]} if "workspace_intent" in parsed else {}
     workspace_visual_order = {"workspace_visual_order": parsed["workspace_visual_order"]} if "workspace_visual_order" in parsed else {}
+    canvas_brief = {"canvas_brief": parsed["canvas_brief"]} if "canvas_brief" in parsed else {}
     if "candidate_metadata" not in parsed:
         return {
             "text": parsed["text"],
@@ -328,6 +331,7 @@ def _normalize_output(
             "candidate_metadata_error": "candidate_metadata_missing",
             **workspace_intent,
             **workspace_visual_order,
+            **canvas_brief,
             **_teaching_decision_output(parsed),
         }
     return {
@@ -336,6 +340,7 @@ def _normalize_output(
         "candidate_metadata": parsed["candidate_metadata"],
         **workspace_intent,
         **workspace_visual_order,
+        **canvas_brief,
         **_teaching_decision_output(parsed),
     }
 
@@ -351,6 +356,7 @@ def _tutor_response_schema_name(payload: dict[str, object]) -> str | None:
         "tutor_turn_v8",
         "tutor_turn_v9",
         "tutor_turn_v10",
+        "tutor_turn_v11",
     } else None
 
 
