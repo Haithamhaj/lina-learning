@@ -9,14 +9,14 @@ An explicit current Product Owner instruction authorizes its requested working s
 | REPO-TRUTH-01 | DONE | Reconciliation report records branch, document, capability, and contradiction evidence. |
 | REPO-TRUTH-02 | DONE | Canonical source-of-truth rewrite is complete. |
 | REPO-TRUTH-03 | DONE | Physical history/evidence/output cleanup and hygiene verification are complete. |
-| REPO-TRUTH-04 | BLOCKED — Product Owner approval | Fast-forward `main` only after the required stop-gate approval. |
-| REPO-TRUTH-05 | BLOCKED — Product Owner approval | Retire shadow branches and configure light protection after promotion. |
+| REPO-TRUTH-04 | DONE | `main` was fast-forwarded to the approved cleanup truth and parity verified. |
+| REPO-TRUTH-05 | DONE | Shadow remote branches were retired; `main` now prevents force pushes and branch deletion. |
 
 ## Next
 
 | Task | Status | Scope |
 | --- | --- | --- |
-| UI-REFINE-01 | PLANNED | Refine the Daily Student experience using `docs/domains/FRONTEND.md`. |
+| UI-REFINE-01 | NEXT | Refine the Daily Student experience using `docs/domains/FRONTEND.md`. |
 | DAILY-E2E-01 | PLANNED | Run an authenticated disposable-Student Daily journey across text, voice, sources, and Canvas. |
 | REAL-LINA-01 | PLANNED | Conduct bounded real-use observation and record decisions without treating it as automatic product expansion. |
 

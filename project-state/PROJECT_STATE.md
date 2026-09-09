@@ -2,15 +2,15 @@
 
 ## Current goal
 
-Complete REPO-TRUTH-01 through 03: reconcile documentation and repository hygiene on `repo/truth-reset-01`, then stop for Product Owner approval before promoting `main`.
+Begin `UI-REFINE-01`: refine the Daily Student experience using the canonical frontend direction while preserving current runtime contracts.
 
 ## Current reality
 
-The accepted source baseline is `7ce6bcba41a6df92ff7862718a5d340925546415`; remote `main` is the older ancestor `b213e66f5e2505879610c0056f4bc5e576a01edc`. The current root `main` worktree contains unrelated local changes and is protected by an isolated cleanup worktree.
+`main` is the canonical branch at the approved Repository Truth Reset baseline. The legacy shadow branches were retired; the intentionally preserved FE-02 prototype remains separate. The root `main` worktree still contains unrelated local changes and remains untouched.
 
 ## Active decisions
 
-`main` becomes the one canonical branch only after the stop gate. The FE-02 prototype remains preserved. Current truth is separated from history, review evidence, and research.
+`main` is the one canonical branch. The FE-02 prototype remains preserved. Current truth is separated from history, review evidence, and research.
 
 ## Protected areas
 
@@ -18,11 +18,11 @@ Safety/Parent Boundaries, ownership/privacy, Learning Intelligence semantics, ra
 
 ## Active risks
 
-Remote main protection is not yet inspected. Authenticated Daily acceptance and longitudinal real Lina calibration remain unproven product gates.
+Authenticated Daily acceptance and longitudinal real Lina calibration remain unproven product gates.
 
 ## Next recommended action
 
-Finish the bounded repository cleanup and request Product Owner approval for main promotion. After promotion, begin `UI-REFINE-01`.
+Start `UI-REFINE-01` with a bounded approved scope; then pursue authenticated Daily acceptance and real-use calibration.
 
 ## Critical references
 
