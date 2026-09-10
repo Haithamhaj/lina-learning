@@ -10,8 +10,10 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import sys
 from hashlib import sha256
 from pathlib import Path
+from typing import Callable
 from uuid import UUID, uuid4
 
 from pydantic import ValidationError
@@ -63,6 +65,88 @@ def _digest(value: object) -> str:
 
 def _record(case_id: str, *, passed: bool, status: str = "RUN", **metadata: object) -> dict[str, object]:
     return {"case_id": case_id, "status": status, "passed": passed, **metadata}
+
+
+class LiveEvidenceRecorder:
+    """Atomically preserve bounded live evidence after every completed case."""
+
+    def __init__(self, *, output: Path, model: str) -> None:
+        self.output = output
+        self.model = model
+        self.results: list[dict[str, object]] = []
+
+    def _write(
+        self,
+        *,
+        run_status: str,
+        all_required_passed: bool,
+        failure: dict[str, object] | None = None,
+    ) -> dict[str, object]:
+        evidence: dict[str, object] = {
+            "proof": "STUDIO-AGENTIC-01",
+            "schema_version": "studio-agentic-live-proof-v1",
+            "model": self.model,
+            "run_status": run_status,
+            "all_required_passed": all_required_passed,
+            "results": self.results,
+        }
+        if failure is not None:
+            evidence["failure"] = failure
+        self.output.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.output.with_suffix(f"{self.output.suffix}.tmp")
+        temporary.write_text(json.dumps(evidence, indent=2, sort_keys=True), encoding="utf-8")
+        temporary.replace(self.output)
+        return evidence
+
+    def start(self) -> None:
+        self.results = []
+        self._write(run_status="RUNNING", all_required_passed=False)
+
+    def sync(self, results: list[dict[str, object]]) -> None:
+        self.results = [dict(item) for item in results]
+        self._write(run_status="RUNNING", all_required_passed=False)
+
+    def record(self, result: dict[str, object]) -> None:
+        self.results.append(dict(result))
+        self._write(run_status="RUNNING", all_required_passed=False)
+
+    def fail(self, error: BaseException) -> dict[str, object]:
+        last_case_id = self.results[-1].get("case_id") if self.results else None
+        return self._write(
+            run_status="FAILED",
+            all_required_passed=False,
+            failure={
+                "exception_type": type(error).__name__,
+                "last_completed_case_id": last_case_id,
+            },
+        )
+
+    def finish(self, results: list[dict[str, object]]) -> dict[str, object]:
+        self.results = [dict(item) for item in results]
+        case_ids = {item.get("case_id") for item in self.results if item.get("passed") is True}
+        all_required_passed = case_ids == {f"LIVE-{index:02d}" for index in range(1, 13)}
+        return self._write(
+            run_status="COMPLETED",
+            all_required_passed=all_required_passed,
+        )
+
+
+def _append_result(
+    results: list[dict[str, object]],
+    result: dict[str, object],
+    on_progress: Callable[[list[dict[str, object]]], None] | None,
+) -> None:
+    results.append(result)
+    if on_progress is not None:
+        on_progress(results)
+
+
+def _sync_results(
+    results: list[dict[str, object]],
+    on_progress: Callable[[list[dict[str, object]]], None] | None,
+) -> None:
+    if on_progress is not None:
+        on_progress(results)
 
 
 def _tutor_brief(
@@ -309,7 +393,12 @@ def _durable_studio_evidence(settings: Settings, run_id: UUID) -> dict[str, obje
         engine.dispose()
 
 
-async def run_live(settings: Settings, *, durable_run_id: UUID | None = None) -> dict[str, object]:
+async def run_live(
+    settings: Settings,
+    *,
+    durable_run_id: UUID | None = None,
+    on_progress: Callable[[list[dict[str, object]]], None] | None = None,
+) -> dict[str, object]:
     results: list[dict[str, object]] = []
 
     math_brief, math_lineage = _tutor_brief(
@@ -318,16 +407,16 @@ async def run_live(settings: Settings, *, durable_run_id: UUID | None = None) ->
         subject="MATH",
         locale="en",
     )
-    results.append(_record("LIVE-01", passed=True, **math_lineage))
+    _append_result(results, _record("LIVE-01", passed=True, **math_lineage), on_progress)
     math_composition = await _compose(settings, math_brief)
     math_scene = math_composition.scene
     math_metadata = _scene_metadata(math_scene, math_brief)
-    results.append(_record("LIVE-02", passed=math_scene.subject_key == "MATH", **math_metadata))
-    results.append(_record(
+    _append_result(results, _record("LIVE-02", passed=math_scene.subject_key == "MATH", **math_metadata), on_progress)
+    _append_result(results, _record(
         "LIVE-03",
         passed=math_composition.tool_call_count >= 2 and len(math_composition.selected_tools) >= 2,
         **_agent_metadata(math_composition),
-    ))
+    ), on_progress)
 
     live_cases = (
         ("LIVE-04", "Open Canvas for this Physics question about motion: a cyclist travels 3.6 kilometres while a runner travels 2500 metres. Preserve both physical distance quantities and their units, convert them exactly, and show their comparison as a clear visual relationship.", "PHYSICS", "en", 0, {"convert_units"}),
@@ -348,16 +437,16 @@ async def run_live(settings: Settings, *, durable_run_id: UUID | None = None) ->
             )
             if case_id == "LIVE-06":
                 passed = passed and brief.direction == "rtl"
-            results.append(_record(
+            _append_result(results, _record(
                 case_id,
                 passed=passed,
                 element_count=element_count,
                 **lineage,
                 **_scene_metadata(scene, brief),
                 **_agent_metadata(composition),
-            ))
+            ), on_progress)
         except Exception as error:  # noqa: BLE001 - each live case must record and continue
-            results.append(_record(case_id, passed=False, status="FAILED", reason_code=type(error).__name__))
+            _append_result(results, _record(case_id, passed=False, status="FAILED", reason_code=type(error).__name__), on_progress)
 
     hosted_cases = (
         (
@@ -369,7 +458,7 @@ async def run_live(settings: Settings, *, durable_run_id: UUID | None = None) ->
         ),
         (
             "LIVE-08",
-            "Open Canvas for an exact bounded data investigation. Starting at 2, calculate the first 30 values of this recurrence: when a value is odd, the next is (3 times it plus 1) divided by 2; otherwise the next is half of it. Find the maximum and count the odd and even transitions, then create a typed visual summary without showing executable code.",
+            "Open Canvas for an exact bounded data investigation. Starting at 2, calculate the first 200 values of this recurrence: when a value is odd, the next is (3 times it plus 1) divided by 2; otherwise the next is half of it. Find the maximum, count the odd and even transitions, and compare the first and last 20 values as a typed visual summary without showing executable code.",
             "MATH",
             "en",
             "code_interpreter",
@@ -388,16 +477,16 @@ async def run_live(settings: Settings, *, durable_run_id: UUID | None = None) ->
                 and "image_generation_call" not in serialized
                 and "base64" not in serialized.lower()
             )
-            results.append(_record(
+            _append_result(results, _record(
                 case_id,
                 passed=passed,
                 generated_image_count=len(composition.generated_images),
                 **lineage,
                 **_scene_metadata(composition.scene, brief),
                 **_agent_metadata(composition),
-            ))
+            ), on_progress)
         except Exception as error:  # noqa: BLE001 - each live case must record and continue
-            results.append(_record(case_id, passed=False, status="FAILED", reason_code=type(error).__name__))
+            _append_result(results, _record(case_id, passed=False, status="FAILED", reason_code=type(error).__name__), on_progress)
 
     durable = None
     if durable_run_id is not None:
@@ -406,16 +495,15 @@ async def run_live(settings: Settings, *, durable_run_id: UUID | None = None) ->
         except RuntimeError:
             durable = None
     if durable is None:
-        results.extend((
-            _record("LIVE-09", passed=False, status="NOT_RUN", reason_code="DURABLE_STUDIO_INTERACTION_REQUIRED"),
-            _record("LIVE-10", passed=False, status="NOT_RUN", reason_code="DURABLE_ACTIVE_CANVAS_CHAT_REQUIRED"),
-            _record("LIVE-11", passed=False, status="NOT_RUN", reason_code="DURABLE_TUTOR_UPDATE_AND_STALE_FENCE_REQUIRED"),
-        ))
+        _append_result(results, _record("LIVE-09", passed=False, status="NOT_RUN", reason_code="DURABLE_STUDIO_INTERACTION_REQUIRED"), on_progress)
+        _append_result(results, _record("LIVE-10", passed=False, status="NOT_RUN", reason_code="DURABLE_ACTIVE_CANVAS_CHAT_REQUIRED"), on_progress)
+        _append_result(results, _record("LIVE-11", passed=False, status="NOT_RUN", reason_code="DURABLE_TUTOR_UPDATE_AND_STALE_FENCE_REQUIRED"), on_progress)
     else:
         trace_passed = durable["tool_call_count"] >= 2 and len(durable["selected_tools"]) >= 2
         results[2] = _record("LIVE-03", passed=trace_passed, **{
             key: durable[key] for key in ("run_id", "scene_id", "proposal_digest", "sdk_trace_id", "selected_tools", "tool_call_count", "usage", "tool_calls")
         })
+        _sync_results(results, on_progress)
         interaction_passed = (
             durable["interaction_status"] == "COMPLETED"
             and durable["action_key"] is not None
@@ -424,18 +512,18 @@ async def run_live(settings: Settings, *, durable_run_id: UUID | None = None) ->
             and durable["tutor_execution_id"] is not None
             and durable["observation_execution_id"] == durable["tutor_execution_id"]
         )
-        results.append(_record("LIVE-09", passed=interaction_passed, **{
+        _append_result(results, _record("LIVE-09", passed=interaction_passed, **{
             key: durable[key] for key in ("run_id", "scene_id", "interaction_id", "action_key", "interaction_status", "observation_status", "tutor_message_id", "tutor_execution_id")
-        }))
-        results.append(_record("LIVE-10", passed=interaction_passed and durable["scene_status"] == "ACTIVE", run_id=durable["run_id"], scene_id=durable["scene_id"], active_canvas=durable["scene_status"] == "ACTIVE", chat_execution_id=durable["tutor_execution_id"]))
+        }), on_progress)
+        _append_result(results, _record("LIVE-10", passed=interaction_passed and durable["scene_status"] == "ACTIVE", run_id=durable["run_id"], scene_id=durable["scene_id"], active_canvas=durable["scene_status"] == "ACTIVE", chat_execution_id=durable["tutor_execution_id"]), on_progress)
         update_passed = (
             durable["update_run_id"] is not None
             and durable["successor_run_id"] is not None
             and durable["superseded_run_id"] == durable["update_run_id"]
         )
-        results.append(_record("LIVE-11", passed=update_passed, run_id=durable["run_id"], update_run_id=durable["update_run_id"], successor_run_id=durable["successor_run_id"], superseded_run_id=durable["superseded_run_id"], update_requested=durable["update_run_id"] is not None, stale_fence_observed=durable["superseded_run_id"] == durable["update_run_id"]))
+        _append_result(results, _record("LIVE-11", passed=update_passed, run_id=durable["run_id"], update_run_id=durable["update_run_id"], successor_run_id=durable["successor_run_id"], superseded_run_id=durable["superseded_run_id"], update_requested=durable["update_run_id"] is not None, stale_fence_observed=durable["superseded_run_id"] == durable["update_run_id"]), on_progress)
     replayed = AgenticCanvasSceneV1.model_validate(json.loads(json.dumps(math_scene.model_dump(mode="json"))))
-    results.append(_record("LIVE-12", passed=replayed == math_scene, scene_contract=replayed.version, scene_digest=_digest(replayed.model_dump(mode="json"))))
+    _append_result(results, _record("LIVE-12", passed=replayed == math_scene, scene_contract=replayed.version, scene_digest=_digest(replayed.model_dump(mode="json"))), on_progress)
     return {
         "proof": "STUDIO-AGENTIC-01",
         "schema_version": "studio-agentic-live-proof-v1",
@@ -457,15 +545,40 @@ def main() -> None:
     settings = Settings(_env_file=args.env_file) if args.env_file is not None else Settings()
     if settings.model_api_key is None or settings.model_name == "mock":
         raise SystemExit("Configured MODEL_API_KEY and a real MODEL_NAME are required.")
-    evidence = asyncio.run(run_live(settings, durable_run_id=args.studio_run_id))
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(evidence, indent=2, sort_keys=True), encoding="utf-8")
+    recorder = LiveEvidenceRecorder(output=args.output, model=settings.model_name)
+    recorder.start()
+    try:
+        run_result = asyncio.run(
+            run_live(
+                settings,
+                durable_run_id=args.studio_run_id,
+                on_progress=recorder.sync,
+            )
+        )
+    except BaseException as error:
+        recorder.fail(error)
+        print(
+            json.dumps(
+                {
+                    "proof": "STUDIO-AGENTIC-01",
+                    "status": "FAILED",
+                    "exception_type": type(error).__name__,
+                    "evidence_path": str(args.output),
+                },
+                separators=(",", ":"),
+            ),
+            file=sys.stderr,
+        )
+        raise
+    evidence = recorder.finish(run_result["results"])
     print(json.dumps({
         "proof": evidence["proof"],
         "all_required_passed": evidence["all_required_passed"],
         "results": [{"case_id": item["case_id"], "status": item["status"], "passed": item["passed"]} for item in evidence["results"]],
         "evidence_path": str(args.output),
     }, separators=(",", ":")))
+    if not evidence["all_required_passed"]:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
