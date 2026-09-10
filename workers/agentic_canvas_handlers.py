@@ -70,10 +70,11 @@ def register_agentic_canvas_handlers(
                 return {"run_id": str(run.id), "run_status": run.status}
             message = session.get(LearningMessage, execution.message_id)
             audit = message.payload.get("agentic_canvas") if message is not None and isinstance(message.payload, dict) else None
+            post_brief = _matching_audited_brief(audit, run)
             active = session.execute(select(StudioScene).where(StudioScene.studio_runtime_id == run.studio_runtime_id, StudioScene.status == "ACTIVE").with_for_update()).scalar_one_or_none()
             newest = session.scalars(select(LearningMessage).where(LearningMessage.session_id == run.learning_session_id, LearningMessage.role == "tutor").order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())).first()
             if (run.status != "RUNNING" or (run.deadline_at is not None and run.deadline_at <= datetime.now(UTC))
-                    or not isinstance(audit, dict) or audit.get("status") != "ADMITTED" or audit.get("brief_digest") != run.order_digest
+                    or post_brief is None
                     or (active is None and (run.base_scene_id is not None or run.base_scene_version != 0))
                     or (active is not None and (active.id != run.base_scene_id or active.scene_version != run.base_scene_version))
                     or newest is None or newest.id != execution.message_id):
@@ -125,15 +126,9 @@ def _preflight(factory: sessionmaker[Session], job: Job) -> _AgenticExecutionEnv
             raise NonRetryableJobError("CANVAS_BRIEF_LINEAGE_INVALID")
         message = session.get(LearningMessage, run.source_message_id)
         audit = message.payload.get("agentic_canvas") if message is not None and isinstance(message.payload, dict) else None
-        try:
-            brief = parse_canvas_brief(audit.get("brief") if isinstance(audit, dict) else None)
-        except Exception:
-            brief = None
+        brief = _matching_audited_brief(audit, run)
         if (message is None or message.role != "tutor" or message.session_id != run.learning_session_id
-                or not isinstance(audit, dict) or audit.get("status") != "ADMITTED"
-                or brief is None or brief.subject_key != run.subject_key
-                or audit.get("brief_digest") != run.order_digest
-                or _canonical_digest(brief.model_dump(mode="json")) != run.order_digest):
+                or brief is None):
             _fail_in_session(run, "CANVAS_BRIEF_LINEAGE_INVALID")
             raise NonRetryableJobError("CANVAS_BRIEF_LINEAGE_INVALID")
         newest = session.scalars(select(LearningMessage).where(LearningMessage.session_id == run.learning_session_id, LearningMessage.role == "tutor").order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())).first()
@@ -149,16 +144,53 @@ def _fail_in_session(run: StudioCanvasSpecialistRun, code: str) -> None:
     run.status, run.failure_metadata, run.completed_at = "FAILED", {"code": code}, datetime.now(UTC)
 
 
+def _matching_audited_brief(audit: object, run: StudioCanvasSpecialistRun):
+    """Return only the exact canonical Tutor brief admitted for this Run."""
+    if not isinstance(audit, dict) or audit.get("status") != "ADMITTED":
+        return None
+    try:
+        brief = parse_canvas_brief(audit.get("brief"))
+    except Exception:
+        return None
+    if (
+        brief is None
+        or brief.subject_key != run.subject_key
+        or audit.get("brief_digest") != run.order_digest
+        or _canonical_digest(brief.model_dump(mode="json")) != run.order_digest
+    ):
+        return None
+    return brief
+
+
+def _runtime_then_run_locked(session: Session, run_id):
+    """Read the Runtime id unlocked, then acquire the shared Runtime -> Run fence."""
+    unguarded_run = session.get(StudioCanvasSpecialistRun, run_id)
+    if unguarded_run is None:
+        return None
+    runtime = session.execute(
+        select(StudioRuntime)
+        .where(StudioRuntime.id == unguarded_run.studio_runtime_id)
+        .with_for_update()
+    ).scalar_one_or_none()
+    if runtime is None:
+        return None
+    return session.execute(
+        select(StudioCanvasSpecialistRun)
+        .where(StudioCanvasSpecialistRun.id == run_id)
+        .with_for_update()
+    ).scalar_one_or_none()
+
+
 def _record_retryable_failure(factory: sessionmaker[Session], run_id, metadata: dict[str, object]) -> None:
     with factory.begin() as session:
-        run = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.id == run_id).with_for_update()).scalar_one_or_none()
+        run = _runtime_then_run_locked(session, run_id)
         if run is not None and run.status not in {"COMPLETED", "FAILED", "CANCELLED", "SUPERSEDED", "REJECTED"}:
             run.status, run.failure_metadata, run.completed_at = "PENDING", metadata, None
 
 
 def _fail(factory: sessionmaker[Session], run_id, code: str, *, metadata: dict[str, object] | None = None) -> None:
     with factory.begin() as session:
-        run = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.id == run_id).with_for_update()).scalar_one_or_none()
+        run = _runtime_then_run_locked(session, run_id)
         if run is not None and run.status not in {"COMPLETED", "FAILED", "CANCELLED", "SUPERSEDED", "REJECTED"}:
             run.status, run.failure_metadata, run.completed_at = "FAILED", metadata or {"code": code}, datetime.now(UTC)
 

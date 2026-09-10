@@ -327,3 +327,113 @@ def test_deadline_is_terminal_without_calling_agent(factory: sessionmaker[Sessio
         assert calls == 0
         assert run is not None and run.status == "FAILED" and run.failure_metadata == {"code": "DEADLINE_EXCEEDED"}
         assert job is not None and job.status == "FAILED"
+
+
+def test_reconciler_defers_completed_agentic_scene_without_legacy_rejection(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, learning, message = _admitted_message(session)
+        runtime = session.scalar(
+            select(m.StudioRuntime).where(m.StudioRuntime.learning_session_id == learning.id)
+        )
+        assert runtime is not None
+        session.add(
+            m.StudioSnapshot(
+                studio_runtime_id=runtime.id,
+                student_id=student.id,
+                snapshot_schema_version="studio-snapshot-v1",
+                latest_event_sequence=0,
+                state_payload={},
+            )
+        )
+        run = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=message.id
+        )
+        assert run is not None
+        run_id = run.id
+
+    async def compose(**kwargs):
+        return _scene()
+
+    registry = _registry(factory, compose)
+    assert run_once(factory, registry, worker_id="agentic-reconcile-success") == m.JobStatus.COMPLETED
+    # A second poll invokes the shared reconciler before it looks for work.
+    assert run_once(factory, registry, worker_id="agentic-reconcile-second-poll") is None
+
+    with factory() as session:
+        completed = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert completed is not None
+        assert completed.status == "COMPLETED"
+        assert completed.proposal_payload == _scene().model_dump(mode="json")
+        assert completed.failure_metadata == {"code": "AGENTIC_SCENE_SETTLEMENT_DEFERRED"}
+
+
+def test_post_provider_brief_mutation_is_rejected_before_scene_commit(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, learning, message = _admitted_message(session)
+        run = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=message.id
+        )
+        assert run is not None
+        run_id = run.id
+
+    async def compose(**kwargs):
+        # Simulate a compromised/mutable persistence path after preflight. The
+        # stale declared digest must not be trusted at settlement.
+        with factory.begin() as session:
+            current = session.get(m.LearningMessage, message.id)
+            assert current is not None
+            payload = dict(current.payload)
+            audit = dict(payload["agentic_canvas"])
+            altered = dict(audit["brief"])
+            altered["objective"] = "A changed objective must not receive this Agent result."
+            audit["brief"] = altered
+            payload["agentic_canvas"] = audit
+            current.payload = payload
+        return _scene()
+
+    assert run_once(factory, _registry(factory, compose), worker_id="agentic-late-mutation") == m.JobStatus.COMPLETED
+    with factory() as session:
+        rejected = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert rejected is not None
+        assert rejected.status == "REJECTED"
+        assert rejected.failure_metadata == {"code": "STALE_AGENTIC_CANVAS_RESULT"}
+        assert rejected.proposal_payload is None and rejected.proposal_digest is None
+
+
+def test_retry_recovery_preserves_supersession_that_happens_during_provider_failure(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, learning, message = _admitted_message(session)
+        run = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=message.id
+        )
+        assert run is not None
+        run_id = run.id
+
+    async def compose(**kwargs):
+        # A newer admission acquires Runtime -> Run before the retry helper.
+        # The helper must see and preserve the terminal supersession state.
+        with factory.begin() as session:
+            _, _, successor_message = _admitted_message(
+                session, student=student, learning=learning, objective="A newer Agentic brief."
+            )
+            successor = admit_agentic_canvas_brief(
+                session,
+                student_id=student.id,
+                learning_session_id=learning.id,
+                source_message_id=successor_message.id,
+            )
+            assert successor is not None
+        raise TimeoutError("provider timed out after supersession")
+
+    assert run_once(factory, _registry(factory, compose), worker_id="agentic-retry-superseded") == m.JobStatus.PENDING
+    with factory() as session:
+        superseded = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert superseded is not None
+        assert superseded.status == "SUPERSEDED"
+        assert superseded.proposal_payload is None
