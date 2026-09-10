@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import pytest
 from PIL import Image
+from sqlalchemy.orm import Session
 
 from services.platform.db import models as m
 from services.platform.storage import LocalObjectStorage, StorageIntegrityError
@@ -166,6 +167,65 @@ def test_database_failure_deletes_adopted_bytes(tmp_path: Path) -> None:
 
     owned_root = tmp_path / "objects" / "studio-generated-assets"
     assert not owned_root.exists() or not any(path.is_file() for path in owned_root.glob("**/*"))
+
+
+def test_outer_transaction_rollback_deletes_flushed_asset_bytes(tmp_path: Path) -> None:
+    """A later transaction rollback must compensate after adoption already returned."""
+
+    service = _service()
+    storage = LocalObjectStorage(tmp_path / "objects", signing_secret="fixture")
+    run = _run()
+
+    class _NoDatabaseSession(Session):
+        def flush(self, objects: object | None = None) -> None:
+            # Keep Session transaction events real while avoiding a database in
+            # this focused object-lifecycle contract.
+            for value in list(self.new):
+                self.expunge(value)
+
+    database = _NoDatabaseSession()
+    resolution = service.adopt_generated_image(
+        database,
+        storage=storage,
+        run=run,
+        temporary_handle="hosted-image-rollback",
+        content=_png(),
+        content_type="image/png",
+    )
+    storage.head(resolution.asset.storage_key)
+
+    database.rollback()
+
+    owned_root = tmp_path / "objects" / "studio-generated-assets"
+    assert not owned_root.exists() or not any(path.is_file() for path in owned_root.glob("**/*"))
+
+
+def test_successful_outer_commit_cancels_asset_compensation(tmp_path: Path) -> None:
+    """A later Session close/rollback must not delete bytes whose row committed."""
+
+    service = _service()
+    storage = LocalObjectStorage(tmp_path / "objects", signing_secret="fixture")
+    run = _run()
+
+    class _NoDatabaseSession(Session):
+        def flush(self, objects: object | None = None) -> None:
+            for value in list(self.new):
+                self.expunge(value)
+
+    database = _NoDatabaseSession()
+    resolution = service.adopt_generated_image(
+        database,
+        storage=storage,
+        run=run,
+        temporary_handle="hosted-image-commit",
+        content=_png(),
+        content_type="image/png",
+    )
+
+    database.commit()
+    database.close()
+
+    assert storage.get(resolution.asset.storage_key).content == _png()
 
 
 def test_private_read_rechecks_immutable_storage_metadata(tmp_path: Path) -> None:

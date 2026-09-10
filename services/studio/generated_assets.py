@@ -11,11 +11,16 @@ from io import BytesIO
 from uuid import UUID, uuid4
 
 from PIL import Image, UnidentifiedImageError
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import event, select
+from sqlalchemy.orm import Session, SessionTransaction
 
 from services.platform.db.models import StudioCanvasSpecialistRun, StudioGeneratedAsset
-from services.platform.storage import ObjectStorage, StorageIntegrityError, StoredObject
+from services.platform.storage import (
+    ObjectStorage,
+    StorageError,
+    StorageIntegrityError,
+    StoredObject,
+)
 from services.studio.agentic_canvas import AgenticCanvasSceneV1
 
 DEFAULT_MAX_GENERATED_IMAGE_BYTES = 20 * 1024 * 1024
@@ -26,6 +31,10 @@ _IMAGE_MIME_BY_FORMAT = {
     "WEBP": "image/webp",
 }
 _TEMPORARY_HANDLE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,127}$")
+_PENDING_COMPENSATIONS = "studio_generated_asset_pending_compensations"
+_COMPENSATION_LISTENERS = "studio_generated_asset_compensation_listeners"
+_OUTER_COMMIT_ATTEMPT = "studio_generated_asset_outer_commit_attempt"
+_OUTER_COMMIT_SUCCEEDED = "studio_generated_asset_outer_commit_succeeded"
 
 
 class GeneratedAssetValidationError(ValueError):
@@ -50,6 +59,62 @@ class GeneratedImageResolution:
     @property
     def asset_id(self) -> UUID:
         return self.asset.id
+
+
+def _delete_pending_objects(session: Session) -> None:
+    pending = session.info.pop(_PENDING_COMPENSATIONS, {})
+    first_error: StorageError | None = None
+    for storage, storage_key in pending.values():
+        try:
+            storage.delete(storage_key)
+        except StorageError as exc:  # cleanup must attempt every registered object
+            first_error = first_error or exc
+    if first_error is not None:
+        raise first_error
+
+
+def _before_session_commit(session: Session) -> None:
+    # A savepoint commit is not durable ownership. Only mark an attempt when
+    # Session.commit() is preparing the outer transaction.
+    if not session.in_nested_transaction():
+        session.info[_OUTER_COMMIT_ATTEMPT] = True
+        session.info[_OUTER_COMMIT_SUCCEEDED] = False
+
+
+def _after_session_commit(session: Session) -> None:
+    if session.info.get(_OUTER_COMMIT_ATTEMPT):
+        session.info[_OUTER_COMMIT_SUCCEEDED] = True
+
+
+def _after_session_transaction_end(
+    session: Session,
+    transaction: SessionTransaction,
+) -> None:
+    if transaction.parent is not None:
+        return
+    try:
+        if session.info.pop(_OUTER_COMMIT_SUCCEEDED, False):
+            session.info.pop(_PENDING_COMPENSATIONS, None)
+        else:
+            _delete_pending_objects(session)
+    finally:
+        session.info.pop(_OUTER_COMMIT_ATTEMPT, None)
+
+
+def _register_transaction_compensation(
+    session: Session,
+    *,
+    storage: ObjectStorage,
+    storage_key: str,
+) -> None:
+    pending = session.info.setdefault(_PENDING_COMPENSATIONS, {})
+    pending[storage_key] = (storage, storage_key)
+    if session.info.get(_COMPENSATION_LISTENERS):
+        return
+    event.listen(session, "before_commit", _before_session_commit)
+    event.listen(session, "after_commit", _after_session_commit)
+    event.listen(session, "after_transaction_end", _after_session_transaction_end)
+    session.info[_COMPENSATION_LISTENERS] = True
 
 
 def validate_generated_image_output(
@@ -148,6 +213,12 @@ def adopt_generated_image(
         )
         session.add(asset)
         session.flush([asset])
+        if isinstance(session, Session):
+            _register_transaction_compensation(
+                session,
+                storage=storage,
+                storage_key=storage_key,
+            )
         return GeneratedImageResolution(temporary_handle=temporary_handle, asset=asset)
     except Exception:
         storage.delete(storage_key)

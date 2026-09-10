@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from apps.api.routes.studio import get_studio_object_storage
@@ -123,6 +124,32 @@ def test_generated_asset_is_visible_only_inside_exact_student_runtime(
             runtime_id=uuid4(),
             asset_id=asset.id,
         ) is None
+
+
+def test_database_rejects_non_hex_generated_asset_checksum(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """A direct internal write cannot persist a fake 64-character SHA-256."""
+
+    with postgres_session_factory() as session:
+        owner = _student(session, "generated-invalid-checksum")
+        runtime, run = _run(session, student=owner)
+        session.add(
+            m.StudioGeneratedAsset(
+                student_id=owner.id,
+                learning_session_id=runtime.learning_session_id,
+                studio_runtime_id=runtime.id,
+                source_run_id=run.id,
+                kind="IMAGE",
+                content_type="image/png",
+                size_bytes=1,
+                checksum_sha256="z" * 64,
+                storage_key=f"studio-generated-assets/{owner.id}/{uuid4()}/image",
+            )
+        )
+        with pytest.raises(IntegrityError):
+            session.flush()
+        session.rollback()
 
 
 def test_authenticated_private_read_never_exposes_provider_location(

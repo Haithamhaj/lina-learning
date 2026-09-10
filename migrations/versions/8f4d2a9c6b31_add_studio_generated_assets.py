@@ -35,7 +35,10 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.CheckConstraint("kind = 'IMAGE'", name="ck_studio_generated_assets_kind"),
         sa.CheckConstraint("size_bytes > 0", name="ck_studio_generated_assets_size_positive"),
-        sa.CheckConstraint("length(checksum_sha256) = 64", name="ck_studio_generated_assets_checksum_length"),
+        sa.CheckConstraint(
+            "checksum_sha256 ~ '^[0-9a-f]{64}$'",
+            name="ck_studio_generated_assets_checksum_sha256",
+        ),
         sa.ForeignKeyConstraint(
             ["studio_runtime_id", "student_id", "learning_session_id"],
             ["studio_runtimes.id", "studio_runtimes.student_id", "studio_runtimes.learning_session_id"],

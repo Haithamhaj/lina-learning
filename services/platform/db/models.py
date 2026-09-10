@@ -1786,7 +1786,10 @@ class StudioGeneratedAsset(Base):
         ),
         CheckConstraint("kind = 'IMAGE'", name="ck_studio_generated_assets_kind"),
         CheckConstraint("size_bytes > 0", name="ck_studio_generated_assets_size_positive"),
-        CheckConstraint("length(checksum_sha256) = 64", name="ck_studio_generated_assets_checksum_length"),
+        CheckConstraint(
+            "checksum_sha256 ~ '^[0-9a-f]{64}$'",
+            name="ck_studio_generated_assets_checksum_sha256",
+        ),
         UniqueConstraint("storage_key", name="uq_studio_generated_assets_storage_key"),
         Index(
             "ix_studio_generated_assets_student_runtime_created",
