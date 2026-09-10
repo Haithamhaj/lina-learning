@@ -26,6 +26,7 @@ from workers.content_handlers import register_content_handlers
 from workers.intelligence_handlers import register_intelligence_handlers
 from workers.personal_facts_handlers import register_personal_facts_handlers
 from workers.studio_handlers import reconcile_canvas_specialist_runs, register_canvas_specialist_handlers
+from workers.agentic_canvas_handlers import register_agentic_canvas_handlers
 
 JobHandler: TypeAlias = Callable[[Job], Mapping[str, object] | None]
 _logger = logging.getLogger(__name__)
@@ -167,6 +168,7 @@ def main() -> None:
         gateway_factory=create_personal_facts_gateway,
     )
     register_canvas_specialist_handlers(registry, session_factory=session_factory)
+    register_agentic_canvas_handlers(registry, session_factory=session_factory)
     worker_id = f"{socket.gethostname()}-{os.getpid()}-{uuid4().hex[:8]}"
     _logger.info("Starting jobs worker %s", worker_id)
     run_forever(session_factory, registry, worker_id=worker_id)

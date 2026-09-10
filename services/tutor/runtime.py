@@ -1429,6 +1429,14 @@ class TutorRuntime:
                 learning_session_id=learning_session.id,
                 source_message_id=message.id,
             )
+        if (
+            isinstance(canvas_audit, dict)
+            and canvas_audit.get("status") == "ADMITTED"
+            and callable(getattr(self._session, "execute", None))
+            and self._session.scalar(select(StudioRuntime.id).where(StudioRuntime.student_id == learning_session.student_id, StudioRuntime.learning_session_id == learning_session.id)) is not None
+        ):
+            from services.studio.agent.admission import admit_agentic_canvas_brief
+            admit_agentic_canvas_brief(self._session, student_id=learning_session.student_id, learning_session_id=learning_session.id, source_message_id=message.id)
         return TutorTurn(
             text,
             suggested_actions,
