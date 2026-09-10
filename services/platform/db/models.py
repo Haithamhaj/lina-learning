@@ -1717,6 +1717,13 @@ class StudioCanvasSpecialistRun(Base):
         Index("ix_studio_specialist_runs_runtime_status", "studio_runtime_id", "status", "created_at"),
         Index("ix_studio_specialist_runs_runtime_source_message", "studio_runtime_id", "source_message_id"),
         Index("uq_studio_specialist_runs_execution_identity", "source_message_id", "order_digest", "capability_profile_version", unique=True, postgresql_where=text("order_digest IS NOT NULL")),
+        UniqueConstraint(
+            "id",
+            "studio_runtime_id",
+            "student_id",
+            "learning_session_id",
+            name="uq_studio_specialist_runs_id_runtime_student_session",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -1749,3 +1756,56 @@ class StudioCanvasSpecialistRun(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class StudioGeneratedAsset(Base):
+    """Immutable derived bytes owned by one Student, Runtime, and Agentic run."""
+
+    __tablename__ = "studio_generated_assets"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["studio_runtime_id", "student_id", "learning_session_id"],
+            [
+                "studio_runtimes.id",
+                "studio_runtimes.student_id",
+                "studio_runtimes.learning_session_id",
+            ],
+            ondelete="CASCADE",
+            name="fk_studio_generated_assets_runtime_student_session",
+        ),
+        ForeignKeyConstraint(
+            ["source_run_id", "studio_runtime_id", "student_id", "learning_session_id"],
+            [
+                "studio_canvas_specialist_runs.id",
+                "studio_canvas_specialist_runs.studio_runtime_id",
+                "studio_canvas_specialist_runs.student_id",
+                "studio_canvas_specialist_runs.learning_session_id",
+            ],
+            ondelete="CASCADE",
+            name="fk_studio_generated_assets_run_runtime_student_session",
+        ),
+        CheckConstraint("kind = 'IMAGE'", name="ck_studio_generated_assets_kind"),
+        CheckConstraint("size_bytes > 0", name="ck_studio_generated_assets_size_positive"),
+        CheckConstraint("length(checksum_sha256) = 64", name="ck_studio_generated_assets_checksum_length"),
+        UniqueConstraint("storage_key", name="uq_studio_generated_assets_storage_key"),
+        Index(
+            "ix_studio_generated_assets_student_runtime_created",
+            "student_id",
+            "studio_runtime_id",
+            "created_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    learning_session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    studio_runtime_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    source_run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, default="IMAGE", server_default="IMAGE")
+    content_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    storage_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )

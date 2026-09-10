@@ -8,20 +8,24 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.platform.auth import AuthenticatedPrincipal, UserRole, require_role
-from services.platform.db.session import get_session
 from services.platform.db.models import StudioCanvasSpecialistRun
-from services.platform.student_identity import resolve_student_for_authenticated_identity
+from services.platform.db.session import get_session
+from services.platform.storage import ObjectStorage, StorageError, create_object_storage
+from services.platform.student_identity import (
+    resolve_student_for_authenticated_identity,
+)
 from services.studio.feed import StudioEventFeed
+from services.studio.generated_assets import owned_generated_asset, read_generated_asset
 from services.studio.protocol import (
     StudioCursorConflict,
-    StudioOperationRequest,
     StudioOperationConflict,
+    StudioOperationRequest,
     StudioProtocolError,
     StudioProtocolService,
     StudioResourceNotFound,
@@ -30,7 +34,6 @@ from services.studio.protocol import (
 )
 from services.studio.subjects import production_subject_registry
 from services.studio.subjects.registry import SubjectCapabilityRegistry
-
 
 router = APIRouter(prefix="/api/v1/student/studio", tags=["student-studio"])
 
@@ -75,6 +78,12 @@ def get_studio_subject_registry() -> SubjectCapabilityRegistry:
     """Production registry injection seam; fixture activities remain test-only."""
 
     return production_subject_registry()
+
+
+def get_studio_object_storage() -> ObjectStorage:
+    """Production storage injection seam for authenticated generated-asset reads."""
+
+    return create_object_storage()
 
 
 @router.post("/session/{learning_session_id}/open", response_model=StudioRuntimeOpenResponse)
@@ -145,6 +154,43 @@ def get_studio_composition_status(
         .order_by(StudioCanvasSpecialistRun.created_at.desc(), StudioCanvasSpecialistRun.id.desc())
     )
     return StudioCompositionStatusResponse(status="IDLE" if run is None else run.status)
+
+
+@router.get("/{runtime_id}/assets/{asset_id}")
+def get_studio_generated_asset(
+    runtime_id: UUID,
+    asset_id: UUID,
+    principal: AuthenticatedPrincipal = Depends(require_role(UserRole.STUDENT)),
+    storage: ObjectStorage = Depends(get_studio_object_storage),
+    session: Session = Depends(get_session),
+) -> Response:
+    """Return private derived bytes only to the owning authenticated Student."""
+
+    student_id = _student_id(session, principal)
+    asset = owned_generated_asset(
+        session,
+        student_id=student_id,
+        runtime_id=runtime_id,
+        asset_id=asset_id,
+    )
+    if asset is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Studio resource not found.")
+    try:
+        stored = read_generated_asset(storage=storage, asset=asset)
+    except StorageError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Studio asset is temporarily unavailable.",
+        ) from None
+    return Response(
+        content=stored.content,
+        media_type=asset.content_type,
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Disposition": "inline",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.post("/{runtime_id}/operations", response_model=StudioOperationResponse)
