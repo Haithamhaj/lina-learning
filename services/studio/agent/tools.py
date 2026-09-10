@@ -9,15 +9,16 @@ from __future__ import annotations
 import re
 from decimal import Decimal
 from functools import lru_cache
+from fractions import Fraction
+from typing import Literal
 
 from pint import UnitRegistry
 from pydantic import BaseModel, ConfigDict, Field
-from sympy import sympify
+from sympy import Rational
 
 from services.studio.agentic_canvas import AgenticCanvasBlockV1, AgenticCanvasElementV1
 
 
-_SAFE_EXPRESSION = re.compile(r"^[0-9+*/().\s-]+$")
 _TOOL_NAMES = (
     "compute_math",
     "convert_units",
@@ -34,6 +35,8 @@ class ComputationResult(BaseModel):
 
     exact_result: str = Field(min_length=1, max_length=240)
     explanation: str = Field(min_length=1, max_length=300)
+    left_exact: str | None = Field(..., max_length=120)
+    right_exact: str | None = Field(..., max_length=120)
 
 
 class UnitConversionResult(BaseModel):
@@ -48,16 +51,26 @@ def tool_names() -> tuple[str, ...]:
     return _TOOL_NAMES
 
 
-def compute_math(*, expression: str, purpose: str) -> ComputationResult:
-    """Evaluate a bounded arithmetic expression exactly for a stated learning purpose."""
-    if not _SAFE_EXPRESSION.fullmatch(expression) or len(expression) > 160:
-        raise ValueError("expression must contain only bounded arithmetic notation")
+def _exact_rational(value: str) -> Rational:
+    if len(value) > 80 or not re.fullmatch(r"[+-]?(?:\d+(?:\.\d+)?|\d+/\d+)", value.strip()):
+        raise ValueError("value must be a bounded decimal, integer, or fraction")
+    fraction = Fraction(value)
+    return Rational(fraction.numerator, fraction.denominator)
+
+
+def compute_math(*, left: str, right: str, operation: Literal["ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "COMPARE"], purpose: str) -> ComputationResult:
+    """Perform one typed exact rational operation for a stated learning purpose."""
     if not purpose.strip():
         raise ValueError("purpose is required")
-    value = sympify(expression, evaluate=True)
-    if getattr(value, "free_symbols", set()):
-        raise ValueError("expression must be numeric")
-    return ComputationResult(exact_result=str(value), explanation=purpose)
+    left_value, right_value = _exact_rational(left), _exact_rational(right)
+    if operation == "ADD": result = left_value + right_value
+    elif operation == "SUBTRACT": result = left_value - right_value
+    elif operation == "MULTIPLY": result = left_value * right_value
+    elif operation == "DIVIDE":
+        if right_value == 0: raise ValueError("division by zero is not allowed")
+        result = left_value / right_value
+    else: result = ">" if left_value > right_value else "<" if left_value < right_value else "="
+    return ComputationResult(exact_result=str(result), explanation=purpose, left_exact=str(left_value), right_exact=str(right_value))
 
 
 @lru_cache(maxsize=1)

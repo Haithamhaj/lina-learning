@@ -47,6 +47,7 @@ class WorkspaceCapabilityContext:
     custom_compose_potentially_eligible: bool
     eligible_custom_composition_patterns: tuple[str, ...]
     authored_problem_sources: tuple[dict, ...] = ()
+    include_legacy_catalog: bool = True
 
     def as_model_payload(self) -> dict[str, object]:
         return {
@@ -58,13 +59,12 @@ class WorkspaceCapabilityContext:
             "allowed_action_keys": list(self.allowed_action_keys),
             "authorized_source_references": list(self.authorized_source_references),
             "known_workspace_capabilities_available": self.known_workspace_capabilities_available,
-            "custom_compose_potentially_eligible": self.custom_compose_potentially_eligible,
-            "eligible_custom_composition_patterns": list(self.eligible_custom_composition_patterns),
-            "custom_composition_constraints": {
-                pattern: CUSTOM_COMPOSITION_CONSTRAINTS[pattern]
-                for pattern in self.eligible_custom_composition_patterns
-            },
-            "authored_problem_sources": list(self.authored_problem_sources),
+            **({
+                "custom_compose_potentially_eligible": self.custom_compose_potentially_eligible,
+                "eligible_custom_composition_patterns": list(self.eligible_custom_composition_patterns),
+                "custom_composition_constraints": {pattern: CUSTOM_COMPOSITION_CONSTRAINTS[pattern] for pattern in self.eligible_custom_composition_patterns},
+                "authored_problem_sources": list(self.authored_problem_sources),
+            } if self.include_legacy_catalog else {}),
         }
 
 
@@ -73,11 +73,12 @@ def build_workspace_capability_context(
     *,
     authorized_source_references: tuple[str, ...],
     current_subject_key: str | None = None,
+    include_legacy_catalog: bool = True,
 ) -> WorkspaceCapabilityContext:
     """Represent only currently usable, exact capabilities; absent means unavailable."""
 
     if studio_context is None:
-        return WorkspaceCapabilityContext(None, None, None, "NO_STUDIO_RUNTIME", (), authorized_source_references, False, False, ())
+        return WorkspaceCapabilityContext(None, None, None, "NO_STUDIO_RUNTIME", (), authorized_source_references, False, False, (), (), include_legacy_catalog)
     scene = studio_context.current_scene_capability
     # Studio owns capability identity. Broad Subject is only a fallback when the
     # Workspace has not established one of its four primary subject keys.
@@ -88,21 +89,21 @@ def build_workspace_capability_context(
     if subject_key is None or profile_version is None:
         return WorkspaceCapabilityContext(
             subject_key, profile_version, None, active_scene_status, (), authorized_source_references,
-            False, bool(eligible_custom_patterns), eligible_custom_patterns,
+            False, bool(eligible_custom_patterns), eligible_custom_patterns, (), include_legacy_catalog,
         )
     try:
         profile = production_subject_registry().resolve_profile(subject_key, profile_version)
     except SubjectCapabilityError:
-        return WorkspaceCapabilityContext(subject_key, profile_version, None, "UNSUPPORTED_HISTORICAL_CAPABILITY", (), authorized_source_references, False, False, ())
-    problems = authored_problem_sources(subject_key) + place_value_sources(subject_key)
+        return WorkspaceCapabilityContext(subject_key, profile_version, None, "UNSUPPORTED_HISTORICAL_CAPABILITY", (), authorized_source_references, False, False, (), (), include_legacy_catalog)
+    problems = authored_problem_sources(subject_key) + place_value_sources(subject_key) if include_legacy_catalog else ()
     return WorkspaceCapabilityContext(
         subject_key, profile_version, profile.tutor_guidance_fragment, active_scene_status,
         () if scene is None else scene.allowed_action_keys,
-        tuple(dict.fromkeys((*authorized_source_references, *(p['source_ref'] for p in problems)))),
+        tuple(dict.fromkeys((*authorized_source_references, *(p["source_ref"] for p in problems)))),
         any(r.implementation_status != "AWARENESS_ONLY" for r in profile.renderers) and bool(profile.activities),
         bool(eligible_custom_patterns),
         eligible_custom_patterns,
-        problems,
+        problems, include_legacy_catalog,
     )
 
 

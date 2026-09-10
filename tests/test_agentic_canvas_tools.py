@@ -9,10 +9,18 @@ from services.studio.agent.tools import (
 
 
 def test_compute_math_preserves_exact_result_and_explanation() -> None:
-    result = compute_math(expression="(3/4) + (1/8)", purpose="compare the fractions")
+    result = compute_math(left="3/4", right="1/8", operation="ADD", purpose="compare the fractions")
 
     assert result.exact_result == "7/8"
     assert result.explanation == "compare the fractions"
+
+
+def test_compute_math_compares_decimal_inputs_as_exact_rationals() -> None:
+    result = compute_math(left="0.6", right="0.45", operation="COMPARE", purpose="compare decimal locations")
+
+    assert result.left_exact == "3/5"
+    assert result.right_exact == "9/20"
+    assert result.exact_result == ">"
 
 
 def test_convert_units_returns_a_semantic_quantity_not_a_renderer_instruction() -> None:

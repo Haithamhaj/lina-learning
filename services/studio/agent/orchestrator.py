@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from pathlib import Path
 
 from agents import Agent, OpenAIResponsesModel, RunContextWrapper, RunConfig, Runner, function_tool
 from openai import AsyncOpenAI
@@ -22,6 +23,9 @@ from services.studio.agentic_canvas import AgenticCanvasPlanV1, AgenticCanvasSce
 from services.studio.canvas_brief import CanvasBriefV1
 
 
+_CANVAS_SKILL_ROOT = Path(__file__).resolve().parents[3] / "runtime" / "canvas-agent"
+_CANVAS_SKILL_PACK = "\n\n".join(path.read_text(encoding="utf-8") for path in sorted((_CANVAS_SKILL_ROOT / "skills").glob("*.md")))
+
 CANVAS_AGENT_INSTRUCTIONS = """You are Lina's single Canvas Agent. The Tutor is the
 only teaching and reasoning authority. You receive only a Tutor-authored CanvasBrief
 and compose a bounded, declarative visual representation that makes its stated
@@ -37,6 +41,7 @@ student records, or delegate to another agent.
 Return exactly one agentic-canvas-plan-v1. Its block_ids must refer only to blocks
 returned by your create_* tools. Every selected block must preserve the Tutor's
 subject, objective, quantities, and must-not-imply constraints."""
+CANVAS_AGENT_INSTRUCTIONS += "\n\n" + (_CANVAS_SKILL_ROOT / "AGENT.md").read_text(encoding="utf-8") + "\n\n" + _CANVAS_SKILL_PACK
 
 
 @dataclass

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-import os
 from datetime import UTC, datetime
 from time import perf_counter
 
@@ -34,13 +33,13 @@ def register_agentic_canvas_handlers(registry, *, session_factory: sessionmaker[
                 raise NonRetryableJobError("CANVAS_BRIEF_INVALID")
             run.status, run.started_at = "RUNNING", datetime.now(UTC)
             run_id, student_id, session_id, message_id, parent_execution_id = run.id, run.student_id, run.learning_session_id, message.id, message.ai_execution_id
-        key = os.environ.get("OPENAI_API_KEY")
-        if not key:
-            _fail(session_factory, run_id, "OPENAI_API_KEY_MISSING")
-            raise NonRetryableJobError("OPENAI_API_KEY_MISSING")
-        settings, started = Settings(), perf_counter()
+        settings = Settings()
+        if settings.model_api_key is None:
+            _fail(session_factory, run_id, "MODEL_API_KEY_MISSING")
+            raise NonRetryableJobError("MODEL_API_KEY_MISSING")
+        started = perf_counter()
         try:
-            scene = asyncio.run(compose_canvas_scene(brief=brief, api_key=key, model=settings.model_name, base_url=settings.model_base_url))
+            scene = asyncio.run(compose_canvas_scene(brief=brief, api_key=settings.model_api_key.get_secret_value(), model=settings.model_name, base_url=settings.model_base_url))
         except Exception as error:
             _fail(session_factory, run_id, type(error).__name__)
             raise

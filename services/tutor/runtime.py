@@ -358,6 +358,7 @@ def build_tutor_model_payload(
         authorized_source_references=tuple(
             str(source["ref"]) for source in (sources or []) if isinstance(source, dict) and isinstance(source.get("ref"), str)
         ),
+        include_legacy_catalog=False,
     )
     studio_workspace_context = (
         "\n\nStudio Workspace Context (current authoritative Workspace state; unseen Events are meaningful Student actions since the last successful Tutor observation):\n"
@@ -978,6 +979,10 @@ class TutorRuntime:
             allowed_source_references={str(source["source_ref"]) for source in _source_metadata(context)},
             safety_allows=parent_resolution.action is not SafetyAction.REDIRECT_TO_PARENT,
         )
+        if canvas_audit.get("status") == "ADMITTED":
+            # v11 Agentic Canvas is the sole composition authority for this
+            # Tutor turn; legacy visual orders remain replay-only.
+            visual_audit = {"status": "NOT_REQUESTED", "reason_code": "AGENTIC_CANVAS_SELECTED", "admitted_order": None, "semantic_alignment": None, "order_digest": None, "frozen_composition_pack": None}
         candidate_metadata_status, candidate_metadata_error = self._persist_candidates(
             learning_session=learning_session,
             source_message=student_message,
