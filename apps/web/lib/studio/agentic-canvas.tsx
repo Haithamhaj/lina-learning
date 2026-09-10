@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import type { AgenticCanvasAction, AgenticCanvasBlock, StudioOperation } from "./contracts";
-import { createAgenticCanvasOperation, parseAgenticCanvasScene } from "./agentic-canvas-contract";
+import { createAgenticCanvasOperation, parseAgenticCanvasScene, settleAgenticCanvasOperation } from "./agentic-canvas-contract";
 import {
   CoordinateConstruction,
   isExactGridPoint,
@@ -176,12 +176,18 @@ function DeclarativeBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOpe
 /** Exact allowlisted renderer for one server-owned Agentic Canvas Scene. */
 export function AgenticCanvasWorkspace(props: Props) {
   const scene = parseAgenticCanvasScene(props.seed);
+  const [operationFailed, setOperationFailed] = useState(false);
   if (scene === null) return <Failure onReload={props.onReload}/>;
+  const safeOperation = async (operation: StudioOperation) => {
+    const accepted = await settleAgenticCanvasOperation(props.onOperation, operation);
+    setOperationFailed(!accepted);
+  };
   return <section aria-label="Learning canvas" className="space-y-3">
     <header className="rounded-2xl bg-[#f2f7ff] px-4 py-3">
       <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#496a8b]">Canvas</p>
       <h2 className="mt-1 font-display text-xl text-slate-900" dir="auto">{scene.objective}</h2>
     </header>
-    {scene.blocks.map((block) => <DeclarativeBlock key={block.block_id} {...props} block={block}/>)}
+    {operationFailed ? <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-900">That Canvas action was not saved. The current Studio state has been restored, and Tutor chat remains available.</p> : null}
+    {scene.blocks.map((block) => <DeclarativeBlock key={block.block_id} {...props} onOperation={safeOperation} block={block}/>)}
   </section>;
 }

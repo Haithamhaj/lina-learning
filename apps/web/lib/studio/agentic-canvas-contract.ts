@@ -150,9 +150,11 @@ export function createAgenticCanvasOperation(input: OperationInput): StudioOpera
   if (input.fromValue !== undefined && !safeText(input.fromValue, 0, 240)) throw new Error("Invalid semantic from-value.");
   if (input.toValue !== undefined && !safeText(input.toValue, 0, 240)) throw new Error("Invalid semantic to-value.");
   const payload: Record<string, unknown> = { block_id: input.block.block_id };
-  if (input.elementId !== undefined) payload.element_id = input.elementId;
-  if (input.fromValue !== undefined) payload.from_value = input.fromValue;
-  if (input.toValue !== undefined) payload.to_value = input.toValue;
+  payload.version = "agentic-canvas-action-v1";
+  payload.action = input.action;
+  payload.element_id = input.elementId ?? null;
+  payload.from_value = input.fromValue ?? null;
+  payload.to_value = input.toValue ?? null;
   return {
     scene_id: input.sceneId,
     base_scene_version: input.sceneVersion,
@@ -160,4 +162,17 @@ export function createAgenticCanvasOperation(input: OperationInput): StudioOpera
     payload,
     idempotency_key: input.idempotencyKey,
   };
+}
+
+/** Resolve an operation promise so UI event handlers never leak a rejection. */
+export async function settleAgenticCanvasOperation(
+  onOperation: (operation: StudioOperation) => Promise<void>,
+  operation: StudioOperation,
+): Promise<boolean> {
+  try {
+    await onOperation(operation);
+    return true;
+  } catch {
+    return false;
+  }
 }

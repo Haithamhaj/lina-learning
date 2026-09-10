@@ -4,8 +4,9 @@ import test from "node:test";
 import {
   createAgenticCanvasOperation,
   parseAgenticCanvasScene,
+  settleAgenticCanvasOperation,
 } from "./agentic-canvas-contract.ts";
-import { resolveApprovedStudioRenderer } from "./renderer-host.ts";
+import { activeSceneRendererState, resolveApprovedStudioRenderer } from "./renderer-host.ts";
 
 const commonBlock = {
   meaning: "Compare the quantities without changing the Tutor's objective.",
@@ -113,7 +114,14 @@ test("Agentic Canvas emits one exact semantic Studio operation and no renderer a
     scene_id: "studio-scene-1",
     base_scene_version: 3,
     action_key: "FOCUS",
-    payload: { block_id: "math-board", element_id: "item-a" },
+    payload: {
+      version: "agentic-canvas-action-v1",
+      action: "FOCUS",
+      block_id: "math-board",
+      element_id: "item-a",
+      from_value: null,
+      to_value: null,
+    },
     idempotency_key: "focus-1",
   });
   assert(!JSON.stringify(operation).match(/renderer|provider|component|pixel|tool/i));
@@ -133,4 +141,27 @@ test("Agentic Canvas emits one exact semantic Studio operation and no renderer a
     elementId: "unknown-element",
     idempotencyKey: "focus-2",
   }), /unknown element/);
+});
+
+test("Agentic Canvas renders the current reduced Scene after Snapshot reload", () => {
+  const updated = structuredClone(validScene);
+  updated.blocks[0].elements[0].current_value = "4/5";
+  const rendererState = activeSceneRendererState({
+    active_scene_contract: exactAgenticContract,
+    active_scene_seed: validScene,
+    state_payload: { agentic_canvas: updated },
+  });
+  const parsed = parseAgenticCanvasScene(rendererState);
+  assert.equal(parsed?.blocks[0].elements[0].current_value, "4/5");
+});
+
+test("Agentic Canvas settles rejected Studio operations without an unhandled rejection", async () => {
+  const accepted = await settleAgenticCanvasOperation(async () => { throw new Error("stale scene"); }, {
+    scene_id: "studio-scene-1",
+    base_scene_version: 3,
+    action_key: "FOCUS",
+    payload: {},
+    idempotency_key: "focus-failed",
+  });
+  assert.equal(accepted, false);
 });
