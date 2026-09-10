@@ -300,6 +300,8 @@ def test_transient_provider_failure_retries_same_run_and_persists_canonical_dige
             "run_status": "COMPLETED",
             "scene_contract": "agentic-canvas-scene-v1",
             "proposal_digest": expected_digest,
+            "scene_id": None,
+            "agent_trace": {"selected_tools": [], "tool_call_count": 0},
         }
 
 
@@ -328,7 +330,7 @@ def test_deadline_is_terminal_without_calling_agent(factory: sessionmaker[Sessio
         assert job is not None and job.status == "FAILED"
 
 
-def test_reconciler_settles_completed_agentic_scene_through_existing_studio_state(
+def test_worker_immediately_settles_completed_agentic_scene_through_existing_studio_state(
     factory: sessionmaker[Session],
 ) -> None:
     with factory.begin() as session:
@@ -357,8 +359,6 @@ def test_reconciler_settles_completed_agentic_scene_through_existing_studio_stat
 
     registry = _registry(factory, compose)
     assert run_once(factory, registry, worker_id="agentic-reconcile-success") == m.JobStatus.COMPLETED
-    # A second poll invokes the shared reconciler before it looks for work.
-    assert run_once(factory, registry, worker_id="agentic-reconcile-second-poll") is None
 
     with factory() as session:
         completed = session.get(m.StudioCanvasSpecialistRun, run_id)
@@ -376,6 +376,11 @@ def test_reconciler_settles_completed_agentic_scene_through_existing_studio_stat
         assert snapshot is not None
         assert snapshot.current_scene_id == scene.id
         assert snapshot.active_activity_key == "agentic_canvas"
+        job = session.get(m.Job, completed.job_id)
+        assert job is not None
+        assert job.result["run_id"] == str(completed.id)
+        assert job.result["scene_id"] == str(scene.id)
+        assert job.result["agent_trace"] == {"selected_tools": [], "tool_call_count": 0}
 
 
 def test_post_provider_brief_mutation_is_rejected_before_scene_commit(

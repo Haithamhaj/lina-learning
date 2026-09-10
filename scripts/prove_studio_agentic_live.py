@@ -12,19 +12,27 @@ import asyncio
 import json
 from hashlib import sha256
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from pydantic import ValidationError
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
 
 from services.model_gateway.factory import create_tutor_gateway
 from services.platform.config.settings import Settings
-from services.platform.db.models import ModelTask
-from services.studio.agent.orchestrator import compose_canvas_scene
-from services.studio.agentic_canvas import (
-    AgenticCanvasActionV1,
-    AgenticCanvasSceneV1,
-    build_agentic_tutor_projection,
+from services.platform.db.connection import normalize_database_url
+from services.platform.db.models import (
+    Job,
+    LearningMessage,
+    ModelTask,
+    StudioCanvasSpecialistRun,
+    StudioEvent,
+    StudioScene,
+    StudioStudentInteraction,
+    StudioTutorObservation,
 )
+from services.studio.agent.orchestrator import compose_canvas_scene
+from services.studio.agentic_canvas import AgenticCanvasSceneV1
 from services.studio.canvas_brief import CanvasBriefV1, audit_canvas_brief
 from services.studio.process_production_acceptance import agentic_scene_contract
 from services.studio.tutor_context import StudioTutorWorkspaceContext
@@ -128,14 +136,150 @@ def _scene_metadata(scene: AgenticCanvasSceneV1, brief: CanvasBriefV1) -> dict[s
         "studio_subject": contract["subject_key"],
         "semantic_subject": scene.subject_key,
         "block_types": block_types,
-        # Creation tools are deterministically implied by accepted block types;
-        # hidden SDK trace content is deliberately not persisted.
-        "selected_tools": [f"create_{kind.lower()}" for kind in block_types],
     }
 
 
-async def run_live(settings: Settings) -> dict[str, object]:
-    run_id = uuid4()
+def _durable_studio_evidence(settings: Settings, run_id: UUID) -> dict[str, object]:
+    """Read bounded evidence from the actual Studio Run and worker Job result."""
+
+    if not settings.database_url:
+        raise RuntimeError("DATABASE_URL_REQUIRED_FOR_DURABLE_LIVE_EVIDENCE")
+    engine = create_engine(normalize_database_url(settings.database_url))
+    try:
+        with Session(engine) as session:
+            run = session.get(StudioCanvasSpecialistRun, run_id)
+            if run is None or run.job_id is None:
+                raise RuntimeError("STUDIO_RUN_NOT_FOUND")
+            job = session.get(Job, run.job_id)
+            scene = session.get(StudioScene, run.scene_id) if run.scene_id is not None else None
+            result = job.result if job is not None and isinstance(job.result, dict) else {}
+            trace = result.get("agent_trace") if isinstance(result.get("agent_trace"), dict) else {}
+            selected_tools = trace.get("selected_tools")
+            tool_call_count = trace.get("tool_call_count")
+            if (
+                result.get("run_id") != str(run.id)
+                or not isinstance(selected_tools, list)
+                or not all(isinstance(name, str) for name in selected_tools)
+                or type(tool_call_count) is not int
+            ):
+                raise RuntimeError("DURABLE_AGENT_TRACE_MISSING")
+            interaction = session.scalars(
+                select(StudioStudentInteraction)
+                .where(StudioStudentInteraction.studio_runtime_id == run.studio_runtime_id)
+                .order_by(StudioStudentInteraction.created_at.desc())
+            ).first()
+            source_event = None
+            if interaction is not None:
+                source_event = session.get(StudioEvent, interaction.source_event_id)
+                if (
+                    source_event is None
+                    or scene is None
+                    or source_event.scene_id != scene.id
+                    or source_event.actor != "STUDENT"
+                    or source_event.action_key is None
+                ):
+                    interaction = None
+            observation = (
+                session.scalars(
+                    select(StudioTutorObservation)
+                    .where(
+                        StudioTutorObservation.studio_runtime_id == run.studio_runtime_id,
+                        StudioTutorObservation.student_interaction_id == interaction.id,
+                    )
+                    .order_by(StudioTutorObservation.created_at.desc())
+                ).first()
+                if interaction is not None
+                else None
+            )
+            # LIVE-11 requires an update genuinely emitted by the same Primary
+            # Tutor turn that completed the Canvas interaction.  A later,
+            # unrelated Run in the runtime is not sufficient evidence.
+            tutor_message = None
+            if interaction is not None and interaction.tutor_message_id is not None:
+                candidate = session.get(LearningMessage, interaction.tutor_message_id)
+                payload = candidate.payload if candidate is not None and isinstance(candidate.payload, dict) else {}
+                if (
+                    candidate is not None
+                    and candidate.role == "tutor"
+                    and candidate.ai_execution_id == interaction.ai_execution_id
+                    and payload.get("turn_origin") == "STUDIO_INTERACTION"
+                    and payload.get("student_interaction_id") == str(interaction.id)
+                    and payload.get("source_studio_event_id") == str(interaction.source_event_id)
+                ):
+                    tutor_message = candidate
+            update_run = None
+            update_message = tutor_message
+            if update_message is not None:
+                update_audit = (
+                    update_message.payload.get("agentic_canvas")
+                    if isinstance(update_message.payload, dict)
+                    else None
+                )
+                if (
+                    update_message is not None
+                    and update_message.role == "tutor"
+                    and isinstance(update_audit, dict)
+                    and update_audit.get("status") == "ADMITTED"
+                ):
+                    update_run = session.scalars(
+                        select(StudioCanvasSpecialistRun).where(
+                            StudioCanvasSpecialistRun.studio_runtime_id == run.studio_runtime_id,
+                            StudioCanvasSpecialistRun.source_message_id == update_message.id,
+                            StudioCanvasSpecialistRun.base_scene_id == scene.id,
+                        )
+                    ).first()
+
+            successor = None
+            superseded = None
+            if update_run is not None and update_run.status == "SUPERSEDED":
+                failure = update_run.failure_metadata
+                successor_digest = (
+                    failure.get("successor_order_digest")
+                    if isinstance(failure, dict)
+                    and failure.get("code") == "SUPERSEDED_BY_NEWER_AGENTIC_CANVAS_BRIEF"
+                    else None
+                )
+                if isinstance(successor_digest, str):
+                    successor = session.scalars(
+                        select(StudioCanvasSpecialistRun).where(
+                            StudioCanvasSpecialistRun.studio_runtime_id == run.studio_runtime_id,
+                            StudioCanvasSpecialistRun.order_digest == successor_digest,
+                            StudioCanvasSpecialistRun.created_at > update_run.created_at,
+                        )
+                    ).first()
+                    if successor is not None:
+                        superseded = update_run
+            return {
+                "run_id": str(run.id),
+                "scene_id": None if scene is None else str(scene.id),
+                "scene_status": None if scene is None else scene.status,
+                "proposal_digest": run.proposal_digest,
+                "selected_tools": selected_tools,
+                "tool_call_count": tool_call_count,
+                "interaction_id": None if interaction is None else str(interaction.id),
+                "interaction_status": None if interaction is None else interaction.status,
+                "action_key": None if source_event is None else source_event.action_key,
+                "tutor_message_id": None if tutor_message is None else str(tutor_message.id),
+                "observation_status": None if observation is None else observation.status,
+                "observation_execution_id": (
+                    None
+                    if observation is None or observation.ai_execution_id is None
+                    else str(observation.ai_execution_id)
+                ),
+                "tutor_execution_id": (
+                    None
+                    if interaction is None or interaction.ai_execution_id is None
+                    else str(interaction.ai_execution_id)
+                ),
+                "update_run_id": None if update_run is None else str(update_run.id),
+                "successor_run_id": None if successor is None else str(successor.id),
+                "superseded_run_id": None if superseded is None else str(superseded.id),
+            }
+    finally:
+        engine.dispose()
+
+
+async def run_live(settings: Settings, *, durable_run_id: UUID | None = None) -> dict[str, object]:
     results: list[dict[str, object]] = []
 
     math_brief, math_lineage = _tutor_brief(
@@ -144,19 +288,19 @@ async def run_live(settings: Settings) -> dict[str, object]:
         subject="MATH",
         locale="en",
     )
-    results.append(_record("LIVE-01", passed=True, run_id=str(run_id), **math_lineage))
+    results.append(_record("LIVE-01", passed=True, **math_lineage))
     math_scene = await _compose(settings, math_brief)
     math_metadata = _scene_metadata(math_scene, math_brief)
     results.append(_record("LIVE-02", passed=math_scene.subject_key == "MATH", **math_metadata))
     results.append(_record(
         "LIVE-03",
-        passed=len(math_scene.blocks) >= 2,
-        selected_tools=math_metadata["selected_tools"],
-        deterministic_check="at_least_two_registered_blocks",
+        passed=False,
+        status="NOT_RUN",
+        reason_code="DURABLE_AGENT_TRACE_REQUIRED",
     ))
 
     live_cases = (
-        ("LIVE-04", "Please use Canvas to help me compare 3.6 kilometres with 2500 metres using a visual relationship.", "SCIENCE", "en", 0),
+        ("LIVE-04", "Please use Canvas to help me compare 3.6 kilometres with 2500 metres using a visual relationship.", "PHYSICS", "en", 0),
         ("LIVE-05", "Please use Canvas to build a visual cycle with at least five named stages for water moving through evaporation, condensation, clouds, precipitation, collection, and return flow.", "SCIENCE", "en", 5),
         ("LIVE-06", "افتح Canvas وساعدني بصريًا في ترتيب مراحل دورة الماء، واجعل النص عربيًا واضحًا.", "ARABIC", "ar", 0),
     )
@@ -177,43 +321,41 @@ async def run_live(settings: Settings) -> dict[str, object]:
     results.append(_record("LIVE-07", passed=False, status="NOT_RUN", reason_code="HOSTED_IMAGE_TOOL_NOT_REGISTERED"))
     results.append(_record("LIVE-08", passed=False, status="NOT_USED", reason_code="CODE_INTERPRETER_NOT_REQUIRED_BY_EXECUTED_CASES"))
 
-    first_block = math_scene.blocks[0]
-    first_element = first_block.elements[0] if first_block.elements else None
-    action = AgenticCanvasActionV1(
-        version="agentic-canvas-action-v1",
-        action="SELECT",
-        block_id=first_block.block_id,
-        element_id=None if first_element is None else first_element.id,
-        from_value=None,
-        to_value=None,
-    )
-    projection = build_agentic_tutor_projection(
-        objective=math_scene.objective,
-        subject_key=math_scene.subject_key,
-        scene_status="ACTIVE",
-        blocks=[block.model_dump(mode="json") for block in math_scene.blocks],
-        actions=[action],
-    )
-    workspace = StudioTutorWorkspaceContext(
-        runtime_id=uuid4(), snapshot_schema_version="studio-snapshot-v1", through_sequence=1,
-        snapshot_sequence=1, current_scene_id=uuid4(), current_scene_version=2,
-        active_subject_key="CANVAS", active_activity_key="agentic_canvas",
-        state_payload={}, unseen_events=(), observation_id=None, visual_scene=projection,
-    )
-    followup_session = _EvidenceSession()
-    followup = create_tutor_gateway(followup_session, settings=settings).execute(  # type: ignore[arg-type]
-        ModelTask.TUTOR,
-        build_tutor_model_payload(
-            question="I selected the first element. What should I notice?",
-            studio_context=workspace,
-            workspace_subject_key=math_scene.subject_key,
-            student_core_context={"age_years": 10, "grade_level": 5},
-        ),
-    )
-    results.append(_record("LIVE-09", passed=bool(followup.output.get("text")), tutor_execution_id=str(followup.execution_id), action="SELECT", projection_version=projection["version"]))
-    results.append(_record("LIVE-10", passed=bool(followup.output.get("text")), tutor_execution_id=str(followup.execution_id), active_canvas=True, chat_available=True))
-    update_brief = followup.output.get("canvas_brief")
-    results.append(_record("LIVE-11", passed=update_brief is None or isinstance(update_brief, dict), tutor_execution_id=str(followup.execution_id), update_requested=update_brief is not None, stale_fence="newer_admitted_brief_only"))
+    durable = None
+    if durable_run_id is not None:
+        try:
+            durable = _durable_studio_evidence(settings, durable_run_id)
+        except RuntimeError:
+            durable = None
+    if durable is None:
+        results.extend((
+            _record("LIVE-09", passed=False, status="NOT_RUN", reason_code="DURABLE_STUDIO_INTERACTION_REQUIRED"),
+            _record("LIVE-10", passed=False, status="NOT_RUN", reason_code="DURABLE_ACTIVE_CANVAS_CHAT_REQUIRED"),
+            _record("LIVE-11", passed=False, status="NOT_RUN", reason_code="DURABLE_TUTOR_UPDATE_AND_STALE_FENCE_REQUIRED"),
+        ))
+    else:
+        trace_passed = durable["tool_call_count"] >= 2 and len(durable["selected_tools"]) >= 2
+        results[2] = _record("LIVE-03", passed=trace_passed, **{
+            key: durable[key] for key in ("run_id", "scene_id", "proposal_digest", "selected_tools", "tool_call_count")
+        })
+        interaction_passed = (
+            durable["interaction_status"] == "COMPLETED"
+            and durable["action_key"] is not None
+            and durable["tutor_message_id"] is not None
+            and durable["observation_status"] == "COMMITTED"
+            and durable["tutor_execution_id"] is not None
+            and durable["observation_execution_id"] == durable["tutor_execution_id"]
+        )
+        results.append(_record("LIVE-09", passed=interaction_passed, **{
+            key: durable[key] for key in ("run_id", "scene_id", "interaction_id", "action_key", "interaction_status", "observation_status", "tutor_message_id", "tutor_execution_id")
+        }))
+        results.append(_record("LIVE-10", passed=interaction_passed and durable["scene_status"] == "ACTIVE", run_id=durable["run_id"], scene_id=durable["scene_id"], active_canvas=durable["scene_status"] == "ACTIVE", chat_execution_id=durable["tutor_execution_id"]))
+        update_passed = (
+            durable["update_run_id"] is not None
+            and durable["successor_run_id"] is not None
+            and durable["superseded_run_id"] == durable["update_run_id"]
+        )
+        results.append(_record("LIVE-11", passed=update_passed, run_id=durable["run_id"], update_run_id=durable["update_run_id"], successor_run_id=durable["successor_run_id"], superseded_run_id=durable["superseded_run_id"], update_requested=durable["update_run_id"] is not None, stale_fence_observed=durable["superseded_run_id"] == durable["update_run_id"]))
     replayed = AgenticCanvasSceneV1.model_validate(json.loads(json.dumps(math_scene.model_dump(mode="json"))))
     results.append(_record("LIVE-12", passed=replayed == math_scene, scene_contract=replayed.version, scene_digest=_digest(replayed.model_dump(mode="json"))))
     return {
@@ -230,13 +372,14 @@ def main() -> None:
     parser.add_argument("--live", action="store_true", help="Authorize real provider calls for this invocation.")
     parser.add_argument("--output", type=Path, default=Path("output/studio-agentic-live-proof.json"))
     parser.add_argument("--env-file", type=Path, default=None, help="Optional explicit server dotenv path.")
+    parser.add_argument("--studio-run-id", type=UUID, default=None, help="Optional actual Studio run used for durable LIVE-03 and LIVE-09 through LIVE-11 evidence.")
     args = parser.parse_args()
     if not args.live:
         raise SystemExit("Refusing provider calls without explicit --live.")
     settings = Settings(_env_file=args.env_file) if args.env_file is not None else Settings()
     if settings.model_api_key is None or settings.model_name == "mock":
         raise SystemExit("Configured MODEL_API_KEY and a real MODEL_NAME are required.")
-    evidence = asyncio.run(run_live(settings))
+    evidence = asyncio.run(run_live(settings, durable_run_id=args.studio_run_id))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(evidence, indent=2, sort_keys=True), encoding="utf-8")
     print(json.dumps({

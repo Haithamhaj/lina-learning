@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import errno
+import logging
 from datetime import UTC, datetime
 from time import perf_counter
 from urllib.error import HTTPError, URLError
@@ -18,6 +19,7 @@ from services.platform.db.models import (
     StudioCanvasSpecialistRun,
     StudioRuntime,
     StudioScene,
+    StudioSnapshot,
 )
 from services.platform.jobs import NonRetryableJobError
 from services.studio.agent.admission import (
@@ -27,16 +29,22 @@ from services.studio.agent.admission import (
     _canonical_digest,
     latest_admitted_agentic_message,
 )
-from services.studio.agent.orchestrator import compose_canvas_scene
+from services.studio.agent.orchestrator import (
+    AgenticCanvasCompositionResult,
+    compose_canvas_scene_with_trace,
+)
 from services.studio.agentic_canvas import AgenticCanvasSceneV1
 from services.studio.canvas_brief import CanvasBriefContractError, parse_canvas_brief
+from services.studio.process_production_acceptance import accept_completed_canvas_run
+
+_logger = logging.getLogger(__name__)
 
 
 def register_agentic_canvas_handlers(
     registry,
     *,
     session_factory: sessionmaker[Session],
-    compose=compose_canvas_scene,
+    compose=compose_canvas_scene_with_trace,
     settings_factory=Settings,
 ) -> None:
     def handle(job: Job) -> dict[str, object]:
@@ -51,7 +59,7 @@ def register_agentic_canvas_handlers(
         try:
             # Phase A committed before the remote Agent call. No Runtime/Run
             # lock or transaction remains open while the provider is running.
-            scene = asyncio.run(compose(brief=execution.brief, api_key=settings.model_api_key.get_secret_value(), model=settings.model_name, base_url=settings.model_base_url))
+            composition = asyncio.run(compose(brief=execution.brief, api_key=settings.model_api_key.get_secret_value(), model=settings.model_name, base_url=settings.model_base_url))
         except Exception as error:
             code, retryable = _classify_agent_failure(error)
             metadata = {"code": code, "provider_attempt": execution.provider_attempt}
@@ -62,6 +70,15 @@ def register_agentic_canvas_handlers(
                 metadata["retry_exhausted"] = True
             _fail(session_factory, execution.run_id, code, metadata=metadata)
             raise NonRetryableJobError(code) from error
+        if isinstance(composition, AgenticCanvasCompositionResult):
+            scene = composition.scene
+            selected_tools = composition.selected_tools
+            tool_call_count = composition.tool_call_count
+        else:
+            # Deterministic fixtures may retain the historical Scene-only seam.
+            scene = composition
+            selected_tools = ()
+            tool_call_count = 0
         try:
             scene = AgenticCanvasSceneV1.model_validate(scene)
         except Exception as error:
@@ -72,6 +89,7 @@ def register_agentic_canvas_handlers(
                 metadata={"code": "AGENTIC_SCENE_INVALID", "exception_type": type(error).__name__},
             )
             raise NonRetryableJobError("AGENTIC_SCENE_INVALID") from error
+        durable_result: dict[str, object]
         with session_factory.begin() as session:
             unguarded_run = session.get(StudioCanvasSpecialistRun, execution.run_id)
             if unguarded_run is None:
@@ -102,7 +120,45 @@ def register_agentic_canvas_handlers(
             proposal = scene.model_dump(mode="json")
             proposal_digest = _canonical_digest(proposal)
             run.proposal_payload, run.proposal_digest, run.ai_execution_id, run.status, run.completed_at, run.failure_metadata = proposal, proposal_digest, ai_execution.id, "COMPLETED", datetime.now(UTC), None
-            return {"run_id": str(run.id), "run_status": run.status, "scene_contract": scene.version, "proposal_digest": proposal_digest}
+            has_snapshot = session.execute(
+                select(StudioSnapshot.id).where(
+                    StudioSnapshot.studio_runtime_id == run.studio_runtime_id
+                )
+            ).scalar_one_or_none() is not None
+            durable_result = {
+                "run_id": str(run.id),
+                "run_status": run.status,
+                "scene_contract": scene.version,
+                "proposal_digest": proposal_digest,
+                "scene_id": None,
+                "agent_trace": {
+                    "selected_tools": list(selected_tools),
+                    "tool_call_count": tool_call_count,
+                },
+            }
+        # The provider result is durable before this short deterministic
+        # settlement transaction. Reconciliation remains crash-window repair.
+        if has_snapshot:
+            try:
+                with session_factory.begin() as acceptance_session:
+                    accepted = accept_completed_canvas_run(acceptance_session, execution.run_id)
+                    if accepted is not None:
+                        durable_result["scene_id"] = str(accepted.id)
+            except Exception:
+                _logger.exception(
+                    "Agentic Canvas Scene settlement deferred for run %s",
+                    execution.run_id,
+                )
+                _mark_scene_settlement_deferred(session_factory, execution.run_id)
+        with session_factory() as session:
+            settled_run = session.get(StudioCanvasSpecialistRun, execution.run_id)
+            if settled_run is None:
+                raise ValueError("AGENTIC_CANVAS_RUN_MISSING")
+            durable_result["run_status"] = settled_run.status
+            durable_result["scene_id"] = (
+                str(settled_run.scene_id) if settled_run.scene_id is not None else None
+            )
+        return durable_result
     registry.register(AGENTIC_CANVAS_COMPOSE_JOB, handle)
 
 
@@ -205,6 +261,15 @@ def _record_retryable_failure(factory: sessionmaker[Session], run_id, metadata: 
         run = _runtime_then_run_locked(session, run_id)
         if run is not None and run.status not in {"COMPLETED", "FAILED", "CANCELLED", "SUPERSEDED", "REJECTED"}:
             run.status, run.failure_metadata, run.completed_at = "PENDING", metadata, None
+
+
+def _mark_scene_settlement_deferred(factory: sessionmaker[Session], run_id) -> None:
+    """Expose a retryable settlement gap without changing provider truth."""
+
+    with factory.begin() as session:
+        run = _runtime_then_run_locked(session, run_id)
+        if run is not None and run.status == "COMPLETED" and run.scene_id is None:
+            run.failure_metadata = {"code": "SCENE_SETTLEMENT_DEFERRED"}
 
 
 def _fail(factory: sessionmaker[Session], run_id, code: str, *, metadata: dict[str, object] | None = None) -> None:

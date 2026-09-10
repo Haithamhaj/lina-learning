@@ -43,3 +43,22 @@ def test_canvas_agent_input_contains_only_the_tutor_authored_semantic_brief() ->
 
     assert payload == {"canvas_brief": brief.model_dump(mode="json")}
     assert "student_id" not in json.dumps(payload)
+
+
+def test_agent_trace_records_actual_registered_tool_calls_without_arguments() -> None:
+    from types import SimpleNamespace
+
+    from services.studio.agent.orchestrator import (
+        CanvasAgentRunContext,
+        _compute_math,
+        _create_math_board,
+    )
+    from services.studio.agent.registry import CanvasBlockRegistry
+
+    context = CanvasAgentRunContext(registry=CanvasBlockRegistry())
+    wrapper = SimpleNamespace(context=context)
+
+    _compute_math(wrapper, "0.6", "0.45", "COMPARE", "Compare exact decimals.")
+    _create_math_board(wrapper, "decimal-line", "Exact decimal positions.", "Decimal line", "0.45 < 0.6")
+
+    assert context.tool_calls == ["compute_math", "create_math_board"]
