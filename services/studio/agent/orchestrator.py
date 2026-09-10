@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 
-from agents import Agent, OpenAIResponsesModel, RunConfig, Runner, function_tool
+from agents import Agent, OpenAIResponsesModel, RunContextWrapper, RunConfig, Runner, function_tool
 from openai import AsyncOpenAI
 
 from services.studio.agent.tools import (
@@ -16,7 +17,8 @@ from services.studio.agent.tools import (
     create_math_input,
     create_text_interaction,
 )
-from services.studio.agentic_canvas import AgenticCanvasSceneV1
+from services.studio.agent.registry import CanvasBlockRegistry
+from services.studio.agentic_canvas import AgenticCanvasPlanV1, AgenticCanvasSceneV1
 from services.studio.canvas_brief import CanvasBriefV1
 
 
@@ -32,25 +34,57 @@ browser APIs, components, pixel positions, URLs, prompts for another model, or t
 implementation details. You cannot write Studio state, call the Tutor, access
 student records, or delegate to another agent.
 
-Return exactly one agentic-canvas-scene-v1 scene. Every block must come from the
-tool allowlist and must preserve the Tutor's subject, objective, quantities, and
-must-not-imply constraints. Give each block a stable semantic id and explicit
-nullable current_value fields for every element."""
+Return exactly one agentic-canvas-plan-v1. Its block_ids must refer only to blocks
+returned by your create_* tools. Every selected block must preserve the Tutor's
+subject, objective, quantities, and must-not-imply constraints."""
+
+
+@dataclass
+class CanvasAgentRunContext:
+    registry: CanvasBlockRegistry
+
+
+def _block_summary(block):
+    return {"block_id": block.block_id, "type": block.type, "meaning": block.meaning}
+
+
+def _record_block(context: RunContextWrapper[CanvasAgentRunContext], block):
+    return _block_summary(context.context.registry.accept(block))
+
+
+def _create_math_board(context: RunContextWrapper[CanvasAgentRunContext], block_id: str, meaning: str, label: str, expression: str):
+    return _record_block(context, create_math_board(block_id=block_id, meaning=meaning, label=label, expression=expression))
+
+
+def _create_2d_scene(context: RunContextWrapper[CanvasAgentRunContext], block_id: str, meaning: str, label: str):
+    return _record_block(context, create_2d_scene(block_id=block_id, meaning=meaning, label=label))
+
+
+def _create_diagram(context: RunContextWrapper[CanvasAgentRunContext], block_id: str, meaning: str, label: str):
+    return _record_block(context, create_diagram(block_id=block_id, meaning=meaning, label=label))
+
+
+def _create_text_interaction(context: RunContextWrapper[CanvasAgentRunContext], block_id: str, meaning: str, label: str, prompt: str):
+    return _record_block(context, create_text_interaction(block_id=block_id, meaning=meaning, label=label, prompt=prompt))
+
+
+def _create_math_input(context: RunContextWrapper[CanvasAgentRunContext], block_id: str, meaning: str, label: str, initial_value: str = ""):
+    return _record_block(context, create_math_input(block_id=block_id, meaning=meaning, label=label, initial_value=initial_value))
 
 
 def _agent_tools():
     return [
         function_tool(compute_math),
         function_tool(convert_units),
-        function_tool(create_math_board),
-        function_tool(create_2d_scene),
-        function_tool(create_diagram),
-        function_tool(create_text_interaction),
-        function_tool(create_math_input),
+        function_tool(_create_math_board, name_override="create_math_board"),
+        function_tool(_create_2d_scene, name_override="create_2d_scene"),
+        function_tool(_create_diagram, name_override="create_diagram"),
+        function_tool(_create_text_interaction, name_override="create_text_interaction"),
+        function_tool(_create_math_input, name_override="create_math_input"),
     ]
 
 
-def build_canvas_agent(*, api_key: str, model: str, base_url: str | None = None) -> Agent[None]:
+def build_canvas_agent(*, api_key: str, model: str, base_url: str | None = None) -> Agent[CanvasAgentRunContext]:
     """Build the isolated composer; callers retain all Studio ownership."""
     client = AsyncOpenAI(api_key=api_key, base_url=base_url)
     return Agent(
@@ -58,7 +92,7 @@ def build_canvas_agent(*, api_key: str, model: str, base_url: str | None = None)
         instructions=CANVAS_AGENT_INSTRUCTIONS,
         tools=_agent_tools(),
         model=OpenAIResponsesModel(model=model, openai_client=client),
-        output_type=AgenticCanvasSceneV1,
+        output_type=AgenticCanvasPlanV1,
     )
 
 
@@ -69,13 +103,15 @@ def canvas_agent_input(brief: CanvasBriefV1) -> str:
 
 async def compose_canvas_scene(*, brief: CanvasBriefV1, api_key: str, model: str, base_url: str | None = None) -> AgenticCanvasSceneV1:
     """Run one bounded composition without taking Studio ownership."""
+    registry = CanvasBlockRegistry()
     result = await Runner.run(
         build_canvas_agent(api_key=api_key, model=model, base_url=base_url),
         input=canvas_agent_input(brief),
+        context=CanvasAgentRunContext(registry=registry),
         max_turns=8,
         run_config=RunConfig(
             workflow_name="lina-agentic-canvas-compose",
             trace_include_sensitive_data=False,
         ),
     )
-    return AgenticCanvasSceneV1.model_validate(result.final_output)
+    return registry.materialize_plan(AgenticCanvasPlanV1.model_validate(result.final_output))

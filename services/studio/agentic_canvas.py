@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 AGENTIC_CANVAS_SCENE_VERSION = "agentic-canvas-scene-v1"
 AGENTIC_CANVAS_ACTION_VERSION = "agentic-canvas-action-v1"
+AGENTIC_CANVAS_PLAN_VERSION = "agentic-canvas-plan-v1"
 
 
 class AgenticCanvasElementV1(BaseModel):
@@ -37,6 +38,23 @@ class AgenticCanvasSceneV1(BaseModel):
     def unique_block_ids(self) -> "AgenticCanvasSceneV1":
         if len({block.block_id for block in self.blocks}) != len(self.blocks):
             raise ValueError("Agentic Canvas block identifiers must be unique")
+        return self
+
+
+class AgenticCanvasPlanV1(BaseModel):
+    """Agent final output references only run-local tool-produced blocks."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    version: Literal[AGENTIC_CANVAS_PLAN_VERSION]
+    objective: str = Field(min_length=1, max_length=500)
+    subject_key: str = Field(min_length=1, max_length=64)
+    block_ids: list[str] = Field(min_length=1, max_length=12)
+
+    @model_validator(mode="after")
+    def unique_block_ids(self) -> "AgenticCanvasPlanV1":
+        if len(set(self.block_ids)) != len(self.block_ids):
+            raise ValueError("Agentic Canvas plan block identifiers must be unique")
         return self
 
 

@@ -4,13 +4,13 @@ from __future__ import annotations
 def test_single_canvas_agent_uses_only_the_bounded_local_tool_registry() -> None:
     from services.studio.agent.orchestrator import build_canvas_agent
     from services.studio.agent.tools import tool_names
-    from services.studio.agentic_canvas import AgenticCanvasSceneV1
+    from services.studio.agentic_canvas import AgenticCanvasPlanV1
 
     agent = build_canvas_agent(api_key="test-only-key", model="gpt-5.6-luna")
 
     assert agent.handoffs == []
     assert tuple(tool.name for tool in agent.tools) == tool_names()
-    assert agent.output_type is AgenticCanvasSceneV1
+    assert agent.output_type is AgenticCanvasPlanV1
     assert "Tutor" in agent.instructions
     assert "write Studio" in agent.instructions
 
