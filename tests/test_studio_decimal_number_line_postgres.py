@@ -152,19 +152,17 @@ def test_api_real_mock_factory_original_submission_and_later_snapshot(postgres_s
 
 
 @pytest.mark.parametrize('ref',['decimal-line:v1:compare-equal','decimal-line:v1:round-carry'])
-def test_normal_tutor_configured_mock_wiring_issues_and_activates_exact_reference(postgres_session_factory,monkeypatch,ref):
+def test_normal_tutor_does_not_receive_or_reactivate_legacy_authored_catalog(postgres_session_factory,monkeypatch,ref):
     from services.tutor.runtime import LocalTutorProvider
-    from services.model_gateway.gateway import ModelResult
-    from services.platform.db.models import StudioScene,LearningMessage
+    from services.platform.db.models import StudioScene
     from test_studio_make_ten_postgres import _make_ten_scene_command,_activate,_client,_clear_overrides
     calls=[]
     original=LocalTutorProvider.execute
     def authored_response(self,route,payload):
-        assert ref in payload['input']
+        assert ref not in payload['input']
         assert all(s['ref']!=ref for s in payload['sources'])
         calls.append(payload)
-        result=original(self,route,payload)
-        return ModelResult(output={**result.output,'workspace_intent':audit(ref)['intent']})
+        return original(self,route,payload)
     monkeypatch.setattr(LocalTutorProvider,'execute',authored_response)
     with postgres_session_factory.begin() as session:
         student=_student(session,'decimal-normal')
@@ -173,7 +171,7 @@ def test_normal_tutor_configured_mock_wiring_issues_and_activates_exact_referenc
         runtime=state.get_or_create_runtime(student_id=student.id,learning_session_id=learning.id)
         historical=state.accept_scene(_make_ten_scene_command(student,learning))
         _activate(state,runtime_id=runtime.id,student=student,learning_session=learning,scene=historical)
-        learning_id=learning.id
+        learning_id,historical_id=learning.id,historical.id
     client=_client(postgres_session_factory,subject='decimal-normal')
     try:
         response=client.post(f'/api/v1/student/daily/session/{learning_id}/turn/stream',json={'content':'Use the prepared decimal exercise.'})
@@ -181,8 +179,6 @@ def test_normal_tutor_configured_mock_wiring_issues_and_activates_exact_referenc
     finally:
         _clear_overrides()
     with postgres_session_factory.begin() as session:
-        scene=session.execute(select(StudioScene).where(StudioScene.learning_session_id==learning_id,StudioScene.activity_key==math.ACTIVITY_KEY)).scalar_one()
-        assert scene.seed_payload['source_ref']==ref
-        source=session.get(LearningMessage,scene.source_message_id)
-        assert source.payload['workspace']['decision']['target_source_reference']==ref
-        assert source.role=='tutor' and len(calls)==1
+        assert session.execute(select(StudioScene).where(StudioScene.learning_session_id==learning_id,StudioScene.activity_key==math.ACTIVITY_KEY)).scalar_one_or_none() is None
+        assert session.get(StudioScene,historical_id).status=='ACTIVE'
+        assert len(calls)==1
