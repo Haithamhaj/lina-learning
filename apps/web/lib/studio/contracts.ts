@@ -65,6 +65,59 @@ export type StudioOperation = {
   idempotency_key: string;
 };
 
+export type AgenticCanvasAction = "FOCUS" | "SELECT" | "MOVE" | "SET_VALUE" | "CONNECT" | "SUBMIT";
+
+export type AgenticCanvasElement = {
+  id: string;
+  label: string;
+  current_value: string | null;
+};
+
+export type AgenticCanvasAccessibility = {
+  text_equivalent: string;
+  aria_label: string | null;
+};
+
+type AgenticCanvasBlockBase = {
+  block_id: string;
+  meaning: string;
+  title: string | null;
+  accessibility: AgenticCanvasAccessibility;
+  allowed_actions: AgenticCanvasAction[];
+  elements: AgenticCanvasElement[];
+};
+
+export type AgenticCanvasBlock =
+  | (AgenticCanvasBlockBase & {
+      type: "MATH_BOARD";
+      board_kind: "NUMBER_LINE" | "CARTESIAN" | "PLOT";
+      axis_min: string | null;
+      axis_max: string | null;
+    })
+  | (AgenticCanvasBlockBase & {
+      type: "SCENE_2D";
+      viewport_width_units: 100;
+      viewport_height_units: 100;
+    })
+  | (AgenticCanvasBlockBase & {
+      type: "DIAGRAM";
+      topology: "SEQUENCE" | "CYCLE" | "FLOW" | "CAUSE_EFFECT" | "COMPARISON" | "HIERARCHY" | "SYSTEM" | "CONCEPT_MAP";
+      layout: "HORIZONTAL" | "VERTICAL" | "RADIAL" | "TREE" | "GRID" | "AUTO";
+    })
+  | (AgenticCanvasBlockBase & {
+      type: "TEXT_INTERACTION";
+      interaction_family: "ORDERING" | "MATCHING" | "CLASSIFICATION" | "GROUPING" | "HIGHLIGHT" | "ANNOTATION" | "RELATION" | "TOKEN_MANIPULATION";
+    })
+  | (AgenticCanvasBlockBase & { type: "MATH_INPUT"; notation: "LATEX" })
+  | (AgenticCanvasBlockBase & { type: "IMAGE"; studio_generated_asset_id: string });
+
+export type AgenticCanvasScene = {
+  version: "agentic-canvas-scene-v1";
+  objective: string;
+  subject_key: string;
+  blocks: AgenticCanvasBlock[];
+};
+
 export class StudioProtocolParseError extends Error {}
 
 function isRecord(value: unknown): value is Record<string, unknown> {

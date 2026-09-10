@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { StudioRendererHost } from "@/components/daily-student/studio-renderer-host";
 import { DailyVoiceInput } from "@/components/daily-student/daily-voice-input";
@@ -468,6 +468,17 @@ export function DailyStudentApp() {
     }
   };
 
+  const loadGeneratedAsset = useCallback(async (assetId: string): Promise<Blob> => {
+    const runtimeId = runtimeIdRef.current;
+    const token = await getToken();
+    if (!runtimeId || !token) throw new Error("Studio asset authentication is unavailable.");
+    const response = await fetch(studentEndpoint(`/studio/${encodeURIComponent(runtimeId)}/assets/${encodeURIComponent(assetId)}`), {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error("Studio asset is unavailable.");
+    return response.blob();
+  }, [getToken]);
+
   const latestTutor = [...(learningSession?.messages ?? [])].reverse().find((message) => message.role === "tutor");
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -506,7 +517,7 @@ export function DailyStudentApp() {
               <Button className="order-3 min-h-12" type="submit" disabled={(!draft.trim() && !selectedSource) || chatSending || voiceBusy}>{chatSending ? "Tutor is thinking…" : "Send"}</Button>
             </form>
           </section>
-          {workspaceVisible || canvasCompositionPending ? <aside aria-label="Adaptive Learning Workspace" className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a6b42]">Adaptive Learning Workspace</p><h2 ref={workspaceHeadingRef} tabIndex={-1} className="mt-1 font-display text-2xl outline-none">{workspaceVisible ? "Work with the current scene" : "Preparing a visual explanation"}</h2></div>{operationPending ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900" role="status">Saving…</span> : null}</div>{canvasCompositionPending ? <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" role="status">Tutor is preparing the visual explanation. You can keep chatting while it arrives.</p> : null}{workspaceVisible && snapshot ? <StudioRendererHost snapshot={snapshot} operationPending={operationPending} onOperation={submitOperation} onReload={() => { void reloadSnapshot(); }} /> : null}</aside> : null}
+          {workspaceVisible || canvasCompositionPending ? <aside aria-label="Adaptive Learning Workspace" className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a6b42]">Adaptive Learning Workspace</p><h2 ref={workspaceHeadingRef} tabIndex={-1} className="mt-1 font-display text-2xl outline-none">{workspaceVisible ? "Work with the current scene" : "Preparing a visual explanation"}</h2></div>{operationPending ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900" role="status">Saving…</span> : null}</div>{canvasCompositionPending ? <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" role="status">Tutor is preparing the visual explanation. You can keep chatting while it arrives.</p> : null}{workspaceVisible && snapshot ? <StudioRendererHost snapshot={snapshot} operationPending={operationPending} onOperation={submitOperation} onReload={() => { void reloadSnapshot(); }} loadGeneratedAsset={loadGeneratedAsset} /> : null}</aside> : null}
         </div>
         {error ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert"><span>{error}</span><Button type="button" variant="secondary" onClick={() => setLoadAttempt((value) => value + 1)}>Reconnect</Button></div> : null}
       </div>
