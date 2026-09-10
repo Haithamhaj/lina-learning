@@ -2,11 +2,11 @@
 
 ## Current goal
 
-Complete and verify `STUDIO-AGENTIC-01`, then return to `UI-REFINE-01` without changing Studio ownership or Tutor authority.
+Execute `UI-REFINE-01` without changing Studio ownership or Tutor authority.
 
 ## Current reality
 
-`main` is the canonical branch. `STUDIO-AGENTIC-01` is implemented in the isolated `codex/studio-agentic-01` worktree: Tutor v11 can emit an admitted educational brief; one bounded Canvas Agent composes project-owned typed blocks; completed proposals settle through the existing Studio Scene/Event/Snapshot/reducer path; semantic interactions return to the same Primary Tutor. Historical Studio capability profiles remain registered for replay. The root `main` worktree and unrelated local changes remain untouched.
+`main` is the canonical branch. `STUDIO-AGENTIC-01` is complete on `codex/studio-agentic-01`: Tutor v11 emits admitted educational briefs; one bounded Canvas Agent composes project-owned rich typed blocks; deterministic tools, hosted Image Generation, and Code Interpreter remain bounded; proposals settle through the existing Studio Scene/Event/Snapshot/reducer path; semantic interactions return to the same Primary Tutor. Historical Studio capability profiles remain registered for replay.
 
 ## Active decisions
 
@@ -18,11 +18,11 @@ Safety/Parent Boundaries, ownership/privacy, Learning Intelligence semantics, ra
 
 ## Active risks
 
-Authenticated disposable-Student Daily acceptance and longitudinal real Lina calibration remain unproven product gates. The bounded real-provider harness has partial evidence; hosted Image Generation is not registered yet and Code Interpreter was not needed by the executed cases, so those live cases are explicitly not accepted.
+Authenticated disposable-Student Daily acceptance and longitudinal real Lina calibration remain unproven product gates. STUDIO-AGENTIC-01 real-provider evidence is complete, including hosted Image Generation, Code Interpreter, durable same-Tutor Canvas continuity, updates, and replay.
 
 ## Next recommended action
 
-Close the remaining hosted-tool/live-acceptance gates for `STUDIO-AGENTIC-01`; then start `UI-REFINE-01` with a bounded approved scope and pursue authenticated Daily acceptance and real-use calibration.
+Start `UI-REFINE-01` with a bounded approved scope, then pursue authenticated Daily acceptance and real-use calibration.
 
 ## Critical references
 
