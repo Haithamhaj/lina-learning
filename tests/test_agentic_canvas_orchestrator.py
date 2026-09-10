@@ -25,6 +25,22 @@ def test_single_canvas_agent_uses_only_the_bounded_tool_registry() -> None:
     assert code_tool.tool_config == {"type": "code_interpreter", "container": {"type": "auto"}}
 
 
+def test_canvas_agent_instructions_make_hosted_tool_selection_semantic_and_bounded() -> None:
+    from services.studio.agent.orchestrator import CANVAS_AGENT_INSTRUCTIONS
+
+    instructions = CANVAS_AGENT_INSTRUCTIONS.casefold()
+    assert "original illustrative image" in instructions
+    assert "typed geometric or diagram primitives" in instructions
+    assert "do not replace that requested illustration with typed primitives" in instructions
+    assert "long bounded recurrence" in instructions
+    assert "aggregate a bounded data series" in instructions
+    assert "must use code interpreter" in instructions
+    assert "different compatible units" in instructions
+    assert "do not substitute compute_math for dimensional conversion" in instructions
+    assert "never prescribe a fixed tool sequence" in instructions
+    assert instructions.index("must use code interpreter") < instructions.index("return exactly one agentic-canvas-plan-v1")
+
+
 def test_canvas_agent_input_contains_only_the_tutor_authored_semantic_brief() -> None:
     import json
 

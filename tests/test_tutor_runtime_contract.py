@@ -141,6 +141,15 @@ def test_tutor_v11_requires_nullable_canvas_brief_and_keeps_workspace_intent() -
     assert canvas_brief["anyOf"][0]["properties"]["version"]["const"] == "canvas-brief-v1"
 
 
+def test_primary_tutor_honors_an_explicit_safe_canvas_request_across_subjects() -> None:
+    instructions = TUTOR_SHARED_INSTRUCTIONS.casefold()
+
+    assert "student explicitly asks to use canvas" in instructions
+    assert "even when no legacy workspace activity matches the subject" in instructions
+    assert "preserve the most specific educational subject" in instructions
+    assert "retain the starting value, recurrence rule, requested bound" in instructions
+
+
 def test_tutor_payload_preserves_complete_within_budget_visual_personalization_catalog() -> None:
     payload = build_tutor_model_payload(
         question="Can you show a process?",

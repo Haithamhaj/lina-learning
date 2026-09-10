@@ -330,7 +330,7 @@ async def run_live(settings: Settings, *, durable_run_id: UUID | None = None) ->
     ))
 
     live_cases = (
-        ("LIVE-04", "Please use Canvas to help me compare 3.6 kilometres with 2500 metres using a visual relationship.", "PHYSICS", "en", 0, {"convert_units"}),
+        ("LIVE-04", "Open Canvas for this Physics question about motion: a cyclist travels 3.6 kilometres while a runner travels 2500 metres. Preserve both physical distance quantities and their units, convert them exactly, and show their comparison as a clear visual relationship.", "PHYSICS", "en", 0, {"convert_units"}),
         ("LIVE-05", "Please use Canvas to build a visual cycle with at least five named stages for water moving through evaporation, condensation, clouds, precipitation, collection, and return flow.", "SCIENCE", "en", 5, {"create_diagram"}),
         ("LIVE-06", "افتح Canvas وساعدني بصريًا في ترتيب مراحل دورة الماء، واجعل النص عربيًا واضحًا ثم أضف مساحة أرتب فيها المراحل بنفسي.", "ARABIC", "ar", 0, {"create_text_interaction"}),
     )
@@ -341,7 +341,8 @@ async def run_live(settings: Settings, *, durable_run_id: UUID | None = None) ->
             scene = composition.scene
             element_count = max((len(block.elements) for block in scene.blocks), default=0)
             passed = (
-                scene.subject_key == brief.subject_key
+                (case_id != "LIVE-04" or brief.subject_key == "PHYSICS")
+                and scene.subject_key == brief.subject_key
                 and element_count >= minimum_elements
                 and required_tools.issubset(composition.selected_tools)
             )
@@ -361,14 +362,14 @@ async def run_live(settings: Settings, *, durable_run_id: UUID | None = None) ->
     hosted_cases = (
         (
             "LIVE-07",
-            "Please use Canvas to create an original, simple child-safe illustration of sunlight helping a small plant grow, alongside a clear labeled explanation. Do not use a prepared activity.",
+            "Open Canvas for a science explanation that requires one original child-safe illustrative image of sunlight helping a small plant grow. Show organic leaf shapes, irregular soil texture, and natural light that a symbolic diagram or simple geometric shapes cannot faithfully express, alongside one concise typed explanation.",
             "SCIENCE",
             "en",
             "image_generation",
         ),
         (
             "LIVE-08",
-            "Please use Canvas to analyze the first 30 values of the recurrence a(1)=2 and a(n+1)=(3*a(n)+1)/2 when a(n) is odd, otherwise a(n)/2. Use the sandboxed calculation tool because this multi-step data transformation is beyond one ordinary arithmetic operation, then create a typed visual summary without exposing code.",
+            "Open Canvas for an exact bounded data investigation. Starting at 2, calculate the first 30 values of this recurrence: when a value is odd, the next is (3 times it plus 1) divided by 2; otherwise the next is half of it. Find the maximum and count the odd and even transitions, then create a typed visual summary without showing executable code.",
             "MATH",
             "en",
             "code_interpreter",
