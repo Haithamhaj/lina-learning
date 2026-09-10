@@ -10,7 +10,11 @@ from PIL import Image
 from sqlalchemy.orm import Session
 
 from services.platform.db import models as m
-from services.platform.storage import LocalObjectStorage, StorageIntegrityError
+from services.platform.storage import (
+    LocalObjectStorage,
+    ObjectNotFoundError,
+    StorageIntegrityError,
+)
 
 
 def _png() -> bytes:
@@ -226,6 +230,79 @@ def test_successful_outer_commit_cancels_asset_compensation(tmp_path: Path) -> N
     database.close()
 
     assert storage.get(resolution.asset.storage_key).content == _png()
+
+
+def test_nested_savepoint_rollback_deletes_only_its_generated_asset(tmp_path: Path) -> None:
+    """Outer commit must not orphan bytes whose asset row died in a savepoint."""
+
+    service = _service()
+    storage = LocalObjectStorage(tmp_path / "objects", signing_secret="fixture")
+    run = _run()
+
+    class _NoDatabaseSession(Session):
+        def flush(self, objects: object | None = None) -> None:
+            for value in list(self.new):
+                self.expunge(value)
+
+    database = _NoDatabaseSession()
+    database.begin()
+    root_resolution = service.adopt_generated_image(
+        database,
+        storage=storage,
+        run=run,
+        temporary_handle="hosted-image-root-commit",
+        content=_png(),
+        content_type="image/png",
+    )
+    savepoint = database.begin_nested()
+    resolution = service.adopt_generated_image(
+        database,
+        storage=storage,
+        run=run,
+        temporary_handle="hosted-image-savepoint-rollback",
+        content=_png(),
+        content_type="image/png",
+    )
+    storage.head(resolution.asset.storage_key)
+
+    savepoint.rollback()
+    database.commit()
+
+    assert storage.get(root_resolution.asset.storage_key).content == _png()
+    with pytest.raises(ObjectNotFoundError):
+        storage.head(resolution.asset.storage_key)
+
+
+def test_nested_savepoint_commit_remains_pending_until_outer_outcome(tmp_path: Path) -> None:
+    """Savepoint success alone cannot cancel compensation before outer rollback."""
+
+    service = _service()
+    storage = LocalObjectStorage(tmp_path / "objects", signing_secret="fixture")
+    run = _run()
+
+    class _NoDatabaseSession(Session):
+        def flush(self, objects: object | None = None) -> None:
+            for value in list(self.new):
+                self.expunge(value)
+
+    database = _NoDatabaseSession()
+    database.begin()
+    savepoint = database.begin_nested()
+    resolution = service.adopt_generated_image(
+        database,
+        storage=storage,
+        run=run,
+        temporary_handle="hosted-image-savepoint-commit",
+        content=_png(),
+        content_type="image/png",
+    )
+
+    savepoint.commit()
+    storage.head(resolution.asset.storage_key)
+    database.rollback()
+
+    owned_root = tmp_path / "objects" / "studio-generated-assets"
+    assert not owned_root.exists() or not any(path.is_file() for path in owned_root.glob("**/*"))
 
 
 def test_private_read_rechecks_immutable_storage_metadata(tmp_path: Path) -> None:

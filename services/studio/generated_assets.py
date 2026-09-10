@@ -6,7 +6,7 @@ import copy
 import hashlib
 import re
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from io import BytesIO
 from uuid import UUID, uuid4
 
@@ -33,8 +33,8 @@ _IMAGE_MIME_BY_FORMAT = {
 _TEMPORARY_HANDLE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,127}$")
 _PENDING_COMPENSATIONS = "studio_generated_asset_pending_compensations"
 _COMPENSATION_LISTENERS = "studio_generated_asset_compensation_listeners"
-_OUTER_COMMIT_ATTEMPT = "studio_generated_asset_outer_commit_attempt"
-_OUTER_COMMIT_SUCCEEDED = "studio_generated_asset_outer_commit_succeeded"
+_COMMIT_ATTEMPT = "studio_generated_asset_commit_attempt"
+_COMMITTED_TRANSACTIONS = "studio_generated_asset_committed_transactions"
 
 
 class GeneratedAssetValidationError(ValueError):
@@ -61,12 +61,35 @@ class GeneratedImageResolution:
         return self.asset.id
 
 
-def _delete_pending_objects(session: Session) -> None:
-    pending = session.info.pop(_PENDING_COMPENSATIONS, {})
+@dataclass(frozen=True, slots=True)
+class _PendingCompensation:
+    storage: ObjectStorage
+    storage_key: str
+    owner_transaction: SessionTransaction
+
+
+def _delete_pending_objects(
+    session: Session,
+    *,
+    owner_transaction: SessionTransaction | None = None,
+) -> None:
+    pending: dict[str, _PendingCompensation] = session.info.get(
+        _PENDING_COMPENSATIONS,
+        {},
+    )
+    targets = [
+        item
+        for item in pending.values()
+        if owner_transaction is None or item.owner_transaction is owner_transaction
+    ]
+    for item in targets:
+        pending.pop(item.storage_key, None)
+    if not pending:
+        session.info.pop(_PENDING_COMPENSATIONS, None)
     first_error: StorageError | None = None
-    for storage, storage_key in pending.values():
+    for item in targets:
         try:
-            storage.delete(storage_key)
+            item.storage.delete(item.storage_key)
         except StorageError as exc:  # cleanup must attempt every registered object
             first_error = first_error or exc
     if first_error is not None:
@@ -74,31 +97,53 @@ def _delete_pending_objects(session: Session) -> None:
 
 
 def _before_session_commit(session: Session) -> None:
-    # A savepoint commit is not durable ownership. Only mark an attempt when
-    # Session.commit() is preparing the outer transaction.
-    if not session.in_nested_transaction():
-        session.info[_OUTER_COMMIT_ATTEMPT] = True
-        session.info[_OUTER_COMMIT_SUCCEEDED] = False
+    transaction = session.get_nested_transaction() or session.get_transaction()
+    if transaction is not None:
+        session.info[_COMMIT_ATTEMPT] = transaction
 
 
 def _after_session_commit(session: Session) -> None:
-    if session.info.get(_OUTER_COMMIT_ATTEMPT):
-        session.info[_OUTER_COMMIT_SUCCEEDED] = True
+    transaction = session.info.pop(_COMMIT_ATTEMPT, None)
+    if transaction is not None:
+        committed = session.info.setdefault(_COMMITTED_TRANSACTIONS, set())
+        committed.add(transaction)
 
 
 def _after_session_transaction_end(
     session: Session,
     transaction: SessionTransaction,
 ) -> None:
+    committed: set[SessionTransaction] = session.info.get(
+        _COMMITTED_TRANSACTIONS,
+        set(),
+    )
+    transaction_committed = transaction in committed
+    committed.discard(transaction)
+    if not committed:
+        session.info.pop(_COMMITTED_TRANSACTIONS, None)
+
+    pending: dict[str, _PendingCompensation] = session.info.get(
+        _PENDING_COMPENSATIONS,
+        {},
+    )
     if transaction.parent is not None:
+        if transaction_committed:
+            for storage_key, item in tuple(pending.items()):
+                if item.owner_transaction is transaction:
+                    pending[storage_key] = replace(
+                        item,
+                        owner_transaction=transaction.parent,
+                    )
+        else:
+            _delete_pending_objects(session, owner_transaction=transaction)
         return
     try:
-        if session.info.pop(_OUTER_COMMIT_SUCCEEDED, False):
+        if transaction_committed:
             session.info.pop(_PENDING_COMPENSATIONS, None)
         else:
             _delete_pending_objects(session)
     finally:
-        session.info.pop(_OUTER_COMMIT_ATTEMPT, None)
+        session.info.pop(_COMMIT_ATTEMPT, None)
 
 
 def _register_transaction_compensation(
@@ -107,8 +152,15 @@ def _register_transaction_compensation(
     storage: ObjectStorage,
     storage_key: str,
 ) -> None:
+    owner_transaction = session.get_nested_transaction() or session.get_transaction()
+    if owner_transaction is None:
+        raise RuntimeError("Generated asset persistence requires an active transaction.")
     pending = session.info.setdefault(_PENDING_COMPENSATIONS, {})
-    pending[storage_key] = (storage, storage_key)
+    pending[storage_key] = _PendingCompensation(
+        storage=storage,
+        storage_key=storage_key,
+        owner_transaction=owner_transaction,
+    )
     if session.info.get(_COMPENSATION_LISTENERS):
         return
     event.listen(session, "before_commit", _before_session_commit)
