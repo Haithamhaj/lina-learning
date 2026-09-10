@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
+
 from scripts import prove_studio_agentic_live as live
 from scripts.prove_studio_agentic_live import LiveEvidenceRecorder
 from services.platform.config.settings import Settings
@@ -114,3 +116,59 @@ def test_durable_evidence_connection_failure_becomes_a_bounded_case_failure(
 
     assert evidence is None
     assert reason_code == "ConnectionError"
+
+
+def test_completed_durable_artifact_is_validated_before_reuse(tmp_path: Path) -> None:
+    run_id = str(uuid4())
+    durable = {
+        "run_id": run_id,
+        "scene_id": str(uuid4()),
+        "scene_status": "ACTIVE",
+        "proposal_digest": "a" * 64,
+        "sdk_trace_id": "trace_verified",
+        "usage": {"requests": 2},
+        "tool_calls": [
+            {"name": "compute_math", "call_id": "call-1", "status": "completed"},
+            {"name": "create_math_board", "call_id": "call-2", "status": "completed"},
+        ],
+        "selected_tools": ["compute_math", "create_math_board"],
+        "tool_call_count": 2,
+        "interaction_id": str(uuid4()),
+        "interaction_status": "COMPLETED",
+        "action_key": "SELECT",
+        "tutor_message_id": str(uuid4()),
+        "observation_status": "COMMITTED",
+        "observation_execution_id": str(uuid4()),
+        "tutor_execution_id": None,
+        "update_run_id": str(uuid4()),
+        "successor_run_id": str(uuid4()),
+        "superseded_run_id": None,
+    }
+    durable["tutor_execution_id"] = durable["observation_execution_id"]
+    durable["superseded_run_id"] = durable["update_run_id"]
+    artifact = tmp_path / "durable.json"
+    artifact.write_text(json.dumps({
+        "proof": "STUDIO-AGENTIC-01-DURABLE",
+        "schema_version": "studio-agentic-durable-live-proof-v1",
+        "status": "COMPLETED",
+        "stage": "VERIFIED",
+        "run_id": run_id,
+        "durable": durable,
+    }), encoding="utf-8")
+
+    assert live._load_durable_evidence_artifact(artifact) == durable
+
+
+def test_incomplete_or_mismatched_durable_artifact_is_rejected(tmp_path: Path) -> None:
+    artifact = tmp_path / "durable.json"
+    artifact.write_text(json.dumps({
+        "proof": "STUDIO-AGENTIC-01-DURABLE",
+        "schema_version": "studio-agentic-durable-live-proof-v1",
+        "status": "RUNNING",
+        "stage": "CAUSAL_UPDATE_ADMITTED",
+        "run_id": str(uuid4()),
+        "durable": {},
+    }), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="completed and verified"):
+        live._load_durable_evidence_artifact(artifact)

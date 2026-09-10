@@ -442,10 +442,60 @@ def _try_durable_studio_evidence(
         return None, type(error).__name__
 
 
+def _load_durable_evidence_artifact(path: Path) -> dict[str, object]:
+    """Validate the bounded artifact emitted by the real durable proof harness."""
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("Durable evidence artifact must be a JSON object.")
+    if (
+        payload.get("proof") != "STUDIO-AGENTIC-01-DURABLE"
+        or payload.get("schema_version") != "studio-agentic-durable-live-proof-v1"
+        or payload.get("status") != "COMPLETED"
+        or payload.get("stage") != "VERIFIED"
+    ):
+        raise ValueError("Durable evidence artifact must be completed and verified.")
+    durable = payload.get("durable")
+    if not isinstance(durable, dict) or payload.get("run_id") != durable.get("run_id"):
+        raise ValueError("Durable evidence artifact run identity is invalid.")
+    selected_tools = durable.get("selected_tools")
+    tool_calls = durable.get("tool_calls")
+    if (
+        not isinstance(selected_tools, list)
+        or not selected_tools
+        or not all(isinstance(name, str) for name in selected_tools)
+        or not isinstance(tool_calls, list)
+        or type(durable.get("tool_call_count")) is not int
+        or durable["tool_call_count"] != len(tool_calls)
+        or not isinstance(durable.get("sdk_trace_id"), str)
+        or not isinstance(durable.get("proposal_digest"), str)
+    ):
+        raise ValueError("Durable evidence artifact Agent trace is invalid.")
+    call_names = {
+        call.get("name")
+        for call in tool_calls
+        if isinstance(call, dict) and isinstance(call.get("name"), str)
+    }
+    if call_names != set(selected_tools):
+        raise ValueError("Durable evidence artifact tool lineage is inconsistent.")
+    if (
+        durable.get("scene_status") != "ACTIVE"
+        or durable.get("interaction_status") != "COMPLETED"
+        or durable.get("observation_status") != "COMMITTED"
+        or durable.get("observation_execution_id") != durable.get("tutor_execution_id")
+        or durable.get("update_run_id") is None
+        or durable.get("successor_run_id") is None
+        or durable.get("superseded_run_id") != durable.get("update_run_id")
+    ):
+        raise ValueError("Durable evidence artifact continuity lineage is invalid.")
+    return durable
+
+
 async def run_live(
     settings: Settings,
     *,
     durable_run_id: UUID | None = None,
+    durable_evidence: dict[str, object] | None = None,
     on_progress: Callable[[list[dict[str, object]]], None] | None = None,
 ) -> dict[str, object]:
     results: list[dict[str, object]] = []
@@ -537,9 +587,9 @@ async def run_live(
         except Exception as error:  # noqa: BLE001 - each live case must record and continue
             _append_result(results, _record(case_id, passed=False, status="FAILED", reason_code=type(error).__name__), on_progress)
 
-    durable = None
+    durable = durable_evidence
     durable_reason_code = None
-    if durable_run_id is not None:
+    if durable is None and durable_run_id is not None:
         durable, durable_reason_code = _try_durable_studio_evidence(settings, durable_run_id)
     if durable is None:
         _append_result(results, _record("LIVE-09", passed=False, status="NOT_RUN", reason_code=durable_reason_code or "DURABLE_STUDIO_INTERACTION_REQUIRED"), on_progress)
@@ -585,7 +635,9 @@ def main() -> None:
     parser.add_argument("--live", action="store_true", help="Authorize real provider calls for this invocation.")
     parser.add_argument("--output", type=Path, default=Path("output/studio-agentic-live-proof.json"))
     parser.add_argument("--env-file", type=Path, default=None, help="Optional explicit server dotenv path.")
-    parser.add_argument("--studio-run-id", type=UUID, default=None, help="Optional actual Studio run used for durable LIVE-03 and LIVE-09 through LIVE-11 evidence.")
+    durable_source = parser.add_mutually_exclusive_group()
+    durable_source.add_argument("--studio-run-id", type=UUID, default=None, help="Optional actual Studio run used for durable LIVE-03 and LIVE-09 through LIVE-11 evidence.")
+    durable_source.add_argument("--durable-evidence", type=Path, default=None, help="Completed output from prove_studio_agentic_durable_live.py.")
     args = parser.parse_args()
     if not args.live:
         raise SystemExit("Refusing provider calls without explicit --live.")
@@ -595,10 +647,16 @@ def main() -> None:
     recorder = LiveEvidenceRecorder(output=args.output, model=settings.model_name)
     recorder.start()
     try:
+        durable_evidence = (
+            _load_durable_evidence_artifact(args.durable_evidence)
+            if args.durable_evidence is not None
+            else None
+        )
         run_result = asyncio.run(
             run_live(
                 settings,
                 durable_run_id=args.studio_run_id,
+                durable_evidence=durable_evidence,
                 on_progress=recorder.sync,
             )
         )
