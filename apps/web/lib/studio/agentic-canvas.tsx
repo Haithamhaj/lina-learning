@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 
 import type { AgenticCanvasAction, AgenticCanvasBlock, StudioOperation } from "./contracts";
@@ -252,6 +252,45 @@ function GeneratedImage({ block, loadGeneratedAsset }: { block: Extract<AgenticC
   </div>;
 }
 
+const CUSTOM_CHANNEL = "lina-full-power-canvas-v1";
+
+function customSandboxDocument(source: string, parameters: Record<string, string | number | boolean>, nonce: string) {
+  const params = JSON.stringify(parameters).replace(/</g, "\\u003c");
+  const safeSource = source.replace(/<\/script/gi, "<\\/script");
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"></head><body><main id="root"></main><script>
+const bridge={emit:(semantic_action,semantic_id,detail={})=>parent.postMessage({channel:'${CUSTOM_CHANNEL}',type:'EVENT',nonce:'${nonce}',semantic_action,semantic_id,from_value:detail.from_value??null,to_value:detail.to_value??null},'*')};
+try { ${safeSource}\nif(typeof window.mount!=='function')throw new Error('mount unavailable');window.mount(document.getElementById('root'),${params},bridge);parent.postMessage({channel:'${CUSTOM_CHANNEL}',type:'READY',nonce:'${nonce}'},'*'); } catch(error) { parent.postMessage({channel:'${CUSTOM_CHANNEL}',type:'ERROR',nonce:'${nonce}',message:'Custom visual could not start.'},'*'); }
+</script></body></html>`;
+}
+
+function CustomVisualSandbox(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "CUSTOM_VISUAL" }> }) {
+  const frame = useRef<HTMLIFrameElement>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
+  const eventCount = useRef(0);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setStatus((current) => current === "loading" ? "failed" : current), 4500);
+    const receive = (event: MessageEvent<unknown>) => {
+      if (event.source !== frame.current?.contentWindow || typeof event.data !== "object" || event.data === null) return;
+      const data = event.data as Record<string, unknown>;
+      if (data.channel !== CUSTOM_CHANNEL || data.nonce !== props.block.bridge_nonce) return;
+      if (data.type === "READY") { setStatus("ready"); return; }
+      if (data.type === "ERROR") { setStatus("failed"); return; }
+      if (data.type !== "EVENT" || eventCount.current >= 24 || typeof data.semantic_action !== "string" || typeof data.semantic_id !== "string") return;
+      const action = data.semantic_action as AgenticCanvasAction;
+      const declared = props.block.package.manifest.interactions.find((item) => item.action === action && item.semantic_id === data.semantic_id);
+      if (!declared || !props.block.elements.some((item) => item.id === data.semantic_id) || (declared.value_required && typeof data.to_value !== "string")) return;
+      eventCount.current += 1;
+      nextOperation(props, props.block, action, { elementId: data.semantic_id, fromValue: typeof data.from_value === "string" ? data.from_value : undefined, toValue: typeof data.to_value === "string" ? data.to_value : undefined });
+    };
+    window.addEventListener("message", receive);
+    return () => { window.clearTimeout(timeout); window.removeEventListener("message", receive); };
+  }, [props.block, props.sceneId, props.sceneVersion]);
+  return <section className="overflow-hidden rounded-xl border border-slate-200 bg-white" data-custom-visual-sandbox={status}>
+    <iframe ref={frame} title={props.block.title ?? "Interactive learning visual"} sandbox="allow-scripts" referrerPolicy="no-referrer" className="min-h-[24rem] w-full border-0" srcDoc={customSandboxDocument(props.block.package.source, props.block.parameters, props.block.bridge_nonce)}/>
+    {status === "failed" ? <p role="alert" className="p-3 text-sm text-rose-900">This visual could not run safely. Tutor chat is still available.</p> : null}
+  </section>;
+}
+
 function DeclarativeBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation" | "loadGeneratedAsset"> & { block: AgenticCanvasBlock }) {
   if (props.block.type === "SCENE_2D") return <Scene2DBlock {...props} block={props.block}/>;
   if (props.block.type === "MATH_BOARD") return <MathBoardBlock {...props} block={props.block}/>;
@@ -262,6 +301,7 @@ function DeclarativeBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOpe
     <GeneratedImage block={props.block} loadGeneratedAsset={props.loadGeneratedAsset}/>
     <SemanticButtons {...props}/>
   </BlockFrame>;
+  if (props.block.type === "CUSTOM_VISUAL") return <BlockFrame block={props.block}><CustomVisualSandbox {...props} block={props.block}/></BlockFrame>;
   return <BlockFrame block={props.block}><ElementList block={props.block}/><SemanticButtons {...props}/></BlockFrame>;
 }
 

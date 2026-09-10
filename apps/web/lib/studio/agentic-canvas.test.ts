@@ -103,6 +103,30 @@ test("Agentic Canvas v2 preserves semantic presentation while rejecting hidden c
   assert.equal(parseAgenticCanvasScene({ ...scene, presentation: { ...scene.presentation, placements: [] } }), null);
 });
 
+test("Full-Power v3 admits only a declared custom sandbox package", () => {
+  const scene = {
+    version: "agentic-canvas-scene-v3",
+    objective: "Compare two fractions.", subject_key: "MATH",
+    presentation: { layout: "FOCUS", palette: "COOL", motion: "NONE", placements: [{ block_id: "custom", role: "PRIMARY", order: 0, span: "FULL" }], reveal_order: [] },
+    blocks: [{
+      ...commonBlock, block_id: "custom", type: "CUSTOM_VISUAL", allowed_actions: ["MOVE"],
+      elements: [{ id: "fraction-a", label: "One half", current_value: null }], artifact_instance_id: "fraction-instance", bridge_nonce: "nonce-123",
+      package: {
+        version: "custom-visual-package-v1", runtime_kind: "custom-visual", dependencies: ["native-svg-v1"],
+        source: "window.mount=(root,params,bridge)=>{root.textContent=params.label}", parameter_schema: { type: "object" },
+        manifest: {
+          version: "canvas-semantic-manifest-v1", brief_digest: "a".repeat(64), objective: "Compare two fractions.", representation_summary: "A shared exact fraction line.",
+          entities: [{ semantic_id: "fraction-a", kind: "quantity", label: "One half", educational_meaning: "An exact fraction.", visible_description: "A blue marker." }],
+          relations: [], quantities: [{ semantic_id: "fraction-a", value: "1/2", unit: null, provenance: "tutor-brief" }], presentation_steps: [],
+          interactions: [{ semantic_id: "fraction-a", action: "MOVE", meaning: "Move the marker.", value_required: true }], calculated_results: [], visual_descriptions: ["A blue marker."], current_state_schema: {}, provenance: { runtime_kind: "custom-visual" },
+        },
+      }, parameters: { label: "1/2" },
+    }],
+  };
+  assert.equal(parseAgenticCanvasScene(scene)?.blocks[0].type, "CUSTOM_VISUAL");
+  assert.equal(parseAgenticCanvasScene({ ...scene, blocks: [{ ...scene.blocks[0], package: { ...scene.blocks[0].package, source: "window.mount=()=>fetch('https://bad.example')" } }] }), null);
+});
+
 test("Agentic Canvas admission rejects unknown blocks and unknown fields at every boundary", () => {
   assert.equal(parseAgenticCanvasScene({ ...validScene, renderer_key: "model-picked-renderer" }), null);
   assert.equal(parseAgenticCanvasScene({ ...validScene, blocks: [{ ...commonBlock, block_id: "video", type: "VIDEO" }] }), null);

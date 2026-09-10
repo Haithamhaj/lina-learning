@@ -38,7 +38,7 @@ from services.studio.agent.orchestrator import (
     compose_canvas_scene_with_trace,
 )
 from services.studio.agentic_canvas import AgenticCanvasSceneV1
-from services.studio.canvas_brief import CanvasBriefV1, audit_canvas_brief
+from services.studio.canvas_brief import CanvasBriefV1, VisualLearnerContextV1, audit_canvas_brief
 from services.studio.process_production_acceptance import agentic_scene_contract
 from services.studio.tutor_context import StudioTutorWorkspaceContext
 from services.tutor.runtime import build_tutor_model_payload
@@ -208,6 +208,11 @@ async def _compose(settings: Settings, brief: CanvasBriefV1) -> AgenticCanvasCom
     assert settings.model_api_key is not None
     return await compose_canvas_scene_with_trace(
         brief=brief,
+        visual_learner_context=VisualLearnerContextV1.model_validate({
+            "version": "visual-learner-context-v1",
+            "core_profile": {"age_years": 10, "grade_level": "5"},
+            "selected_personal_facts": [],
+        }),
         api_key=settings.model_api_key.get_secret_value(),
         model=settings.model_name,
         base_url=settings.model_base_url,

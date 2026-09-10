@@ -7,8 +7,11 @@ from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
+from services.studio.full_power_canvas import CanvasSemanticManifestV1, CustomVisualPackageV1
 
-AGENTIC_CANVAS_SCENE_VERSION = "agentic-canvas-scene-v2"
+
+AGENTIC_CANVAS_SCENE_VERSION = "agentic-canvas-scene-v3"
+AGENTIC_CANVAS_SCENE_V2_VERSION = "agentic-canvas-scene-v2"
 AGENTIC_CANVAS_SCENE_V1_VERSION = "agentic-canvas-scene-v1"
 AGENTIC_CANVAS_ACTION_VERSION = "agentic-canvas-action-v1"
 AGENTIC_CANVAS_PLAN_VERSION = "agentic-canvas-plan-v1"
@@ -163,7 +166,10 @@ class AgenticCanvasBlockV1(BaseModel):
     meaning: str = Field(min_length=1, max_length=500)
     title: str | None = Field(default=None, max_length=120)
     accessibility: AccessibilitySpecV1
-    allowed_actions: list[Literal["FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT"]] = Field(default_factory=list, max_length=6)
+    # The action vocabulary is deliberately finite.  Custom visuals use the
+    # same Studio action vocabulary as typed blocks; there is no side channel
+    # for generated code to mutate Studio state.
+    allowed_actions: list[Literal["FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP", "RESET_VIEW"]] = Field(default_factory=list, max_length=10)
     elements: list[AgenticCanvasElementV1] = Field(..., max_length=32)
 
 
@@ -259,7 +265,29 @@ class ImageBlockV1(AgenticCanvasBlockV1):
     studio_generated_asset_id: str = Field(min_length=1, max_length=64)
 
 
-TypedAgenticCanvasBlockV1 = Annotated[Union[MathBoardBlockV1, Scene2DBlockV1, DiagramBlockV1, TextInteractionBlockV1, MathInputBlockV1, ImageBlockV1], Field(discriminator="type")]
+class CustomVisualBlockV1(AgenticCanvasBlockV1):
+    """Generated package data; execution remains exclusively in the browser sandbox."""
+
+    type: Literal["CUSTOM_VISUAL"]
+    artifact_instance_id: str = Field(min_length=1, max_length=64, pattern=_SEMANTIC_ID)
+    bridge_nonce: str = Field(min_length=8, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")
+    package: CustomVisualPackageV1
+    parameters: dict[str, str | int | float | bool] = Field(default_factory=dict, max_length=32)
+
+    @model_validator(mode="after")
+    def manifest_matches_block(self) -> "CustomVisualBlockV1":
+        manifest: CanvasSemanticManifestV1 = self.package.manifest
+        manifest_ids = {item.semantic_id for item in manifest.entities}
+        element_ids = {item.id for item in self.elements}
+        if not element_ids <= manifest_ids:
+            raise ValueError("Custom visual block elements must be declared by its Semantic Manifest")
+        allowed = {item.action for item in manifest.interactions}
+        if not set(self.allowed_actions) <= allowed:
+            raise ValueError("Custom visual block actions must be declared by its Semantic Manifest")
+        return self
+
+
+TypedAgenticCanvasBlockV1 = Annotated[Union[MathBoardBlockV1, Scene2DBlockV1, DiagramBlockV1, TextInteractionBlockV1, MathInputBlockV1, ImageBlockV1, CustomVisualBlockV1], Field(discriminator="type")]
 
 
 class AgenticCanvasSceneV1(BaseModel):
@@ -300,7 +328,7 @@ class AgenticCanvasSceneV2(BaseModel):
     """New-write Scene preserving the Agent's semantic presentation decisions."""
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    version: Literal[AGENTIC_CANVAS_SCENE_VERSION]
+    version: Literal[AGENTIC_CANVAS_SCENE_V2_VERSION]
     objective: str = Field(min_length=1, max_length=500)
     subject_key: str = Field(min_length=1, max_length=64)
     presentation: CanvasPresentationV1
@@ -316,7 +344,29 @@ class AgenticCanvasSceneV2(BaseModel):
         return self
 
 
-AgenticCanvasScene = AgenticCanvasSceneV1 | AgenticCanvasSceneV2
+class AgenticCanvasSceneV3(BaseModel):
+    """Full-Power new-write Scene; v1/v2 remain exact historical contracts."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    version: Literal[AGENTIC_CANVAS_SCENE_VERSION]
+    objective: str = Field(min_length=1, max_length=500)
+    subject_key: str = Field(min_length=1, max_length=64)
+    presentation: CanvasPresentationV1
+    blocks: list[TypedAgenticCanvasBlockV1] = Field(min_length=1, max_length=12)
+
+    @model_validator(mode="after")
+    def composition_matches_blocks(self) -> "AgenticCanvasSceneV3":
+        block_ids = {block.block_id for block in self.blocks}
+        if len(block_ids) != len(self.blocks):
+            raise ValueError("Agentic Canvas block identifiers must be unique")
+        if {placement.block_id for placement in self.presentation.placements} != block_ids:
+            raise ValueError("Canvas presentation must place every Scene block exactly once")
+        if sum(isinstance(block, CustomVisualBlockV1) for block in self.blocks) > 1:
+            raise ValueError("A Full-Power Canvas Scene may contain one isolated custom visual package")
+        return self
+
+
+AgenticCanvasScene = AgenticCanvasSceneV1 | AgenticCanvasSceneV2 | AgenticCanvasSceneV3
 AGENTIC_CANVAS_SCENE_ADAPTER = TypeAdapter(AgenticCanvasScene)
 
 
@@ -355,11 +405,13 @@ class CanvasBlockPlacementV1(BaseModel):
 class AgenticCanvasActionV1(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     version: Literal[AGENTIC_CANVAS_ACTION_VERSION]
-    action: Literal["FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT"]
+    action: Literal["FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP", "RESET_VIEW"]
     block_id: str = Field(min_length=1, max_length=64)
     element_id: str | None = Field(default=None, min_length=1, max_length=64)
     from_value: str | None = Field(default=None, max_length=240)
     to_value: str | None = Field(default=None, max_length=240)
+    related_element_id: str | None = Field(default=None, min_length=1, max_length=64)
+    step_id: str | None = Field(default=None, min_length=1, max_length=64)
 
 
 def build_agentic_tutor_projection(*, objective: str, subject_key: str, scene_status: str, blocks: list[dict[str, object]], actions: list[AgenticCanvasActionV1]) -> dict[str, object]:
@@ -371,14 +423,33 @@ def build_agentic_tutor_projection(*, objective: str, subject_key: str, scene_st
         "subject": subject_key,
         "scene_status": scene_status,
         "blocks": [
-            {"block_id": block.block_id, "type": block.type, "meaning": block.meaning,
-             "elements": [element.model_dump() for element in block.elements]}
+            {
+                "block_id": block.block_id,
+                "type": block.type,
+                "meaning": block.meaning,
+                "elements": [element.model_dump() for element in block.elements],
+                **({
+                    "semantic_manifest": {
+                        "objective": block.package.manifest.objective,
+                        "representation_summary": block.package.manifest.representation_summary,
+                        "entities": [item.model_dump() for item in block.package.manifest.entities],
+                        "relations": [item.model_dump() for item in block.package.manifest.relations],
+                        "quantities": [item.model_dump() for item in block.package.manifest.quantities],
+                        "presentation_steps": [item.model_dump() for item in block.package.manifest.presentation_steps],
+                        "interactions": [item.model_dump() for item in block.package.manifest.interactions],
+                        "calculated_results": [item.model_dump() for item in block.package.manifest.calculated_results],
+                        "visual_descriptions": list(block.package.manifest.visual_descriptions),
+                        "provenance": dict(block.package.manifest.provenance),
+                    }
+                } if isinstance(block, CustomVisualBlockV1) else {}),
+            }
             for block in parsed_blocks
         ],
         "current_focus": None,
         "recent_student_actions": [
             {"action": action.action, "block_id": action.block_id, "element_id": action.element_id,
-             "from": action.from_value, "to": action.to_value}
+             "from": action.from_value, "to": action.to_value,
+             "related_element_id": action.related_element_id, "step_id": action.step_id}
             for action in actions
         ],
     }

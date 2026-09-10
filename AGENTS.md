@@ -1,34 +1,158 @@
-# Lina Personal Learning System — Operating Guide
+# AGENTS.md — Lina Personal Learning System
 
-## Build mode
+## Purpose
 
-An explicit Product Owner request for an implementation, fix, improvement, feature, refactor, or bounded task authorizes that working slice. `TASKS.md` and the Roadmap provide current planning and context; their status labels do not override an explicit current Product Owner instruction. A roadmap item alone is not authorization.
-
-Stop only for a real blocker: a protected-area change, conflicting requirements, missing required credentials with no safe progress, or an irreversible/destructive action requiring consent. Do not stop merely for task promotion or status bookkeeping. Read `docs/PROJECT_REFERENCE.md`, `project-state/PROJECT_STATE.md`, and the relevant specialized contract before changing behavior.
-
-Use the smallest correct implementation. Preserve unrelated local work; never stash, reset, clean, overwrite, or absorb it. Use normal Git history and no force push. `main` is the canonical branch after REPO-TRUTH-01; branches are short-lived and must not become a shadow mainline.
+This file is the compact operating guide for AI implementation agents working in Lina. Read the governing references needed for the task, preserve approved product boundaries, and use engineering judgment rather than mechanically following checklists.
 
 ## Authority map
 
-- `README.md`: orientation and implemented capability.
-- `docs/PROJECT_REFERENCE.md`: durable product truth and boundaries.
-- `docs/LEARNING_INTELLIGENCE_SPEC.md`: Evidence/Intelligence semantics.
-- `docs/CHILD_SAFETY_POLICY.md`: child safety and Parent Boundaries.
-- `docs/IMPLEMENTATION_PLAN.md`: current technical architecture.
-- `docs/LEARNING_PRODUCT_ROADMAP.md`: capability evolution, never execution authority.
-- `TASKS.md`: current queue and reference.
-- `project-state/PROJECT_STATE.md`: short live operational state.
+Read in this order when relevant:
 
-History, review evidence, and research are non-authoritative.
+1. `docs/PROJECT_REFERENCE.md` — durable product truth and cross-domain boundaries.
+2. `docs/LEARNING_INTELLIGENCE_SPEC.md` — Evidence / Intelligence semantics.
+3. `docs/CHILD_SAFETY_POLICY.md` — child-safety and Parent Boundary authority.
+4. `docs/IMPLEMENTATION_PLAN.md` — current technical architecture and execution direction.
+5. `docs/FULL-POWER-CANVAS-01_ARCHITECTURE_IMPLEMENTATION_SPEC.md` — approved Full-Power Canvas architecture and acceptance authority.
+6. `research/repository/TECHNOLOGY_REUSE_CATALOG.md` — reusable technology/capability reference.
+7. `project-state/PROJECT_STATE.md` — current operational snapshot.
+8. `TASKS.md` — executable queue and dependencies.
 
-## Protected areas
+If two governing documents conflict, the most recently approved Product Owner decision controls only where the conflict is explicit. Surface any unresolved protected-area contradiction rather than silently inventing a new product direction.
 
-Product Owner approval is required before changing child safety or Parent Boundary meaning; auth, privacy, ownership, or data isolation; Evidence or Learning Intelligence authority/semantics; destructive schema/data behavior; or irreversible external action. Preserve raw work and source provenance.
+## Current implementation mode
 
-Tutor availability is independent of curriculum. Route application AI through the Model Gateway. Normal Tutor turns use one primary call; semantic mode, strategy, method, prior-method relation, and optional `CanvasBriefV1` come from that call, while code validates, enforces policy, and persists canonical values. Canvas is a representation surface; Chat/Tutor remains language and reasoning authority. The Product Owner-approved `STUDIO-AGENTIC-01` exception is one bounded Canvas Agent composition loop using the OpenAI Agents SDK after Tutor-brief admission; it has no teaching, learner-state, safety, storage, or Studio-state authority and must settle only a project-owned typed Scene through the existing Studio lifecycle.
+The approved current execution direction is `FULL-POWER-CANVAS-01`.
 
-## Engineering and verification
+Use **native Codex capabilities only** for this work. Do not use Superpowers or any `superpowers:*` workflow/skill. Native reasoning, repository inspection, editing, debugging, browser work, testing, and native subagents are allowed.
 
-Use RED → GREEN → REFACTOR for behavioral work when practical. Keep the user experience simple and the modular monolith explicit; do not add core infrastructure, agents, or services without approval. Use migrations for schema changes. Match verification to risk, inspect the diff, run `git diff --check`, and report any unrun gate exactly.
+Do not stop for ordinary implementation choices, test failures, layout problems, library selection, or reversible refactors. Stop only for:
 
-Before custom-building a substantial UI, chat, retrieval, or learning-artifact subsystem, inspect `research/repository/TECHNOLOGY_REUSE_CATALOG.md`; record an ADOPT, PARTIAL ADOPT, or REJECT decision before equivalent custom infrastructure is complete.
+- a protected-area change requiring Product Owner approval;
+- contradictory governing requirements that cannot be reconciled from repository truth;
+- missing credentials when no safe useful work remains;
+- an irreversible/destructive external action requiring consent.
+
+Do not merge to `main`, force-push, delete branches, or rewrite unrelated history without explicit approval.
+
+## Engineering rules
+
+- Prefer the smallest robust implementation that satisfies the approved behavior.
+- Preserve the modular monolith.
+- Reuse current Tutor, Studio, filtering, generated-asset ownership, Model Gateway, browser harness, and Agentic Canvas foundations.
+- Do not rebuild working infrastructure merely because FULL-POWER-CANVAS-01 expands capability.
+- Add new abstractions only when they materially improve correctness, safety, reuse, visual quality, recoverability, or maintainability.
+- Generated visual code is never application authority.
+- Exact Math/Science truth comes from typed data or deterministic tools, not renderer guesswork.
+- Route application AI through approved model/provider boundaries and preserve usage/latency/cost lineage.
+- Use migrations for schema changes.
+- Preserve raw learner/source provenance and rebuildability.
+
+## Tutor / Canvas authority
+
+The invariant is:
+
+```text
+Tutor teaches.
+Canvas Agent composes.
+Tools establish exact truth.
+Code validates and executes.
+Studio persists.
+Tutor understands the Canvas.
+```
+
+The Primary Tutor owns:
+
+- educational objective;
+- facts and grounding;
+- pedagogical strategy;
+- student-facing explanation;
+- interpretation of meaningful learner actions.
+
+The Full-Power Canvas Agent owns bounded visual composition. It may choose REUSE, ADAPT, or CREATE and may use approved visual/runtime capabilities, but it does not gain learner-state, safety, storage, database, or Tutor authority.
+
+## Full-Power Canvas rules
+
+Typed renderers are a **fast path, not a capability ceiling**.
+
+The Canvas Agent may use the strongest approved route for the educational representation:
+
+- existing typed visual tools/renderers;
+- reusable visual artifacts;
+- parameter adaptation;
+- React/SVG/Motion;
+- JSXGraph;
+- Konva;
+- MathLive;
+- approved chart/simulation capabilities;
+- generated project-owned images;
+- custom visual code inside the approved isolated sandbox.
+
+Use:
+
+```text
+REUSE when fit is strong
+ADAPT when structure is fit but parameters/presentation must change
+CREATE when reuse/adaptation would compromise the learning representation
+```
+
+Do not force reuse merely to reduce cost.
+
+### Custom visual security boundary
+
+Generated custom code must execute only inside the approved visual sandbox. It must not receive:
+
+- cookies or browser identity;
+- application secrets;
+- database access;
+- unrestricted filesystem access;
+- arbitrary network access;
+- raw Personal Memory or Learning Intelligence;
+- raw student-source bytes unless a separately approved safe path explicitly requires them;
+- direct Studio writes.
+
+Only allowlisted dependencies/capabilities and a bounded semantic event bridge are permitted.
+
+### Semantic Manifest
+
+Every finalized Canvas runtime kind must expose a validated implementation-independent Semantic Manifest with stable semantic IDs sufficient for the same Primary Tutor to understand what the learner sees and does.
+
+The Tutor should normally consume semantic state/events, not generated code. A visual snapshot may be used only when genuinely useful.
+
+### Reusable Visual Registry
+
+Separate:
+
+- build history: every generated visual attempt/version needed for provenance;
+- reusable registry: only parameterizable, validated, safe, high-quality reusable artifacts.
+
+Never promote student-specific private information into reusable artifact definitions.
+
+## Verification rules
+
+Use lightweight behavior-first TDD on meaningful new boundaries when practical:
+
+```text
+define behavior → RED for intended reason → implement → GREEN
+```
+
+Do not build exhaustive upfront test matrices.
+
+During implementation use focused verification. Do not repeatedly rerun the entire Python/PostgreSQL/browser/live-provider suite after small changes.
+
+The primary release gate is one final integrated acceptance wave that includes real-provider and real-browser proof for representative REUSE, ADAPT, CREATE, Tutor round-trip, and sandbox-negative behavior, followed by one broad regression near closure.
+
+A task is not complete because unit tests pass. Visual completion requires actual rendered evidence.
+
+Always run `git diff --check` before closure and report any unrun gate exactly.
+
+## Project-state discipline
+
+`project-state/PROJECT_STATE.md` is a short operational snapshot, not a diary. Keep only:
+
+- current goal;
+- current reality;
+- active decisions;
+- protected areas;
+- active risks;
+- next recommended action;
+- critical references.

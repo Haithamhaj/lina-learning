@@ -32,6 +32,7 @@ from services.studio.agent.tools import (
     create_diagram,
     create_math_board,
     create_math_input,
+    create_custom_visual,
     create_text_interaction,
 )
 from services.studio.agentic_canvas import AgenticCanvasPlanV1, AgenticCanvasScene
@@ -48,6 +49,7 @@ from services.studio.agentic_canvas import (
     TextRelationV1,
 )
 from services.studio.canvas_brief import CanvasBriefV1, VisualLearnerContextV1
+from services.studio.full_power_canvas import CanvasSemanticManifestV1
 
 _CANVAS_SKILL_ROOT = Path(__file__).resolve().parents[3] / "runtime" / "canvas-agent"
 _CANVAS_SKILL_PACK = "\n\n".join(path.read_text(encoding="utf-8") for path in sorted((_CANVAS_SKILL_ROOT / "skills").glob("*.md")))
@@ -75,9 +77,26 @@ cannot be represented by typed primitives, use one Image Generation call.
 
 Return exactly one agentic-canvas-plan-v1. Its placements must refer only to
 blocks returned by your create_* tools. Select bounded layout, palette, and
-motion semantics; never provide CSS or physical layout. Every selected block
-must preserve the Tutor's subject, objective, quantities, and must-not-imply
-constraints."""
+motion semantics. Never provide implementation detail except as the source
+argument to create_custom_visual when CREATE is genuinely required. That is
+the only approved custom-code boundary: source defines window.mount, receives
+facts only through parameters, and emits only declared semantic actions via
+the supplied bridge. Never put source code in the final plan.
+
+First choose REUSE when a strong existing representation fits, ADAPT when its
+structure can bind the current values and presentation, and CREATE only when
+those routes would compromise understanding. Typed blocks remain fast paths,
+not a ceiling. Every selected block must preserve the Tutor's subject,
+objective, quantities, and must-not-imply constraints."""
+CANVAS_AGENT_INSTRUCTIONS += """
+Search the reusable registry before CREATE when a reusable visual might fit.
+Registry search returns only semantic summaries. To use one, call
+instantiate_reusable_visual with the current Semantic Manifest as a JSON string
+in manifest_json and the current values as a JSON string in parameters_json.
+Use mode REUSE for an unchanged structure and ADAPT only when a new version is
+needed. For CREATE, create_custom_visual likewise accepts manifest_json,
+parameter_schema_json, and parameters_json as JSON strings. The source itself
+is never placed in a plan or narrative."""
 CANVAS_AGENT_INSTRUCTIONS += "\n\n" + (_CANVAS_SKILL_ROOT / "AGENT.md").read_text(encoding="utf-8") + "\n\n" + _CANVAS_SKILL_PACK
 
 
@@ -85,6 +104,11 @@ CANVAS_AGENT_INSTRUCTIONS += "\n\n" + (_CANVAS_SKILL_ROOT / "AGENT.md").read_tex
 class CanvasAgentRunContext:
     registry: CanvasBlockRegistry
     tool_calls: list[str] = field(default_factory=list)
+    # These summaries are supplied by the application-owned registry adapter.
+    # They contain reusable definitions only: no student identity, history, or
+    # previously bound learner values.  Source stays internal to the tool.
+    reusable_visuals: dict[str, dict[str, object]] = field(default_factory=dict)
+    reusable_selections: list[dict[str, object]] = field(default_factory=list)
 
     def record_tool(self, name: str) -> None:
         self.tool_calls.append(name)
@@ -100,11 +124,12 @@ class AgenticCanvasCompositionResult:
     model: str | None = None
     usage: dict[str, int] = field(default_factory=dict)
     tool_calls: tuple["AgentToolCallTrace", ...] = ()
+    reusable_selections: tuple[dict[str, object], ...] = ()
 
     def execution_metadata(self) -> dict[str, object]:
         """Return the bounded durable Agent run envelope, never raw inputs/results."""
 
-        return {
+        result = {
             "sdk_trace_id": self.sdk_trace_id,
             "model": self.model,
             "usage": dict(self.usage),
@@ -112,6 +137,9 @@ class AgenticCanvasCompositionResult:
             "tool_call_count": self.tool_call_count,
             "tool_calls": [call.as_dict() for call in self.tool_calls],
         }
+        if self.reusable_selections:
+            result["reusable_selections"] = [dict(selection) for selection in self.reusable_selections]
+        return result
 
 
 @dataclass(frozen=True, slots=True)
@@ -280,6 +308,123 @@ def _create_math_input(
     ))
 
 
+def _create_custom_visual(
+    context: RunContextWrapper[CanvasAgentRunContext],
+    block_id: str,
+    meaning: str,
+    label: str,
+    artifact_instance_id: str,
+    bridge_nonce: str,
+    source: str,
+    dependencies: list[str],
+    manifest_json: str,
+    parameter_schema_json: str,
+    parameters_json: str = "{}",
+):
+    """Create a validated package for the opaque browser sandbox; never execute it here."""
+    context.context.record_tool("create_custom_visual")
+    try:
+        manifest = CanvasSemanticManifestV1.model_validate(json.loads(manifest_json))
+        parameter_schema = json.loads(parameter_schema_json)
+        parameters = json.loads(parameters_json)
+    except (json.JSONDecodeError, ValueError, TypeError) as exc:
+        raise ValueError("Custom visual manifest and parameter inputs must be bounded JSON objects.") from exc
+    if not isinstance(parameter_schema, dict) or not isinstance(parameters, dict):
+        raise ValueError("Custom visual manifest and parameter inputs must be JSON objects.")
+    return _record_block(context, create_custom_visual(
+        block_id=block_id,
+        meaning=meaning,
+        label=label,
+        artifact_instance_id=artifact_instance_id,
+        bridge_nonce=bridge_nonce,
+        source=source,
+        dependencies=dependencies,
+        manifest=manifest,
+        parameter_schema=parameter_schema,
+        parameters=parameters,
+    ))
+
+
+def _search_reusable_visuals(
+    context: RunContextWrapper[CanvasAgentRunContext],
+    query: str,
+):
+    """Return at most five safe registry summaries; never return implementation source."""
+    context.context.record_tool("search_reusable_visuals")
+    words = {word for word in query.lower().split() if word}
+    candidates = sorted(
+        context.context.reusable_visuals.items(),
+        key=lambda item: len(words & set((str(item[1].get("semantic_purpose", "")) + " " + str(item[1].get("stable_slug", ""))).lower().replace("-", " ").split())),
+        reverse=True,
+    )[:5]
+    return [
+        {
+            "version_id": version_id,
+            "stable_slug": str(value["stable_slug"]),
+            "semantic_purpose": str(value["semantic_purpose"]),
+            "runtime_kind": str(value["runtime_kind"]),
+            "parameter_schema": value["parameter_schema"],
+        }
+        for version_id, value in candidates
+    ]
+
+
+def _instantiate_reusable_visual(
+    context: RunContextWrapper[CanvasAgentRunContext],
+    version_id: str,
+    block_id: str,
+    meaning: str,
+    label: str,
+    artifact_instance_id: str,
+    bridge_nonce: str,
+    manifest_json: str,
+    parameters_json: str = "{}",
+    mode: Literal["REUSE", "ADAPT"] = "REUSE",
+):
+    """Bind a selected reusable visual to current Tutor-approved facts.
+
+    ADAPT records an immutable fork request for application-owned promotion at
+    settlement; the agent never writes the reusable registry itself.
+    """
+    context.context.record_tool("instantiate_reusable_visual")
+    candidate = context.context.reusable_visuals.get(version_id)
+    if candidate is None:
+        raise ValueError("Reusable visual version is not available in this bounded run.")
+    if candidate.get("runtime_kind") != "custom-visual":
+        raise ValueError("This minimal reusable path currently admits only custom visual packages.")
+    definition = candidate.get("definition")
+    if not isinstance(definition, dict):
+        raise ValueError("Reusable visual definition is invalid.")
+    source, dependencies = definition.get("source"), definition.get("dependencies")
+    if not isinstance(source, str) or not isinstance(dependencies, list) or not all(isinstance(item, str) for item in dependencies):
+        raise ValueError("Reusable visual package is invalid.")
+    try:
+        manifest = CanvasSemanticManifestV1.model_validate(json.loads(manifest_json))
+        parameters = json.loads(parameters_json)
+    except (json.JSONDecodeError, ValueError, TypeError) as exc:
+        raise ValueError("Reusable visual manifest and parameters must be bounded JSON objects.") from exc
+    schema = candidate.get("parameter_schema")
+    if not isinstance(schema, dict) or not isinstance(parameters, dict):
+        raise ValueError("Reusable visual parameters are invalid.")
+    properties = schema.get("properties", {})
+    if not isinstance(properties, dict) or not set(parameters) <= set(properties):
+        raise ValueError("Reusable visual parameters are outside the approved schema.")
+    block = create_custom_visual(
+        block_id=block_id,
+        meaning=meaning,
+        label=label,
+        artifact_instance_id=artifact_instance_id,
+        bridge_nonce=bridge_nonce,
+        source=source,
+        dependencies=dependencies,
+        manifest=manifest,
+        parameter_schema=schema,
+        parameters=parameters,
+    )
+    context.context.reusable_selections.append({"version_id": version_id, "mode": mode, "parameters": parameters})
+    return _record_block(context, block)
+
+
 def _agent_tools():
     return [
         function_tool(_compute_math, name_override="compute_math"),
@@ -289,6 +434,9 @@ def _agent_tools():
         function_tool(_create_diagram, name_override="create_diagram"),
         function_tool(_create_text_interaction, name_override="create_text_interaction"),
         function_tool(_create_math_input, name_override="create_math_input"),
+        function_tool(_create_custom_visual, name_override="create_custom_visual"),
+        function_tool(_search_reusable_visuals, name_override="search_reusable_visuals"),
+        function_tool(_instantiate_reusable_visual, name_override="instantiate_reusable_visual"),
         ImageGenerationTool(tool_config={
             "type": "image_generation",
             "action": "generate",
@@ -385,7 +533,8 @@ def _extract_tool_call_trace(result: object) -> tuple[AgentToolCallTrace, ...]:
 def _agent_function_tool_names() -> frozenset[str]:
     return frozenset({
         "compute_math", "convert_units", "create_math_board", "create_2d_scene",
-        "create_diagram", "create_text_interaction", "create_math_input",
+        "create_diagram", "create_text_interaction", "create_math_input", "create_custom_visual",
+        "search_reusable_visuals", "instantiate_reusable_visual",
     })
 
 
@@ -453,9 +602,9 @@ def canvas_agent_input(brief: CanvasBriefV1, visual_learner_context: VisualLearn
     }, ensure_ascii=False)
 
 
-async def compose_canvas_scene_with_trace(*, brief: CanvasBriefV1, visual_learner_context: VisualLearnerContextV1, api_key: str, model: str, base_url: str | None = None, sdk_trace_id: str | None = None) -> AgenticCanvasCompositionResult:
+async def compose_canvas_scene_with_trace(*, brief: CanvasBriefV1, visual_learner_context: VisualLearnerContextV1, api_key: str, model: str, base_url: str | None = None, sdk_trace_id: str | None = None, reusable_visuals: dict[str, dict[str, object]] | None = None) -> AgenticCanvasCompositionResult:
     """Run one bounded composition and return only accepted tool-call metadata."""
-    context = CanvasAgentRunContext(registry=CanvasBlockRegistry())
+    context = CanvasAgentRunContext(registry=CanvasBlockRegistry(), reusable_visuals=dict(reusable_visuals or {}))
     trace_id = sdk_trace_id or gen_trace_id()
     result = await Runner.run(
         build_canvas_agent(api_key=api_key, model=model, base_url=base_url),
@@ -481,12 +630,13 @@ async def compose_canvas_scene_with_trace(*, brief: CanvasBriefV1, visual_learne
         model=model,
         usage=_bounded_usage(result),
         tool_calls=tool_calls,
+        reusable_selections=tuple(context.reusable_selections),
     )
 
 
-async def compose_canvas_scene(*, brief: CanvasBriefV1, visual_learner_context: VisualLearnerContextV1, api_key: str, model: str, base_url: str | None = None) -> AgenticCanvasScene:
+async def compose_canvas_scene(*, brief: CanvasBriefV1, visual_learner_context: VisualLearnerContextV1, api_key: str, model: str, base_url: str | None = None, reusable_visuals: dict[str, dict[str, object]] | None = None) -> AgenticCanvasScene:
     """Backward-compatible Scene-only boundary for non-worker callers."""
-    composition = await compose_canvas_scene_with_trace(brief=brief, visual_learner_context=visual_learner_context, api_key=api_key, model=model, base_url=base_url)
+    composition = await compose_canvas_scene_with_trace(brief=brief, visual_learner_context=visual_learner_context, api_key=api_key, model=model, base_url=base_url, reusable_visuals=reusable_visuals)
     if composition.generated_images:
         raise HostedImageOutputError("Hosted images require the owned Studio asset adoption boundary.")
     return composition.scene

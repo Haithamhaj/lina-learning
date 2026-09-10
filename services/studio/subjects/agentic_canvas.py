@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from copy import deepcopy
 
-from services.studio.agentic_canvas import AGENTIC_CANVAS_SCENE_ADAPTER, AgenticCanvasActionV1, AgenticCanvasScene, AgenticCanvasSceneV1
+from services.studio.agentic_canvas import AGENTIC_CANVAS_SCENE_ADAPTER, AgenticCanvasActionV1, AgenticCanvasScene, AgenticCanvasSceneV1, AgenticCanvasSceneV2, CustomVisualBlockV1
 from services.studio.subjects.contracts import (
     AccessibilityContract,
     ActivityActionContract,
@@ -24,19 +24,19 @@ from services.studio.subjects.contracts import (
 
 
 SUBJECT_KEY = "CANVAS"
-PROFILE_VERSION = "agentic-canvas-profile-v2"
+PROFILE_VERSION = "agentic-canvas-profile-v3"
 ACTIVITY_KEY = "agentic_canvas"
 ACTIVITY_VERSION = "agentic-canvas-activity-v1"
 RENDERER_KEY = "agentic-canvas"
-RENDERER_VERSION = "agentic-canvas-renderer-v2"
-SCENE_SCHEMA_VERSION = "agentic-canvas-scene-v2"
+RENDERER_VERSION = "agentic-canvas-renderer-v3"
+SCENE_SCHEMA_VERSION = "agentic-canvas-scene-v3"
 ACTION_SCHEMA_VERSION = "agentic-canvas-action-v1"
 REDUCER_KEY = "agentic-canvas-reducer"
 REDUCER_VERSION = "agentic-canvas-reducer-v1"
 ACTION_VALIDATOR_KEY = "agentic-canvas-action-validator"
 ACTION_VALIDATOR_VERSION = "agentic-canvas-action-validator-v1"
-ACTIONS = ("FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT")
-TUTOR_TRIGGERING_ACTIONS = frozenset({"SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT"})
+ACTIONS = ("FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP", "RESET_VIEW")
+TUTOR_TRIGGERING_ACTIONS = frozenset({"SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP"})
 
 
 ACCESSIBILITY = AccessibilityContract(
@@ -57,8 +57,9 @@ def validate_scene(payload: Mapping[str, object]) -> None:
 
 
 def validate_action_shape(payload: Mapping[str, object]) -> None:
-    expected = {"version", "action", "block_id", "element_id", "from_value", "to_value"}
-    if set(payload) != expected:
+    required = {"version", "action", "block_id", "element_id", "from_value", "to_value"}
+    supported = {*required, "related_element_id", "step_id"}
+    if not required <= set(payload) or not set(payload) <= supported:
         raise ValueError("Agentic Canvas action has an unsupported shape.")
     AgenticCanvasActionV1.model_validate(dict(payload))
 
@@ -93,6 +94,12 @@ def validate_action(payload: Mapping[str, object]) -> ValidationResult:
         element = next((item for item in block.elements if item.id == action.element_id), None)
         if element is None:
             raise ValueError("Agentic Canvas action references an unknown element.")
+    if isinstance(block, CustomVisualBlockV1):
+        declared = next((item for item in block.package.manifest.interactions if item.semantic_id == action.element_id and item.action == action.action), None)
+        if declared is None:
+            raise ValueError("Custom Canvas action is not declared by its Semantic Manifest.")
+        if declared.value_required and action.to_value is None:
+            raise ValueError("Custom Canvas action requires a semantic value.")
     if action.action in {"MOVE", "SET_VALUE", "CONNECT"}:
         if element is None or action.to_value is None:
             raise ValueError("Agentic Canvas mutation requires an element and semantic value.")
@@ -236,3 +243,21 @@ def make_legacy_profile() -> SubjectCapabilityProfile:
         for item in legacy_profile.payload_validators
     )
     return replace(legacy_profile, activities=(legacy_activity,), renderers=(legacy_renderer,), payload_validators=legacy_validators)
+
+
+def make_v2_profile() -> SubjectCapabilityProfile:
+    """Retain exact pre-Full-Power new-write contract for persisted v2 replay."""
+    from dataclasses import replace
+
+    profile = make_profile()
+    v2_profile = replace(profile, profile_version="agentic-canvas-profile-v2")
+    v2_activity = replace(v2_profile.activities[0], renderer_version="agentic-canvas-renderer-v2", initial_scene_payload_schema_version="agentic-canvas-scene-v2")
+    v2_renderer = replace(v2_profile.renderers[0], renderer_version="agentic-canvas-renderer-v2", scene_input_schema_version="agentic-canvas-scene-v2")
+    def validate_v2(payload: Mapping[str, object]) -> None:
+        AgenticCanvasSceneV2.model_validate(dict(payload))
+    v2_validators = tuple(
+        replace(item, payload_schema_version="agentic-canvas-scene-v2", validator=validate_v2)
+        if item.payload_validator_key == "agentic-canvas-scene-payload" else item
+        for item in v2_profile.payload_validators
+    )
+    return replace(v2_profile, activities=(v2_activity,), renderers=(v2_renderer,), payload_validators=v2_validators)

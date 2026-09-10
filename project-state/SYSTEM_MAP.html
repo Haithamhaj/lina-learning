@@ -1,10 +1,91 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>Lina current system map</title><style>body{font:16px system-ui;margin:2rem;max-width:900px;color:#18222f}code{background:#eef3f7;padding:.1rem .3rem}section{border-left:4px solid #557a95;padding:.3rem 1rem;margin:1rem 0}strong{color:#134d68}</style></head><body>
-<h1>Lina — current architecture and readiness</h1>
-<p>This is a current visual map, not a historical plan.</p>
-<section><strong>Student interaction</strong><br>Daily Chat, voice, or owned image/PDF/DOCX source → identity/ownership → multimodal safety and Parent Boundary → one primary Tutor call.</section>
-<section><strong>Learning loop</strong><br>Raw interaction → completed Segment → semantic review → session-authorized Event/Evidence → Current State/Patterns → compact Intelligence Card → relevant later Tutor context.</section>
-<section><strong>Grounding and representation</strong><br>Original content → Docling structural processing → optional semantics → hybrid retrieval. Tutor-selected Studio/Canvas representation may persist Runtime/Scene/Event/Snapshot state and returns to the same Tutor.</section>
-<section><strong>Platform</strong><br>Next.js + FastAPI + PostgreSQL/pgvector + worker + object storage + Model Gateway. Safety, ownership, and raw provenance are protected boundaries.</section>
-<section><strong>Readiness</strong><br>Implemented: Tutor, Intelligence foundation, Personal Facts, optional RAG, Voice, Vision sources, safety, Studio/Canvas, four Studio subjects, Daily surface. Next gates: authenticated Daily acceptance, real Lina use, and calibration.</section>
-</body></html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lina — Full-Power Canvas Operating Map</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--ink:#182033;--muted:#667085;--line:#d9e0ec;--tutor:#eef4ff;--agent:#f4efff;--reuse:#eefbf4;--create:#fff5ea;--studio:#fff1f5;--risk:#fff9dd;--accent:#6558d3;--shadow:0 10px 30px rgba(25,35,58,.08);--r:18px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.wrap{max-width:1500px;margin:auto;padding:28px}.top{display:flex;justify-content:space-between;gap:22px;align-items:flex-start;margin-bottom:18px}.top h1{margin:0;font-size:32px;letter-spacing:-.03em}.top p{margin:8px 0 0;color:var(--muted);max-width:900px;line-height:1.55}
+.badge{white-space:nowrap;background:#e9f8ee;color:#25754a;padding:8px 12px;border-radius:999px;font-size:12px;font-weight:800}
+.grid{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:18px}.card h2{margin:0 0 12px;font-size:18px}.node{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.88);padding:12px;margin-top:9px}.node b{display:block}.node span{display:block;color:var(--muted);font-size:12px;line-height:1.5;margin-top:4px}
+.tutor{background:linear-gradient(145deg,var(--tutor),#fff)}.agent{background:linear-gradient(145deg,var(--agent),#fff)}.studio{background:linear-gradient(145deg,var(--studio),#fff)}.reuse{background:linear-gradient(145deg,var(--reuse),#fff)}.create{background:linear-gradient(145deg,var(--create),#fff)}
+.flow{margin-top:16px}.flow svg{width:100%;height:auto;display:block}.box{fill:#fff;stroke:#ccd5e3;stroke-width:1.4}.bt{fill:#eef4ff}.ba{fill:#f4efff}.br{fill:#eefbf4}.bc{fill:#fff5ea}.bs{fill:#fff1f5}.tx{fill:#202939;font-size:13px;font-weight:750}.sub{fill:#667085;font-size:10px}.arr{fill:none;stroke:#8c98aa;stroke-width:1.8;marker-end:url(#a)}
+.lower{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:16px;margin-top:16px}.rule{border-top:1px solid #edf0f5;padding:9px 0;font-size:12px}.rule:first-child{border-top:0}.rule strong{display:block}.rule span{color:var(--muted);line-height:1.45}
+.route{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.route div{border:1px solid var(--line);border-radius:13px;padding:11px;text-align:center}.route b{display:block}.route small{color:var(--muted)}
+.risk{background:var(--risk)}code{font-size:11px;background:#f5f6fa;border:1px solid #e5e8ef;border-radius:7px;padding:2px 5px}
+@media(max-width:980px){.grid,.lower{grid-template-columns:1fr}.top{display:block}.badge{display:inline-block;margin-top:12px}.route{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<section class="top">
+<div><h1>Lina — Full-Power Canvas Operating Map</h1><p>Approved next architecture: preserve Tutor/Studio authority, remove the expressive visual ceiling, and let one Canvas Agent choose REUSE, ADAPT, or CREATE while every final Canvas remains safe, explainable, and understandable by the same Primary Tutor.</p></div>
+<div class="badge">FULL-POWER-CANVAS-01 · READY</div>
+</section>
+
+<section class="grid">
+<article class="card tutor"><h2>Primary Tutor — Teaching Authority</h2>
+<div class="node"><b>Educational truth</b><span>Objective, facts, grounding, teaching strategy, learner-facing explanation.</span></div>
+<div class="node"><b>Bounded handoff</b><span>CanvasBrief + already-filtered Visual Learner Context only.</span></div>
+<div class="node"><b>Same-Tutor continuity</b><span>Receives Semantic Manifest + meaningful Studio state/events and continues the lesson.</span></div>
+</article>
+
+<article class="card agent"><h2>Full-Power Canvas Agent — Visual Authority</h2>
+<div class="node"><b>Choose representation</b><span>Search reusable capability, adapt it, or create a new visual when quality requires it.</span></div>
+<div class="node"><b>Capability portfolio</b><span>Typed Canvas, React/SVG/Motion, JSXGraph, Konva, MathLive, charts/simulation, images, custom visual packages.</span></div>
+<div class="node"><b>Quality + cost judgment</b><span>Reuse when strong; do not force reuse when it hurts understanding.</span></div>
+</article>
+
+<article class="card studio"><h2>Studio — Durable Authority</h2>
+<div class="node"><b>Persistence</b><span>Runtime / Scene / Event / Snapshot / Interaction remain canonical.</span></div>
+<div class="node"><b>Semantic bridge</b><span>Custom visuals emit only bounded meaningful actions with stable semantic IDs.</span></div>
+<div class="node"><b>Failure isolation</b><span>Canvas failure never blocks Tutor chat.</span></div>
+</article>
+</section>
+
+<section class="card flow">
+<h2>Approved end-to-end Canvas flow</h2>
+<svg viewBox="0 0 1420 315" role="img" aria-label="Full-Power Canvas architecture">
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#8c98aa"/></marker></defs>
+<rect class="box bt" x="25" y="92" width="165" height="82" rx="14"/><text class="tx" x="108" y="120" text-anchor="middle">Primary Tutor</text><text class="sub" x="108" y="141" text-anchor="middle">CanvasBrief</text><text class="sub" x="108" y="157" text-anchor="middle">filtered learner context</text>
+<rect class="box ba" x="230" y="92" width="175" height="82" rx="14"/><text class="tx" x="318" y="120" text-anchor="middle">Canvas Agent</text><text class="sub" x="318" y="141" text-anchor="middle">visual composition</text><text class="sub" x="318" y="157" text-anchor="middle">no Tutor authority</text>
+<rect class="box br" x="445" y="55" width="170" height="70" rx="14"/><text class="tx" x="530" y="84" text-anchor="middle">REUSE / ADAPT</text><text class="sub" x="530" y="104" text-anchor="middle">Reusable Visual Registry</text>
+<rect class="box bc" x="445" y="155" width="170" height="70" rx="14"/><text class="tx" x="530" y="184" text-anchor="middle">CREATE</text><text class="sub" x="530" y="204" text-anchor="middle">generated visual package</text>
+<rect class="box bc" x="655" y="155" width="175" height="70" rx="14"/><text class="tx" x="742" y="184" text-anchor="middle">Safe Sandbox</text><text class="sub" x="742" y="204" text-anchor="middle">allowlist · CSP · bounds</text>
+<rect class="box" x="870" y="92" width="175" height="82" rx="14"/><text class="tx" x="958" y="120" text-anchor="middle">Browser Render</text><text class="sub" x="958" y="141" text-anchor="middle">preview / one refinement</text><text class="sub" x="958" y="157" text-anchor="middle">quality evidence</text>
+<rect class="box br" x="1085" y="92" width="165" height="82" rx="14"/><text class="tx" x="1168" y="120" text-anchor="middle">Semantic Manifest</text><text class="sub" x="1168" y="141" text-anchor="middle">stable semantic IDs</text><text class="sub" x="1168" y="157" text-anchor="middle">implementation-independent</text>
+<rect class="box bs" x="1290" y="92" width="105" height="82" rx="14"/><text class="tx" x="1342" y="120" text-anchor="middle">Studio</text><text class="sub" x="1342" y="141" text-anchor="middle">state/events</text><text class="sub" x="1342" y="157" text-anchor="middle">same Tutor</text>
+<path class="arr" d="M190 133H230"/><path class="arr" d="M405 133H445"/><path class="arr" d="M405 133C425 133 425 90 445 90"/><path class="arr" d="M615 190H655"/><path class="arr" d="M615 90C730 90 760 120 870 133"/><path class="arr" d="M830 190C850 190 850 148 870 148"/><path class="arr" d="M1045 133H1085"/><path class="arr" d="M1250 133H1290"/>
+<path class="arr" d="M1342 174 C1342 275, 180 275, 108 174"/><text class="sub" x="730" y="294" text-anchor="middle">Meaningful Canvas state returns to the same Primary Tutor; implementation code never becomes teaching authority.</text>
+</svg>
+</section>
+
+<section class="lower">
+<article class="card reuse"><h2>Routing policy</h2><div class="route">
+<div><b>REUSE</b><small>Strong fit; bind parameters and render.</small></div>
+<div><b>ADAPT</b><small>Reuse structure; change presentation/parameters/version.</small></div>
+<div><b>CREATE</b><small>Novel representation when reuse would compromise learning.</small></div>
+</div>
+<div class="rule"><strong>Build history ≠ reusable registry</strong><span>Only safe, generalized, parameterizable, validated visuals are promoted.</span></div>
+<div class="rule"><strong>Quality floor</strong><span>Prior accepted Canvas quality is a floor, never a template.</span></div>
+</article>
+
+<article class="card create"><h2>Custom runtime boundary</h2>
+<div class="rule"><strong>No application authority</strong><span>No cookies, secrets, database, unrestricted filesystem/network, or direct Studio writes.</span></div>
+<div class="rule"><strong>Allowlisted capabilities</strong><span>Use approved versioned visual/runtime dependencies only.</span></div>
+<div class="rule"><strong>Exact truth</strong><span>Math/Science values come from typed/deterministic inputs; renderer never invents them.</span></div>
+<div class="rule"><strong>Bounded feedback</strong><span>CREATE: generate → render → accept or one refinement by default.</span></div>
+</article>
+
+<article class="card risk"><h2>Current state & next action</h2>
+<div class="rule"><strong>Migration baseline</strong><span><code>62df59bcc8c43074c223d79b73bcf97a0905ed4c</code></span></div>
+<div class="rule"><strong>Current task</strong><span>FULL-POWER-CANVAS-01 is READY.</span></div>
+<div class="rule"><strong>Execution</strong><span>Native Codex only. Lightweight TDD. Focused tests during implementation.</span></div>
+<div class="rule"><strong>Final gate</strong><span>Real-provider REUSE/ADAPT/CREATE → exact production browser output → Tutor round-trip + sandbox negative proof.</span></div>
+</article>
+</section>
+</div>
+</body>
+</html>

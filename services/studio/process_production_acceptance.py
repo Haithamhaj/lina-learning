@@ -16,6 +16,10 @@ from services.platform.db.models import (
     StudioGeneratedAsset,
     StudioRuntime,
     StudioScene,
+    VisualArtifactBuild,
+    VisualArtifactInstance,
+    VisualArtifact,
+    VisualArtifactVersion,
 )
 from services.studio.agent.admission import (
     AGENTIC_CANVAS_CAPABILITY_IDENTITY,
@@ -59,10 +63,11 @@ def agentic_scene_contract(
     brief = parse_canvas_brief(dict(brief_payload))
     if brief is None or scene.subject_key != brief.subject_key:
         raise ValueError("Agentic Canvas proposal does not match its Tutor brief subject.")
+    is_v3 = scene.version == "agentic-canvas-scene-v3"
     is_v2 = scene.version == "agentic-canvas-scene-v2"
     return {
         "subject_key": "CANVAS",
-        "subject_profile_version": "agentic-canvas-profile-v2" if is_v2 else "agentic-canvas-profile-v1",
+        "subject_profile_version": "agentic-canvas-profile-v3" if is_v3 else "agentic-canvas-profile-v2" if is_v2 else "agentic-canvas-profile-v1",
         "concept_keys": tuple(
             f"agentic:{block.type.lower()}:{block.block_id}" for block in scene.blocks
         ),
@@ -70,7 +75,7 @@ def agentic_scene_contract(
         "activity_contract_version": "agentic-canvas-activity-v1",
         "artifact_type": "agentic-canvas",
         "renderer_key": "agentic-canvas",
-        "renderer_version": "agentic-canvas-renderer-v2" if is_v2 else "agentic-canvas-renderer-v1",
+        "renderer_version": "agentic-canvas-renderer-v3" if is_v3 else "agentic-canvas-renderer-v2" if is_v2 else "agentic-canvas-renderer-v1",
         "payload_schema_version": scene.version,
         "seed_payload": scene.model_dump(mode="json"),
         "accessibility_payload": {
@@ -309,6 +314,20 @@ def _accept_completed_agentic_run_locked(
         run.status, run.failure_metadata = "REJECTED", {"code": "PROPOSAL_TO_SCENE_INVALID"}
         return None
 
+    selections = _validated_reusable_selections(run.agent_execution_metadata)
+    custom_blocks = [block for block in scene_payload.blocks if block.type == "CUSTOM_VISUAL"]
+    if selections and len(custom_blocks) != 1:
+        run.status, run.failure_metadata = "REJECTED", {"code": "REUSABLE_VISUAL_SELECTION_INVALID"}
+        return None
+    try:
+        selected_artifact_version_id = _resolve_artifact_version_for_instance(
+            session,
+            selection=selections[0] if selections else None,
+        )
+    except ValueError:
+        run.status, run.failure_metadata = "REJECTED", {"code": "REUSABLE_VISUAL_SELECTION_INVALID"}
+        return None
+
     state = StudioStateService(session)
     scene = state.accept_scene(
         CreateSceneCommand(
@@ -331,6 +350,31 @@ def _accept_completed_agentic_run_locked(
             source_segment_id=message.segment_id,
         )
     )
+    for block in scene_payload.blocks:
+        if block.type == "CUSTOM_VISUAL":
+            artifact_version_id = selected_artifact_version_id
+            session.add(VisualArtifactBuild(
+                artifact_version_id=artifact_version_id,
+                source_digest=sha256(block.package.source.encode()).hexdigest(),
+                bundle_digest=sha256(block.package.source.encode()).hexdigest(),
+                status="VALIDATED",
+                technical_metadata={
+                    "runtime_kind": block.package.runtime_kind,
+                    "dependencies": list(block.package.dependencies),
+                    "manifest_version": block.package.manifest.version,
+                    "scene_id": str(scene.id),
+                },
+            ))
+            session.add(VisualArtifactInstance(
+                artifact_version_id=artifact_version_id,
+                studio_scene_id=scene.id,
+                student_id=run.student_id,
+                bound_parameters=dict(block.parameters),
+                semantic_manifest=block.package.manifest.model_dump(mode="json"),
+                current_semantic_state={},
+                locale=str(contract["locale"]),
+                direction=str(contract["direction"]),
+            ))
     if active is not None:
         state.append_event(
             AppendStudioEventCommand(
@@ -372,6 +416,75 @@ def _accept_completed_agentic_run_locked(
     if before_commit is not None:
         before_commit()
     return scene
+
+
+def _validated_reusable_selections(value: object) -> list[dict[str, object]]:
+    """Read only the bounded routing record produced by the Canvas Agent."""
+    if not isinstance(value, dict):
+        return []
+    selections = value.get("reusable_selections")
+    if not isinstance(selections, list) or len(selections) > 1:
+        return []
+    accepted: list[dict[str, object]] = []
+    for selection in selections:
+        if not isinstance(selection, dict) or selection.get("mode") not in {"REUSE", "ADAPT"}:
+            return []
+        version_id, parameters = selection.get("version_id"), selection.get("parameters")
+        if not isinstance(version_id, str) or not isinstance(parameters, dict):
+            return []
+        accepted.append({"version_id": version_id, "mode": selection["mode"], "parameters": dict(parameters)})
+    return accepted
+
+
+def _resolve_artifact_version_for_instance(session: Session, *, selection: dict[str, object] | None):
+    """Link REUSE or create the one immutable ADAPT fork at settlement.
+
+    CREATE intentionally returns None: its validated build remains history and
+    is not silently promoted into the reusable registry.
+    """
+    if selection is None:
+        return None
+    try:
+        source_id = UUID(str(selection["version_id"]))
+    except (KeyError, ValueError):
+        raise ValueError("Reusable visual selection identity is invalid.")
+    source = session.get(VisualArtifactVersion, source_id)
+    if source is None:
+        raise ValueError("Selected reusable visual version no longer exists.")
+    artifact = session.get(VisualArtifact, source.artifact_id)
+    if artifact is None or artifact.lifecycle_status not in {"VALIDATED", "TRUSTED"} or source.validation_status not in {"VALIDATED", "TRUSTED"}:
+        raise ValueError("Selected reusable visual is not trusted for instantiation.")
+    if selection["mode"] == "REUSE":
+        return source.id
+    parameters = selection["parameters"]
+    properties = source.parameter_schema.get("properties", {})
+    if not isinstance(properties, dict) or not set(parameters) <= set(properties):
+        raise ValueError("Adapted reusable visual parameters are outside the declared schema.")
+    definition = dict(source.definition_payload)
+    definition["adapted_from_version_id"] = str(source.id)
+    definition["adaptation_parameters"] = dict(parameters)
+    sibling_count = session.scalar(
+        select(VisualArtifactVersion.version_number)
+        .where(VisualArtifactVersion.artifact_id == source.artifact_id)
+        .order_by(VisualArtifactVersion.version_number.desc())
+        .limit(1)
+    ) or 0
+    adapted = VisualArtifactVersion(
+        artifact_id=source.artifact_id,
+        parent_version_id=source.id,
+        version_number=int(sibling_count) + 1,
+        source_digest=sha256(json.dumps(definition, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest(),
+        runtime_contract_version=source.runtime_contract_version,
+        parameter_schema=dict(source.parameter_schema),
+        manifest_contract=dict(source.manifest_contract),
+        dependency_capabilities=list(source.dependency_capabilities),
+        definition_payload=definition,
+        validation_status="VALIDATED",
+        technical_evidence={"route": "ADAPT", "parent_version_id": str(source.id)},
+    )
+    session.add(adapted)
+    session.flush()
+    return adapted.id
 
 
 def _validate_generated_asset_lineage(

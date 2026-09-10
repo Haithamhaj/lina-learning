@@ -65,7 +65,7 @@ export type StudioOperation = {
   idempotency_key: string;
 };
 
-export type AgenticCanvasAction = "FOCUS" | "SELECT" | "MOVE" | "SET_VALUE" | "CONNECT" | "SUBMIT";
+export type AgenticCanvasAction = "FOCUS" | "SELECT" | "MOVE" | "SET_VALUE" | "CONNECT" | "SUBMIT" | "REORDER" | "TOGGLE" | "STEP" | "RESET_VIEW";
 
 export type AgenticCanvasElement = {
   id: string;
@@ -147,6 +147,31 @@ export type AgenticCanvasTextRelation = {
   relation: "BEFORE" | "MATCHES" | "BELONGS_TO" | "RELATES_TO";
 };
 
+export type CanvasSemanticManifest = {
+  version: "canvas-semantic-manifest-v1";
+  brief_digest: string;
+  objective: string;
+  representation_summary: string;
+  entities: Array<{ semantic_id: string; kind: string; label: string; educational_meaning: string; visible_description: string }>;
+  relations: Array<{ source_id: string; relation: string; target_id: string; meaning: string }>;
+  quantities: Array<{ semantic_id: string; value: string; unit: string | null; provenance: string }>;
+  presentation_steps: Array<{ semantic_id: string; label: string; order: number }>;
+  interactions: Array<{ semantic_id: string; action: AgenticCanvasAction; meaning: string; value_required: boolean }>;
+  calculated_results: Array<{ semantic_id: string; value: string; unit: string | null; provenance: string }>;
+  visual_descriptions: string[];
+  current_state_schema: Record<string, string>;
+  provenance: Record<string, string>;
+};
+
+export type CustomVisualPackage = {
+  version: "custom-visual-package-v1";
+  runtime_kind: "custom-visual";
+  dependencies: Array<"native-svg-v1" | "motion-v1">;
+  source: string;
+  manifest: CanvasSemanticManifest;
+  parameter_schema: Record<string, unknown>;
+};
+
 export type AgenticCanvasBlock =
   | (AgenticCanvasBlockBase & {
       type: "MATH_BOARD";
@@ -180,7 +205,8 @@ export type AgenticCanvasBlock =
       relations: AgenticCanvasTextRelation[];
     })
   | (AgenticCanvasBlockBase & { type: "MATH_INPUT"; notation: "LATEX"; prompt: string; constraints: string[] })
-  | (AgenticCanvasBlockBase & { type: "IMAGE"; studio_generated_asset_id: string });
+  | (AgenticCanvasBlockBase & { type: "IMAGE"; studio_generated_asset_id: string })
+  | (AgenticCanvasBlockBase & { type: "CUSTOM_VISUAL"; artifact_instance_id: string; bridge_nonce: string; package: CustomVisualPackage; parameters: Record<string, string | number | boolean> });
 
 export type AgenticCanvasPresentation = {
   layout: "FOCUS" | "STACK" | "SPLIT" | "GRID" | "FOCUS_SUPPORT" | "OVERLAY";
@@ -191,7 +217,7 @@ export type AgenticCanvasPresentation = {
 };
 
 export type AgenticCanvasScene = {
-  version: "agentic-canvas-scene-v1" | "agentic-canvas-scene-v2";
+  version: "agentic-canvas-scene-v1" | "agentic-canvas-scene-v2" | "agentic-canvas-scene-v3";
   objective: string;
   subject_key: string;
   presentation?: AgenticCanvasPresentation;

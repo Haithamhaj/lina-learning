@@ -22,6 +22,8 @@ from services.platform.db.models import (
     StudioRuntime,
     StudioScene,
     StudioSnapshot,
+    VisualArtifact,
+    VisualArtifactVersion,
 )
 from services.platform.jobs import NonRetryableJobError
 from services.platform.storage import ObjectStorage
@@ -81,6 +83,7 @@ def register_agentic_canvas_handlers(
                 model=settings.model_name,
                 base_url=settings.model_base_url,
                 sdk_trace_id=execution.sdk_trace_id,
+                reusable_visuals=execution.reusable_visuals,
             ))
         except Exception as error:
             code, retryable = _classify_agent_failure(error)
@@ -289,7 +292,7 @@ def _adopt_hosted_images(
 
 
 class _AgenticExecutionEnvelope:
-    def __init__(self, *, run_id, student_id, session_id, message_id, parent_execution_id, brief, visual_learner_context, provider_attempt: int, provider_max_attempts: int, sdk_trace_id: str) -> None:
+    def __init__(self, *, run_id, student_id, session_id, message_id, parent_execution_id, brief, visual_learner_context, provider_attempt: int, provider_max_attempts: int, sdk_trace_id: str, reusable_visuals: dict[str, dict[str, object]]) -> None:
         self.run_id = run_id
         self.student_id = student_id
         self.session_id = session_id
@@ -300,6 +303,35 @@ class _AgenticExecutionEnvelope:
         self.provider_attempt = provider_attempt
         self.provider_max_attempts = provider_max_attempts
         self.sdk_trace_id = sdk_trace_id
+        self.reusable_visuals = reusable_visuals
+
+
+def _reusable_visuals_for_agent(session: Session) -> dict[str, dict[str, object]]:
+    """Read the tiny trusted registry into an ephemeral agent context.
+
+    Candidate builds stay out of selection.  The source is never passed to the
+    model prompt: only the controlled instantiate tool can read it.
+    """
+    rows = session.execute(
+        select(VisualArtifactVersion, VisualArtifact)
+        .join(VisualArtifact, VisualArtifact.id == VisualArtifactVersion.artifact_id)
+        .where(
+            VisualArtifact.lifecycle_status.in_(("VALIDATED", "TRUSTED")),
+            VisualArtifactVersion.validation_status.in_(("VALIDATED", "TRUSTED")),
+        )
+        .order_by(VisualArtifactVersion.created_at.desc())
+        .limit(5)
+    ).all()
+    return {
+        str(version.id): {
+            "stable_slug": artifact.stable_slug,
+            "semantic_purpose": artifact.semantic_purpose,
+            "runtime_kind": artifact.runtime_kind,
+            "parameter_schema": dict(version.parameter_schema),
+            "definition": dict(version.definition_payload),
+        }
+        for version, artifact in rows
+    }
 
 
 def _preflight(factory: sessionmaker[Session], job: Job) -> _AgenticExecutionEnvelope | None:
@@ -351,7 +383,7 @@ def _preflight(factory: sessionmaker[Session], job: Job) -> _AgenticExecutionEnv
                     else:
                         run.status, run.started_at = "RUNNING", run.started_at or datetime.now(UTC)
                         run.sdk_trace_id = run.sdk_trace_id or gen_trace_id()
-                        envelope = _AgenticExecutionEnvelope(run_id=run.id, student_id=run.student_id, session_id=run.learning_session_id, message_id=message.id, parent_execution_id=message.ai_execution_id, brief=brief, visual_learner_context=visual_learner_context, provider_attempt=claimed.attempt_count, provider_max_attempts=claimed.max_attempts, sdk_trace_id=run.sdk_trace_id)
+                        envelope = _AgenticExecutionEnvelope(run_id=run.id, student_id=run.student_id, session_id=run.learning_session_id, message_id=message.id, parent_execution_id=message.ai_execution_id, brief=brief, visual_learner_context=visual_learner_context, provider_attempt=claimed.attempt_count, provider_max_attempts=claimed.max_attempts, sdk_trace_id=run.sdk_trace_id, reusable_visuals=_reusable_visuals_for_agent(session))
     # Raising inside ``factory.begin()`` rolls back the terminal Run state.
     # Commit that authoritative state first, then fail the queue Job.
     if terminal_error is not None:

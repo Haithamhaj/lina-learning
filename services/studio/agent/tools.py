@@ -20,6 +20,7 @@ from services.studio.agentic_canvas import (
     AccessibilitySpecV1,
     AgenticCanvasBlockV1,
     AgenticCanvasElementV1,
+    CustomVisualBlockV1,
     DiagramBlockV1,
     DiagramEdgeV1,
     DiagramNodeV1,
@@ -36,6 +37,7 @@ from services.studio.agentic_canvas import (
     TextItemV1,
     TextRelationV1,
 )
+from services.studio.full_power_canvas import CanvasSemanticManifestV1, CustomVisualPackageV1
 
 
 _TOOL_NAMES = (
@@ -46,6 +48,9 @@ _TOOL_NAMES = (
     "create_diagram",
     "create_text_interaction",
     "create_math_input",
+    "create_custom_visual",
+    "search_reusable_visuals",
+    "instantiate_reusable_visual",
     "image_generation",
     "code_interpreter",
 )
@@ -319,4 +324,48 @@ def create_math_input(
         ),
         prompt=prompt,
         constraints=constraints or [],
+    )
+
+
+def create_custom_visual(
+    *,
+    block_id: str,
+    meaning: str,
+    label: str,
+    artifact_instance_id: str,
+    bridge_nonce: str,
+    source: str,
+    dependencies: list[str],
+    manifest: CanvasSemanticManifestV1 | dict[str, object],
+    parameter_schema: dict[str, object],
+    parameters: dict[str, str | int | float | bool] | None = None,
+) -> AgenticCanvasBlockV1:
+    """Admit one bounded custom package; it is never run by this server process."""
+
+    package = CustomVisualPackageV1.model_validate({
+        "version": "custom-visual-package-v1",
+        "runtime_kind": "custom-visual",
+        "dependencies": dependencies,
+        "source": source,
+        "manifest": manifest,
+        "parameter_schema": parameter_schema,
+    })
+    elements = [
+        AgenticCanvasElementV1(id=item.semantic_id, label=item.label, current_value=None)
+        for item in package.manifest.entities
+    ]
+    actions = sorted({item.action for item in package.manifest.interactions})
+    return CustomVisualBlockV1(
+        **_common(
+            block_id=block_id,
+            block_type="CUSTOM_VISUAL",
+            meaning=meaning,
+            label=label,
+            elements=elements,
+            allowed_actions=actions,
+        ),
+        artifact_instance_id=artifact_instance_id,
+        bridge_nonce=bridge_nonce,
+        package=package,
+        parameters=parameters or {},
     )

@@ -278,21 +278,26 @@ Do not adopt a complete Webflow/Framer marketing template as the application arc
 
 # 7. Learning Artifact Renderer Stack
 
-The approved architecture remains:
+The approved architecture is now a Full-Power Hybrid Canvas:
 
 ```text
-Tutor teaching decision
+Tutor CanvasBrief + bounded Visual Learner Context
         ↓
-Typed Artifact Specification
+Canvas Agent: REUSE / ADAPT / CREATE
         ↓
-Artifact Registry
+Typed/reusable fast path OR sandboxed custom visual runtime
         ↓
-Approved renderer
+Semantic Manifest + Studio semantic bridge
         ↓
 Inline Artifact or Learning Canvas
 ```
 
-The AI should describe **what educational representation is needed**. Reusable renderers should determine **how it is rendered** whenever possible.
+The AI describes what educational representation is needed and may create a
+custom visual when a reusable renderer would compromise learning quality. Typed
+renderers remain the preferred fast path, not a capability ceiling. Generated
+custom code is admitted only through the isolated sandbox, approved capability
+allowlist, and Semantic Manifest boundary; it is never embedded directly in
+Lina application components or granted network/application authority.
 
 ### FE-02 scope boundary
 

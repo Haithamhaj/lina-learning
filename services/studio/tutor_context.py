@@ -148,7 +148,12 @@ def _safe_event(event):
         action = event.payload.get("action")
         try:
             parsed = AgenticCanvasActionV1.model_validate(action)
-            payload["payload"] = {"action": parsed.model_dump(mode="json")}
+            safe_action = parsed.model_dump(mode="json")
+            if safe_action["related_element_id"] is None:
+                safe_action.pop("related_element_id")
+            if safe_action["step_id"] is None:
+                safe_action.pop("step_id")
+            payload["payload"] = {"action": safe_action}
         except (ValueError, TypeError):
             payload["payload"] = {}
         return payload
@@ -297,9 +302,10 @@ def _selected_visual(session, runtime, snapshot, capability):
         agentic_canvas.ACTIVITY_KEY: (agentic_canvas.PROFILE_VERSION, agentic_canvas.ACTIVITY_VERSION, agentic_canvas.RENDERER_KEY, agentic_canvas.RENDERER_VERSION),
     }
     profile = profiles.get(capability.activity_key)
-    if profile is None or (capability.capability_status != "RESOLVED" or capability.subject_profile_version != profile[0]
+    agentic_historical = capability.activity_key == agentic_canvas.ACTIVITY_KEY and capability.subject_profile_version in {"agentic-canvas-profile-v1", "agentic-canvas-profile-v2"}
+    if profile is None or (capability.capability_status != "RESOLVED" or (not agentic_historical and capability.subject_profile_version != profile[0])
         or capability.activity_version != profile[1] or capability.renderer_key != profile[2]
-        or capability.renderer_version != profile[3]):
+        or (not agentic_historical and capability.renderer_version != profile[3])):
         return None
     scene = session.execute(select(StudioScene).where(StudioScene.id == snapshot.current_scene_id,
         StudioScene.student_id == runtime.student_id, StudioScene.studio_runtime_id == runtime.id,
@@ -314,7 +320,7 @@ def _selected_visual(session, runtime, snapshot, capability):
         if capability.activity_key == visual.ACTIVITY_KEY
         else process_production.SEED_VERSION
         if capability.activity_key == process_production.ACTIVITY_KEY
-        else agentic_canvas.SCENE_SCHEMA_VERSION
+        else scene.payload_schema_version if agentic_historical else agentic_canvas.SCENE_SCHEMA_VERSION
     )
     if seed != scene.seed_payload or scene.payload_schema_version != expected_seed_version:
         return None

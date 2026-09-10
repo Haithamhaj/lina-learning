@@ -88,14 +88,14 @@ def test_runtime_generated_journeys_map_to_the_exact_registered_scene(
     direction: str,
     element_count: int,
 ) -> None:
-    scene = AgenticCanvasSceneV1.model_validate(
+    scene = AgenticCanvasSceneV2.model_validate(
         _scene(subject=subject, block_type=block_type, element_count=element_count)
     )
 
     contract = agentic_scene_contract(scene, _brief(subject=subject, locale=locale, direction=direction))
 
     assert contract["subject_key"] == "CANVAS"
-    assert contract["subject_profile_version"] == "agentic-canvas-profile-v1"
+    assert contract["subject_profile_version"] == "agentic-canvas-profile-v2"
     assert contract["activity_key"] == "agentic_canvas"
     assert contract["renderer_key"] == "agentic-canvas"
     assert contract["locale"] == locale

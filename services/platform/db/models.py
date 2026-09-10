@@ -1762,6 +1762,91 @@ class StudioCanvasSpecialistRun(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class VisualArtifact(Base):
+    """Project-owned reusable Canvas definition; never a student-specific instance."""
+
+    __tablename__ = "visual_artifacts"
+    __table_args__ = (
+        UniqueConstraint("stable_slug", name="uq_visual_artifacts_stable_slug"),
+        CheckConstraint("lifecycle_status IN ('CANDIDATE', 'VALIDATED', 'TRUSTED', 'RETIRED')", name="ck_visual_artifacts_lifecycle"),
+        Index("ix_visual_artifacts_lifecycle_runtime", "lifecycle_status", "runtime_kind"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    stable_slug: Mapped[str] = mapped_column(String(96), nullable=False)
+    semantic_purpose: Mapped[str] = mapped_column(String(600), nullable=False)
+    runtime_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    lifecycle_status: Mapped[str] = mapped_column(String(16), nullable=False, default="CANDIDATE", server_default="CANDIDATE")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class VisualArtifactVersion(Base):
+    """Immutable reusable artifact contract; fixes and adaptations create a new row."""
+
+    __tablename__ = "visual_artifact_versions"
+    __table_args__ = (
+        UniqueConstraint("artifact_id", "version_number", name="uq_visual_artifact_versions_number"),
+        UniqueConstraint("source_digest", name="uq_visual_artifact_versions_source_digest"),
+        CheckConstraint("version_number > 0", name="ck_visual_artifact_versions_positive"),
+        CheckConstraint("validation_status IN ('CANDIDATE', 'VALIDATED', 'TRUSTED', 'RETIRED')", name="ck_visual_artifact_versions_validation"),
+        Index("ix_visual_artifact_versions_artifact", "artifact_id", "version_number"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    artifact_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("visual_artifacts.id", ondelete="RESTRICT"), nullable=False)
+    parent_version_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("visual_artifact_versions.id", ondelete="RESTRICT"), nullable=True)
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    runtime_contract_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    parameter_schema: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    manifest_contract: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    dependency_capabilities: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    definition_payload: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    validation_status: Mapped[str] = mapped_column(String(16), nullable=False, default="CANDIDATE", server_default="CANDIDATE")
+    technical_evidence: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class VisualArtifactBuild(Base):
+    """Every custom build attempt, deliberately separate from reusable promotion."""
+
+    __tablename__ = "visual_artifact_builds"
+    __table_args__ = (
+        CheckConstraint("status IN ('VALIDATED', 'FAILED', 'PREVIEWED')", name="ck_visual_artifact_builds_status"),
+        Index("ix_visual_artifact_builds_version_created", "artifact_version_id", "created_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    artifact_version_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("visual_artifact_versions.id", ondelete="SET NULL"), nullable=True)
+    source_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    bundle_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    technical_metadata: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class VisualArtifactInstance(Base):
+    """Student-scoped binding to a reusable version; never reusable definition data."""
+
+    __tablename__ = "visual_artifact_instances"
+    __table_args__ = (
+        UniqueConstraint("studio_scene_id", name="uq_visual_artifact_instances_scene"),
+        Index("ix_visual_artifact_instances_student_created", "student_id", "created_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    artifact_version_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("visual_artifact_versions.id", ondelete="RESTRICT"), nullable=True)
+    studio_scene_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("studio_scenes.id", ondelete="CASCADE"), nullable=False)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
+    bound_parameters: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    semantic_manifest: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    current_semantic_state: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    locale: Mapped[str] = mapped_column(String(16), nullable=False)
+    direction: Mapped[str] = mapped_column(String(8), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class StudioGeneratedAsset(Base):
     """Immutable derived bytes owned by one Student, Runtime, and Agentic run."""
 

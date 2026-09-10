@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from services.studio.agentic_canvas import AgenticCanvasBlockV1, AgenticCanvasPlanV1, AgenticCanvasScene, AgenticCanvasSceneV2, CanvasPresentationV1
+from services.studio.agentic_canvas import AgenticCanvasBlockV1, AgenticCanvasPlanV1, AgenticCanvasScene, AgenticCanvasSceneV2, AgenticCanvasSceneV3, CanvasPresentationV1, CustomVisualBlockV1
 
 
 class CanvasBlockRegistry:
@@ -24,7 +24,7 @@ class CanvasBlockRegistry:
             if accepted is None or accepted != block:
                 raise ValueError("Canvas scene block was not produced by a registered tool")
 
-    def materialize_plan(self, plan: AgenticCanvasPlanV1) -> AgenticCanvasSceneV2:
+    def materialize_plan(self, plan: AgenticCanvasPlanV1) -> AgenticCanvasScene:
         blocks = []
         for placement in sorted(plan.placements, key=lambda item: item.order):
             block_id = placement.block_id
@@ -32,8 +32,9 @@ class CanvasBlockRegistry:
             if block is None:
                 raise ValueError("Canvas plan block was not produced by a registered tool")
             blocks.append(block)
-        return AgenticCanvasSceneV2(
-            version="agentic-canvas-scene-v2",
+        scene_type = AgenticCanvasSceneV3 if any(isinstance(block, CustomVisualBlockV1) for block in blocks) else AgenticCanvasSceneV2
+        return scene_type(
+            version="agentic-canvas-scene-v3" if scene_type is AgenticCanvasSceneV3 else "agentic-canvas-scene-v2",
             objective=plan.objective,
             subject_key=plan.subject_key,
             presentation=CanvasPresentationV1(

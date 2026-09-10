@@ -2,6 +2,8 @@ import type {
   AgenticCanvasAction,
   AgenticCanvasAccessibility,
   AgenticCanvasBlock,
+  CanvasSemanticManifest,
+  CustomVisualPackage,
   AgenticCanvasDiagramEdge,
   AgenticCanvasDiagramNode,
   AgenticCanvasElement,
@@ -19,8 +21,8 @@ import type {
   StudioOperation,
 } from "./contracts";
 
-const ACTIONS = ["FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT"] as const;
-const BLOCK_TYPES = ["MATH_BOARD", "SCENE_2D", "DIAGRAM", "TEXT_INTERACTION", "MATH_INPUT", "IMAGE"] as const;
+const ACTIONS = ["FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP", "RESET_VIEW"] as const;
+const BLOCK_TYPES = ["MATH_BOARD", "SCENE_2D", "DIAGRAM", "TEXT_INTERACTION", "MATH_INPUT", "IMAGE", "CUSTOM_VISUAL"] as const;
 const COMMON_BLOCK_KEYS = ["block_id", "type", "meaning", "title", "accessibility", "allowed_actions", "elements"] as const;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
@@ -74,7 +76,7 @@ function parseCommonBlock(value: Record<string, unknown>, subtypeKeys: readonly 
   if (!identifier(value.block_id) || !safeText(value.meaning, 1, 500)) return null;
   if (value.title !== null && !safeText(value.title, 1, 120)) return null;
   const accessibility = parseAccessibility(value.accessibility);
-  if (accessibility === null || !Array.isArray(value.allowed_actions) || value.allowed_actions.length > 6) return null;
+  if (accessibility === null || !Array.isArray(value.allowed_actions) || value.allowed_actions.length > 10) return null;
   if (!value.allowed_actions.every((action) => enumValue(action, ACTIONS)) || new Set(value.allowed_actions).size !== value.allowed_actions.length) return null;
   if (!Array.isArray(value.elements) || value.elements.length > 32) return null;
   const elements = value.elements.map(parseElement);
@@ -180,6 +182,44 @@ function parseTextRelation(value: unknown): AgenticCanvasTextRelation | null {
   return { source_id: value.source_id, target_id: value.target_id, relation: value.relation };
 }
 
+const SAFE_CUSTOM_SOURCE = /\b(fetch|XMLHttpRequest|WebSocket|EventSource|localStorage|sessionStorage|indexedDB|document\.cookie|window\.parent|window\.top|import|require|eval|Function|Worker|serviceWorker|window\.open)\b/i;
+
+function parseManifest(value: unknown): CanvasSemanticManifest | null {
+  const keys = ["version", "brief_digest", "objective", "representation_summary", "entities", "relations", "quantities", "presentation_steps", "interactions", "calculated_results", "visual_descriptions", "current_state_schema", "provenance"];
+  if (!isRecord(value) || !exactKeys(value, keys) || value.version !== "canvas-semantic-manifest-v1" || !/^[a-f0-9]{64}$/.test(String(value.brief_digest)) || !safeText(value.objective, 1, 500) || !safeText(value.representation_summary, 1, 600)) return null;
+  const entities = parseArray(value.entities, 48, (item) => {
+    if (!isRecord(item) || !exactKeys(item, ["semantic_id", "kind", "label", "educational_meaning", "visible_description"]) || !identifier(item.semantic_id) || !safeText(item.kind, 1, 64) || !safeText(item.label, 1, 160) || !safeText(item.educational_meaning, 1, 500) || !safeText(item.visible_description, 1, 320)) return null;
+    return { semantic_id: item.semantic_id, kind: item.kind, label: item.label, educational_meaning: item.educational_meaning, visible_description: item.visible_description };
+  });
+  if (entities === null || new Set(entities.map((item) => item.semantic_id)).size !== entities.length) return null;
+  const known = new Set(entities.map((item) => item.semantic_id));
+  const quantities = (item: unknown) => {
+    if (!isRecord(item) || !exactKeys(item, ["semantic_id", "value", "unit", "provenance"]) || !identifier(item.semantic_id) || !known.has(item.semantic_id) || !safeText(item.value, 1, 120) || (item.unit !== null && !safeText(item.unit, 1, 80)) || !safeText(item.provenance, 1, 120)) return null;
+    return { semantic_id: item.semantic_id, value: item.value, unit: item.unit as string | null, provenance: item.provenance };
+  };
+  const relations = parseArray(value.relations, 96, (item) => {
+    if (!isRecord(item) || !exactKeys(item, ["source_id", "relation", "target_id", "meaning"]) || !identifier(item.source_id) || !identifier(item.target_id) || !known.has(item.source_id) || !known.has(item.target_id) || !safeText(item.relation, 1, 64) || !safeText(item.meaning, 1, 500)) return null;
+    return { source_id: item.source_id, relation: item.relation, target_id: item.target_id, meaning: item.meaning };
+  });
+  const presentationSteps = parseArray(value.presentation_steps, 32, (item) => {
+    if (!isRecord(item) || !exactKeys(item, ["semantic_id", "label", "order"]) || !identifier(item.semantic_id) || !safeText(item.label, 1, 160) || typeof item.order !== "number" || !Number.isInteger(item.order) || item.order < 1 || item.order > 32) return null;
+    return { semantic_id: item.semantic_id, label: item.label, order: Number(item.order) };
+  });
+  const interactions = parseArray(value.interactions, 32, (item) => {
+    if (!isRecord(item) || !exactKeys(item, ["semantic_id", "action", "meaning", "value_required"]) || !identifier(item.semantic_id) || !known.has(item.semantic_id) || !enumValue(item.action, ACTIONS) || !safeText(item.meaning, 1, 400) || typeof item.value_required !== "boolean") return null;
+    return { semantic_id: item.semantic_id, action: item.action, meaning: item.meaning, value_required: item.value_required };
+  });
+  const parsedQuantities = parseArray(value.quantities, 48, quantities); const results = parseArray(value.calculated_results, 32, quantities);
+  if (relations === null || presentationSteps === null || interactions === null || parsedQuantities === null || results === null || !Array.isArray(value.visual_descriptions) || value.visual_descriptions.length > 24 || !value.visual_descriptions.every((item) => safeText(item, 1, 320)) || !isRecord(value.current_state_schema) || !isRecord(value.provenance) || !Object.values(value.current_state_schema).every((item) => safeText(item, 1, 120)) || !Object.values(value.provenance).every((item) => safeText(item, 1, 160))) return null;
+  return { version: value.version, brief_digest: value.brief_digest as string, objective: value.objective, representation_summary: value.representation_summary, entities, relations, quantities: parsedQuantities, presentation_steps: presentationSteps, interactions, calculated_results: results, visual_descriptions: value.visual_descriptions as string[], current_state_schema: value.current_state_schema as Record<string, string>, provenance: value.provenance as Record<string, string> };
+}
+
+function parseCustomPackage(value: unknown): CustomVisualPackage | null {
+  if (!isRecord(value) || !exactKeys(value, ["version", "runtime_kind", "dependencies", "source", "manifest", "parameter_schema"]) || value.version !== "custom-visual-package-v1" || value.runtime_kind !== "custom-visual" || !Array.isArray(value.dependencies) || value.dependencies.length < 1 || value.dependencies.length > 4 || !value.dependencies.every((item) => item === "native-svg-v1" || item === "motion-v1") || typeof value.source !== "string" || value.source.length < 1 || value.source.length > 48000 || SAFE_CUSTOM_SOURCE.test(value.source) || !value.source.includes("window.mount") || !isRecord(value.parameter_schema)) return null;
+  const manifest = parseManifest(value.manifest);
+  return manifest === null ? null : { version: value.version, runtime_kind: value.runtime_kind, dependencies: value.dependencies as CustomVisualPackage["dependencies"], source: value.source, manifest, parameter_schema: value.parameter_schema };
+}
+
 function parseArray<T>(value: unknown, maximum: number, parser: (item: unknown) => T | null): T[] | null {
   if (!Array.isArray(value) || value.length > maximum) return null;
   const parsed = value.map(parser);
@@ -247,6 +287,15 @@ function parseBlock(value: unknown): AgenticCanvasBlock | null {
     if (!Array.isArray(value.constraints) || value.constraints.length > 8 || !value.constraints.every((item) => safeText(item, 1, 200))) return null;
     return { ...common, type: value.type, notation: "LATEX", prompt: value.prompt, constraints: value.constraints as string[] };
   }
+  if (value.type === "CUSTOM_VISUAL") {
+    const common = parseCommonBlock(value, ["artifact_instance_id", "bridge_nonce", "package", "parameters"]);
+    const packageValue = parseCustomPackage(value.package);
+    if (!common || !identifier(value.artifact_instance_id) || typeof value.bridge_nonce !== "string" || !/^[A-Za-z0-9_-]{8,128}$/.test(value.bridge_nonce) || packageValue === null || !isRecord(value.parameters) || !Object.values(value.parameters).every((item) => ["string", "number", "boolean"].includes(typeof item))) return null;
+    const declaredEntities = new Set(packageValue.manifest.entities.map((item) => item.semantic_id));
+    const declaredActions = new Set(packageValue.manifest.interactions.map((item) => item.action));
+    if (common.elements.some((item) => !declaredEntities.has(item.id)) || common.allowed_actions.some((item) => !declaredActions.has(item))) return null;
+    return { ...common, type: value.type, artifact_instance_id: value.artifact_instance_id, bridge_nonce: value.bridge_nonce, package: packageValue, parameters: value.parameters as Record<string, string | number | boolean> };
+  }
   const common = parseCommonBlock(value, ["studio_generated_asset_id"]);
   if (!common || !safeText(value.studio_generated_asset_id, 1, 64)) return null;
   return { ...common, type: value.type, studio_generated_asset_id: value.studio_generated_asset_id };
@@ -274,15 +323,16 @@ function parsePresentation(value: unknown, blockIds: Set<string>): AgenticCanvas
 
 /** Fail-closed browser admission for the exact server-owned Scene schema. */
 export function parseAgenticCanvasScene(value: unknown): AgenticCanvasScene | null {
-  if (!isRecord(value) || !((value.version === "agentic-canvas-scene-v1" && exactKeys(value, ["version", "objective", "subject_key", "blocks"])) || (value.version === "agentic-canvas-scene-v2" && exactKeys(value, ["version", "objective", "subject_key", "presentation", "blocks"])))) return null;
+  if (!isRecord(value) || !((value.version === "agentic-canvas-scene-v1" && exactKeys(value, ["version", "objective", "subject_key", "blocks"])) || ((value.version === "agentic-canvas-scene-v2" || value.version === "agentic-canvas-scene-v3") && exactKeys(value, ["version", "objective", "subject_key", "presentation", "blocks"])))) return null;
   if (!safeText(value.objective, 1, 500) || !safeText(value.subject_key, 1, 64)) return null;
   if (!Array.isArray(value.blocks) || value.blocks.length < 1 || value.blocks.length > 12) return null;
   const blocks = value.blocks.map(parseBlock);
   if (blocks.some((block) => block === null)) return null;
   const acceptedBlocks = blocks as AgenticCanvasBlock[];
   if (new Set(acceptedBlocks.map((block) => block.block_id)).size !== acceptedBlocks.length) return null;
-  const presentation = value.version === "agentic-canvas-scene-v2" ? parsePresentation(value.presentation, new Set(acceptedBlocks.map((block) => block.block_id))) : undefined;
-  if (value.version === "agentic-canvas-scene-v2" && presentation === null) return null;
+  if (value.version === "agentic-canvas-scene-v3" && acceptedBlocks.filter((block) => block.type === "CUSTOM_VISUAL").length > 1) return null;
+  const presentation = value.version !== "agentic-canvas-scene-v1" ? parsePresentation(value.presentation, new Set(acceptedBlocks.map((block) => block.block_id))) : undefined;
+  if (value.version !== "agentic-canvas-scene-v1" && presentation === null) return null;
   return { version: value.version, objective: value.objective, subject_key: value.subject_key, ...(presentation ? { presentation } : {}), blocks: acceptedBlocks };
 }
 
