@@ -5,7 +5,7 @@ from __future__ import annotations
 from services.studio.subjects.process_visual import make_profile as make_visual_profile
 from services.studio.subjects.process_production import make_profile as make_production_process_profile
 from services.studio.subjects.canvas_production import make_profile as make_canvas_production_profile
-from services.studio.subjects.agentic_canvas import PROFILE_VERSION as AGENTIC_CANVAS_PROFILE_VERSION, make_profile as make_agentic_canvas_profile
+from services.studio.subjects.agentic_canvas import PROFILE_VERSION as AGENTIC_CANVAS_PROFILE_VERSION, make_legacy_profile as make_legacy_agentic_canvas_profile, make_profile as make_agentic_canvas_profile
 from functools import lru_cache
 from types import MappingProxyType
 
@@ -47,7 +47,7 @@ def production_subject_registry() -> SubjectCapabilityRegistry:
         for subject_key in ("MATH", "SCIENCE", "ENGLISH", "ARABIC")
     )
     return SubjectCapabilityRegistry(
-        (*baseline_profiles, make_visual_profile(), make_production_process_profile(), make_canvas_production_profile(), make_agentic_canvas_profile(), make_ten_profile(), make_profile(), make_place_profile(), make_process_sequence_profile(), make_sentence_ordering_profile(), make_arabic_sentence_ordering_profile())
+        (*baseline_profiles, make_visual_profile(), make_production_process_profile(), make_canvas_production_profile(), make_legacy_agentic_canvas_profile(), make_agentic_canvas_profile(), make_ten_profile(), make_profile(), make_place_profile(), make_process_sequence_profile(), make_sentence_ordering_profile(), make_arabic_sentence_ordering_profile())
     )
 
 

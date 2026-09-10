@@ -18,6 +18,7 @@ type ApprovedContract = Omit<StudioActiveSceneContract, "scene_id" | "scene_vers
 };
 
 const approvedContracts: readonly ApprovedContract[] = [
+  { renderer: "AGENTIC_CANVAS", subject_key: "CANVAS", subject_profile_version: "agentic-canvas-profile-v2", activity_key: "agentic_canvas", activity_contract_version: "agentic-canvas-activity-v1", renderer_key: "agentic-canvas", renderer_version: "agentic-canvas-renderer-v2", payload_schema_version: "agentic-canvas-scene-v2" },
   { renderer: "AGENTIC_CANVAS", subject_key: "CANVAS", subject_profile_version: "agentic-canvas-profile-v1", activity_key: "agentic_canvas", activity_contract_version: "agentic-canvas-activity-v1", renderer_key: "agentic-canvas", renderer_version: "agentic-canvas-renderer-v1", payload_schema_version: "agentic-canvas-scene-v1" },
   {
     renderer: "CANVAS_SPATIAL_MANIPULATION", subject_key: "MATH", subject_profile_version: "canvas-production-profile-v1",

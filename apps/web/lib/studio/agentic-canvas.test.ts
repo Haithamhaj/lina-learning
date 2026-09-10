@@ -86,6 +86,23 @@ test("Agentic Canvas admission accepts only the exact registered declarative blo
   assert.equal(parsed.blocks[1].type === "SCENE_2D" && parsed.blocks[1].objects[0].position.x, "40");
 });
 
+test("Agentic Canvas v2 preserves semantic presentation while rejecting hidden context", () => {
+  const scene = {
+    ...validScene,
+    version: "agentic-canvas-scene-v2",
+    presentation: {
+      layout: "FOCUS_SUPPORT", palette: "COOL", motion: "REVEAL",
+      placements: validScene.blocks.map((block, order) => ({ block_id: block.block_id, role: order === 0 ? "PRIMARY" : "SUPPORT", order, span: order === 0 ? "FULL" : "NORMAL" })),
+      reveal_order: ["math-board"],
+    },
+  };
+  const parsed = parseAgenticCanvasScene(scene);
+  assert(parsed?.presentation);
+  assert.equal(parsed.presentation?.layout, "FOCUS_SUPPORT");
+  assert.equal(parseAgenticCanvasScene({ ...scene, visual_learner_context: { age_years: 10 } }), null);
+  assert.equal(parseAgenticCanvasScene({ ...scene, presentation: { ...scene.presentation, placements: [] } }), null);
+});
+
 test("Agentic Canvas admission rejects unknown blocks and unknown fields at every boundary", () => {
   assert.equal(parseAgenticCanvasScene({ ...validScene, renderer_key: "model-picked-renderer" }), null);
   assert.equal(parseAgenticCanvasScene({ ...validScene, blocks: [{ ...commonBlock, block_id: "video", type: "VIDEO" }] }), null);

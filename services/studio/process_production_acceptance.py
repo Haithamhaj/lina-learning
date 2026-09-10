@@ -22,7 +22,7 @@ from services.studio.agent.admission import (
     AGENTIC_CANVAS_SCENE_SCHEMA_VERSION,
     _canonical_digest,
 )
-from services.studio.agentic_canvas import AgenticCanvasSceneV1
+from services.studio.agentic_canvas import AGENTIC_CANVAS_SCENE_ADAPTER, AgenticCanvasScene
 from services.studio.canvas_brief import CanvasBriefContractError, parse_canvas_brief
 from services.studio.canvas_specialist import (
     frozen_pack_identity_is_valid,
@@ -51,7 +51,7 @@ class ProcessAcceptanceFailure(RuntimeError):
 
 
 def agentic_scene_contract(
-    scene: AgenticCanvasSceneV1,
+    scene: AgenticCanvasScene,
     brief_payload: Mapping[str, object],
 ) -> dict[str, object]:
     """Map semantic Agent output to the one registered Studio Scene identity."""
@@ -59,9 +59,10 @@ def agentic_scene_contract(
     brief = parse_canvas_brief(dict(brief_payload))
     if brief is None or scene.subject_key != brief.subject_key:
         raise ValueError("Agentic Canvas proposal does not match its Tutor brief subject.")
+    is_v2 = scene.version == "agentic-canvas-scene-v2"
     return {
         "subject_key": "CANVAS",
-        "subject_profile_version": "agentic-canvas-profile-v1",
+        "subject_profile_version": "agentic-canvas-profile-v2" if is_v2 else "agentic-canvas-profile-v1",
         "concept_keys": tuple(
             f"agentic:{block.type.lower()}:{block.block_id}" for block in scene.blocks
         ),
@@ -69,8 +70,8 @@ def agentic_scene_contract(
         "activity_contract_version": "agentic-canvas-activity-v1",
         "artifact_type": "agentic-canvas",
         "renderer_key": "agentic-canvas",
-        "renderer_version": "agentic-canvas-renderer-v1",
-        "payload_schema_version": AGENTIC_CANVAS_SCENE_SCHEMA_VERSION,
+        "renderer_version": "agentic-canvas-renderer-v2" if is_v2 else "agentic-canvas-renderer-v1",
+        "payload_schema_version": scene.version,
         "seed_payload": scene.model_dump(mode="json"),
         "accessibility_payload": {
             "contract": "agentic-canvas-accessibility-v1",
@@ -299,7 +300,7 @@ def _accept_completed_agentic_run_locked(
         return None
 
     try:
-        scene_payload = AgenticCanvasSceneV1.model_validate(run.proposal_payload)
+        scene_payload = AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(run.proposal_payload)
         if run.proposal_digest != _canonical_digest(scene_payload.model_dump(mode="json")):
             raise ValueError("Agentic Canvas proposal digest is invalid.")
         contract = agentic_scene_contract(scene_payload, brief.model_dump(mode="json"))
@@ -376,7 +377,7 @@ def _accept_completed_agentic_run_locked(
 def _validate_generated_asset_lineage(
     session: Session,
     run: StudioCanvasSpecialistRun,
-    scene: AgenticCanvasSceneV1,
+    scene: AgenticCanvasScene,
 ) -> None:
     for block in scene.blocks:
         if block.type != "IMAGE":

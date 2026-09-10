@@ -18,6 +18,7 @@ An explicit current Product Owner instruction authorizes its requested working s
 | Task | Status | Scope |
 | --- | --- | --- |
 | STUDIO-AGENTIC-01 | DONE | Tutor-led Agentic Canvas is complete: Tutor v11 CanvasBrief, bounded Agents SDK Canvas Agent, deterministic and hosted tools, rich typed Scene settlement through existing Studio state, generated-asset lineage, exact renderer admission, semantic interactions, same-Tutor continuity, historical replay, and recorded real-provider acceptance. |
+| CANVAS-VISUAL-INTELLIGENCE-01 | DONE | Agentic Canvas now receives only server-resolved visual learner context, persists semantic presentation in Scene v2, strengthens visual-composition guidance, and renders dynamic geometry through the existing typed Studio boundary while retaining v1 replay. |
 | UI-REFINE-01 | NEXT | Refine the Daily Student experience using `docs/domains/FRONTEND.md`. |
 | DAILY-E2E-01 | PLANNED | Run an authenticated disposable-Student Daily journey across text, voice, sources, and Canvas. |
 | REAL-LINA-01 | PLANNED | Conduct bounded real-use observation and record decisions without treating it as automatic product expansion. |

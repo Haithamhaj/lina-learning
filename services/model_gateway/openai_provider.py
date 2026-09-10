@@ -318,11 +318,12 @@ def _normalize_output(
         raise ValueError(f"OpenAI structured {tutor_schema_name} output is missing required workspace_intent.")
     if tutor_schema_name in {"tutor_turn_v10", "tutor_turn_v11"} and "workspace_visual_order" not in parsed:
         raise ValueError(f"OpenAI structured {tutor_schema_name} output is missing required workspace_visual_order.")
-    if tutor_schema_name == "tutor_turn_v11" and "canvas_brief" not in parsed:
-        raise ValueError("OpenAI structured tutor_turn_v11 output is missing required canvas_brief.")
+    if tutor_schema_name == "tutor_turn_v11" and ("canvas_brief" not in parsed or "canvas_visual_context_selection" not in parsed):
+        raise ValueError("OpenAI structured tutor_turn_v11 output is missing required Canvas fields.")
     workspace_intent = {"workspace_intent": parsed["workspace_intent"]} if "workspace_intent" in parsed else {}
     workspace_visual_order = {"workspace_visual_order": parsed["workspace_visual_order"]} if "workspace_visual_order" in parsed else {}
     canvas_brief = {"canvas_brief": parsed["canvas_brief"]} if "canvas_brief" in parsed else {}
+    canvas_visual_context_selection = {"canvas_visual_context_selection": parsed["canvas_visual_context_selection"]} if "canvas_visual_context_selection" in parsed else {}
     if "candidate_metadata" not in parsed:
         return {
             "text": parsed["text"],
@@ -332,6 +333,7 @@ def _normalize_output(
             **workspace_intent,
             **workspace_visual_order,
             **canvas_brief,
+            **canvas_visual_context_selection,
             **_teaching_decision_output(parsed),
         }
     return {
@@ -341,6 +343,7 @@ def _normalize_output(
         **workspace_intent,
         **workspace_visual_order,
         **canvas_brief,
+        **canvas_visual_context_selection,
         **_teaching_decision_output(parsed),
     }
 

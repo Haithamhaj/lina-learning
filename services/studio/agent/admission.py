@@ -24,7 +24,7 @@ from services.studio.canvas_brief import CanvasBriefContractError, parse_canvas_
 AGENTIC_CANVAS_COMPOSE_JOB = "studio.agentic_canvas.compose.v1"
 AGENTIC_CANVAS_CAPABILITY_IDENTITY = "agentic-canvas-v1"
 AGENTIC_CANVAS_DEADLINE = timedelta(minutes=2)
-AGENTIC_CANVAS_SCENE_SCHEMA_VERSION = "agentic-canvas-scene-v1"
+AGENTIC_CANVAS_SCENE_SCHEMA_VERSION = "agentic-canvas-scene-v2"
 
 
 def _canonical_digest(value: dict[str, object]) -> str:

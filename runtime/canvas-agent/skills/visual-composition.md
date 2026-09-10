@@ -7,3 +7,9 @@ or position but never carries meaning alone. Motion may explain change,
 direction, relationship, or focus; never decorate, flash, or loop distractingly.
 Use reveal order only when sequencing helps and simultaneous comparison is not
 needed. Every interactive or stateful object has a stable semantic ID.
+
+Choose the minimum semantic complexity that fully supports the objective, then maximize
+clarity and explanatory power. Establish PRIMARY, SUPPORT, and INTERACTION hierarchy;
+use whitespace, grouping, and adjacent labels before shrinking content. Connected
+systems, paths, axes, and spatial relations need a continuous visual field rather than
+repeated cards. Reflow responsively without changing semantic order.

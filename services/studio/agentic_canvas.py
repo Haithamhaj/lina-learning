@@ -8,7 +8,8 @@ from typing import Annotated, Literal, Union
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
 
-AGENTIC_CANVAS_SCENE_VERSION = "agentic-canvas-scene-v1"
+AGENTIC_CANVAS_SCENE_VERSION = "agentic-canvas-scene-v2"
+AGENTIC_CANVAS_SCENE_V1_VERSION = "agentic-canvas-scene-v1"
 AGENTIC_CANVAS_ACTION_VERSION = "agentic-canvas-action-v1"
 AGENTIC_CANVAS_PLAN_VERSION = "agentic-canvas-plan-v1"
 
@@ -263,7 +264,7 @@ TypedAgenticCanvasBlockV1 = Annotated[Union[MathBoardBlockV1, Scene2DBlockV1, Di
 
 class AgenticCanvasSceneV1(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    version: Literal[AGENTIC_CANVAS_SCENE_VERSION]
+    version: Literal[AGENTIC_CANVAS_SCENE_V1_VERSION]
     objective: str = Field(min_length=1, max_length=500)
     subject_key: str = Field(min_length=1, max_length=64)
     blocks: list[TypedAgenticCanvasBlockV1] = Field(min_length=1, max_length=12)
@@ -273,6 +274,50 @@ class AgenticCanvasSceneV1(BaseModel):
         if len({block.block_id for block in self.blocks}) != len(self.blocks):
             raise ValueError("Agentic Canvas block identifiers must be unique")
         return self
+
+
+class CanvasPresentationV1(BaseModel):
+    """Durable semantic composition, deliberately excluding learner context and pixels."""
+
+    model_config = ConfigDict(extra="forbid")
+    layout: Literal["FOCUS", "STACK", "SPLIT", "GRID", "FOCUS_SUPPORT", "OVERLAY"]
+    palette: Literal["AUTO", "WARM", "COOL", "NATURE", "VIBRANT", "NEUTRAL"]
+    motion: Literal["NONE", "SUBTLE", "REVEAL"]
+    placements: list["CanvasBlockPlacementV1"] = Field(min_length=1, max_length=12)
+    reveal_order: list[str] = Field(default_factory=list, max_length=12)
+
+    @model_validator(mode="after")
+    def references_placed_blocks_once(self) -> "CanvasPresentationV1":
+        block_ids = [placement.block_id for placement in self.placements]
+        if len(set(block_ids)) != len(block_ids):
+            raise ValueError("Canvas presentation placements must be unique")
+        if self.reveal_order and (len(set(self.reveal_order)) != len(self.reveal_order) or set(self.reveal_order) - set(block_ids)):
+            raise ValueError("Canvas presentation reveal order must reference placed blocks")
+        return self
+
+
+class AgenticCanvasSceneV2(BaseModel):
+    """New-write Scene preserving the Agent's semantic presentation decisions."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    version: Literal[AGENTIC_CANVAS_SCENE_VERSION]
+    objective: str = Field(min_length=1, max_length=500)
+    subject_key: str = Field(min_length=1, max_length=64)
+    presentation: CanvasPresentationV1
+    blocks: list[TypedAgenticCanvasBlockV1] = Field(min_length=1, max_length=12)
+
+    @model_validator(mode="after")
+    def composition_matches_blocks(self) -> "AgenticCanvasSceneV2":
+        block_ids = {block.block_id for block in self.blocks}
+        if len(block_ids) != len(self.blocks):
+            raise ValueError("Agentic Canvas block identifiers must be unique")
+        if {placement.block_id for placement in self.presentation.placements} != block_ids:
+            raise ValueError("Canvas presentation must place every Scene block exactly once")
+        return self
+
+
+AgenticCanvasScene = AgenticCanvasSceneV1 | AgenticCanvasSceneV2
+AGENTIC_CANVAS_SCENE_ADAPTER = TypeAdapter(AgenticCanvasScene)
 
 
 class AgenticCanvasPlanV1(BaseModel):

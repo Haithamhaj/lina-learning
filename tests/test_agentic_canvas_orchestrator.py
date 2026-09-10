@@ -45,7 +45,7 @@ def test_canvas_agent_input_contains_only_the_tutor_authored_semantic_brief() ->
     import json
 
     from services.studio.agent.orchestrator import canvas_agent_input
-    from services.studio.canvas_brief import CanvasBriefV1
+    from services.studio.canvas_brief import CanvasBriefV1, VisualLearnerContextV1
 
     brief = CanvasBriefV1.model_validate(
         {
@@ -65,10 +65,15 @@ def test_canvas_agent_input_contains_only_the_tutor_authored_semantic_brief() ->
         }
     )
 
-    payload = json.loads(canvas_agent_input(brief))
+    visual_context = VisualLearnerContextV1.model_validate({
+        "version": "visual-learner-context-v1", "core_profile": {"age_years": 10, "grade_level": "5"},
+        "selected_personal_facts": [{"fact_key": "soccer", "category": "ACTIVITY", "display_statement": "Enjoys soccer."}],
+    })
+    payload = json.loads(canvas_agent_input(brief, visual_context))
 
-    assert payload == {"canvas_brief": brief.model_dump(mode="json")}
+    assert payload == {"canvas_brief": brief.model_dump(mode="json"), "visual_learner_context": visual_context.model_dump(mode="json")}
     assert "student_id" not in json.dumps(payload)
+    assert "personal_memory" not in json.dumps(payload)
 
 
 def test_agent_trace_records_actual_registered_tool_calls_without_arguments() -> None:
@@ -221,7 +226,7 @@ def test_composition_trace_keeps_only_bounded_metadata_for_code_interpreter(
 
     from services.studio.agent.orchestrator import compose_canvas_scene_with_trace
     from services.studio.agent.tools import create_math_input
-    from services.studio.canvas_brief import CanvasBriefV1
+    from services.studio.canvas_brief import CanvasBriefV1, VisualLearnerContextV1
 
     async def fake_run(*args, **kwargs):
         context = kwargs["context"]
@@ -280,8 +285,9 @@ def test_composition_trace_keeps_only_bounded_metadata_for_code_interpreter(
     })
 
     result = asyncio.run(
-        compose_canvas_scene_with_trace(
-            brief=brief,
+            compose_canvas_scene_with_trace(
+                brief=brief,
+                visual_learner_context=VisualLearnerContextV1.model_validate({"version": "visual-learner-context-v1", "core_profile": {"age_years": 10, "grade_level": "5"}, "selected_personal_facts": []}),
             api_key="test-only-key",
             model="gpt-5.6-luna",
             sdk_trace_id="trace_0123456789abcdef0123456789abcdef",

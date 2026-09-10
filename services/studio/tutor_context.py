@@ -20,7 +20,7 @@ from services.platform.db.models import (
 )
 from services.studio.agentic_canvas import (
     AgenticCanvasActionV1,
-    AgenticCanvasSceneV1,
+    AGENTIC_CANVAS_SCENE_ADAPTER,
     build_agentic_tutor_projection,
 )
 from services.studio.service import TUTOR_OBSERVATION_FAILURE_CODES, StudioStateService
@@ -321,7 +321,7 @@ def _selected_visual(session, runtime, snapshot, capability):
     try:
         if capability.activity_key == agentic_canvas.ACTIVITY_KEY:
             current = snapshot.state_payload.get(agentic_canvas.ACTIVITY_KEY, seed)
-            parsed_scene = AgenticCanvasSceneV1.model_validate(current)
+            parsed_scene = AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(current)
             actions: list[AgenticCanvasActionV1] = []
             for event in session.scalars(
                 select(StudioEvent)

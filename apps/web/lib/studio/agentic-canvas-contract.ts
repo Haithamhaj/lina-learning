@@ -9,6 +9,7 @@ import type {
   AgenticCanvasMathAxis,
   AgenticCanvasMathExpression,
   AgenticCanvasMathMarker,
+  AgenticCanvasPresentation,
   AgenticCanvasScene,
   AgenticCanvasSpatialObject,
   AgenticCanvasSpatialRelation,
@@ -251,16 +252,38 @@ function parseBlock(value: unknown): AgenticCanvasBlock | null {
   return { ...common, type: value.type, studio_generated_asset_id: value.studio_generated_asset_id };
 }
 
+function parsePresentation(value: unknown, blockIds: Set<string>): AgenticCanvasPresentation | null {
+  if (!isRecord(value) || !exactKeys(value, ["layout", "palette", "motion", "placements", "reveal_order"])) return null;
+  if (!enumValue(value.layout, ["FOCUS", "STACK", "SPLIT", "GRID", "FOCUS_SUPPORT", "OVERLAY"] as const)
+    || !enumValue(value.palette, ["AUTO", "WARM", "COOL", "NATURE", "VIBRANT", "NEUTRAL"] as const)
+    || !enumValue(value.motion, ["NONE", "SUBTLE", "REVEAL"] as const)
+    || !Array.isArray(value.placements) || !Array.isArray(value.reveal_order)) return null;
+  const placements = value.placements.map((item) => {
+    if (!isRecord(item) || !exactKeys(item, ["block_id", "role", "order", "span"]) || !identifier(item.block_id)
+      || !enumValue(item.role, ["PRIMARY", "SUPPORT", "INTERACTION"] as const)
+      || typeof item.order !== "number" || !Number.isInteger(item.order) || item.order < 0 || item.order > 11
+      || !enumValue(item.span, ["COMPACT", "NORMAL", "WIDE", "FULL"] as const)) return null;
+    return { block_id: item.block_id, role: item.role, order: item.order, span: item.span };
+  });
+  if (placements.some((item) => item === null) || placements.length !== blockIds.size) return null;
+  const accepted = placements as AgenticCanvasPresentation["placements"];
+  if (new Set(accepted.map((item) => item.block_id)).size !== accepted.length || accepted.some((item) => !blockIds.has(item.block_id))) return null;
+  if (!value.reveal_order.every(identifier) || value.reveal_order.length > 12 || new Set(value.reveal_order).size !== value.reveal_order.length || value.reveal_order.some((id) => !blockIds.has(id))) return null;
+  return { layout: value.layout, palette: value.palette, motion: value.motion, placements: accepted, reveal_order: value.reveal_order };
+}
+
 /** Fail-closed browser admission for the exact server-owned Scene schema. */
 export function parseAgenticCanvasScene(value: unknown): AgenticCanvasScene | null {
-  if (!isRecord(value) || !exactKeys(value, ["version", "objective", "subject_key", "blocks"])) return null;
-  if (value.version !== "agentic-canvas-scene-v1" || !safeText(value.objective, 1, 500) || !safeText(value.subject_key, 1, 64)) return null;
+  if (!isRecord(value) || !((value.version === "agentic-canvas-scene-v1" && exactKeys(value, ["version", "objective", "subject_key", "blocks"])) || (value.version === "agentic-canvas-scene-v2" && exactKeys(value, ["version", "objective", "subject_key", "presentation", "blocks"])))) return null;
+  if (!safeText(value.objective, 1, 500) || !safeText(value.subject_key, 1, 64)) return null;
   if (!Array.isArray(value.blocks) || value.blocks.length < 1 || value.blocks.length > 12) return null;
   const blocks = value.blocks.map(parseBlock);
   if (blocks.some((block) => block === null)) return null;
   const acceptedBlocks = blocks as AgenticCanvasBlock[];
   if (new Set(acceptedBlocks.map((block) => block.block_id)).size !== acceptedBlocks.length) return null;
-  return { version: value.version, objective: value.objective, subject_key: value.subject_key, blocks: acceptedBlocks };
+  const presentation = value.version === "agentic-canvas-scene-v2" ? parsePresentation(value.presentation, new Set(acceptedBlocks.map((block) => block.block_id))) : undefined;
+  if (value.version === "agentic-canvas-scene-v2" && presentation === null) return null;
+  return { version: value.version, objective: value.objective, subject_key: value.subject_key, ...(presentation ? { presentation } : {}), blocks: acceptedBlocks };
 }
 
 type OperationInput = {

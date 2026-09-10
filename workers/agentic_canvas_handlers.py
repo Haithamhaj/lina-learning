@@ -37,10 +37,11 @@ from services.studio.agent.orchestrator import (
     HostedGeneratedImage,
     compose_canvas_scene_with_trace,
 )
-from services.studio.agentic_canvas import AgenticCanvasSceneV1
+from services.studio.agentic_canvas import AGENTIC_CANVAS_SCENE_ADAPTER, AgenticCanvasScene
 from services.studio.canvas_brief import (
     CanvasBriefContractError,
     CanvasBriefV1,
+    VisualLearnerContextV1,
     parse_canvas_brief,
 )
 from services.studio.generated_assets import (
@@ -75,6 +76,7 @@ def register_agentic_canvas_handlers(
             # lock or transaction remains open while the provider is running.
             composition = asyncio.run(compose(
                 brief=execution.brief,
+                visual_learner_context=execution.visual_learner_context,
                 api_key=settings.model_api_key.get_secret_value(),
                 model=settings.model_name,
                 base_url=settings.model_base_url,
@@ -103,7 +105,7 @@ def register_agentic_canvas_handlers(
             generated_images = ()
             agent_trace = {"selected_tools": [], "tool_call_count": 0}
         try:
-            scene = AgenticCanvasSceneV1.model_validate(scene)
+            scene = AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(scene)
         except Exception as error:
             _fail(
                 session_factory,
@@ -242,9 +244,9 @@ def _adopt_hosted_images(
     storage: ObjectStorage,
     run: StudioCanvasSpecialistRun,
     brief: CanvasBriefV1,
-    scene: AgenticCanvasSceneV1,
+    scene: AgenticCanvasScene,
     generated_images: tuple[HostedGeneratedImage, ...],
-) -> AgenticCanvasSceneV1:
+) -> AgenticCanvasScene:
     """Adopt ephemeral SDK bytes and expose only owned asset IDs to the Scene."""
 
     if len(generated_images) != 1 or len(scene.blocks) >= 12:
@@ -275,18 +277,26 @@ def _adopt_hosted_images(
         "elements": [],
         "temporary_image_handle": output.temporary_handle,
     })
+    if draft.get("version") == "agentic-canvas-scene-v2":
+        presentation = draft.get("presentation")
+        if not isinstance(presentation, dict) or not isinstance(presentation.get("placements"), list):
+            raise GeneratedAssetValidationError("Agentic Canvas presentation is missing for generated image composition.")
+        presentation["placements"].append({
+            "block_id": block_id, "role": "SUPPORT", "order": len(presentation["placements"]), "span": "WIDE",
+        })
     resolved = resolve_generated_image_handles(draft, resolutions=[resolution])
-    return AgenticCanvasSceneV1.model_validate(resolved)
+    return AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(resolved)
 
 
 class _AgenticExecutionEnvelope:
-    def __init__(self, *, run_id, student_id, session_id, message_id, parent_execution_id, brief, provider_attempt: int, provider_max_attempts: int, sdk_trace_id: str) -> None:
+    def __init__(self, *, run_id, student_id, session_id, message_id, parent_execution_id, brief, visual_learner_context, provider_attempt: int, provider_max_attempts: int, sdk_trace_id: str) -> None:
         self.run_id = run_id
         self.student_id = student_id
         self.session_id = session_id
         self.message_id = message_id
         self.parent_execution_id = parent_execution_id
         self.brief = brief
+        self.visual_learner_context = visual_learner_context
         self.provider_attempt = provider_attempt
         self.provider_max_attempts = provider_max_attempts
         self.sdk_trace_id = sdk_trace_id
@@ -321,8 +331,12 @@ def _preflight(factory: sessionmaker[Session], job: Job) -> _AgenticExecutionEnv
                 message = session.get(LearningMessage, run.source_message_id)
                 audit = message.payload.get("agentic_canvas") if message is not None and isinstance(message.payload, dict) else None
                 brief = _matching_audited_brief(audit, run)
+                try:
+                    visual_learner_context = VisualLearnerContextV1.model_validate(audit.get("visual_learner_context")) if isinstance(audit, dict) else None
+                except Exception:
+                    visual_learner_context = None
                 if (message is None or message.role != "tutor" or message.session_id != run.learning_session_id
-                        or brief is None):
+                        or brief is None or visual_learner_context is None):
                     _fail_in_session(run, "CANVAS_BRIEF_LINEAGE_INVALID")
                     terminal_error = "CANVAS_BRIEF_LINEAGE_INVALID"
                 else:
@@ -337,7 +351,7 @@ def _preflight(factory: sessionmaker[Session], job: Job) -> _AgenticExecutionEnv
                     else:
                         run.status, run.started_at = "RUNNING", run.started_at or datetime.now(UTC)
                         run.sdk_trace_id = run.sdk_trace_id or gen_trace_id()
-                        envelope = _AgenticExecutionEnvelope(run_id=run.id, student_id=run.student_id, session_id=run.learning_session_id, message_id=message.id, parent_execution_id=message.ai_execution_id, brief=brief, provider_attempt=claimed.attempt_count, provider_max_attempts=claimed.max_attempts, sdk_trace_id=run.sdk_trace_id)
+                        envelope = _AgenticExecutionEnvelope(run_id=run.id, student_id=run.student_id, session_id=run.learning_session_id, message_id=message.id, parent_execution_id=message.ai_execution_id, brief=brief, visual_learner_context=visual_learner_context, provider_attempt=claimed.attempt_count, provider_max_attempts=claimed.max_attempts, sdk_trace_id=run.sdk_trace_id)
     # Raising inside ``factory.begin()`` rolls back the terminal Run state.
     # Commit that authoritative state first, then fail the queue Job.
     if terminal_error is not None:

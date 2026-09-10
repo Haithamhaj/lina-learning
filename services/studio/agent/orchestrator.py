@@ -34,7 +34,7 @@ from services.studio.agent.tools import (
     create_math_input,
     create_text_interaction,
 )
-from services.studio.agentic_canvas import AgenticCanvasPlanV1, AgenticCanvasSceneV1
+from services.studio.agentic_canvas import AgenticCanvasPlanV1, AgenticCanvasScene
 from services.studio.agentic_canvas import (
     DiagramEdgeV1,
     DiagramNodeV1,
@@ -47,7 +47,7 @@ from services.studio.agentic_canvas import (
     TextItemV1,
     TextRelationV1,
 )
-from services.studio.canvas_brief import CanvasBriefV1
+from services.studio.canvas_brief import CanvasBriefV1, VisualLearnerContextV1
 
 _CANVAS_SKILL_ROOT = Path(__file__).resolve().parents[3] / "runtime" / "canvas-agent"
 _CANVAS_SKILL_PACK = "\n\n".join(path.read_text(encoding="utf-8") for path in sorted((_CANVAS_SKILL_ROOT / "skills").glob("*.md")))
@@ -92,7 +92,7 @@ class CanvasAgentRunContext:
 
 @dataclass(frozen=True)
 class AgenticCanvasCompositionResult:
-    scene: AgenticCanvasSceneV1
+    scene: AgenticCanvasScene
     selected_tools: tuple[str, ...]
     tool_call_count: int
     generated_images: tuple["HostedGeneratedImage", ...] = ()
@@ -445,18 +445,21 @@ def build_canvas_agent(*, api_key: str, model: str, base_url: str | None = None)
     )
 
 
-def canvas_agent_input(brief: CanvasBriefV1) -> str:
-    """Pass only the Tutor's semantic brief, never raw conversation or identity."""
-    return json.dumps({"canvas_brief": brief.model_dump(mode="json")}, ensure_ascii=False)
+def canvas_agent_input(brief: CanvasBriefV1, visual_learner_context: VisualLearnerContextV1) -> str:
+    """Pass only bounded educational and presentation context, never identity or memory."""
+    return json.dumps({
+        "canvas_brief": brief.model_dump(mode="json"),
+        "visual_learner_context": visual_learner_context.model_dump(mode="json"),
+    }, ensure_ascii=False)
 
 
-async def compose_canvas_scene_with_trace(*, brief: CanvasBriefV1, api_key: str, model: str, base_url: str | None = None, sdk_trace_id: str | None = None) -> AgenticCanvasCompositionResult:
+async def compose_canvas_scene_with_trace(*, brief: CanvasBriefV1, visual_learner_context: VisualLearnerContextV1, api_key: str, model: str, base_url: str | None = None, sdk_trace_id: str | None = None) -> AgenticCanvasCompositionResult:
     """Run one bounded composition and return only accepted tool-call metadata."""
     context = CanvasAgentRunContext(registry=CanvasBlockRegistry())
     trace_id = sdk_trace_id or gen_trace_id()
     result = await Runner.run(
         build_canvas_agent(api_key=api_key, model=model, base_url=base_url),
-        input=canvas_agent_input(brief),
+        input=canvas_agent_input(brief, visual_learner_context),
         context=context,
         max_turns=8,
         run_config=RunConfig(
@@ -481,9 +484,9 @@ async def compose_canvas_scene_with_trace(*, brief: CanvasBriefV1, api_key: str,
     )
 
 
-async def compose_canvas_scene(*, brief: CanvasBriefV1, api_key: str, model: str, base_url: str | None = None) -> AgenticCanvasSceneV1:
+async def compose_canvas_scene(*, brief: CanvasBriefV1, visual_learner_context: VisualLearnerContextV1, api_key: str, model: str, base_url: str | None = None) -> AgenticCanvasScene:
     """Backward-compatible Scene-only boundary for non-worker callers."""
-    composition = await compose_canvas_scene_with_trace(brief=brief, api_key=api_key, model=model, base_url=base_url)
+    composition = await compose_canvas_scene_with_trace(brief=brief, visual_learner_context=visual_learner_context, api_key=api_key, model=model, base_url=base_url)
     if composition.generated_images:
         raise HostedImageOutputError("Hosted images require the owned Studio asset adoption boundary.")
     return composition.scene

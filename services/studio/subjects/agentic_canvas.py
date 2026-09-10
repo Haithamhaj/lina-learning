@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from copy import deepcopy
 
-from services.studio.agentic_canvas import AgenticCanvasActionV1, AgenticCanvasSceneV1
+from services.studio.agentic_canvas import AGENTIC_CANVAS_SCENE_ADAPTER, AgenticCanvasActionV1, AgenticCanvasScene, AgenticCanvasSceneV1
 from services.studio.subjects.contracts import (
     AccessibilityContract,
     ActivityActionContract,
@@ -24,12 +24,12 @@ from services.studio.subjects.contracts import (
 
 
 SUBJECT_KEY = "CANVAS"
-PROFILE_VERSION = "agentic-canvas-profile-v1"
+PROFILE_VERSION = "agentic-canvas-profile-v2"
 ACTIVITY_KEY = "agentic_canvas"
 ACTIVITY_VERSION = "agentic-canvas-activity-v1"
 RENDERER_KEY = "agentic-canvas"
-RENDERER_VERSION = "agentic-canvas-renderer-v1"
-SCENE_SCHEMA_VERSION = "agentic-canvas-scene-v1"
+RENDERER_VERSION = "agentic-canvas-renderer-v2"
+SCENE_SCHEMA_VERSION = "agentic-canvas-scene-v2"
 ACTION_SCHEMA_VERSION = "agentic-canvas-action-v1"
 REDUCER_KEY = "agentic-canvas-reducer"
 REDUCER_VERSION = "agentic-canvas-reducer-v1"
@@ -51,7 +51,9 @@ ACCESSIBILITY = AccessibilityContract(
 
 
 def validate_scene(payload: Mapping[str, object]) -> None:
-    AgenticCanvasSceneV1.model_validate(dict(payload))
+    scene = AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(dict(payload))
+    if scene.version != SCENE_SCHEMA_VERSION:
+        raise ValueError("Agentic Canvas Scene version is not valid for new writes")
 
 
 def validate_action_shape(payload: Mapping[str, object]) -> None:
@@ -67,11 +69,11 @@ def validate_action_shape_for(payload: Mapping[str, object], action_key: str) ->
         raise ValueError("Agentic Canvas action payload does not match its registered action key.")
 
 
-def _current_scene(activity_state: Mapping[str, object]) -> AgenticCanvasSceneV1:
+def _current_scene(activity_state: Mapping[str, object]) -> AgenticCanvasScene:
     current = activity_state.get(ACTIVITY_KEY, activity_state.get("scene_seed"))
     if not isinstance(current, Mapping):
         raise ValueError("Agentic Canvas authoritative Scene is missing.")
-    return AgenticCanvasSceneV1.model_validate(dict(current))
+    return AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(dict(current))
 
 
 def validate_action(payload: Mapping[str, object]) -> ValidationResult:
@@ -126,7 +128,7 @@ def reduce_agentic_canvas(snapshot: dict[str, object], event: object) -> dict[st
             for element in block["elements"]:
                 if element["id"] == action.element_id:
                     element["current_value"] = action.to_value
-    AgenticCanvasSceneV1.model_validate(current)
+    AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(current)
     result = deepcopy(snapshot)
     result["latest_event_sequence"] = event.sequence
     if event.actor == "STUDENT":
@@ -216,3 +218,21 @@ def make_profile() -> SubjectCapabilityProfile:
         ),
         reducers=(ReducerContract(REDUCER_KEY, REDUCER_VERSION, reduce_agentic_canvas),),
     )
+
+
+def make_legacy_profile() -> SubjectCapabilityProfile:
+    """Retain exact v1 capability resolution for historical Studio replay."""
+    from dataclasses import replace
+
+    profile = make_profile()
+    legacy_profile = replace(profile, profile_version="agentic-canvas-profile-v1")
+    legacy_activity = replace(legacy_profile.activities[0], activity_version="agentic-canvas-activity-v1", renderer_version="agentic-canvas-renderer-v1", initial_scene_payload_schema_version="agentic-canvas-scene-v1")
+    legacy_renderer = replace(legacy_profile.renderers[0], renderer_version="agentic-canvas-renderer-v1", scene_input_schema_version="agentic-canvas-scene-v1")
+    def validate_v1(payload: Mapping[str, object]) -> None:
+        AgenticCanvasSceneV1.model_validate(dict(payload))
+    legacy_validators = tuple(
+        replace(item, payload_schema_version="agentic-canvas-scene-v1", validator=validate_v1)
+        if item.payload_validator_key == "agentic-canvas-scene-payload" else item
+        for item in legacy_profile.payload_validators
+    )
+    return replace(legacy_profile, activities=(legacy_activity,), renderers=(legacy_renderer,), payload_validators=legacy_validators)

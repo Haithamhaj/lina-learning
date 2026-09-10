@@ -111,6 +111,30 @@ def test_canvas_brief_admission_is_safety_gated_and_source_bounded() -> None:
     assert audit_canvas_brief(brief, allowed_source_references={"source-1"}, safety_allows=False)["status"] == "NOT_REQUESTED"
 
 
+def test_canvas_visual_context_resolves_only_selected_safe_catalogue_facts() -> None:
+    from services.studio.canvas_brief import resolve_visual_learner_context
+
+    context = resolve_visual_learner_context(
+        {"version": "canvas-visual-context-selection-v1", "personal_fact_keys": ["drawing"]},
+        visual_personalization_catalog={
+            "drawing": {"category": "ACTIVITY", "display_statement": "Enjoys drawing."},
+            "private": {"category": "UNSAFE", "display_statement": "Must not cross the boundary."},
+        },
+        core_profile={"age_years": 10, "grade_level": "5"},
+    )
+
+    assert context.model_dump(mode="json") == {
+        "version": "visual-learner-context-v1",
+        "core_profile": {"age_years": 10, "grade_level": "5"},
+        "selected_personal_facts": [{"fact_key": "drawing", "category": "ACTIVITY", "display_statement": "Enjoys drawing."}],
+    }
+    with pytest.raises(ValueError, match="outside the filtered catalogue"):
+        resolve_visual_learner_context(
+            {"version": "canvas-visual-context-selection-v1", "personal_fact_keys": ["private"]},
+            visual_personalization_catalog={}, core_profile={},
+        )
+
+
 def test_tutor_output_requires_nullable_workspace_intent_with_its_own_schema_version() -> None:
     """Structured Tutor output must carry the optional request without reinterpreting v8."""
 

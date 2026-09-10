@@ -21,7 +21,7 @@ from services.platform.storage import (
     StorageIntegrityError,
     StoredObject,
 )
-from services.studio.agentic_canvas import AgenticCanvasSceneV1
+from services.studio.agentic_canvas import AGENTIC_CANVAS_SCENE_ADAPTER
 
 DEFAULT_MAX_GENERATED_IMAGE_BYTES = 20 * 1024 * 1024
 DEFAULT_MAX_GENERATED_IMAGE_PIXELS = 20_000_000
@@ -313,7 +313,7 @@ def resolve_generated_image_handles(
     if used_handles != set(resolved_by_handle):
         raise GeneratedAssetValidationError("Generated image resolution is not referenced by the scene.")
     try:
-        return AgenticCanvasSceneV1.model_validate(payload).model_dump(mode="json")
+        return AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(payload).model_dump(mode="json")
     except ValueError as exc:
         raise GeneratedAssetValidationError("Resolved generated image scene is invalid.") from exc
 

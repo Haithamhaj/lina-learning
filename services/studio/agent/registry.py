@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from services.studio.agentic_canvas import AgenticCanvasBlockV1, AgenticCanvasPlanV1, AgenticCanvasSceneV1
+from services.studio.agentic_canvas import AgenticCanvasBlockV1, AgenticCanvasPlanV1, AgenticCanvasScene, AgenticCanvasSceneV2, CanvasPresentationV1
 
 
 class CanvasBlockRegistry:
@@ -18,13 +18,13 @@ class CanvasBlockRegistry:
         self._blocks[block.block_id] = block
         return block
 
-    def validate_scene(self, scene: AgenticCanvasSceneV1) -> None:
+    def validate_scene(self, scene: AgenticCanvasScene) -> None:
         for block in scene.blocks:
             accepted = self._blocks.get(block.block_id)
             if accepted is None or accepted != block:
                 raise ValueError("Canvas scene block was not produced by a registered tool")
 
-    def materialize_plan(self, plan: AgenticCanvasPlanV1) -> AgenticCanvasSceneV1:
+    def materialize_plan(self, plan: AgenticCanvasPlanV1) -> AgenticCanvasSceneV2:
         blocks = []
         for placement in sorted(plan.placements, key=lambda item: item.order):
             block_id = placement.block_id
@@ -32,10 +32,14 @@ class CanvasBlockRegistry:
             if block is None:
                 raise ValueError("Canvas plan block was not produced by a registered tool")
             blocks.append(block)
-        return AgenticCanvasSceneV1(
-            version="agentic-canvas-scene-v1",
+        return AgenticCanvasSceneV2(
+            version="agentic-canvas-scene-v2",
             objective=plan.objective,
             subject_key=plan.subject_key,
+            presentation=CanvasPresentationV1(
+                layout=plan.layout, palette=plan.palette, motion=plan.motion,
+                placements=plan.placements, reveal_order=plan.reveal_order,
+            ),
             blocks=blocks,
         )
 

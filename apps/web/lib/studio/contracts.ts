@@ -182,10 +182,19 @@ export type AgenticCanvasBlock =
   | (AgenticCanvasBlockBase & { type: "MATH_INPUT"; notation: "LATEX"; prompt: string; constraints: string[] })
   | (AgenticCanvasBlockBase & { type: "IMAGE"; studio_generated_asset_id: string });
 
+export type AgenticCanvasPresentation = {
+  layout: "FOCUS" | "STACK" | "SPLIT" | "GRID" | "FOCUS_SUPPORT" | "OVERLAY";
+  palette: "AUTO" | "WARM" | "COOL" | "NATURE" | "VIBRANT" | "NEUTRAL";
+  motion: "NONE" | "SUBTLE" | "REVEAL";
+  placements: Array<{ block_id: string; role: "PRIMARY" | "SUPPORT" | "INTERACTION"; order: number; span: "COMPACT" | "NORMAL" | "WIDE" | "FULL" }>;
+  reveal_order: string[];
+};
+
 export type AgenticCanvasScene = {
-  version: "agentic-canvas-scene-v1";
+  version: "agentic-canvas-scene-v1" | "agentic-canvas-scene-v2";
   objective: string;
   subject_key: string;
+  presentation?: AgenticCanvasPresentation;
   blocks: AgenticCanvasBlock[];
 };
 

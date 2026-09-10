@@ -71,18 +71,56 @@ function ElementList({ block }: { block: AgenticCanvasBlock }) {
   </li>)}</ul>;
 }
 
+const rational = (value: string) => {
+  const [numerator, denominator = "1"] = value.split("/");
+  return Number(numerator) / Number(denominator);
+};
+
+function NumberLineSurface({ block }: { block: Extract<AgenticCanvasBlock, { type: "MATH_BOARD" }> }) {
+  const axis = block.axes.find((candidate) => candidate.axis === "X");
+  if (!axis) return <ElementList block={block}/>;
+  const minimum = rational(axis.minimum); const maximum = rational(axis.maximum); const width = 720; const left = 52; const right = 668;
+  const point = (value: string) => left + ((rational(value) - minimum) / (maximum - minimum)) * (right - left);
+  const step = axis.step === null ? null : rational(axis.step);
+  const ticks = step ? Array.from({ length: Math.min(21, Math.floor((maximum - minimum) / step) + 1) }, (_, index) => minimum + index * step) : [minimum, maximum];
+  return <svg viewBox="0 0 720 180" className="w-full overflow-visible rounded-xl bg-sky-50" role="img" aria-label={block.accessibility.aria_label ?? block.accessibility.text_equivalent}>
+    <defs><marker id={`${block.block_id}-arrow`} markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#284b63"/></marker></defs>
+    <line x1={left} y1="100" x2={right} y2="100" stroke="#284b63" strokeWidth="3" markerEnd={`url(#${block.block_id}-arrow)`}/>
+    {ticks.map((tick) => <g key={tick}><line x1={point(String(tick))} y1="93" x2={point(String(tick))} y2="107" stroke="#587087"/><text x={point(String(tick))} y="126" textAnchor="middle" className="fill-slate-600 text-[13px]">{tick}</text></g>)}
+    {block.markers.map((marker, index) => <g key={marker.id}><line x1={point(marker.value)} y1="95" x2={point(marker.value)} y2={54 - (index % 2) * 20} stroke="#2563eb" strokeWidth="2"/><circle cx={point(marker.value)} cy="100" r="8" fill={marker.marker_kind === "OPEN_ENDPOINT" ? "white" : "#2563eb"} stroke="#1d4ed8" strokeWidth="3"/><text x={point(marker.value)} y={40 - (index % 2) * 20} textAnchor="middle" className="fill-blue-950 text-[15px] font-semibold" direction="ltr">{marker.label}</text></g>)}
+  </svg>;
+}
+
+function DiagramSurface({ block }: { block: Extract<AgenticCanvasBlock, { type: "DIAGRAM" }> }) {
+  const count = Math.max(block.nodes.length, 1); const width = 720; const height = block.topology === "CYCLE" ? 410 : 260;
+  const nodePosition = (index: number) => {
+    if (block.topology === "CYCLE" || block.layout === "RADIAL") { const angle = -Math.PI / 2 + (Math.PI * 2 * index) / count; return { x: 360 + Math.cos(angle) * 220, y: 200 + Math.sin(angle) * 130 }; }
+    if (block.layout === "VERTICAL" || block.topology === "HIERARCHY") return { x: 360, y: 42 + (index * 170) / Math.max(count - 1, 1) };
+    return { x: 70 + (index * 580) / Math.max(count - 1, 1), y: 130 };
+  };
+  const positions = new Map(block.nodes.map((node, index) => [node.id, nodePosition(index)]));
+  return <svg viewBox={`0 0 ${width} ${height}`} className="w-full rounded-xl bg-violet-50" role="img" aria-label={block.accessibility.aria_label ?? block.accessibility.text_equivalent}>
+    <defs><marker id={`${block.block_id}-arrow`} markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#7c3aed"/></marker></defs>
+    {block.edges.map((edge, index) => { const source = positions.get(edge.source_id); const target = positions.get(edge.target_id); if (!source || !target) return null; const curved = block.topology === "CYCLE" || edge.relation === "RETURNS_TO"; const midX = (source.x + target.x) / 2; const midY = Math.min(source.y, target.y) - (curved ? 65 : 0); return <g key={`${edge.source_id}-${edge.target_id}-${index}`}><path d={curved ? `M ${source.x} ${source.y} Q ${midX} ${midY} ${target.x} ${target.y}` : `M ${source.x} ${source.y} L ${target.x} ${target.y}`} fill="none" stroke="#7c3aed" strokeWidth="3" markerEnd={`url(#${block.block_id}-arrow)`}/>{edge.label ? <text x={midX} y={midY - 8} textAnchor="middle" className="fill-violet-900 text-[12px]">{edge.label}</text> : null}</g>; })}
+    {block.nodes.map((node) => { const position = positions.get(node.id)!; return <g key={node.id}><circle cx={position.x} cy={position.y} r="43" fill="#fff" stroke="#8b5cf6" strokeWidth="3"/><text x={position.x} y={position.y - 4} textAnchor="middle" className="fill-slate-900 text-[14px] font-semibold">{node.label}</text><text x={position.x} y={position.y + 16} textAnchor="middle" className="fill-violet-700 text-[10px]">{node.node_kind}</text></g>; })}
+  </svg>;
+}
+
+function SpatialSurface({ block }: { block: Extract<AgenticCanvasBlock, { type: "SCENE_2D" }> }) {
+  const point = (position: { x: string; y: string }) => ({ x: rational(position.x) * 6.6 + 30, y: rational(position.y) * 3.4 + 20 });
+  const positions = new Map(block.objects.map((object) => [object.id, point(object.position)]));
+  return <svg viewBox="0 0 720 390" className="w-full rounded-xl bg-sky-50" role="img" aria-label={block.accessibility.aria_label ?? block.accessibility.text_equivalent}>
+    <defs><marker id={`${block.block_id}-arrow`} markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#0284c7"/></marker></defs>
+    {block.relations.map((relation, index) => { const source = positions.get(relation.source_id); const target = positions.get(relation.target_id); return source && target ? <g key={`${relation.source_id}-${relation.target_id}-${index}`}><line x1={source.x} y1={source.y} x2={target.x} y2={target.y} stroke="#0284c7" strokeWidth="2" markerEnd={`url(#${block.block_id}-arrow)`}/>{relation.label ? <text x={(source.x + target.x) / 2} y={(source.y + target.y) / 2 - 8} textAnchor="middle" className="fill-sky-900 text-[12px]">{relation.label}</text> : null}</g> : null; })}
+    {block.objects.map((object) => { const position = positions.get(object.id)!; const isCircle = object.object_kind === "CIRCLE" || object.object_kind === "POINT"; return <g key={object.id}>{isCircle ? <circle cx={position.x} cy={position.y} r={object.object_kind === "POINT" ? 8 : 28} fill="#bae6fd" stroke="#0369a1" strokeWidth="3"/> : <rect x={position.x - 38} y={position.y - 22} width="76" height="44" rx="10" fill="#e0f2fe" stroke="#0369a1" strokeWidth="3"/>}<text x={position.x} y={position.y + 5} textAnchor="middle" className="fill-slate-900 text-[13px] font-semibold">{object.label}</text></g>; })}
+  </svg>;
+}
+
 function Scene2DBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "SCENE_2D" }> }) {
   const [object, target] = props.block.elements;
   const interactive = object && target && props.block.allowed_actions.includes("MOVE");
   if (!interactive) return <BlockFrame block={props.block}>
-    <div className="grid min-h-40 gap-2 rounded-xl bg-sky-50 p-3 sm:grid-cols-2" aria-label="Logical 2D scene">
-      {props.block.objects.map((item) => <div
-        key={item.id}
-        className="rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm"
-        title={item.object_kind}
-      ><span className="font-semibold" dir="auto">{item.label}</span><span className="ml-2 text-xs text-slate-500" dir="ltr">({item.position.x}, {item.position.y})</span></div>)}
-    </div>
-    {props.block.relations.length ? <ul className="mt-3 space-y-1 text-sm text-slate-600">{props.block.relations.map((relation, index) => <li key={`${relation.source_id}-${relation.target_id}-${index}`}>{relation.source_id} → {relation.label ?? relation.relation} → {relation.target_id}</li>)}</ul> : null}
+    <SpatialSurface block={props.block}/>
     <SemanticButtons {...props}/>
   </BlockFrame>;
   const value: SemanticPlacement = { objectId: object.id, targetId: object.current_value === target.id ? target.id : null };
@@ -129,10 +167,7 @@ function CartesianMathBoard(props: Pick<Props, "sceneId" | "sceneVersion" | "onO
 function MathBoardBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "MATH_BOARD" }> }) {
   if (props.block.board_kind === "CARTESIAN") return <CartesianMathBoard {...props}/>;
   return <BlockFrame block={props.block}>
-    {props.block.axes.map((axis) => <div key={axis.axis} className="mb-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
-      <p>{axis.axis} axis: {axis.minimum} to {axis.maximum}{axis.step ? `, step ${axis.step}` : ""}</p>
-    </div>)}
-    <div className="grid gap-2 sm:grid-cols-2">{props.block.markers.map((marker) => <div key={marker.id} className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm"><span dir="auto">{marker.label}</span>: <span dir="ltr">{marker.value}</span></div>)}</div>
+    <NumberLineSurface block={props.block}/>
     {props.block.expressions.length ? <div className="mt-3 space-y-2">{props.block.expressions.map((expression) => <p key={expression.id} className="rounded-xl bg-emerald-50 px-3 py-2 text-sm" dir="auto">{expression.label}: <span dir="ltr">{expression.latex}</span></p>)}</div> : null}
     <SemanticButtons {...props}/>
   </BlockFrame>;
@@ -155,10 +190,8 @@ function MathInputBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOpera
 }
 
 function DiagramBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "DIAGRAM" }> }) {
-  const labels = new Map(props.block.nodes.map((node) => [node.id, node.label]));
   return <BlockFrame block={props.block}>
-    <div className="grid gap-2 sm:grid-cols-2">{props.block.nodes.map((node) => <div key={node.id} className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2"><p className="text-xs font-semibold uppercase text-violet-700">{node.node_kind}</p><p dir="auto" className="text-sm text-slate-800">{node.label}</p></div>)}</div>
-    {props.block.edges.length ? <ul className="mt-3 space-y-1 text-sm text-slate-600">{props.block.edges.map((edge, index) => <li key={`${edge.source_id}-${edge.target_id}-${index}`}><span dir="auto">{labels.get(edge.source_id)}</span> → {edge.label ?? edge.relation} → <span dir="auto">{labels.get(edge.target_id)}</span></li>)}</ul> : null}
+    <DiagramSurface block={props.block}/>
     <SemanticButtons {...props}/>
   </BlockFrame>;
 }
@@ -166,8 +199,10 @@ function DiagramBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperati
 function TextInteractionBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "TEXT_INTERACTION" }> }) {
   return <BlockFrame block={props.block}>
     <p className="mb-3 text-sm font-medium text-slate-700" dir="auto">{props.block.prompt}</p>
-    {props.block.groups.length ? <div className="mb-3 flex flex-wrap gap-2">{props.block.groups.map((group) => <span key={group.id} className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900" dir="auto">{group.label}</span>)}</div> : null}
-    <div className="grid gap-2">{props.block.items.map((item) => <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm" dir="auto">{item.text}</div>)}</div>
+    <div className={props.block.interaction_family === "MATCHING" || props.block.interaction_family === "RELATION" ? "grid gap-3 sm:grid-cols-2" : props.block.interaction_family === "ORDERING" ? "flex flex-wrap gap-2 border-l-4 border-amber-400 pl-3" : "grid gap-3 sm:grid-cols-2"}>
+      {props.block.groups.map((group) => <section key={group.id} className="rounded-xl border-2 border-dashed border-amber-300 bg-amber-50 p-3"><p className="text-xs font-bold uppercase text-amber-800" dir="auto">{group.label}</p>{props.block.items.filter((item) => item.group_id === group.id).map((item) => <p key={item.id} className="mt-2 rounded-lg bg-white px-3 py-2 text-sm" dir="auto">{item.text}</p>)}</section>)}
+      {props.block.items.filter((item) => item.group_id === null).map((item, index) => <div key={item.id} className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm shadow-sm" dir="auto"><span className="mr-2 text-xs font-bold text-amber-700">{props.block.interaction_family === "ORDERING" ? index + 1 : ""}</span>{item.text}</div>)}
+    </div>
     <SemanticButtons {...props}/>
   </BlockFrame>;
 }
@@ -219,12 +254,18 @@ export function AgenticCanvasWorkspace(props: Props) {
     const accepted = await settleAgenticCanvasOperation(props.onOperation, operation);
     setOperationFailed(!accepted);
   };
+  const placements = new Map(scene.presentation?.placements.map((placement) => [placement.block_id, placement]) ?? []);
+  const orderedBlocks = [...scene.blocks].sort((left, right) => (placements.get(left.block_id)?.order ?? 0) - (placements.get(right.block_id)?.order ?? 0));
+  const layout = scene.presentation?.layout ?? "STACK";
+  const palette = scene.presentation?.palette ?? "AUTO";
+  const layoutClass = layout === "GRID" || layout === "SPLIT" ? "grid gap-3 md:grid-cols-2" : "space-y-3";
+  const paletteClass = palette === "NATURE" ? "bg-emerald-50" : palette === "WARM" ? "bg-amber-50" : palette === "COOL" ? "bg-sky-50" : "bg-[#f2f7ff]";
   return <section aria-label="Learning canvas" className="space-y-3">
-    <header className="rounded-2xl bg-[#f2f7ff] px-4 py-3">
+    <header className={`rounded-2xl px-4 py-3 ${paletteClass}`}>
       <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#496a8b]">Canvas</p>
       <h2 className="mt-1 font-display text-xl text-slate-900" dir="auto">{scene.objective}</h2>
     </header>
     {operationFailed ? <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-900">That Canvas action was not saved. The current Studio state has been restored, and Tutor chat remains available.</p> : null}
-    {scene.blocks.map((block) => <DeclarativeBlock key={block.block_id} {...props} onOperation={safeOperation} block={block}/>)}
+    <div className={layoutClass}>{orderedBlocks.map((block) => <div key={block.block_id} className={placements.get(block.block_id)?.span === "FULL" || placements.get(block.block_id)?.role === "PRIMARY" ? "md:col-span-2" : undefined}><DeclarativeBlock {...props} onOperation={safeOperation} block={block}/></div>)}</div>
   </section>;
 }

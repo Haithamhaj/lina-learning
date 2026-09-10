@@ -2,27 +2,27 @@
 
 ## Current goal
 
-Execute `UI-REFINE-01` without changing Studio ownership or Tutor authority.
+Complete CANVAS-VISUAL-INTELLIGENCE-01 closure from the STUDIO-AGENTIC-01 baseline without changing Studio ownership or Tutor authority.
 
 ## Current reality
 
-`main` is the canonical branch. `STUDIO-AGENTIC-01` is complete on `codex/studio-agentic-01`: Tutor v11 emits admitted educational briefs; one bounded Canvas Agent composes project-owned rich typed blocks; deterministic tools, hosted Image Generation, and Code Interpreter remain bounded; proposals settle through the existing Studio Scene/Event/Snapshot/reducer path; semantic interactions return to the same Primary Tutor. Historical Studio capability profiles remain registered for replay.
+`CANVAS-VISUAL-INTELLIGENCE-01` is complete in isolated branch `codex/canvas-visual-intelligence-01`: the same Tutor call selects only eligible visual Personal Fact keys; server code resolves a bounded age/grade plus selected-safe-facts context for the Canvas Agent; Scene v2 preserves semantic layout/palette/motion/placement/reveal decisions; typed SVG composition renders number lines, relation diagrams, and static spatial scenes as geometry. Historical Scene v1/profile v1 remains registered for replay.
 
 ## Active decisions
 
-`main` is the one canonical branch. The FE-02 prototype remains preserved. Current truth is separated from history, review evidence, and research. STUDIO-AGENTIC-01 is an explicitly Product Owner-authorized, isolated implementation correction: preserve the existing Studio Core while replacing new-write composition dependence on finite capability packs with the bounded Tutor-led Agentic Canvas path.
+Canvas remains Tutor-led: the Canvas Agent receives bounded educational semantics plus presentation-only context, emits no renderer control, and Studio remains the durable lifecycle authority. New writes use Agentic Scene v2; v1 remains replay-only.
 
 ## Protected areas
 
-Safety/Parent Boundaries, ownership/privacy, Learning Intelligence semantics, raw provenance, Model Gateway routing, Studio/Canvas contracts, and runtime behavior are unchanged by this cleanup.
+Safety/Parent Boundaries, ownership/privacy, Learning Intelligence semantics, raw provenance, Model Gateway routing, and Studio lifecycle remain protected. Visual context is limited to Core Profile age/grade and up to three already-filtered safe facts; raw memory, files, intelligence, identity, and source bytes remain excluded.
 
 ## Active risks
 
-Authenticated disposable-Student Daily acceptance and longitudinal real Lina calibration remain unproven product gates. STUDIO-AGENTIC-01 real-provider evidence is complete, including hosted Image Generation, Code Interpreter, durable same-Tutor Canvas continuity, updates, and replay.
+Authenticated disposable-Student Daily acceptance and longitudinal real Lina calibration remain unproven. Frontend typecheck now passes after installing declared dependencies; production compilation succeeds, but static export/browser proof requires a valid configured Clerk publishable key and authenticated local Daily environment.
 
 ## Next recommended action
 
-Start `UI-REFINE-01` with a bounded approved scope, then pursue authenticated Daily acceptance and real-use calibration.
+Request Product Owner approval before remote push; then integrate through the normal review path and pursue authenticated Daily acceptance/real-use calibration.
 
 ## Critical references
 
