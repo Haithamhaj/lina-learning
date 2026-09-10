@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from uuid import uuid4
 
 from scripts import prove_studio_agentic_live as live
 from scripts.prove_studio_agentic_live import LiveEvidenceRecorder
+from services.platform.config.settings import Settings
 
 
 def test_live_evidence_recorder_flushes_each_completed_scenario(tmp_path: Path) -> None:
@@ -95,3 +97,20 @@ def test_durable_live_action_selection_uses_a_tutor_triggering_scene_contract() 
             "to_value": None,
         },
     }
+
+
+def test_durable_evidence_connection_failure_becomes_a_bounded_case_failure(
+    monkeypatch,
+) -> None:
+    def connection_failure(*_args, **_kwargs):
+        raise ConnectionError("private database detail")
+
+    monkeypatch.setattr(live, "_durable_studio_evidence", connection_failure)
+
+    evidence, reason_code = live._try_durable_studio_evidence(
+        Settings(_env_file=None, database_url="postgresql+psycopg://unused/unused"),
+        uuid4(),
+    )
+
+    assert evidence is None
+    assert reason_code == "ConnectionError"

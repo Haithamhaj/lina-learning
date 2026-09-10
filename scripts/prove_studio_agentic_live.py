@@ -430,6 +430,18 @@ def _durable_studio_evidence(settings: Settings, run_id: UUID) -> dict[str, obje
         engine.dispose()
 
 
+def _try_durable_studio_evidence(
+    settings: Settings,
+    run_id: UUID,
+) -> tuple[dict[str, object] | None, str | None]:
+    """Keep database/provider details private while allowing later cases to run."""
+
+    try:
+        return _durable_studio_evidence(settings, run_id), None
+    except Exception as error:  # noqa: BLE001 - a failed proof case must not abort the harness
+        return None, type(error).__name__
+
+
 async def run_live(
     settings: Settings,
     *,
@@ -526,15 +538,13 @@ async def run_live(
             _append_result(results, _record(case_id, passed=False, status="FAILED", reason_code=type(error).__name__), on_progress)
 
     durable = None
+    durable_reason_code = None
     if durable_run_id is not None:
-        try:
-            durable = _durable_studio_evidence(settings, durable_run_id)
-        except RuntimeError:
-            durable = None
+        durable, durable_reason_code = _try_durable_studio_evidence(settings, durable_run_id)
     if durable is None:
-        _append_result(results, _record("LIVE-09", passed=False, status="NOT_RUN", reason_code="DURABLE_STUDIO_INTERACTION_REQUIRED"), on_progress)
-        _append_result(results, _record("LIVE-10", passed=False, status="NOT_RUN", reason_code="DURABLE_ACTIVE_CANVAS_CHAT_REQUIRED"), on_progress)
-        _append_result(results, _record("LIVE-11", passed=False, status="NOT_RUN", reason_code="DURABLE_TUTOR_UPDATE_AND_STALE_FENCE_REQUIRED"), on_progress)
+        _append_result(results, _record("LIVE-09", passed=False, status="NOT_RUN", reason_code=durable_reason_code or "DURABLE_STUDIO_INTERACTION_REQUIRED"), on_progress)
+        _append_result(results, _record("LIVE-10", passed=False, status="NOT_RUN", reason_code=durable_reason_code or "DURABLE_ACTIVE_CANVAS_CHAT_REQUIRED"), on_progress)
+        _append_result(results, _record("LIVE-11", passed=False, status="NOT_RUN", reason_code=durable_reason_code or "DURABLE_TUTOR_UPDATE_AND_STALE_FENCE_REQUIRED"), on_progress)
     else:
         trace_passed = durable["tool_call_count"] >= 2 and len(durable["selected_tools"]) >= 2
         results[2] = _record("LIVE-03", passed=trace_passed, **{
