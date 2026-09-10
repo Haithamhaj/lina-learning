@@ -141,16 +141,20 @@ def test_completed_proposal_settles_to_active_scene_replays_and_reaches_same_tut
         )
         assert run is not None
         proposal = _scene(subject="MATH", block_type="MATH_BOARD")
-        run.status = "COMPLETED"
-        run.proposal_payload = proposal
         canonical_proposal = AgenticCanvasSceneV1.model_validate(proposal).model_dump(mode="json")
+        run.status = "COMPLETED"
+        # Match the production worker exactly: both the durable proposal and
+        # its digest use the fully materialized typed Scene, including defaults.
+        run.proposal_payload = canonical_proposal
         run.proposal_digest = sha256(json.dumps(canonical_proposal, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
         run.completed_at = datetime.now(UTC)
         run_id, runtime_id, student_id, learning_id = run.id, runtime.id, student.id, learning.id
 
     with factory.begin() as session:
         scene = accept_completed_canvas_run(session, run_id)
-        assert scene is not None and scene.status == "ACTIVE"
+        rejected = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert scene is not None, None if rejected is None else rejected.failure_metadata
+        assert scene.status == "ACTIVE"
         assert scene.subject_key == "CANVAS"
         action = {
             "version": "agentic-canvas-action-v1", "action": "SELECT",
