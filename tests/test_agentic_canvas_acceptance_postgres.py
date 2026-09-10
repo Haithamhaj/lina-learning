@@ -143,7 +143,8 @@ def test_completed_proposal_settles_to_active_scene_replays_and_reaches_same_tut
         proposal = _scene(subject="MATH", block_type="MATH_BOARD")
         run.status = "COMPLETED"
         run.proposal_payload = proposal
-        run.proposal_digest = sha256(json.dumps(proposal, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+        canonical_proposal = AgenticCanvasSceneV1.model_validate(proposal).model_dump(mode="json")
+        run.proposal_digest = sha256(json.dumps(canonical_proposal, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
         run.completed_at = datetime.now(UTC)
         run_id, runtime_id, student_id, learning_id = run.id, runtime.id, student.id, learning.id
 

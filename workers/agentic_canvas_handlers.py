@@ -36,8 +36,11 @@ from services.studio.agent.orchestrator import (
     compose_canvas_scene_with_trace,
 )
 from services.studio.agentic_canvas import AgenticCanvasSceneV1
-from services.studio.canvas_brief import CanvasBriefContractError, parse_canvas_brief
-from services.studio.canvas_brief import CanvasBriefV1
+from services.studio.canvas_brief import (
+    CanvasBriefContractError,
+    CanvasBriefV1,
+    parse_canvas_brief,
+)
 from services.studio.generated_assets import (
     GeneratedAssetValidationError,
     adopt_generated_image,
@@ -248,6 +251,8 @@ class _AgenticExecutionEnvelope:
 
 
 def _preflight(factory: sessionmaker[Session], job: Job) -> _AgenticExecutionEnvelope | None:
+    terminal_error: str | None = None
+    envelope: _AgenticExecutionEnvelope | None = None
     with factory.begin() as session:
         claimed = session.get(Job, job.id)
         unguarded_run = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.job_id == job.id)).scalar_one_or_none()
@@ -261,31 +266,40 @@ def _preflight(factory: sessionmaker[Session], job: Job) -> _AgenticExecutionEnv
             return None
         if run.status not in {"PENDING", "RUNNING"}:
             _fail_in_session(run, "RUN_STATUS_INVALID")
-            raise NonRetryableJobError("RUN_STATUS_INVALID")
-        if run.deadline_at is not None and run.deadline_at <= datetime.now(UTC):
+            terminal_error = "RUN_STATUS_INVALID"
+        elif run.deadline_at is not None and run.deadline_at <= datetime.now(UTC):
             _fail_in_session(run, "DEADLINE_EXCEEDED")
-            raise NonRetryableJobError("DEADLINE_EXCEEDED")
-        payload = claimed.payload if isinstance(claimed.payload, dict) else {}
-        if payload.get("run_kind") != AGENTIC_CANVAS_CAPABILITY_IDENTITY or payload.get("source_message_id") != str(run.source_message_id) or payload.get("brief_digest") != run.order_digest or run.output_schema_version != AGENTIC_CANVAS_SCENE_SCHEMA_VERSION:
-            _fail_in_session(run, "CANVAS_BRIEF_LINEAGE_INVALID")
-            raise NonRetryableJobError("CANVAS_BRIEF_LINEAGE_INVALID")
-        message = session.get(LearningMessage, run.source_message_id)
-        audit = message.payload.get("agentic_canvas") if message is not None and isinstance(message.payload, dict) else None
-        brief = _matching_audited_brief(audit, run)
-        if (message is None or message.role != "tutor" or message.session_id != run.learning_session_id
-                or brief is None):
-            _fail_in_session(run, "CANVAS_BRIEF_LINEAGE_INVALID")
-            raise NonRetryableJobError("CANVAS_BRIEF_LINEAGE_INVALID")
-        newest = latest_admitted_agentic_message(
-            session,
-            learning_session_id=run.learning_session_id,
-        )
-        active = session.execute(select(StudioScene).where(StudioScene.studio_runtime_id == run.studio_runtime_id, StudioScene.status == "ACTIVE").with_for_update()).scalar_one_or_none()
-        if newest is None or newest.id != message.id or (active is None and (run.base_scene_id is not None or run.base_scene_version != 0)) or (active is not None and (active.id != run.base_scene_id or active.scene_version != run.base_scene_version)):
-            run.status, run.failure_metadata, run.completed_at = "REJECTED", {"code": "STALE_AGENTIC_CANVAS_REQUEST"}, datetime.now(UTC)
-            raise NonRetryableJobError("STALE_AGENTIC_CANVAS_REQUEST")
-        run.status, run.started_at = "RUNNING", run.started_at or datetime.now(UTC)
-        return _AgenticExecutionEnvelope(run_id=run.id, student_id=run.student_id, session_id=run.learning_session_id, message_id=message.id, parent_execution_id=message.ai_execution_id, brief=brief, provider_attempt=claimed.attempt_count, provider_max_attempts=claimed.max_attempts)
+            terminal_error = "DEADLINE_EXCEEDED"
+        else:
+            payload = claimed.payload if isinstance(claimed.payload, dict) else {}
+            if payload.get("run_kind") != AGENTIC_CANVAS_CAPABILITY_IDENTITY or payload.get("source_message_id") != str(run.source_message_id) or payload.get("brief_digest") != run.order_digest or run.output_schema_version != AGENTIC_CANVAS_SCENE_SCHEMA_VERSION:
+                _fail_in_session(run, "CANVAS_BRIEF_LINEAGE_INVALID")
+                terminal_error = "CANVAS_BRIEF_LINEAGE_INVALID"
+            else:
+                message = session.get(LearningMessage, run.source_message_id)
+                audit = message.payload.get("agentic_canvas") if message is not None and isinstance(message.payload, dict) else None
+                brief = _matching_audited_brief(audit, run)
+                if (message is None or message.role != "tutor" or message.session_id != run.learning_session_id
+                        or brief is None):
+                    _fail_in_session(run, "CANVAS_BRIEF_LINEAGE_INVALID")
+                    terminal_error = "CANVAS_BRIEF_LINEAGE_INVALID"
+                else:
+                    newest = latest_admitted_agentic_message(
+                        session,
+                        learning_session_id=run.learning_session_id,
+                    )
+                    active = session.execute(select(StudioScene).where(StudioScene.studio_runtime_id == run.studio_runtime_id, StudioScene.status == "ACTIVE").with_for_update()).scalar_one_or_none()
+                    if newest is None or newest.id != message.id or (active is None and (run.base_scene_id is not None or run.base_scene_version != 0)) or (active is not None and (active.id != run.base_scene_id or active.scene_version != run.base_scene_version)):
+                        run.status, run.failure_metadata, run.completed_at = "REJECTED", {"code": "STALE_AGENTIC_CANVAS_REQUEST"}, datetime.now(UTC)
+                        terminal_error = "STALE_AGENTIC_CANVAS_REQUEST"
+                    else:
+                        run.status, run.started_at = "RUNNING", run.started_at or datetime.now(UTC)
+                        envelope = _AgenticExecutionEnvelope(run_id=run.id, student_id=run.student_id, session_id=run.learning_session_id, message_id=message.id, parent_execution_id=message.ai_execution_id, brief=brief, provider_attempt=claimed.attempt_count, provider_max_attempts=claimed.max_attempts)
+    # Raising inside ``factory.begin()`` rolls back the terminal Run state.
+    # Commit that authoritative state first, then fail the queue Job.
+    if terminal_error is not None:
+        raise NonRetryableJobError(terminal_error)
+    return envelope
 
 
 def _fail_in_session(run: StudioCanvasSpecialistRun, code: str) -> None:
