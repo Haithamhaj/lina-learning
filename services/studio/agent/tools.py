@@ -16,7 +16,7 @@ from pint import UnitRegistry
 from pydantic import BaseModel, ConfigDict, Field
 from sympy import Rational
 
-from services.studio.agentic_canvas import AgenticCanvasBlockV1, AgenticCanvasElementV1
+from services.studio.agentic_canvas import AccessibilitySpecV1, AgenticCanvasBlockV1, AgenticCanvasElementV1, DiagramBlockV1, MathBoardBlockV1, MathInputBlockV1, Scene2DBlockV1, TextInteractionBlockV1
 
 
 _TOOL_NAMES = (
@@ -91,30 +91,32 @@ def convert_units(*, value: str, from_unit: str, to_unit: str) -> UnitConversion
     return UnitConversionResult(value=normalized, unit=str(converted.units))
 
 
-def _block(*, block_id: str, block_type: str, meaning: str, label: str, value: str | None = None) -> AgenticCanvasBlockV1:
-    return AgenticCanvasBlockV1(
+def _common(*, block_id: str, block_type: str, meaning: str, label: str, value: str | None = None) -> dict[str, object]:
+    return dict(
         block_id=block_id,
         type=block_type,
         meaning=meaning,
+        title=label,
+        accessibility=AccessibilitySpecV1(text_equivalent=meaning),
         elements=[AgenticCanvasElementV1(id=f"{block_id}-primary", label=label, current_value=value)],
     )
 
 
 def create_math_board(*, block_id: str, meaning: str, label: str, expression: str) -> AgenticCanvasBlockV1:
-    return _block(block_id=block_id, block_type="MATH_BOARD", meaning=meaning, label=label, value=expression)
+    return MathBoardBlockV1(**_common(block_id=block_id, block_type="MATH_BOARD", meaning=meaning, label=label, value=expression), board_kind="NUMBER_LINE")
 
 
 def create_2d_scene(*, block_id: str, meaning: str, label: str) -> AgenticCanvasBlockV1:
-    return _block(block_id=block_id, block_type="SCENE_2D", meaning=meaning, label=label)
+    return Scene2DBlockV1(**_common(block_id=block_id, block_type="SCENE_2D", meaning=meaning, label=label))
 
 
 def create_diagram(*, block_id: str, meaning: str, label: str) -> AgenticCanvasBlockV1:
-    return _block(block_id=block_id, block_type="DIAGRAM", meaning=meaning, label=label)
+    return DiagramBlockV1(**_common(block_id=block_id, block_type="DIAGRAM", meaning=meaning, label=label), topology="CONCEPT_MAP")
 
 
 def create_text_interaction(*, block_id: str, meaning: str, label: str, prompt: str) -> AgenticCanvasBlockV1:
-    return _block(block_id=block_id, block_type="TEXT_INTERACTION", meaning=meaning, label=label, value=prompt)
+    return TextInteractionBlockV1(**_common(block_id=block_id, block_type="TEXT_INTERACTION", meaning=meaning, label=label, value=prompt), interaction_family="ANNOTATION")
 
 
 def create_math_input(*, block_id: str, meaning: str, label: str, initial_value: str = "") -> AgenticCanvasBlockV1:
-    return _block(block_id=block_id, block_type="MATH_INPUT", meaning=meaning, label=label, value=initial_value)
+    return MathInputBlockV1(**_common(block_id=block_id, block_type="MATH_INPUT", meaning=meaning, label=label, value=initial_value))

@@ -26,7 +26,8 @@ class CanvasBlockRegistry:
 
     def materialize_plan(self, plan: AgenticCanvasPlanV1) -> AgenticCanvasSceneV1:
         blocks = []
-        for block_id in plan.block_ids:
+        for placement in sorted(plan.placements, key=lambda item: item.order):
+            block_id = placement.block_id
             block = self._blocks.get(block_id)
             if block is None:
                 raise ValueError("Canvas plan block was not produced by a registered tool")

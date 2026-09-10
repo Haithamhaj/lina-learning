@@ -38,9 +38,11 @@ browser APIs, components, pixel positions, URLs, prompts for another model, or t
 implementation details. You cannot write Studio state, call the Tutor, access
 student records, or delegate to another agent.
 
-Return exactly one agentic-canvas-plan-v1. Its block_ids must refer only to blocks
-returned by your create_* tools. Every selected block must preserve the Tutor's
-subject, objective, quantities, and must-not-imply constraints."""
+Return exactly one agentic-canvas-plan-v1. Its placements must refer only to
+blocks returned by your create_* tools. Select bounded layout, palette, and
+motion semantics; never provide CSS or physical layout. Every selected block
+must preserve the Tutor's subject, objective, quantities, and must-not-imply
+constraints."""
 CANVAS_AGENT_INSTRUCTIONS += "\n\n" + (_CANVAS_SKILL_ROOT / "AGENT.md").read_text(encoding="utf-8") + "\n\n" + _CANVAS_SKILL_PACK
 
 

@@ -14,8 +14,10 @@ def test_agentic_scene_accepts_only_declarative_allowlisted_blocks() -> None:
             "blocks": [
                 {
                     "block_id": "number-line-1",
-                    "type": "MATH_BOARD",
-                    "meaning": "Compare decimal locations.",
+                        "type": "MATH_BOARD",
+                        "meaning": "Compare decimal locations.",
+                        "accessibility": {"text_equivalent": "A number line for comparing decimals."},
+                        "board_kind": "NUMBER_LINE",
                     "elements": [{"id": "decimal-a", "label": "0.6", "current_value": "0.6"}],
                 }
             ],
@@ -42,6 +44,20 @@ def test_agentic_scene_requires_explicit_nullable_values_for_strict_model_output
         AgenticCanvasSceneV1.model_validate(payload)
 
 
+def test_agentic_plan_uses_semantic_placements_not_browser_layout() -> None:
+    from services.studio.agentic_canvas import AgenticCanvasPlanV1
+
+    plan = AgenticCanvasPlanV1.model_validate({
+        "version": "agentic-canvas-plan-v1", "objective": "Compare decimals.", "subject_key": "MATH",
+        "layout": "FOCUS_SUPPORT", "palette": "WARM", "motion": "SUBTLE",
+        "placements": [{"block_id": "line", "role": "PRIMARY", "order": 0, "span": "WIDE"}],
+        "reveal_order": [],
+    })
+    assert plan.placements[0].role == "PRIMARY"
+    with pytest.raises(ValueError):
+        AgenticCanvasPlanV1.model_validate({**plan.model_dump(), "placements": [{"block_id": "line", "role": "PRIMARY", "order": 0, "x": 421}]})
+
+
 def test_agentic_projection_is_semantic_and_rejects_browser_noise() -> None:
     from services.studio.agentic_canvas import AgenticCanvasActionV1, build_agentic_tutor_projection
 
@@ -49,7 +65,7 @@ def test_agentic_projection_is_semantic_and_rejects_browser_noise() -> None:
         objective="Compare 0.6 and 0.45",
         subject_key="MATH",
         scene_status="ACTIVE",
-        blocks=[{"block_id": "number-line-1", "type": "MATH_BOARD", "meaning": "Decimal comparison", "elements": [{"id": "decimal-a", "label": "0.6", "current_value": "0.6"}]}],
+        blocks=[{"block_id": "number-line-1", "type": "MATH_BOARD", "meaning": "Decimal comparison", "accessibility": {"text_equivalent": "A decimal number line."}, "board_kind": "NUMBER_LINE", "elements": [{"id": "decimal-a", "label": "0.6", "current_value": "0.6"}]}],
         actions=[AgenticCanvasActionV1.model_validate({"version": "agentic-canvas-action-v1", "action": "MOVE", "block_id": "number-line-1", "element_id": "decimal-a", "from_value": "0.6", "to_value": "0.65"})],
     )
 
