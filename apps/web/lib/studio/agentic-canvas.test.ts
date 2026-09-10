@@ -26,11 +26,26 @@ const validScene = {
   objective: "Compare the two quantities visually.",
   subject_key: "MATH",
   blocks: [
-    { ...commonBlock, block_id: "math-board", type: "MATH_BOARD", board_kind: "NUMBER_LINE", axis_min: "0", axis_max: "1" },
-    { ...commonBlock, block_id: "scene-2d", type: "SCENE_2D", viewport_width_units: 100, viewport_height_units: 100 },
-    { ...commonBlock, block_id: "diagram", type: "DIAGRAM", topology: "COMPARISON", layout: "HORIZONTAL" },
-    { ...commonBlock, block_id: "text", type: "TEXT_INTERACTION", interaction_family: "ANNOTATION" },
-    { ...commonBlock, block_id: "math-input", type: "MATH_INPUT", notation: "LATEX" },
+    {
+      ...commonBlock, block_id: "math-board", type: "MATH_BOARD", board_kind: "NUMBER_LINE", axis_min: "0", axis_max: "1",
+      axes: [{ axis: "X", minimum: "0", maximum: "1", step: "1/10" }],
+      markers: [{ id: "fraction-a", label: "3/5", value: "3/5", marker_kind: "POINT", draggable: true }],
+      expressions: [{ id: "comparison", label: "Comparison", latex: "3/5 > 1/2", role: "DERIVED" }],
+    },
+    {
+      ...commonBlock, block_id: "scene-2d", type: "SCENE_2D", viewport_width_units: 100, viewport_height_units: 100,
+      objects: [{ id: "cart", label: "Cart", object_kind: "RECTANGLE", position: { x: "40", y: "50" }, draggable: false }],
+      relations: [],
+    },
+    {
+      ...commonBlock, block_id: "diagram", type: "DIAGRAM", topology: "COMPARISON", layout: "HORIZONTAL",
+      nodes: [{ id: "whole", label: "Whole", node_kind: "CONCEPT" }], edges: [],
+    },
+    {
+      ...commonBlock, block_id: "text", type: "TEXT_INTERACTION", interaction_family: "ANNOTATION",
+      prompt: "Highlight the key phrase.", items: [{ id: "phrase", text: "three equal parts", group_id: null }], groups: [], relations: [],
+    },
+    { ...commonBlock, block_id: "math-input", type: "MATH_INPUT", notation: "LATEX", prompt: "Enter a fraction.", constraints: ["Use a fraction."] },
     { ...commonBlock, block_id: "image", type: "IMAGE", studio_generated_asset_id: "asset-123" },
   ],
 };
@@ -67,6 +82,8 @@ test("Agentic Canvas admission accepts only the exact registered declarative blo
     "MATH_INPUT",
     "IMAGE",
   ]);
+  assert.equal(parsed.blocks[0].type === "MATH_BOARD" && parsed.blocks[0].markers[0].value, "3/5");
+  assert.equal(parsed.blocks[1].type === "SCENE_2D" && parsed.blocks[1].objects[0].position.x, "40");
 });
 
 test("Agentic Canvas admission rejects unknown blocks and unknown fields at every boundary", () => {
@@ -82,6 +99,17 @@ test("Agentic Canvas admission rejects unknown blocks and unknown fields at ever
       ...validScene.blocks[0],
       accessibility: { ...validScene.blocks[0].accessibility, engine: "browser" },
     }],
+  }), null);
+  assert.equal(parseAgenticCanvasScene({
+    ...validScene,
+    blocks: [{
+      ...validScene.blocks[0],
+      markers: [{ id: "fraction-a", label: "3/5", value: "3/5", marker_kind: "POINT", draggable: true, provider_url: "https://provider.invalid/x" }],
+    }],
+  }), null);
+  assert.equal(parseAgenticCanvasScene({
+    ...validScene,
+    blocks: [{ ...validScene.blocks[2], edges: [{ source_id: "whole", target_id: "missing", relation: "RELATES_TO", label: null }] }],
   }), null);
 });
 

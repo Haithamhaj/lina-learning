@@ -74,7 +74,17 @@ function ElementList({ block }: { block: AgenticCanvasBlock }) {
 function Scene2DBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "SCENE_2D" }> }) {
   const [object, target] = props.block.elements;
   const interactive = object && target && props.block.allowed_actions.includes("MOVE");
-  if (!interactive) return <BlockFrame block={props.block}><ElementList block={props.block}/><SemanticButtons {...props}/></BlockFrame>;
+  if (!interactive) return <BlockFrame block={props.block}>
+    <div className="grid min-h-40 gap-2 rounded-xl bg-sky-50 p-3 sm:grid-cols-2" aria-label="Logical 2D scene">
+      {props.block.objects.map((item) => <div
+        key={item.id}
+        className="rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm"
+        title={item.object_kind}
+      ><span className="font-semibold" dir="auto">{item.label}</span><span className="ml-2 text-xs text-slate-500" dir="ltr">({item.position.x}, {item.position.y})</span></div>)}
+    </div>
+    {props.block.relations.length ? <ul className="mt-3 space-y-1 text-sm text-slate-600">{props.block.relations.map((relation, index) => <li key={`${relation.source_id}-${relation.target_id}-${index}`}>{relation.source_id} → {relation.label ?? relation.relation} → {relation.target_id}</li>)}</ul> : null}
+    <SemanticButtons {...props}/>
+  </BlockFrame>;
   const value: SemanticPlacement = { objectId: object.id, targetId: object.current_value === target.id ? target.id : null };
   return <SpatialPlacement
     value={value}
@@ -118,7 +128,14 @@ function CartesianMathBoard(props: Pick<Props, "sceneId" | "sceneVersion" | "onO
 
 function MathBoardBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "MATH_BOARD" }> }) {
   if (props.block.board_kind === "CARTESIAN") return <CartesianMathBoard {...props}/>;
-  return <BlockFrame block={props.block}><ElementList block={props.block}/><SemanticButtons {...props}/></BlockFrame>;
+  return <BlockFrame block={props.block}>
+    {props.block.axes.map((axis) => <div key={axis.axis} className="mb-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+      <p>{axis.axis} axis: {axis.minimum} to {axis.maximum}{axis.step ? `, step ${axis.step}` : ""}</p>
+    </div>)}
+    <div className="grid gap-2 sm:grid-cols-2">{props.block.markers.map((marker) => <div key={marker.id} className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm"><span dir="auto">{marker.label}</span>: <span dir="ltr">{marker.value}</span></div>)}</div>
+    {props.block.expressions.length ? <div className="mt-3 space-y-2">{props.block.expressions.map((expression) => <p key={expression.id} className="rounded-xl bg-emerald-50 px-3 py-2 text-sm" dir="auto">{expression.label}: <span dir="ltr">{expression.latex}</span></p>)}</div> : null}
+    <SemanticButtons {...props}/>
+  </BlockFrame>;
 }
 
 function MathInputBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "MATH_INPUT" }> }) {
@@ -133,8 +150,26 @@ function MathInputBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOpera
     onValueChange={setDraft}
     onSubmit={action ? (value: MathInput) => nextOperation(props, props.block, action, { elementId: element.id, fromValue: persisted, toValue: value.value }) : undefined}
     title={props.block.title ?? element.label}
-    prompt={props.block.meaning}
+    prompt={props.block.prompt}
   />;
+}
+
+function DiagramBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "DIAGRAM" }> }) {
+  const labels = new Map(props.block.nodes.map((node) => [node.id, node.label]));
+  return <BlockFrame block={props.block}>
+    <div className="grid gap-2 sm:grid-cols-2">{props.block.nodes.map((node) => <div key={node.id} className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2"><p className="text-xs font-semibold uppercase text-violet-700">{node.node_kind}</p><p dir="auto" className="text-sm text-slate-800">{node.label}</p></div>)}</div>
+    {props.block.edges.length ? <ul className="mt-3 space-y-1 text-sm text-slate-600">{props.block.edges.map((edge, index) => <li key={`${edge.source_id}-${edge.target_id}-${index}`}><span dir="auto">{labels.get(edge.source_id)}</span> → {edge.label ?? edge.relation} → <span dir="auto">{labels.get(edge.target_id)}</span></li>)}</ul> : null}
+    <SemanticButtons {...props}/>
+  </BlockFrame>;
+}
+
+function TextInteractionBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "TEXT_INTERACTION" }> }) {
+  return <BlockFrame block={props.block}>
+    <p className="mb-3 text-sm font-medium text-slate-700" dir="auto">{props.block.prompt}</p>
+    {props.block.groups.length ? <div className="mb-3 flex flex-wrap gap-2">{props.block.groups.map((group) => <span key={group.id} className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900" dir="auto">{group.label}</span>)}</div> : null}
+    <div className="grid gap-2">{props.block.items.map((item) => <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm" dir="auto">{item.text}</div>)}</div>
+    <SemanticButtons {...props}/>
+  </BlockFrame>;
 }
 
 function GeneratedImage({ block, loadGeneratedAsset }: { block: Extract<AgenticCanvasBlock, { type: "IMAGE" }>; loadGeneratedAsset?: Props["loadGeneratedAsset"] }) {
@@ -166,6 +201,8 @@ function DeclarativeBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOpe
   if (props.block.type === "SCENE_2D") return <Scene2DBlock {...props} block={props.block}/>;
   if (props.block.type === "MATH_BOARD") return <MathBoardBlock {...props} block={props.block}/>;
   if (props.block.type === "MATH_INPUT") return <MathInputBlock {...props} block={props.block}/>;
+  if (props.block.type === "DIAGRAM") return <DiagramBlock {...props} block={props.block}/>;
+  if (props.block.type === "TEXT_INTERACTION") return <TextInteractionBlock {...props} block={props.block}/>;
   if (props.block.type === "IMAGE") return <BlockFrame block={props.block}>
     <GeneratedImage block={props.block} loadGeneratedAsset={props.loadGeneratedAsset}/>
     <SemanticButtons {...props}/>

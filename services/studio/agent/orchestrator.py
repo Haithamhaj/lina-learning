@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
 from agents import (
     Agent,
+    ImageGenerationTool,
     OpenAIResponsesModel,
     RunConfig,
     RunContextWrapper,
@@ -28,6 +32,18 @@ from services.studio.agent.tools import (
     create_text_interaction,
 )
 from services.studio.agentic_canvas import AgenticCanvasPlanV1, AgenticCanvasSceneV1
+from services.studio.agentic_canvas import (
+    DiagramEdgeV1,
+    DiagramNodeV1,
+    MathAxisV1,
+    MathExpressionV1,
+    MathMarkerV1,
+    SpatialObjectV1,
+    SpatialRelationV1,
+    TextGroupV1,
+    TextItemV1,
+    TextRelationV1,
+)
 from services.studio.canvas_brief import CanvasBriefV1
 
 _CANVAS_SKILL_ROOT = Path(__file__).resolve().parents[3] / "runtime" / "canvas-agent"
@@ -67,6 +83,18 @@ class AgenticCanvasCompositionResult:
     scene: AgenticCanvasSceneV1
     selected_tools: tuple[str, ...]
     tool_call_count: int
+    generated_images: tuple["HostedGeneratedImage", ...] = ()
+
+
+class HostedImageOutputError(ValueError):
+    """The SDK exposed an image output that cannot cross Lina's asset boundary."""
+
+
+@dataclass(frozen=True, slots=True)
+class HostedGeneratedImage:
+    temporary_handle: str
+    content: bytes = field(repr=False)
+    content_type: Literal["image/png"] = "image/png"
 
 
 def _block_summary(block):
@@ -98,29 +126,110 @@ def _convert_units(
     return convert_units(value=value, from_unit=from_unit, to_unit=to_unit)
 
 
-def _create_math_board(context: RunContextWrapper[CanvasAgentRunContext], block_id: str, meaning: str, label: str, expression: str):
+def _create_math_board(
+    context: RunContextWrapper[CanvasAgentRunContext],
+    block_id: str,
+    meaning: str,
+    label: str,
+    board_kind: Literal["NUMBER_LINE", "CARTESIAN", "PLOT"],
+    axes: list[MathAxisV1],
+    markers: list[MathMarkerV1],
+    expressions: list[MathExpressionV1],
+):
     context.context.record_tool("create_math_board")
-    return _record_block(context, create_math_board(block_id=block_id, meaning=meaning, label=label, expression=expression))
+    return _record_block(context, create_math_board(
+        block_id=block_id,
+        meaning=meaning,
+        label=label,
+        board_kind=board_kind,
+        axes=axes,
+        markers=markers,
+        expressions=expressions,
+    ))
 
 
-def _create_2d_scene(context: RunContextWrapper[CanvasAgentRunContext], block_id: str, meaning: str, label: str):
+def _create_2d_scene(
+    context: RunContextWrapper[CanvasAgentRunContext],
+    block_id: str,
+    meaning: str,
+    label: str,
+    objects: list[SpatialObjectV1],
+    relations: list[SpatialRelationV1],
+):
     context.context.record_tool("create_2d_scene")
-    return _record_block(context, create_2d_scene(block_id=block_id, meaning=meaning, label=label))
+    return _record_block(context, create_2d_scene(
+        block_id=block_id,
+        meaning=meaning,
+        label=label,
+        objects=objects,
+        relations=relations,
+    ))
 
 
-def _create_diagram(context: RunContextWrapper[CanvasAgentRunContext], block_id: str, meaning: str, label: str):
+def _create_diagram(
+    context: RunContextWrapper[CanvasAgentRunContext],
+    block_id: str,
+    meaning: str,
+    label: str,
+    topology: Literal["SEQUENCE", "CYCLE", "FLOW", "CAUSE_EFFECT", "COMPARISON", "HIERARCHY", "SYSTEM", "CONCEPT_MAP"],
+    layout: Literal["HORIZONTAL", "VERTICAL", "RADIAL", "TREE", "GRID", "AUTO"],
+    nodes: list[DiagramNodeV1],
+    edges: list[DiagramEdgeV1],
+):
     context.context.record_tool("create_diagram")
-    return _record_block(context, create_diagram(block_id=block_id, meaning=meaning, label=label))
+    return _record_block(context, create_diagram(
+        block_id=block_id,
+        meaning=meaning,
+        label=label,
+        topology=topology,
+        layout=layout,
+        nodes=nodes,
+        edges=edges,
+    ))
 
 
-def _create_text_interaction(context: RunContextWrapper[CanvasAgentRunContext], block_id: str, meaning: str, label: str, prompt: str):
+def _create_text_interaction(
+    context: RunContextWrapper[CanvasAgentRunContext],
+    block_id: str,
+    meaning: str,
+    label: str,
+    prompt: str,
+    interaction_family: Literal["ORDERING", "MATCHING", "CLASSIFICATION", "GROUPING", "HIGHLIGHT", "ANNOTATION", "RELATION", "TOKEN_MANIPULATION"],
+    items: list[TextItemV1],
+    groups: list[TextGroupV1],
+    relations: list[TextRelationV1],
+):
     context.context.record_tool("create_text_interaction")
-    return _record_block(context, create_text_interaction(block_id=block_id, meaning=meaning, label=label, prompt=prompt))
+    return _record_block(context, create_text_interaction(
+        block_id=block_id,
+        meaning=meaning,
+        label=label,
+        prompt=prompt,
+        interaction_family=interaction_family,
+        items=items,
+        groups=groups,
+        relations=relations,
+    ))
 
 
-def _create_math_input(context: RunContextWrapper[CanvasAgentRunContext], block_id: str, meaning: str, label: str, initial_value: str = ""):
+def _create_math_input(
+    context: RunContextWrapper[CanvasAgentRunContext],
+    block_id: str,
+    meaning: str,
+    label: str,
+    prompt: str,
+    initial_value: str,
+    constraints: list[str],
+):
     context.context.record_tool("create_math_input")
-    return _record_block(context, create_math_input(block_id=block_id, meaning=meaning, label=label, initial_value=initial_value))
+    return _record_block(context, create_math_input(
+        block_id=block_id,
+        meaning=meaning,
+        label=label,
+        prompt=prompt,
+        initial_value=initial_value,
+        constraints=constraints,
+    ))
 
 
 def _agent_tools():
@@ -132,7 +241,54 @@ def _agent_tools():
         function_tool(_create_diagram, name_override="create_diagram"),
         function_tool(_create_text_interaction, name_override="create_text_interaction"),
         function_tool(_create_math_input, name_override="create_math_input"),
+        ImageGenerationTool(tool_config={
+            "type": "image_generation",
+            "action": "generate",
+            "background": "opaque",
+            "moderation": "auto",
+            "output_format": "png",
+            "partial_images": 0,
+            "quality": "low",
+        }),
     ]
+
+
+_HOSTED_IMAGE_HANDLE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,127}$")
+_MAX_HOSTED_IMAGE_BASE64_CHARS = 28_000_000
+
+
+def _extract_hosted_generated_images(result: object) -> tuple[HostedGeneratedImage, ...]:
+    """Extract the one documented completed PNG result, rejecting every other shape."""
+
+    calls: list[object] = []
+    for item in getattr(result, "new_items", ()):
+        raw = getattr(item, "raw_item", None)
+        raw_type = raw.get("type") if isinstance(raw, dict) else getattr(raw, "type", None)
+        if raw_type == "image_generation_call":
+            calls.append(raw)
+    if not calls:
+        return ()
+    if len(calls) != 1:
+        raise HostedImageOutputError("Hosted image output is unsupported: exactly one completed image is required.")
+    call = calls[0]
+    value = (lambda name: call.get(name) if isinstance(call, dict) else getattr(call, name, None))
+    handle, status, encoded = value("id"), value("status"), value("result")
+    if (
+        status != "completed"
+        or not isinstance(handle, str)
+        or _HOSTED_IMAGE_HANDLE.fullmatch(handle) is None
+        or not isinstance(encoded, str)
+        or not encoded
+        or len(encoded) > _MAX_HOSTED_IMAGE_BASE64_CHARS
+    ):
+        raise HostedImageOutputError("Hosted image output is unsupported or incomplete.")
+    try:
+        content = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise HostedImageOutputError("Hosted image output is unsupported or malformed.") from exc
+    if not content:
+        raise HostedImageOutputError("Hosted image output is unsupported or empty.")
+    return (HostedGeneratedImage(temporary_handle=handle, content=content),)
 
 
 def build_canvas_agent(*, api_key: str, model: str, base_url: str | None = None) -> Agent[CanvasAgentRunContext]:
@@ -166,13 +322,22 @@ async def compose_canvas_scene_with_trace(*, brief: CanvasBriefV1, api_key: str,
         ),
     )
     scene = context.registry.materialize_plan(AgenticCanvasPlanV1.model_validate(result.final_output))
+    generated_images = _extract_hosted_generated_images(result)
+    selected_tools = tuple(dict.fromkeys([
+        *context.tool_calls,
+        *(["image_generation"] if generated_images else []),
+    ]))
     return AgenticCanvasCompositionResult(
         scene=scene,
-        selected_tools=tuple(dict.fromkeys(context.tool_calls)),
-        tool_call_count=len(context.tool_calls),
+        selected_tools=selected_tools,
+        tool_call_count=len(context.tool_calls) + len(generated_images),
+        generated_images=generated_images,
     )
 
 
 async def compose_canvas_scene(*, brief: CanvasBriefV1, api_key: str, model: str, base_url: str | None = None) -> AgenticCanvasSceneV1:
     """Backward-compatible Scene-only boundary for non-worker callers."""
-    return (await compose_canvas_scene_with_trace(brief=brief, api_key=api_key, model=model, base_url=base_url)).scene
+    composition = await compose_canvas_scene_with_trace(brief=brief, api_key=api_key, model=model, base_url=base_url)
+    if composition.generated_images:
+        raise HostedImageOutputError("Hosted images require the owned Studio asset adoption boundary.")
+    return composition.scene

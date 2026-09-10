@@ -152,10 +152,11 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
     session_factory = sessionmaker(get_engine(), expire_on_commit=False)
     registry = JobHandlerRegistry()
+    storage = create_object_storage()
     register_content_handlers(
         registry,
         session_factory=session_factory,
-        storage=create_object_storage(),
+        storage=storage,
     )
     register_intelligence_handlers(
         registry,
@@ -168,7 +169,11 @@ def main() -> None:
         gateway_factory=create_personal_facts_gateway,
     )
     register_canvas_specialist_handlers(registry, session_factory=session_factory)
-    register_agentic_canvas_handlers(registry, session_factory=session_factory)
+    register_agentic_canvas_handlers(
+        registry,
+        session_factory=session_factory,
+        storage=storage,
+    )
     worker_id = f"{socket.gethostname()}-{os.getpid()}-{uuid4().hex[:8]}"
     _logger.info("Starting jobs worker %s", worker_id)
     run_forever(session_factory, registry, worker_id=worker_id)

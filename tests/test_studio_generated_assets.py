@@ -145,6 +145,76 @@ def test_persisted_image_uses_owned_storage_and_never_records_temporary_handle_o
     assert "provider.invalid" not in repr(resolved)
 
 
+def test_worker_adopts_hosted_image_bytes_before_building_the_durable_scene(tmp_path: Path) -> None:
+    from services.studio.agent.orchestrator import HostedGeneratedImage
+    from services.studio.agentic_canvas import AgenticCanvasSceneV1
+    from services.studio.canvas_brief import CanvasBriefV1
+    from workers.agentic_canvas_handlers import _adopt_hosted_images
+
+    storage = LocalObjectStorage(tmp_path / "objects", signing_secret="fixture")
+    run = _run()
+
+    class _Session:
+        def add(self, value: object) -> None:
+            self.added = value
+
+        def flush(self, values: object | None = None) -> None:
+            return None
+
+    brief = CanvasBriefV1.model_validate({
+        "version": "canvas-brief-v1",
+        "subject_key": "SCIENCE",
+        "objective": "Observe the water cycle.",
+        "student_request": "Show the water cycle.",
+        "requested_representation": "A simple water-cycle illustration.",
+        "facts": ["Water changes state."],
+        "relations": [],
+        "quantities": [],
+        "desired_student_action": None,
+        "must_not_imply": [],
+        "source_references": [],
+        "locale": "en",
+        "direction": "ltr",
+    })
+    scene = AgenticCanvasSceneV1.model_validate({
+        "version": "agentic-canvas-scene-v1",
+        "objective": "Observe the water cycle.",
+        "subject_key": "SCIENCE",
+        "blocks": [{
+            "block_id": "cycle",
+            "type": "DIAGRAM",
+            "meaning": "Water moves through a repeating cycle.",
+            "title": "Water cycle",
+            "accessibility": {"text_equivalent": "A water-cycle diagram.", "aria_label": None},
+            "allowed_actions": ["FOCUS"],
+            "elements": [],
+            "topology": "CYCLE",
+            "layout": "RADIAL",
+            "nodes": [],
+            "edges": [],
+        }],
+    })
+
+    adopted = _adopt_hosted_images(
+        _Session(),
+        storage=storage,
+        run=run,
+        brief=brief,
+        scene=scene,
+        generated_images=(HostedGeneratedImage(
+            temporary_handle="image-call-1",
+            content=_png(),
+        ),),
+    )
+
+    image_block = adopted.blocks[-1]
+    assert image_block.type == "IMAGE"
+    assert image_block.studio_generated_asset_id
+    assert "image-call-1" not in adopted.model_dump_json()
+    assert "base64" not in adopted.model_dump_json()
+    assert "provider" not in adopted.model_dump_json()
+
+
 def test_database_failure_deletes_adopted_bytes(tmp_path: Path) -> None:
     """A failed row insert must not leave an ownerless object behind."""
 

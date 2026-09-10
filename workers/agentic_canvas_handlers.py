@@ -22,6 +22,7 @@ from services.platform.db.models import (
     StudioSnapshot,
 )
 from services.platform.jobs import NonRetryableJobError
+from services.platform.storage import ObjectStorage
 from services.studio.agent.admission import (
     AGENTIC_CANVAS_CAPABILITY_IDENTITY,
     AGENTIC_CANVAS_COMPOSE_JOB,
@@ -31,10 +32,17 @@ from services.studio.agent.admission import (
 )
 from services.studio.agent.orchestrator import (
     AgenticCanvasCompositionResult,
+    HostedGeneratedImage,
     compose_canvas_scene_with_trace,
 )
 from services.studio.agentic_canvas import AgenticCanvasSceneV1
 from services.studio.canvas_brief import CanvasBriefContractError, parse_canvas_brief
+from services.studio.canvas_brief import CanvasBriefV1
+from services.studio.generated_assets import (
+    GeneratedAssetValidationError,
+    adopt_generated_image,
+    resolve_generated_image_handles,
+)
 from services.studio.process_production_acceptance import accept_completed_canvas_run
 
 _logger = logging.getLogger(__name__)
@@ -46,6 +54,7 @@ def register_agentic_canvas_handlers(
     session_factory: sessionmaker[Session],
     compose=compose_canvas_scene_with_trace,
     settings_factory=Settings,
+    storage: ObjectStorage | None = None,
 ) -> None:
     def handle(job: Job) -> dict[str, object]:
         execution = _preflight(session_factory, job)
@@ -74,11 +83,13 @@ def register_agentic_canvas_handlers(
             scene = composition.scene
             selected_tools = composition.selected_tools
             tool_call_count = composition.tool_call_count
+            generated_images = composition.generated_images
         else:
             # Deterministic fixtures may retain the historical Scene-only seam.
             scene = composition
             selected_tools = ()
             tool_call_count = 0
+            generated_images = ()
         try:
             scene = AgenticCanvasSceneV1.model_validate(scene)
         except Exception as error:
@@ -90,52 +101,71 @@ def register_agentic_canvas_handlers(
             )
             raise NonRetryableJobError("AGENTIC_SCENE_INVALID") from error
         durable_result: dict[str, object]
-        with session_factory.begin() as session:
-            unguarded_run = session.get(StudioCanvasSpecialistRun, execution.run_id)
-            if unguarded_run is None:
-                raise ValueError("AGENTIC_CANVAS_RUN_MISSING")
-            # Canonical order shared with admission and legacy settlement.
-            session.execute(select(StudioRuntime).where(StudioRuntime.id == unguarded_run.studio_runtime_id).with_for_update()).scalar_one()
-            run = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.id == execution.run_id).with_for_update()).scalar_one()
-            if run.status in {"COMPLETED", "FAILED", "CANCELLED", "SUPERSEDED", "REJECTED"}:
-                return {"run_id": str(run.id), "run_status": run.status}
-            message = session.get(LearningMessage, execution.message_id)
-            audit = message.payload.get("agentic_canvas") if message is not None and isinstance(message.payload, dict) else None
-            post_brief = _matching_audited_brief(audit, run)
-            active = session.execute(select(StudioScene).where(StudioScene.studio_runtime_id == run.studio_runtime_id, StudioScene.status == "ACTIVE").with_for_update()).scalar_one_or_none()
-            newest = latest_admitted_agentic_message(
-                session,
-                learning_session_id=run.learning_session_id,
-            )
-            if (run.status != "RUNNING" or (run.deadline_at is not None and run.deadline_at <= datetime.now(UTC))
-                    or post_brief is None
-                    or (active is None and (run.base_scene_id is not None or run.base_scene_version != 0))
-                    or (active is not None and (active.id != run.base_scene_id or active.scene_version != run.base_scene_version))
-                    or newest is None or newest.id != execution.message_id):
-                run.status, run.failure_metadata, run.completed_at = "REJECTED", {"code": "STALE_AGENTIC_CANVAS_RESULT"}, datetime.now(UTC)
-                return {"run_id": str(run.id), "run_status": run.status}
-            ai_execution = AIExecution(task="canvas_agent", provider="openai", model=settings.model_name, input_tokens=None, cached_input_tokens=None, cache_write_tokens=None, output_tokens=None, latency_ms=round((perf_counter() - started) * 1000), estimated_cost_usd=None, success=True, failure_code=None, operation_id=run.id, operation_type="agentic_canvas_compose", parent_execution_id=execution.parent_execution_id, student_id=execution.student_id, learning_session_id=execution.session_id, source_message_id=execution.message_id, source_candidate_event_ids=[])
-            session.add(ai_execution)
-            session.flush()
-            proposal = scene.model_dump(mode="json")
-            proposal_digest = _canonical_digest(proposal)
-            run.proposal_payload, run.proposal_digest, run.ai_execution_id, run.status, run.completed_at, run.failure_metadata = proposal, proposal_digest, ai_execution.id, "COMPLETED", datetime.now(UTC), None
-            has_snapshot = session.execute(
-                select(StudioSnapshot.id).where(
-                    StudioSnapshot.studio_runtime_id == run.studio_runtime_id
+        try:
+            with session_factory.begin() as session:
+                unguarded_run = session.get(StudioCanvasSpecialistRun, execution.run_id)
+                if unguarded_run is None:
+                    raise ValueError("AGENTIC_CANVAS_RUN_MISSING")
+                # Canonical order shared with admission and legacy settlement.
+                session.execute(select(StudioRuntime).where(StudioRuntime.id == unguarded_run.studio_runtime_id).with_for_update()).scalar_one()
+                run = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.id == execution.run_id).with_for_update()).scalar_one()
+                if run.status in {"COMPLETED", "FAILED", "CANCELLED", "SUPERSEDED", "REJECTED"}:
+                    return {"run_id": str(run.id), "run_status": run.status}
+                message = session.get(LearningMessage, execution.message_id)
+                audit = message.payload.get("agentic_canvas") if message is not None and isinstance(message.payload, dict) else None
+                post_brief = _matching_audited_brief(audit, run)
+                active = session.execute(select(StudioScene).where(StudioScene.studio_runtime_id == run.studio_runtime_id, StudioScene.status == "ACTIVE").with_for_update()).scalar_one_or_none()
+                newest = latest_admitted_agentic_message(
+                    session,
+                    learning_session_id=run.learning_session_id,
                 )
-            ).scalar_one_or_none() is not None
-            durable_result = {
-                "run_id": str(run.id),
-                "run_status": run.status,
-                "scene_contract": scene.version,
-                "proposal_digest": proposal_digest,
-                "scene_id": None,
-                "agent_trace": {
-                    "selected_tools": list(selected_tools),
-                    "tool_call_count": tool_call_count,
-                },
-            }
+                if (run.status != "RUNNING" or (run.deadline_at is not None and run.deadline_at <= datetime.now(UTC))
+                        or post_brief is None
+                        or (active is None and (run.base_scene_id is not None or run.base_scene_version != 0))
+                        or (active is not None and (active.id != run.base_scene_id or active.scene_version != run.base_scene_version))
+                        or newest is None or newest.id != execution.message_id):
+                    run.status, run.failure_metadata, run.completed_at = "REJECTED", {"code": "STALE_AGENTIC_CANVAS_RESULT"}, datetime.now(UTC)
+                    return {"run_id": str(run.id), "run_status": run.status}
+                if generated_images and storage is None:
+                    raise GeneratedAssetValidationError("Hosted images require configured owned object storage.")
+                scene = _adopt_hosted_images(
+                    session,
+                    storage=storage,
+                    run=run,
+                    brief=execution.brief,
+                    scene=scene,
+                    generated_images=generated_images,
+                ) if generated_images else scene
+                ai_execution = AIExecution(task="canvas_agent", provider="openai", model=settings.model_name, input_tokens=None, cached_input_tokens=None, cache_write_tokens=None, output_tokens=None, latency_ms=round((perf_counter() - started) * 1000), estimated_cost_usd=None, success=True, failure_code=None, operation_id=run.id, operation_type="agentic_canvas_compose", parent_execution_id=execution.parent_execution_id, student_id=execution.student_id, learning_session_id=execution.session_id, source_message_id=execution.message_id, source_candidate_event_ids=[])
+                session.add(ai_execution)
+                session.flush()
+                proposal = scene.model_dump(mode="json")
+                proposal_digest = _canonical_digest(proposal)
+                run.proposal_payload, run.proposal_digest, run.ai_execution_id, run.status, run.completed_at, run.failure_metadata = proposal, proposal_digest, ai_execution.id, "COMPLETED", datetime.now(UTC), None
+                has_snapshot = session.execute(
+                    select(StudioSnapshot.id).where(
+                        StudioSnapshot.studio_runtime_id == run.studio_runtime_id
+                    )
+                ).scalar_one_or_none() is not None
+                durable_result = {
+                    "run_id": str(run.id),
+                    "run_status": run.status,
+                    "scene_contract": scene.version,
+                    "proposal_digest": proposal_digest,
+                    "scene_id": None,
+                    "agent_trace": {
+                        "selected_tools": list(selected_tools),
+                        "tool_call_count": tool_call_count,
+                    },
+                }
+        except GeneratedAssetValidationError as error:
+            _fail(
+                session_factory,
+                execution.run_id,
+                "GENERATED_ASSET_INVALID",
+                metadata={"code": "GENERATED_ASSET_INVALID", "exception_type": type(error).__name__},
+            )
+            raise NonRetryableJobError("GENERATED_ASSET_INVALID") from error
         # The provider result is durable before this short deterministic
         # settlement transaction. Reconciliation remains crash-window repair.
         if has_snapshot:
@@ -160,6 +190,49 @@ def register_agentic_canvas_handlers(
             )
         return durable_result
     registry.register(AGENTIC_CANVAS_COMPOSE_JOB, handle)
+
+
+def _adopt_hosted_images(
+    session: Session,
+    *,
+    storage: ObjectStorage,
+    run: StudioCanvasSpecialistRun,
+    brief: CanvasBriefV1,
+    scene: AgenticCanvasSceneV1,
+    generated_images: tuple[HostedGeneratedImage, ...],
+) -> AgenticCanvasSceneV1:
+    """Adopt ephemeral SDK bytes and expose only owned asset IDs to the Scene."""
+
+    if len(generated_images) != 1 or len(scene.blocks) >= 12:
+        raise GeneratedAssetValidationError("Generated image output cannot fit the bounded Canvas scene.")
+    block_id = "generated-image"
+    if any(block.block_id == block_id for block in scene.blocks):
+        raise GeneratedAssetValidationError("Generated image block identity conflicts with the composed scene.")
+    output = generated_images[0]
+    resolution = adopt_generated_image(
+        session,
+        storage=storage,
+        run=run,
+        temporary_handle=output.temporary_handle,
+        content=output.content,
+        content_type=output.content_type,
+    )
+    draft = scene.model_dump(mode="json")
+    draft["blocks"].append({
+        "block_id": block_id,
+        "type": "IMAGE",
+        "meaning": brief.requested_representation,
+        "title": "Generated visual",
+        "accessibility": {
+            "text_equivalent": brief.requested_representation,
+            "aria_label": None,
+        },
+        "allowed_actions": ["FOCUS"],
+        "elements": [],
+        "temporary_image_handle": output.temporary_handle,
+    })
+    resolved = resolve_generated_image_handles(draft, resolutions=[resolution])
+    return AgenticCanvasSceneV1.model_validate(resolved)
 
 
 class _AgenticExecutionEnvelope:

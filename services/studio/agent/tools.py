@@ -46,6 +46,7 @@ _TOOL_NAMES = (
     "create_diagram",
     "create_text_interaction",
     "create_math_input",
+    "image_generation",
 )
 
 
@@ -66,7 +67,7 @@ class UnitConversionResult(BaseModel):
 
 
 def tool_names() -> tuple[str, ...]:
-    """The allowlisted local tools; hosted tools are configured separately."""
+    """The complete allowlisted tool surface, including the hosted image tool."""
     return _TOOL_NAMES
 
 

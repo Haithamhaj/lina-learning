@@ -57,6 +57,7 @@ def test_registry_names_are_bounded_to_the_approved_canvas_tools() -> None:
         "create_diagram",
         "create_text_interaction",
         "create_math_input",
+        "image_generation",
     )
 
 

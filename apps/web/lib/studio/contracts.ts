@@ -87,28 +87,99 @@ type AgenticCanvasBlockBase = {
   elements: AgenticCanvasElement[];
 };
 
+export type AgenticCanvasMathAxis = {
+  axis: "X" | "Y";
+  minimum: string;
+  maximum: string;
+  step: string | null;
+};
+
+export type AgenticCanvasMathMarker = {
+  id: string;
+  label: string;
+  value: string;
+  marker_kind: "POINT" | "OPEN_ENDPOINT" | "CLOSED_ENDPOINT";
+  draggable: boolean;
+};
+
+export type AgenticCanvasMathExpression = {
+  id: string;
+  label: string;
+  latex: string;
+  role: "GIVEN" | "DERIVED" | "TARGET";
+};
+
+export type AgenticCanvasLogicalPoint = { x: string; y: string };
+
+export type AgenticCanvasSpatialObject = {
+  id: string;
+  label: string;
+  object_kind: "POINT" | "CIRCLE" | "RECTANGLE" | "POLYGON" | "ARROW" | "LABEL";
+  position: AgenticCanvasLogicalPoint;
+  draggable: boolean;
+};
+
+export type AgenticCanvasSpatialRelation = {
+  source_id: string;
+  target_id: string;
+  relation: "NEAR" | "ABOVE" | "BELOW" | "LEFT_OF" | "RIGHT_OF" | "CONTAINS" | "CONNECTED_TO" | "ACTS_ON" | "MOVES_TOWARD" | "PART_OF";
+  label: string | null;
+};
+
+export type AgenticCanvasDiagramNode = {
+  id: string;
+  label: string;
+  node_kind: "CONCEPT" | "STATE" | "PROCESS" | "ENTITY" | "DECISION" | "OUTCOME";
+};
+
+export type AgenticCanvasDiagramEdge = {
+  source_id: string;
+  target_id: string;
+  relation: "NEXT" | "CAUSES" | "RETURNS_TO" | "PART_OF" | "COMPARES" | "RELATES_TO" | "DEPENDS_ON";
+  label: string | null;
+};
+
+export type AgenticCanvasTextItem = { id: string; text: string; group_id: string | null };
+export type AgenticCanvasTextGroup = { id: string; label: string };
+export type AgenticCanvasTextRelation = {
+  source_id: string;
+  target_id: string;
+  relation: "BEFORE" | "MATCHES" | "BELONGS_TO" | "RELATES_TO";
+};
+
 export type AgenticCanvasBlock =
   | (AgenticCanvasBlockBase & {
       type: "MATH_BOARD";
       board_kind: "NUMBER_LINE" | "CARTESIAN" | "PLOT";
       axis_min: string | null;
       axis_max: string | null;
+      axes: AgenticCanvasMathAxis[];
+      markers: AgenticCanvasMathMarker[];
+      expressions: AgenticCanvasMathExpression[];
     })
   | (AgenticCanvasBlockBase & {
       type: "SCENE_2D";
       viewport_width_units: 100;
       viewport_height_units: 100;
+      objects: AgenticCanvasSpatialObject[];
+      relations: AgenticCanvasSpatialRelation[];
     })
   | (AgenticCanvasBlockBase & {
       type: "DIAGRAM";
       topology: "SEQUENCE" | "CYCLE" | "FLOW" | "CAUSE_EFFECT" | "COMPARISON" | "HIERARCHY" | "SYSTEM" | "CONCEPT_MAP";
       layout: "HORIZONTAL" | "VERTICAL" | "RADIAL" | "TREE" | "GRID" | "AUTO";
+      nodes: AgenticCanvasDiagramNode[];
+      edges: AgenticCanvasDiagramEdge[];
     })
   | (AgenticCanvasBlockBase & {
       type: "TEXT_INTERACTION";
       interaction_family: "ORDERING" | "MATCHING" | "CLASSIFICATION" | "GROUPING" | "HIGHLIGHT" | "ANNOTATION" | "RELATION" | "TOKEN_MANIPULATION";
+      prompt: string;
+      items: AgenticCanvasTextItem[];
+      groups: AgenticCanvasTextGroup[];
+      relations: AgenticCanvasTextRelation[];
     })
-  | (AgenticCanvasBlockBase & { type: "MATH_INPUT"; notation: "LATEX" })
+  | (AgenticCanvasBlockBase & { type: "MATH_INPUT"; notation: "LATEX"; prompt: string; constraints: string[] })
   | (AgenticCanvasBlockBase & { type: "IMAGE"; studio_generated_asset_id: string });
 
 export type AgenticCanvasScene = {
