@@ -11,6 +11,7 @@ from urllib.error import HTTPError, URLError
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 from agents.tracing import gen_trace_id
+from agents.exceptions import ModelBehaviorError
 
 from services.platform.config.settings import Settings
 from services.platform.db.models import (
@@ -409,6 +410,11 @@ def _fail(factory: sessionmaker[Session], run_id, code: str, *, metadata: dict[s
 
 
 def _classify_agent_failure(error: Exception) -> tuple[str, bool]:
+    if isinstance(error, ModelBehaviorError):
+        # The provider completed but one model turn produced malformed tool or
+        # final-output arguments. A fresh bounded attempt can recover without
+        # weakening any application validation.
+        return "AGENT_MODEL_BEHAVIOR_FAILURE", True
     if isinstance(error, HTTPError):
         if error.code == 429:
             return "RATE_LIMIT", True

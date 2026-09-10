@@ -9,6 +9,7 @@ from uuid import uuid4
 
 import pytest
 from pydantic import SecretStr
+from agents.exceptions import ModelBehaviorError
 from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -20,11 +21,21 @@ from services.studio.agent.admission import (
 )
 from services.studio.agentic_canvas import AgenticCanvasSceneV1
 from workers.agentic_canvas_handlers import register_agentic_canvas_handlers
+from workers.agentic_canvas_handlers import _classify_agent_failure
 from workers.job_worker import JobHandlerRegistry, run_once
 
 pytestmark = pytest.mark.skipif(
     not os.getenv("DATABASE_URL"), reason="PostgreSQL DATABASE_URL is required"
 )
+
+
+def test_agent_model_behavior_failure_is_retryable_within_the_bounded_job_attempts() -> None:
+    """Catches making one transient malformed Agent turn terminal on its first attempt."""
+
+    assert _classify_agent_failure(ModelBehaviorError("malformed tool arguments")) == (
+        "AGENT_MODEL_BEHAVIOR_FAILURE",
+        True,
+    )
 
 
 @pytest.fixture

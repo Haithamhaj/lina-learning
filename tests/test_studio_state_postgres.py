@@ -31,6 +31,7 @@ from services.platform.db.models import (
     User,
     StudioRuntime,
     StudioScene,
+    StudioCanvasSpecialistRun,
     StudioEvent,
     StudioStudentInteraction,
     StudioTutorObservation,
@@ -1384,6 +1385,87 @@ def test_canvas_stream_persists_one_real_tutor_message_then_finalizes(
         assert observation is not None
         assert observation.status == "COMMITTED"
         assert observation.student_interaction_id == interaction_id
+
+
+def test_canvas_tutor_turn_admits_its_own_canvas_brief_as_a_causal_replacement(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Catches dropping a same-Primary-Tutor Canvas update after a semantic action."""
+
+    from services.studio.interactions import StudioInteractionTutorAdmission
+
+    student_id, session_id, runtime_id, scene_id, interaction_id, engine = _triggering_interaction(
+        postgres_session_factory
+    )
+    with postgres_session_factory.begin() as session:
+        scene = session.get(StudioScene, scene_id)
+        assert scene is not None
+        StudioStateService(session).append_event(
+            AppendStudioEventCommand(
+                runtime_id=runtime_id,
+                student_id=student_id,
+                learning_session_id=session_id,
+                event_kind="studio.scene.activated",
+                event_schema_version=CORE_EVENT_SCHEMA_VERSION,
+                actor=StudioActor.SYSTEM,
+                payload_schema_version="studio-scene-activated-v1",
+                payload={},
+                scene_id=scene_id,
+                base_scene_version=scene.scene_version,
+                idempotency_key=f"activate-for-agentic-replacement:{scene_id}",
+            )
+        )
+
+    class UpdatingTutor(_RecordingStudioTutorProvider):
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            result = super().execute(route, payload)
+            result.output["canvas_brief"] = {
+                "version": "canvas-brief-v1",
+                "subject_key": "MATH",
+                "objective": "Update the active visual after the Student submission.",
+                "student_request": "The Student selected the represented value.",
+                "requested_representation": "A number line with the selected value emphasized.",
+                "facts": ["The Student selected the represented value."],
+                "relations": [],
+                "quantities": [],
+                "desired_student_action": "Compare the selected value with the remaining marker.",
+                "must_not_imply": [],
+                "source_references": [],
+                "locale": "en",
+                "direction": "ltr",
+            }
+            return result
+
+    service = _studio_tutor_service(engine=engine, provider=UpdatingTutor())
+    result = service.execute(
+        student_id=student_id,
+        learning_session_id=session_id,
+        runtime_id=runtime_id,
+        interaction_id=interaction_id,
+    )
+    admission = StudioInteractionTutorAdmission(
+        context=result.context,
+        observation_id=None,
+        workspace_context=None,
+    )
+    turn = service.persist_canvas_turn(
+        admission=admission,
+        result=result.result,
+        student_id=student_id,
+    )
+
+    with postgres_session_factory() as session:
+        message = session.get(LearningMessage, turn.message_id)
+        assert message is not None
+        assert message.payload["tutor_turn_schema_version"] == "tutor_turn_v11"
+        assert message.payload["agentic_canvas"]["status"] == "ADMITTED"
+        replacement = session.scalar(
+            select(StudioCanvasSpecialistRun).where(
+                StudioCanvasSpecialistRun.source_message_id == message.id
+            )
+        )
+        assert replacement is not None
+        assert replacement.base_scene_id == scene_id
 
 
 def test_canvas_terminal_waits_on_learning_session_before_locking_runtime(

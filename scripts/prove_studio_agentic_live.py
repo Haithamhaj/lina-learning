@@ -248,6 +248,43 @@ def _scene_metadata(scene: AgenticCanvasSceneV1, brief: CanvasBriefV1) -> dict[s
     }
 
 
+def semantic_action_for_scene(
+    scene_payload: object,
+    *,
+    preferred_value: str | None = None,
+) -> dict[str, object]:
+    """Select one real Tutor-triggering action exposed by a composed Scene."""
+
+    scene = AgenticCanvasSceneV1.model_validate(scene_payload)
+    for action_key in ("SELECT", "SUBMIT"):
+        for block in scene.blocks:
+            if action_key not in block.allowed_actions:
+                continue
+            preferred = next(
+                (
+                    element
+                    for element in block.elements
+                    if preferred_value is not None
+                    and preferred_value in {element.label, element.current_value}
+                ),
+                None,
+            )
+            element = preferred or (block.elements[0] if block.elements else None)
+            element_id = None if element is None else element.id
+            return {
+                "action_key": action_key,
+                "payload": {
+                    "version": "agentic-canvas-action-v1",
+                    "action": action_key,
+                    "block_id": block.block_id,
+                    "element_id": element_id,
+                    "from_value": None,
+                    "to_value": None,
+                },
+            }
+    raise RuntimeError("AGENTIC_SCENE_HAS_NO_TUTOR_TRIGGERING_PROOF_ACTION")
+
+
 def _durable_studio_evidence(settings: Settings, run_id: UUID) -> dict[str, object]:
     """Read bounded evidence from the actual Studio Run and worker Job result."""
 

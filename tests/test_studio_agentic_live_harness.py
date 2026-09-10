@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from scripts import prove_studio_agentic_live as live
 from scripts.prove_studio_agentic_live import LiveEvidenceRecorder
 
 
@@ -55,3 +56,42 @@ def test_live_evidence_recorder_finalizes_complete_proof_atomically(tmp_path: Pa
     assert evidence["all_required_passed"] is True
     assert evidence["results"] == results
     assert not output.with_suffix(".json.tmp").exists()
+
+
+def test_durable_live_action_selection_uses_a_tutor_triggering_scene_contract() -> None:
+    """Catches a LIVE-09 harness accidentally choosing record-only FOCUS."""
+
+    selector = getattr(live, "semantic_action_for_scene", None)
+    assert callable(selector)
+    action = selector({
+        "version": "agentic-canvas-scene-v1",
+        "objective": "Compare two exact values.",
+        "subject_key": "MATH",
+        "blocks": [{
+            "block_id": "comparison-line",
+            "type": "MATH_BOARD",
+            "meaning": "Two exact markers on a number line.",
+            "title": "Comparison",
+            "accessibility": {"text_equivalent": "Two markers.", "aria_label": None},
+            "allowed_actions": ["FOCUS", "SELECT"],
+            "elements": [
+                {"id": "smaller", "label": "3/5", "current_value": "3/5"},
+                {"id": "larger", "label": "4/5", "current_value": "4/5"},
+            ],
+            "board_kind": "NUMBER_LINE",
+            "axis_min": "0",
+            "axis_max": "1",
+        }],
+    }, preferred_value="4/5")
+
+    assert action == {
+        "action_key": "SELECT",
+        "payload": {
+            "version": "agentic-canvas-action-v1",
+            "action": "SELECT",
+            "block_id": "comparison-line",
+            "element_id": "larger",
+            "from_value": None,
+            "to_value": None,
+        },
+    }

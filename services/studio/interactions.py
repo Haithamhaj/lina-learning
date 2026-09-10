@@ -47,7 +47,8 @@ from services.studio.subjects.contracts import (
 from services.studio.subjects.registry import SubjectCapabilityError, SubjectCapabilityRegistry
 from services.studio.workspace_intent import WorkspaceIntentContractError, parse_workspace_intent
 from services.studio.router import ActiveSceneCapability, WorkspaceAuthorityContext, WorkspaceDecisionStatus, WorkspaceExecutionDecision, route_workspace_intent
-from services.tutor.candidate_events import TUTOR_OUTPUT_RESPONSE_SCHEMA
+from services.studio.canvas_brief import audit_canvas_brief
+from services.tutor.candidate_events import TUTOR_OUTPUT_RESPONSE_SCHEMA, TUTOR_TURN_SCHEMA_VERSION
 from services.tutor.candidate_events import (
     PersistedGuidedLearningCheck,
     SuggestedAction,
@@ -423,13 +424,21 @@ class StudioInteractionTutorService:
                     else None
                 )
                 suggested_actions = [] if override_text is not None else normalize_suggested_actions(result.output.get("suggested_actions"))
+                canvas_audit = audit_canvas_brief(
+                    result.output.get("canvas_brief") if override_text is None else None,
+                    allowed_source_references=set(),
+                    safety_allows=(
+                        parent_boundary is None
+                        or parent_boundary.get("action") != "REDIRECT_TO_PARENT"
+                    ),
+                )
                 message = LearningMessage(
                     session_id=context.learning_session_id,
                     role="tutor",
                     content=text.strip(),
                     ai_execution_id=result.execution_id,
                     payload={
-                        "tutor_turn_schema_version": "tutor_turn_v9",
+                        "tutor_turn_schema_version": TUTOR_TURN_SCHEMA_VERSION,
                         "turn_origin": "STUDIO_INTERACTION",
                         "student_interaction_id": str(interaction.id),
                         "source_studio_event_id": str(source_event_id),
@@ -439,6 +448,7 @@ class StudioInteractionTutorService:
                         "workspace": self._workspace_audit(
                             result.output.get("workspace_intent"), admission.workspace_context
                         ),
+                        "agentic_canvas": canvas_audit,
                         "parent_boundary": None if parent_boundary is None else dict(parent_boundary),
                         "candidate_metadata_status": "not_applicable_canvas_interaction",
                     },
@@ -447,6 +457,15 @@ class StudioInteractionTutorService:
                 persistence_session.add(message)
                 learning_session.last_activity_at = datetime.now(UTC)
                 persistence_session.flush()
+                if canvas_audit.get("status") == "ADMITTED":
+                    from services.studio.agent.admission import admit_agentic_canvas_brief
+
+                    admit_agentic_canvas_brief(
+                        persistence_session,
+                        student_id=student_id,
+                        learning_session_id=context.learning_session_id,
+                        source_message_id=message.id,
+                    )
                 return StudioInteractionTutorTurn(
                     message_id=message.id,
                     text=message.content,
@@ -915,6 +934,9 @@ class StudioInteractionTutorService:
                 "Respond naturally to the persisted semantic action and current Workspace state. "
                 "Complete any explanation requested by the semantic action or Scene prompt in this response; "
                 "do not announce an explanation and defer it. "
+                "When the semantic action makes a Canvas change instructionally useful, or the active Scene "
+                "says the Student action should reveal or emphasize a new relationship, emit the updated "
+                "canvas_brief in this same Primary Tutor result as well as responding in Chat. "
                 "Do not invent a Student question, explanation, reasoning, or source message. "
                 f"The result is internal and not yet a delivered Tutor turn.{workspace_input}"
             ),
