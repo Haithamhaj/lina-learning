@@ -1746,6 +1746,10 @@ class StudioCanvasSpecialistRun(Base):
     ai_execution_id: Mapped[UUID | None] = mapped_column(
         PostgreSQLUUID(as_uuid=True), ForeignKey("ai_executions.id", ondelete="SET NULL")
     )
+    # Agents SDK orchestration is not a single Model Gateway request. Keep its
+    # trace and bounded aggregate/tool metadata on the operational Canvas run.
+    sdk_trace_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    agent_execution_metadata: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     output_schema_version: Mapped[str] = mapped_column(String(64), nullable=False)
     accepted_scene_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
     failure_metadata: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-def test_single_canvas_agent_uses_only_the_bounded_local_tool_registry() -> None:
+def test_single_canvas_agent_uses_only_the_bounded_tool_registry() -> None:
     from services.studio.agent.orchestrator import build_canvas_agent
     from services.studio.agent.tools import tool_names
     from services.studio.agentic_canvas import AgenticCanvasPlanV1
@@ -21,6 +21,8 @@ def test_single_canvas_agent_uses_only_the_bounded_local_tool_registry() -> None
     assert set(schemas["create_2d_scene"]["properties"]) >= {"objects", "relations"}
     assert set(schemas["create_diagram"]["properties"]) >= {"nodes", "edges"}
     assert set(schemas["create_text_interaction"]["properties"]) >= {"items", "groups", "relations"}
+    code_tool = next(tool for tool in agent.tools if tool.name == "code_interpreter")
+    assert code_tool.tool_config == {"type": "code_interpreter", "container": {"type": "auto"}}
 
 
 def test_canvas_agent_input_contains_only_the_tutor_authored_semantic_brief() -> None:
@@ -192,3 +194,103 @@ def test_completed_hosted_image_output_is_extracted_as_ephemeral_bytes_only() ->
     )
     with pytest.raises(HostedImageOutputError, match="unsupported"):
         _extract_hosted_generated_images(malformed)
+
+
+def test_composition_trace_keeps_only_bounded_metadata_for_code_interpreter(
+    monkeypatch,
+) -> None:
+    import asyncio
+    import json
+    from types import SimpleNamespace
+
+    from services.studio.agent.orchestrator import compose_canvas_scene_with_trace
+    from services.studio.agent.tools import create_math_input
+    from services.studio.canvas_brief import CanvasBriefV1
+
+    async def fake_run(*args, **kwargs):
+        context = kwargs["context"]
+        context.registry.accept(create_math_input(
+            block_id="calculated-input",
+            meaning="Use the validated transformed values.",
+            label="Calculated values",
+            prompt="Enter the next value.",
+            initial_value="",
+            constraints=["Use a finite decimal."],
+        ))
+        return SimpleNamespace(
+            final_output={
+                "version": "agentic-canvas-plan-v1",
+                "objective": "Compare a transformed data series.",
+                "subject_key": "MATH",
+                "layout": "FOCUS",
+                "palette": "AUTO",
+                "motion": "NONE",
+                "placements": [{"block_id": "calculated-input", "role": "INTERACTION", "order": 0, "span": "NORMAL"}],
+                "reveal_order": [],
+            },
+            new_items=[
+                SimpleNamespace(raw_item=SimpleNamespace(
+                    type="code_interpreter_call",
+                    id="ci-call-1",
+                    status="completed",
+                    code="print('private raw computation')",
+                    outputs=[{"type": "logs", "logs": "private raw result"}],
+                )),
+            ],
+            context_wrapper=SimpleNamespace(usage=SimpleNamespace(
+                requests=2,
+                input_tokens=101,
+                output_tokens=29,
+                total_tokens=130,
+                input_tokens_details=SimpleNamespace(cached_tokens=11),
+            )),
+        )
+
+    monkeypatch.setattr("services.studio.agent.orchestrator.Runner.run", fake_run)
+    brief = CanvasBriefV1.model_validate({
+        "version": "canvas-brief-v1",
+        "subject_key": "MATH",
+        "objective": "Compare a transformed data series.",
+        "student_request": "Help me compare this data.",
+        "requested_representation": "A validated numeric interaction.",
+        "facts": ["The series requires a multi-step transformation."],
+        "relations": [],
+        "quantities": [],
+        "desired_student_action": "Enter the next transformed value.",
+        "must_not_imply": ["Do not expose executable code."],
+        "source_references": [],
+        "locale": "en",
+        "direction": "ltr",
+    })
+
+    result = asyncio.run(
+        compose_canvas_scene_with_trace(
+            brief=brief,
+            api_key="test-only-key",
+            model="gpt-5.6-luna",
+            sdk_trace_id="trace_0123456789abcdef0123456789abcdef",
+        )
+    )
+
+    assert result.sdk_trace_id == "trace_0123456789abcdef0123456789abcdef"
+    assert result.model == "gpt-5.6-luna"
+    assert result.usage == {
+        "requests": 2,
+        "input_tokens": 101,
+        "cached_input_tokens": 11,
+        "output_tokens": 29,
+        "total_tokens": 130,
+    }
+    assert result.selected_tools == ("code_interpreter",)
+    assert result.tool_call_count == 1
+    trace = result.tool_calls[0]
+    assert trace.name == "code_interpreter"
+    assert trace.call_id == "ci-call-1"
+    assert trace.status == "completed"
+    assert len(trace.input_digest) == len(trace.output_digest) == 64
+    assert trace.produced_block_ids == ()
+    durable = json.dumps(result.execution_metadata(), sort_keys=True)
+    assert "private raw computation" not in durable
+    assert "private raw result" not in durable
+    assert "code\"" not in durable
+    assert "outputs" not in durable

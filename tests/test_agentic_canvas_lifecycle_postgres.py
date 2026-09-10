@@ -355,7 +355,43 @@ def test_worker_immediately_settles_completed_agentic_scene_through_existing_stu
         run_id = run.id
 
     async def compose(**kwargs):
-        return _scene()
+        from services.studio.agent.orchestrator import (
+            AgenticCanvasCompositionResult,
+            AgentToolCallTrace,
+        )
+
+        assert kwargs["sdk_trace_id"].startswith("trace_")
+        return AgenticCanvasCompositionResult(
+            scene=_scene(),
+            selected_tools=("code_interpreter", "create_math_board"),
+            tool_call_count=2,
+            sdk_trace_id=kwargs["sdk_trace_id"],
+            model="test-agentic-model",
+            usage={
+                "requests": 2,
+                "input_tokens": 100,
+                "cached_input_tokens": 10,
+                "output_tokens": 20,
+                "total_tokens": 120,
+            },
+            tool_calls=(
+                AgentToolCallTrace(
+                    name="code_interpreter",
+                    call_id="ci-call-1",
+                    status="completed",
+                    input_digest="1" * 64,
+                    output_digest="2" * 64,
+                ),
+                AgentToolCallTrace(
+                    name="create_math_board",
+                    call_id="math-call-1",
+                    status="completed",
+                    input_digest="3" * 64,
+                    output_digest="4" * 64,
+                    produced_block_ids=("decimal-line",),
+                ),
+            ),
+        )
 
     registry = _registry(factory, compose)
     assert run_once(factory, registry, worker_id="agentic-reconcile-success") == m.JobStatus.COMPLETED
@@ -366,6 +402,39 @@ def test_worker_immediately_settles_completed_agentic_scene_through_existing_stu
         assert completed.status == "COMPLETED"
         assert completed.proposal_payload == _scene().model_dump(mode="json")
         assert completed.failure_metadata is None
+        assert completed.sdk_trace_id.startswith("trace_")
+        assert completed.agent_execution_metadata == {
+            "model": "test-agentic-model",
+            "usage": {
+                "requests": 2,
+                "input_tokens": 100,
+                "cached_input_tokens": 10,
+                "output_tokens": 20,
+                "total_tokens": 120,
+            },
+            "latency_ms": completed.agent_execution_metadata["latency_ms"],
+            "selected_tools": ["code_interpreter", "create_math_board"],
+            "tool_call_count": 2,
+            "tool_calls": [
+                {
+                    "name": "code_interpreter",
+                    "call_id": "ci-call-1",
+                    "status": "completed",
+                    "input_digest": "1" * 64,
+                    "output_digest": "2" * 64,
+                    "produced_block_ids": [],
+                },
+                {
+                    "name": "create_math_board",
+                    "call_id": "math-call-1",
+                    "status": "completed",
+                    "input_digest": "3" * 64,
+                    "output_digest": "4" * 64,
+                    "produced_block_ids": ["decimal-line"],
+                },
+            ],
+            "proposal_digest": completed.proposal_digest,
+        }
         assert completed.scene_id is not None
         scene = session.get(m.StudioScene, completed.scene_id)
         assert scene is not None and scene.status == "ACTIVE"
@@ -380,7 +449,7 @@ def test_worker_immediately_settles_completed_agentic_scene_through_existing_stu
         assert job is not None
         assert job.result["run_id"] == str(completed.id)
         assert job.result["scene_id"] == str(scene.id)
-        assert job.result["agent_trace"] == {"selected_tools": [], "tool_call_count": 0}
+        assert job.result["agent_trace"] == completed.agent_execution_metadata
 
 
 def test_post_provider_brief_mutation_is_rejected_before_scene_commit(

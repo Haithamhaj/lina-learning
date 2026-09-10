@@ -10,6 +10,7 @@ from urllib.error import HTTPError, URLError
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
+from agents.tracing import gen_trace_id
 
 from services.platform.config.settings import Settings
 from services.platform.db.models import (
@@ -71,7 +72,13 @@ def register_agentic_canvas_handlers(
         try:
             # Phase A committed before the remote Agent call. No Runtime/Run
             # lock or transaction remains open while the provider is running.
-            composition = asyncio.run(compose(brief=execution.brief, api_key=settings.model_api_key.get_secret_value(), model=settings.model_name, base_url=settings.model_base_url))
+            composition = asyncio.run(compose(
+                brief=execution.brief,
+                api_key=settings.model_api_key.get_secret_value(),
+                model=settings.model_name,
+                base_url=settings.model_base_url,
+                sdk_trace_id=execution.sdk_trace_id,
+            ))
         except Exception as error:
             code, retryable = _classify_agent_failure(error)
             metadata = {"code": code, "provider_attempt": execution.provider_attempt}
@@ -83,16 +90,17 @@ def register_agentic_canvas_handlers(
             _fail(session_factory, execution.run_id, code, metadata=metadata)
             raise NonRetryableJobError(code) from error
         if isinstance(composition, AgenticCanvasCompositionResult):
+            if composition.sdk_trace_id != execution.sdk_trace_id or composition.model != settings.model_name:
+                _fail(session_factory, execution.run_id, "AGENT_TRACE_INVALID")
+                raise NonRetryableJobError("AGENT_TRACE_INVALID")
             scene = composition.scene
-            selected_tools = composition.selected_tools
-            tool_call_count = composition.tool_call_count
             generated_images = composition.generated_images
+            agent_trace = composition.execution_metadata()
         else:
             # Deterministic fixtures may retain the historical Scene-only seam.
             scene = composition
-            selected_tools = ()
-            tool_call_count = 0
             generated_images = ()
+            agent_trace = {"selected_tools": [], "tool_call_count": 0}
         try:
             scene = AgenticCanvasSceneV1.model_validate(scene)
         except Exception as error:
@@ -139,11 +147,46 @@ def register_agentic_canvas_handlers(
                     scene=scene,
                     generated_images=generated_images,
                 ) if generated_images else scene
-                ai_execution = AIExecution(task="canvas_agent", provider="openai", model=settings.model_name, input_tokens=None, cached_input_tokens=None, cache_write_tokens=None, output_tokens=None, latency_ms=round((perf_counter() - started) * 1000), estimated_cost_usd=None, success=True, failure_code=None, operation_id=run.id, operation_type="agentic_canvas_compose", parent_execution_id=execution.parent_execution_id, student_id=execution.student_id, learning_session_id=execution.session_id, source_message_id=execution.message_id, source_candidate_event_ids=[])
+                latency_ms = round((perf_counter() - started) * 1000)
+                usage = composition.usage if isinstance(composition, AgenticCanvasCompositionResult) else {}
+                cached_input_tokens = int(usage.get("cached_input_tokens", 0)) if usage else None
+                aggregate_input_tokens = int(usage.get("input_tokens", 0)) if usage else None
+                ai_execution = AIExecution(
+                    task="canvas_agent_orchestration",
+                    provider="openai-agents-sdk",
+                    model=settings.model_name,
+                    input_tokens=(
+                        max(aggregate_input_tokens - (cached_input_tokens or 0), 0)
+                        if aggregate_input_tokens is not None
+                        else None
+                    ),
+                    cached_input_tokens=cached_input_tokens,
+                    cache_write_tokens=None,
+                    output_tokens=int(usage.get("output_tokens", 0)) if usage else None,
+                    latency_ms=latency_ms,
+                    estimated_cost_usd=None,
+                    success=True,
+                    failure_code=None,
+                    operation_id=run.id,
+                    operation_type="agentic_canvas_compose",
+                    parent_execution_id=execution.parent_execution_id,
+                    student_id=execution.student_id,
+                    learning_session_id=execution.session_id,
+                    source_message_id=execution.message_id,
+                    source_candidate_event_ids=[],
+                )
                 session.add(ai_execution)
                 session.flush()
                 proposal = scene.model_dump(mode="json")
                 proposal_digest = _canonical_digest(proposal)
+                if isinstance(composition, AgenticCanvasCompositionResult):
+                    agent_trace = {
+                        key: value
+                        for key, value in agent_trace.items()
+                        if key != "sdk_trace_id"
+                    }
+                    agent_trace.update({"latency_ms": latency_ms, "proposal_digest": proposal_digest})
+                    run.agent_execution_metadata = agent_trace
                 run.proposal_payload, run.proposal_digest, run.ai_execution_id, run.status, run.completed_at, run.failure_metadata = proposal, proposal_digest, ai_execution.id, "COMPLETED", datetime.now(UTC), None
                 has_snapshot = session.execute(
                     select(StudioSnapshot.id).where(
@@ -156,10 +199,7 @@ def register_agentic_canvas_handlers(
                     "scene_contract": scene.version,
                     "proposal_digest": proposal_digest,
                     "scene_id": None,
-                    "agent_trace": {
-                        "selected_tools": list(selected_tools),
-                        "tool_call_count": tool_call_count,
-                    },
+                    "agent_trace": agent_trace,
                 }
         except GeneratedAssetValidationError as error:
             _fail(
@@ -239,7 +279,7 @@ def _adopt_hosted_images(
 
 
 class _AgenticExecutionEnvelope:
-    def __init__(self, *, run_id, student_id, session_id, message_id, parent_execution_id, brief, provider_attempt: int, provider_max_attempts: int) -> None:
+    def __init__(self, *, run_id, student_id, session_id, message_id, parent_execution_id, brief, provider_attempt: int, provider_max_attempts: int, sdk_trace_id: str) -> None:
         self.run_id = run_id
         self.student_id = student_id
         self.session_id = session_id
@@ -248,6 +288,7 @@ class _AgenticExecutionEnvelope:
         self.brief = brief
         self.provider_attempt = provider_attempt
         self.provider_max_attempts = provider_max_attempts
+        self.sdk_trace_id = sdk_trace_id
 
 
 def _preflight(factory: sessionmaker[Session], job: Job) -> _AgenticExecutionEnvelope | None:
@@ -294,7 +335,8 @@ def _preflight(factory: sessionmaker[Session], job: Job) -> _AgenticExecutionEnv
                         terminal_error = "STALE_AGENTIC_CANVAS_REQUEST"
                     else:
                         run.status, run.started_at = "RUNNING", run.started_at or datetime.now(UTC)
-                        envelope = _AgenticExecutionEnvelope(run_id=run.id, student_id=run.student_id, session_id=run.learning_session_id, message_id=message.id, parent_execution_id=message.ai_execution_id, brief=brief, provider_attempt=claimed.attempt_count, provider_max_attempts=claimed.max_attempts)
+                        run.sdk_trace_id = run.sdk_trace_id or gen_trace_id()
+                        envelope = _AgenticExecutionEnvelope(run_id=run.id, student_id=run.student_id, session_id=run.learning_session_id, message_id=message.id, parent_execution_id=message.ai_execution_id, brief=brief, provider_attempt=claimed.attempt_count, provider_max_attempts=claimed.max_attempts, sdk_trace_id=run.sdk_trace_id)
     # Raising inside ``factory.begin()`` rolls back the terminal Run state.
     # Commit that authoritative state first, then fail the queue Job.
     if terminal_error is not None:

@@ -47,6 +47,7 @@ _TOOL_NAMES = (
     "create_text_interaction",
     "create_math_input",
     "image_generation",
+    "code_interpreter",
 )
 
 
@@ -67,7 +68,7 @@ class UnitConversionResult(BaseModel):
 
 
 def tool_names() -> tuple[str, ...]:
-    """The complete allowlisted tool surface, including the hosted image tool."""
+    """The complete allowlisted local and hosted Canvas tool surface."""
     return _TOOL_NAMES
 
 

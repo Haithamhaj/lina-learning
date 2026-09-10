@@ -7,11 +7,13 @@ import binascii
 import json
 import re
 from dataclasses import dataclass, field
+from hashlib import sha256
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from agents import (
     Agent,
+    CodeInterpreterTool,
     ImageGenerationTool,
     OpenAIResponsesModel,
     RunConfig,
@@ -19,6 +21,7 @@ from agents import (
     Runner,
     function_tool,
 )
+from agents.tracing import gen_trace_id
 from openai import AsyncOpenAI
 
 from services.studio.agent.registry import CanvasBlockRegistry
@@ -84,6 +87,42 @@ class AgenticCanvasCompositionResult:
     selected_tools: tuple[str, ...]
     tool_call_count: int
     generated_images: tuple["HostedGeneratedImage", ...] = ()
+    sdk_trace_id: str | None = None
+    model: str | None = None
+    usage: dict[str, int] = field(default_factory=dict)
+    tool_calls: tuple["AgentToolCallTrace", ...] = ()
+
+    def execution_metadata(self) -> dict[str, object]:
+        """Return the bounded durable Agent run envelope, never raw inputs/results."""
+
+        return {
+            "sdk_trace_id": self.sdk_trace_id,
+            "model": self.model,
+            "usage": dict(self.usage),
+            "selected_tools": list(self.selected_tools),
+            "tool_call_count": self.tool_call_count,
+            "tool_calls": [call.as_dict() for call in self.tool_calls],
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class AgentToolCallTrace:
+    name: str
+    call_id: str
+    status: str
+    input_digest: str
+    output_digest: str
+    produced_block_ids: tuple[str, ...] = ()
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "name": self.name,
+            "call_id": self.call_id,
+            "status": self.status,
+            "input_digest": self.input_digest,
+            "output_digest": self.output_digest,
+            "produced_block_ids": list(self.produced_block_ids),
+        }
 
 
 class HostedImageOutputError(ValueError):
@@ -250,11 +289,106 @@ def _agent_tools():
             "partial_images": 0,
             "quality": "low",
         }),
+        CodeInterpreterTool(tool_config={
+            "type": "code_interpreter",
+            "container": {"type": "auto"},
+        }),
     ]
 
 
 _HOSTED_IMAGE_HANDLE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,127}$")
 _MAX_HOSTED_IMAGE_BASE64_CHARS = 28_000_000
+_SAFE_CALL_ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+
+
+def _value(item: object, name: str, default: Any = None) -> Any:
+    return item.get(name, default) if isinstance(item, dict) else getattr(item, name, default)
+
+
+def _metadata_digest(value: object) -> str:
+    if hasattr(value, "model_dump"):
+        value = value.model_dump(mode="json")
+    return sha256(
+        json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str).encode()
+    ).hexdigest()
+
+
+def _bounded_usage(result: object) -> dict[str, int]:
+    usage = getattr(getattr(result, "context_wrapper", None), "usage", None)
+    details = getattr(usage, "input_tokens_details", None)
+    return {
+        "requests": int(getattr(usage, "requests", 0) or 0),
+        "input_tokens": int(getattr(usage, "input_tokens", 0) or 0),
+        "cached_input_tokens": int(getattr(details, "cached_tokens", 0) or 0),
+        "output_tokens": int(getattr(usage, "output_tokens", 0) or 0),
+        "total_tokens": int(getattr(usage, "total_tokens", 0) or 0),
+    }
+
+
+def _extract_tool_call_trace(result: object) -> tuple[AgentToolCallTrace, ...]:
+    """Reduce SDK items to IDs, statuses and digests; raw code/results never leave this call."""
+
+    outputs: dict[str, object] = {}
+    for item in getattr(result, "new_items", ()):
+        raw = getattr(item, "raw_item", None)
+        if _value(raw, "type") == "function_call_output":
+            call_id = _value(raw, "call_id") or _value(raw, "id")
+            if isinstance(call_id, str):
+                outputs[call_id] = getattr(item, "output", _value(raw, "output"))
+
+    calls: list[AgentToolCallTrace] = []
+    for item in getattr(result, "new_items", ()):
+        raw = getattr(item, "raw_item", None)
+        raw_type = _value(raw, "type")
+        if raw_type not in {"function_call", "image_generation_call", "code_interpreter_call"}:
+            continue
+        call_id = _value(raw, "call_id") or _value(raw, "id")
+        if not isinstance(call_id, str) or _SAFE_CALL_ID.fullmatch(call_id) is None:
+            raise HostedImageOutputError("SDK tool call identity is missing or invalid.")
+        if raw_type == "function_call":
+            name = _value(raw, "name")
+            if not isinstance(name, str) or name not in _agent_function_tool_names():
+                raise HostedImageOutputError("SDK function tool identity is outside the Canvas allowlist.")
+            raw_input = _value(raw, "arguments", "")
+            raw_output = outputs.get(call_id, "")
+            produced = _produced_block_ids(raw_output)
+        elif raw_type == "image_generation_call":
+            name = "image_generation"
+            raw_input = {"quality": _value(raw, "quality"), "size": _value(raw, "size")}
+            raw_output = _value(raw, "result", "")
+            produced = ()
+        else:
+            name = "code_interpreter"
+            raw_input = _value(raw, "code", "")
+            raw_output = _value(raw, "outputs", ())
+            produced = ()
+        calls.append(AgentToolCallTrace(
+            name=name,
+            call_id=call_id,
+            status=str(_value(raw, "status", "completed")),
+            input_digest=_metadata_digest(raw_input),
+            output_digest=_metadata_digest(raw_output),
+            produced_block_ids=produced,
+        ))
+    return tuple(calls)
+
+
+def _agent_function_tool_names() -> frozenset[str]:
+    return frozenset({
+        "compute_math", "convert_units", "create_math_board", "create_2d_scene",
+        "create_diagram", "create_text_interaction", "create_math_input",
+    })
+
+
+def _produced_block_ids(output: object) -> tuple[str, ...]:
+    value = output
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            return ()
+    block_id = _value(value, "block_id")
+    return (block_id,) if isinstance(block_id, str) and re.fullmatch(r"[a-z][a-z0-9_-]{0,63}", block_id) else ()
 
 
 def _extract_hosted_generated_images(result: object) -> tuple[HostedGeneratedImage, ...]:
@@ -271,8 +405,7 @@ def _extract_hosted_generated_images(result: object) -> tuple[HostedGeneratedIma
     if len(calls) != 1:
         raise HostedImageOutputError("Hosted image output is unsupported: exactly one completed image is required.")
     call = calls[0]
-    value = (lambda name: call.get(name) if isinstance(call, dict) else getattr(call, name, None))
-    handle, status, encoded = value("id"), value("status"), value("result")
+    handle, status, encoded = _value(call, "id"), _value(call, "status"), _value(call, "result")
     if (
         status != "completed"
         or not isinstance(handle, str)
@@ -308,9 +441,10 @@ def canvas_agent_input(brief: CanvasBriefV1) -> str:
     return json.dumps({"canvas_brief": brief.model_dump(mode="json")}, ensure_ascii=False)
 
 
-async def compose_canvas_scene_with_trace(*, brief: CanvasBriefV1, api_key: str, model: str, base_url: str | None = None) -> AgenticCanvasCompositionResult:
+async def compose_canvas_scene_with_trace(*, brief: CanvasBriefV1, api_key: str, model: str, base_url: str | None = None, sdk_trace_id: str | None = None) -> AgenticCanvasCompositionResult:
     """Run one bounded composition and return only accepted tool-call metadata."""
     context = CanvasAgentRunContext(registry=CanvasBlockRegistry())
+    trace_id = sdk_trace_id or gen_trace_id()
     result = await Runner.run(
         build_canvas_agent(api_key=api_key, model=model, base_url=base_url),
         input=canvas_agent_input(brief),
@@ -318,20 +452,23 @@ async def compose_canvas_scene_with_trace(*, brief: CanvasBriefV1, api_key: str,
         max_turns=8,
         run_config=RunConfig(
             workflow_name="lina-agentic-canvas-compose",
+            trace_id=trace_id,
             trace_include_sensitive_data=False,
         ),
     )
     scene = context.registry.materialize_plan(AgenticCanvasPlanV1.model_validate(result.final_output))
     generated_images = _extract_hosted_generated_images(result)
-    selected_tools = tuple(dict.fromkeys([
-        *context.tool_calls,
-        *(["image_generation"] if generated_images else []),
-    ]))
+    tool_calls = _extract_tool_call_trace(result)
+    selected_tools = tuple(dict.fromkeys(call.name for call in tool_calls))
     return AgenticCanvasCompositionResult(
         scene=scene,
         selected_tools=selected_tools,
-        tool_call_count=len(context.tool_calls) + len(generated_images),
+        tool_call_count=len(tool_calls),
         generated_images=generated_images,
+        sdk_trace_id=trace_id,
+        model=model,
+        usage=_bounded_usage(result),
+        tool_calls=tool_calls,
     )
 
 

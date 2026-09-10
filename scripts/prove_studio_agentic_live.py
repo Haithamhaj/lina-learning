@@ -31,7 +31,10 @@ from services.platform.db.models import (
     StudioStudentInteraction,
     StudioTutorObservation,
 )
-from services.studio.agent.orchestrator import compose_canvas_scene
+from services.studio.agent.orchestrator import (
+    AgenticCanvasCompositionResult,
+    compose_canvas_scene_with_trace,
+)
 from services.studio.agentic_canvas import AgenticCanvasSceneV1
 from services.studio.canvas_brief import CanvasBriefV1, audit_canvas_brief
 from services.studio.process_production_acceptance import agentic_scene_contract
@@ -117,14 +120,36 @@ def _tutor_brief(
     }
 
 
-async def _compose(settings: Settings, brief: CanvasBriefV1) -> AgenticCanvasSceneV1:
+async def _compose(settings: Settings, brief: CanvasBriefV1) -> AgenticCanvasCompositionResult:
     assert settings.model_api_key is not None
-    return await compose_canvas_scene(
+    return await compose_canvas_scene_with_trace(
         brief=brief,
         api_key=settings.model_api_key.get_secret_value(),
         model=settings.model_name,
         base_url=settings.model_base_url,
     )
+
+
+def _agent_metadata(composition: AgenticCanvasCompositionResult) -> dict[str, object]:
+    """Keep only bounded execution evidence; raw tool inputs and outputs are forbidden."""
+
+    return {
+        "sdk_trace_id": composition.sdk_trace_id,
+        "selected_tools": list(composition.selected_tools),
+        "tool_call_count": composition.tool_call_count,
+        "usage": dict(composition.usage),
+        "tool_statuses": [
+            {
+                "name": call.name,
+                "call_id": call.call_id,
+                "status": call.status,
+                "input_digest": call.input_digest,
+                "output_digest": call.output_digest,
+                "produced_block_ids": list(call.produced_block_ids),
+            }
+            for call in composition.tool_calls
+        ],
+    }
 
 
 def _scene_metadata(scene: AgenticCanvasSceneV1, brief: CanvasBriefV1) -> dict[str, object]:
@@ -153,11 +178,13 @@ def _durable_studio_evidence(settings: Settings, run_id: UUID) -> dict[str, obje
             job = session.get(Job, run.job_id)
             scene = session.get(StudioScene, run.scene_id) if run.scene_id is not None else None
             result = job.result if job is not None and isinstance(job.result, dict) else {}
-            trace = result.get("agent_trace") if isinstance(result.get("agent_trace"), dict) else {}
+            trace = run.agent_execution_metadata if isinstance(run.agent_execution_metadata, dict) else {}
             selected_tools = trace.get("selected_tools")
             tool_call_count = trace.get("tool_call_count")
             if (
                 result.get("run_id") != str(run.id)
+                or not isinstance(run.sdk_trace_id, str)
+                or trace.get("proposal_digest") != run.proposal_digest
                 or not isinstance(selected_tools, list)
                 or not all(isinstance(name, str) for name in selected_tools)
                 or type(tool_call_count) is not int
@@ -254,6 +281,9 @@ def _durable_studio_evidence(settings: Settings, run_id: UUID) -> dict[str, obje
                 "scene_id": None if scene is None else str(scene.id),
                 "scene_status": None if scene is None else scene.status,
                 "proposal_digest": run.proposal_digest,
+                "sdk_trace_id": run.sdk_trace_id,
+                "usage": trace.get("usage"),
+                "tool_calls": trace.get("tool_calls"),
                 "selected_tools": selected_tools,
                 "tool_call_count": tool_call_count,
                 "interaction_id": None if interaction is None else str(interaction.id),
@@ -289,37 +319,84 @@ async def run_live(settings: Settings, *, durable_run_id: UUID | None = None) ->
         locale="en",
     )
     results.append(_record("LIVE-01", passed=True, **math_lineage))
-    math_scene = await _compose(settings, math_brief)
+    math_composition = await _compose(settings, math_brief)
+    math_scene = math_composition.scene
     math_metadata = _scene_metadata(math_scene, math_brief)
     results.append(_record("LIVE-02", passed=math_scene.subject_key == "MATH", **math_metadata))
     results.append(_record(
         "LIVE-03",
-        passed=False,
-        status="NOT_RUN",
-        reason_code="DURABLE_AGENT_TRACE_REQUIRED",
+        passed=math_composition.tool_call_count >= 2 and len(math_composition.selected_tools) >= 2,
+        **_agent_metadata(math_composition),
     ))
 
     live_cases = (
-        ("LIVE-04", "Please use Canvas to help me compare 3.6 kilometres with 2500 metres using a visual relationship.", "PHYSICS", "en", 0),
-        ("LIVE-05", "Please use Canvas to build a visual cycle with at least five named stages for water moving through evaporation, condensation, clouds, precipitation, collection, and return flow.", "SCIENCE", "en", 5),
-        ("LIVE-06", "افتح Canvas وساعدني بصريًا في ترتيب مراحل دورة الماء، واجعل النص عربيًا واضحًا.", "ARABIC", "ar", 0),
+        ("LIVE-04", "Please use Canvas to help me compare 3.6 kilometres with 2500 metres using a visual relationship.", "PHYSICS", "en", 0, {"convert_units"}),
+        ("LIVE-05", "Please use Canvas to build a visual cycle with at least five named stages for water moving through evaporation, condensation, clouds, precipitation, collection, and return flow.", "SCIENCE", "en", 5, {"create_diagram"}),
+        ("LIVE-06", "افتح Canvas وساعدني بصريًا في ترتيب مراحل دورة الماء، واجعل النص عربيًا واضحًا ثم أضف مساحة أرتب فيها المراحل بنفسي.", "ARABIC", "ar", 0, {"create_text_interaction"}),
     )
-    for case_id, question, subject, locale, minimum_elements in live_cases:
+    for case_id, question, subject, locale, minimum_elements, required_tools in live_cases:
         try:
             brief, lineage = _tutor_brief(settings, question, subject=subject, locale=locale)
-            scene = await _compose(settings, brief)
+            composition = await _compose(settings, brief)
+            scene = composition.scene
             element_count = max((len(block.elements) for block in scene.blocks), default=0)
-            passed = scene.subject_key == brief.subject_key and element_count >= minimum_elements
+            passed = (
+                scene.subject_key == brief.subject_key
+                and element_count >= minimum_elements
+                and required_tools.issubset(composition.selected_tools)
+            )
             if case_id == "LIVE-06":
                 passed = passed and brief.direction == "rtl"
-            results.append(_record(case_id, passed=passed, element_count=element_count, **lineage, **_scene_metadata(scene, brief)))
+            results.append(_record(
+                case_id,
+                passed=passed,
+                element_count=element_count,
+                **lineage,
+                **_scene_metadata(scene, brief),
+                **_agent_metadata(composition),
+            ))
         except Exception as error:  # noqa: BLE001 - each live case must record and continue
             results.append(_record(case_id, passed=False, status="FAILED", reason_code=type(error).__name__))
 
-    # Hosted tools are never represented as passing unless the runtime exposes
-    # and audits them. These bounded results make the missing gate explicit.
-    results.append(_record("LIVE-07", passed=False, status="NOT_RUN", reason_code="HOSTED_IMAGE_TOOL_NOT_REGISTERED"))
-    results.append(_record("LIVE-08", passed=False, status="NOT_USED", reason_code="CODE_INTERPRETER_NOT_REQUIRED_BY_EXECUTED_CASES"))
+    hosted_cases = (
+        (
+            "LIVE-07",
+            "Please use Canvas to create an original, simple child-safe illustration of sunlight helping a small plant grow, alongside a clear labeled explanation. Do not use a prepared activity.",
+            "SCIENCE",
+            "en",
+            "image_generation",
+        ),
+        (
+            "LIVE-08",
+            "Please use Canvas to analyze the first 30 values of the recurrence a(1)=2 and a(n+1)=(3*a(n)+1)/2 when a(n) is odd, otherwise a(n)/2. Use the sandboxed calculation tool because this multi-step data transformation is beyond one ordinary arithmetic operation, then create a typed visual summary without exposing code.",
+            "MATH",
+            "en",
+            "code_interpreter",
+        ),
+    )
+    for case_id, question, subject, locale, required_tool in hosted_cases:
+        try:
+            brief, lineage = _tutor_brief(settings, question, subject=subject, locale=locale)
+            composition = await _compose(settings, brief)
+            scene_payload = composition.scene.model_dump(mode="json")
+            serialized = json.dumps(scene_payload, ensure_ascii=False)
+            passed = (
+                required_tool in composition.selected_tools
+                and (case_id != "LIVE-07" or len(composition.generated_images) == 1)
+                and "code_interpreter_call" not in serialized
+                and "image_generation_call" not in serialized
+                and "base64" not in serialized.lower()
+            )
+            results.append(_record(
+                case_id,
+                passed=passed,
+                generated_image_count=len(composition.generated_images),
+                **lineage,
+                **_scene_metadata(composition.scene, brief),
+                **_agent_metadata(composition),
+            ))
+        except Exception as error:  # noqa: BLE001 - each live case must record and continue
+            results.append(_record(case_id, passed=False, status="FAILED", reason_code=type(error).__name__))
 
     durable = None
     if durable_run_id is not None:
@@ -336,7 +413,7 @@ async def run_live(settings: Settings, *, durable_run_id: UUID | None = None) ->
     else:
         trace_passed = durable["tool_call_count"] >= 2 and len(durable["selected_tools"]) >= 2
         results[2] = _record("LIVE-03", passed=trace_passed, **{
-            key: durable[key] for key in ("run_id", "scene_id", "proposal_digest", "selected_tools", "tool_call_count")
+            key: durable[key] for key in ("run_id", "scene_id", "proposal_digest", "sdk_trace_id", "selected_tools", "tool_call_count", "usage", "tool_calls")
         })
         interaction_passed = (
             durable["interaction_status"] == "COMPLETED"
