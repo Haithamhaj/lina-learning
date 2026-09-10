@@ -26,9 +26,10 @@ pytestmark = pytest.mark.skipif(
 
 def _scene() -> dict[str, object]:
     return {
-        "version": "agentic-canvas-scene-v1",
+        "version": "agentic-canvas-scene-v2",
         "objective": "Compare the quantities.",
         "subject_key": "MATH",
+        "presentation": {"layout": "FOCUS", "palette": "COOL", "motion": "NONE", "placements": [{"block_id": "number-line", "role": "PRIMARY", "order": 0, "span": "FULL"}], "reveal_order": []},
         "blocks": [{
             "block_id": "number-line", "type": "MATH_BOARD",
             "meaning": "Compare exact positions.", "title": "Number line",
@@ -50,12 +51,12 @@ def test_authenticated_agentic_operation_accepts_known_semantics_and_rejects_unk
         runtime = service.get_or_create_runtime(student_id=student.id, learning_session_id=learning.id)
         scene = service.accept_scene(CreateSceneCommand(
             student_id=student.id, learning_session_id=learning.id,
-            subject_key="CANVAS", subject_profile_version="agentic-canvas-profile-v1",
+            subject_key="CANVAS", subject_profile_version="agentic-canvas-profile-v2",
             concept_keys=("fraction-comparison",), activity_key="agentic_canvas",
             artifact_type="agentic-canvas", renderer_key="agentic-canvas",
-            renderer_version="agentic-canvas-renderer-v1",
+            renderer_version="agentic-canvas-renderer-v2",
             activity_contract_version="agentic-canvas-activity-v1",
-            payload_schema_version="agentic-canvas-scene-v1", seed_payload=_scene(),
+            payload_schema_version="agentic-canvas-scene-v2", seed_payload=_scene(),
             accessibility_payload={"text_equivalent": "An exact number line."},
             locale="en", direction="ltr",
         ))

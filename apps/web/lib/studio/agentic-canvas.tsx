@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 
 import type { AgenticCanvasAction, AgenticCanvasBlock, StudioOperation } from "./contracts";
 import { createAgenticCanvasOperation, parseAgenticCanvasScene, settleAgenticCanvasOperation } from "./agentic-canvas-contract";
@@ -13,6 +14,7 @@ import {
   type MathInput,
   type SemanticPlacement,
 } from "./visual-toolbelt";
+import { diagramHeight, diagramNodeShape, diagramPositions, mathSurfaceKind, presentationLayout, spatialPrimitive } from "./agentic-canvas-geometry";
 
 type Props = {
   sceneId: string;
@@ -83,7 +85,7 @@ function NumberLineSurface({ block }: { block: Extract<AgenticCanvasBlock, { typ
   const point = (value: string) => left + ((rational(value) - minimum) / (maximum - minimum)) * (right - left);
   const step = axis.step === null ? null : rational(axis.step);
   const ticks = step ? Array.from({ length: Math.min(21, Math.floor((maximum - minimum) / step) + 1) }, (_, index) => minimum + index * step) : [minimum, maximum];
-  return <svg viewBox="0 0 720 180" className="w-full overflow-visible rounded-xl bg-sky-50" role="img" aria-label={block.accessibility.aria_label ?? block.accessibility.text_equivalent}>
+  return <svg data-agentic-surface="number-line" viewBox="0 0 720 180" className="w-full overflow-visible rounded-xl bg-sky-50" role="img" aria-label={block.accessibility.aria_label ?? block.accessibility.text_equivalent}>
     <defs><marker id={`${block.block_id}-arrow`} markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#284b63"/></marker></defs>
     <line x1={left} y1="100" x2={right} y2="100" stroke="#284b63" strokeWidth="3" markerEnd={`url(#${block.block_id}-arrow)`}/>
     {ticks.map((tick) => <g key={tick}><line x1={point(String(tick))} y1="93" x2={point(String(tick))} y2="107" stroke="#587087"/><text x={point(String(tick))} y="126" textAnchor="middle" className="fill-slate-600 text-[13px]">{tick}</text></g>)}
@@ -91,28 +93,45 @@ function NumberLineSurface({ block }: { block: Extract<AgenticCanvasBlock, { typ
   </svg>;
 }
 
+function PlotSurface({ block, kind }: { block: Extract<AgenticCanvasBlock, { type: "MATH_BOARD" }>; kind: "plot" | "cartesian" }) {
+  const xAxis = block.axes.find((candidate) => candidate.axis === "X");
+  const yAxis = block.axes.find((candidate) => candidate.axis === "Y");
+  const minimumX = xAxis ? rational(xAxis.minimum) : -10; const maximumX = xAxis ? rational(xAxis.maximum) : 10;
+  const minimumY = yAxis ? rational(yAxis.minimum) : -10; const maximumY = yAxis ? rational(yAxis.maximum) : 10;
+  const left = 62; const right = 674; const top = 30; const bottom = 300;
+  const x = (value: number) => left + ((value - minimumX) / (maximumX - minimumX || 1)) * (right - left);
+  const y = (value: number) => bottom - ((value - minimumY) / (maximumY - minimumY || 1)) * (bottom - top);
+  const verticals = Array.from({ length: 9 }, (_, index) => left + (index * (right - left)) / 8);
+  const horizontals = Array.from({ length: 7 }, (_, index) => top + (index * (bottom - top)) / 6);
+  return <svg data-agentic-surface={kind} viewBox="0 0 720 340" className="w-full rounded-xl bg-sky-50" role="img" aria-label={block.accessibility.aria_label ?? block.accessibility.text_equivalent}>
+    <defs><marker id={`${block.block_id}-plot-arrow`} markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#284b63"/></marker></defs>
+    {verticals.map((position) => <line key={position} x1={position} y1={top} x2={position} y2={bottom} stroke="#cbd5e1" strokeWidth="1"/>)}
+    {horizontals.map((position) => <line key={position} x1={left} y1={position} x2={right} y2={position} stroke="#cbd5e1" strokeWidth="1"/>)}
+    <line x1={left} y1={y(0)} x2={right} y2={y(0)} stroke="#284b63" strokeWidth="2.5" markerEnd={`url(#${block.block_id}-plot-arrow)`}/>
+    <line x1={x(0)} y1={bottom} x2={x(0)} y2={top} stroke="#284b63" strokeWidth="2.5" markerEnd={`url(#${block.block_id}-plot-arrow)`}/>
+    <text x={right - 4} y={y(0) - 8} textAnchor="end" className="fill-slate-700 text-[13px]">x</text><text x={x(0) + 9} y={top + 12} className="fill-slate-700 text-[13px]">y</text>
+    {block.markers.map((marker, index) => { const markerX = x(rational(marker.value)); const markerY = kind === "plot" ? y(0) : y(Math.min(maximumY, Math.max(minimumY, index + 1))); return <g key={marker.id}><line x1={markerX} y1={y(0)} x2={markerX} y2={markerY} stroke="#2563eb" strokeDasharray={kind === "plot" ? "5 4" : undefined}/><circle cx={markerX} cy={markerY} r="7" fill="#2563eb"/><text x={markerX} y={markerY - 12} textAnchor="middle" className="fill-blue-950 text-[13px] font-semibold">{marker.label}</text></g>; })}
+  </svg>;
+}
+
 function DiagramSurface({ block }: { block: Extract<AgenticCanvasBlock, { type: "DIAGRAM" }> }) {
-  const count = Math.max(block.nodes.length, 1); const width = 720; const height = block.topology === "CYCLE" ? 410 : 260;
-  const nodePosition = (index: number) => {
-    if (block.topology === "CYCLE" || block.layout === "RADIAL") { const angle = -Math.PI / 2 + (Math.PI * 2 * index) / count; return { x: 360 + Math.cos(angle) * 220, y: 200 + Math.sin(angle) * 130 }; }
-    if (block.layout === "VERTICAL" || block.topology === "HIERARCHY") return { x: 360, y: 42 + (index * 170) / Math.max(count - 1, 1) };
-    return { x: 70 + (index * 580) / Math.max(count - 1, 1), y: 130 };
-  };
-  const positions = new Map(block.nodes.map((node, index) => [node.id, nodePosition(index)]));
-  return <svg viewBox={`0 0 ${width} ${height}`} className="w-full rounded-xl bg-violet-50" role="img" aria-label={block.accessibility.aria_label ?? block.accessibility.text_equivalent}>
+  const height = diagramHeight(block.topology); const positions = new Map(block.nodes.map((node, index) => [node.id, diagramPositions(block.topology, block.nodes.length)[index]]));
+  return <svg data-agentic-surface="diagram" data-topology={block.topology} viewBox={`0 0 720 ${height}`} className="w-full rounded-xl bg-violet-50" role="img" aria-label={block.accessibility.aria_label ?? block.accessibility.text_equivalent}>
     <defs><marker id={`${block.block_id}-arrow`} markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#7c3aed"/></marker></defs>
-    {block.edges.map((edge, index) => { const source = positions.get(edge.source_id); const target = positions.get(edge.target_id); if (!source || !target) return null; const curved = block.topology === "CYCLE" || edge.relation === "RETURNS_TO"; const midX = (source.x + target.x) / 2; const midY = Math.min(source.y, target.y) - (curved ? 65 : 0); return <g key={`${edge.source_id}-${edge.target_id}-${index}`}><path d={curved ? `M ${source.x} ${source.y} Q ${midX} ${midY} ${target.x} ${target.y}` : `M ${source.x} ${source.y} L ${target.x} ${target.y}`} fill="none" stroke="#7c3aed" strokeWidth="3" markerEnd={`url(#${block.block_id}-arrow)`}/>{edge.label ? <text x={midX} y={midY - 8} textAnchor="middle" className="fill-violet-900 text-[12px]">{edge.label}</text> : null}</g>; })}
-    {block.nodes.map((node) => { const position = positions.get(node.id)!; return <g key={node.id}><circle cx={position.x} cy={position.y} r="43" fill="#fff" stroke="#8b5cf6" strokeWidth="3"/><text x={position.x} y={position.y - 4} textAnchor="middle" className="fill-slate-900 text-[14px] font-semibold">{node.label}</text><text x={position.x} y={position.y + 16} textAnchor="middle" className="fill-violet-700 text-[10px]">{node.node_kind}</text></g>; })}
+    {block.topology === "SYSTEM" ? <rect x="52" y="28" width="616" height={height - 56} rx="32" fill="none" stroke="#a78bfa" strokeWidth="2" strokeDasharray="8 6"/> : null}
+    {block.topology === "COMPARISON" ? <line x1="360" y1="30" x2="360" y2={height - 30} stroke="#c4b5fd" strokeWidth="2" strokeDasharray="6 5"/> : null}
+    {block.edges.map((edge, index) => { const source = positions.get(edge.source_id); const target = positions.get(edge.target_id); if (!source || !target) return null; const curved = block.topology === "CYCLE" || block.topology === "CONCEPT_MAP" || edge.relation === "RETURNS_TO"; const midX = (source.x + target.x) / 2; const midY = Math.min(source.y, target.y) - (curved ? 46 : 0); return <g key={`${edge.source_id}-${edge.target_id}-${index}`}><path d={curved ? `M ${source.x} ${source.y} Q ${midX} ${midY} ${target.x} ${target.y}` : `M ${source.x} ${source.y} L ${target.x} ${target.y}`} fill="none" stroke="#7c3aed" strokeWidth="3" markerEnd={`url(#${block.block_id}-arrow)`}/>{edge.label ? <text x={midX} y={midY - 8} textAnchor="middle" className="fill-violet-900 text-[12px]">{edge.label}</text> : null}</g>; })}
+    {block.nodes.map((node) => { const position = positions.get(node.id)!; const shape = diagramNodeShape(node.node_kind); return <g key={node.id} data-node-kind={node.node_kind}>{shape === "diamond" ? <path d={`M ${position.x} ${position.y - 46} L ${position.x + 52} ${position.y} L ${position.x} ${position.y + 46} L ${position.x - 52} ${position.y} Z`} fill="#fff" stroke="#8b5cf6" strokeWidth="3"/> : shape === "rounded" ? <rect x={position.x - 50} y={position.y - 30} width="100" height="60" rx="20" fill="#fff" stroke="#8b5cf6" strokeWidth="3"/> : <circle cx={position.x} cy={position.y} r="43" fill="#fff" stroke="#8b5cf6" strokeWidth="3"/>}<text x={position.x} y={position.y - 4} textAnchor="middle" className="fill-slate-900 text-[14px] font-semibold">{node.label}</text><text x={position.x} y={position.y + 16} textAnchor="middle" className="fill-violet-700 text-[10px]">{node.node_kind}</text></g>; })}
   </svg>;
 }
 
 function SpatialSurface({ block }: { block: Extract<AgenticCanvasBlock, { type: "SCENE_2D" }> }) {
   const point = (position: { x: string; y: string }) => ({ x: rational(position.x) * 6.6 + 30, y: rational(position.y) * 3.4 + 20 });
   const positions = new Map(block.objects.map((object) => [object.id, point(object.position)]));
-  return <svg viewBox="0 0 720 390" className="w-full rounded-xl bg-sky-50" role="img" aria-label={block.accessibility.aria_label ?? block.accessibility.text_equivalent}>
+  return <svg data-agentic-surface="scene-2d" viewBox="0 0 720 390" className="w-full rounded-xl bg-sky-50" role="img" aria-label={block.accessibility.aria_label ?? block.accessibility.text_equivalent}>
     <defs><marker id={`${block.block_id}-arrow`} markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#0284c7"/></marker></defs>
     {block.relations.map((relation, index) => { const source = positions.get(relation.source_id); const target = positions.get(relation.target_id); return source && target ? <g key={`${relation.source_id}-${relation.target_id}-${index}`}><line x1={source.x} y1={source.y} x2={target.x} y2={target.y} stroke="#0284c7" strokeWidth="2" markerEnd={`url(#${block.block_id}-arrow)`}/>{relation.label ? <text x={(source.x + target.x) / 2} y={(source.y + target.y) / 2 - 8} textAnchor="middle" className="fill-sky-900 text-[12px]">{relation.label}</text> : null}</g> : null; })}
-    {block.objects.map((object) => { const position = positions.get(object.id)!; const isCircle = object.object_kind === "CIRCLE" || object.object_kind === "POINT"; return <g key={object.id}>{isCircle ? <circle cx={position.x} cy={position.y} r={object.object_kind === "POINT" ? 8 : 28} fill="#bae6fd" stroke="#0369a1" strokeWidth="3"/> : <rect x={position.x - 38} y={position.y - 22} width="76" height="44" rx="10" fill="#e0f2fe" stroke="#0369a1" strokeWidth="3"/>}<text x={position.x} y={position.y + 5} textAnchor="middle" className="fill-slate-900 text-[13px] font-semibold">{object.label}</text></g>; })}
+    {block.objects.map((object) => { const position = positions.get(object.id)!; const primitive = spatialPrimitive(object.object_kind); const target = block.relations.find((relation) => relation.source_id === object.id); const targetPosition = target ? positions.get(target.target_id) : null; return <g key={object.id} data-object-kind={object.object_kind}>{primitive === "circle" ? <circle cx={position.x} cy={position.y} r={object.object_kind === "POINT" ? 8 : 28} fill="#bae6fd" stroke="#0369a1" strokeWidth="3"/> : primitive === "rectangle" ? <rect x={position.x - 38} y={position.y - 22} width="76" height="44" rx="10" fill="#e0f2fe" stroke="#0369a1" strokeWidth="3"/> : primitive === "polygon" ? <polygon points={`${position.x},${position.y - 31} ${position.x + 35},${position.y - 10} ${position.x + 24},${position.y + 29} ${position.x - 24},${position.y + 29} ${position.x - 35},${position.y - 10}`} fill="#e0f2fe" stroke="#0369a1" strokeWidth="3"/> : primitive === "arrow" ? <line x1={position.x - 30} y1={position.y} x2={targetPosition?.x ?? position.x + 40} y2={targetPosition?.y ?? position.y} stroke="#0369a1" strokeWidth="4" markerEnd={`url(#${block.block_id}-arrow)`}/> : null}{primitive !== "arrow" ? <text x={position.x} y={primitive === "label" ? position.y : object.object_kind === "POINT" ? position.y - 14 : position.y + 5} textAnchor="middle" className="fill-slate-900 text-[13px] font-semibold">{object.label}</text> : <text x={position.x} y={position.y - 12} textAnchor="middle" className="fill-slate-900 text-[13px] font-semibold">{object.label}</text>}</g>; })}
   </svg>;
 }
 
@@ -165,9 +184,10 @@ function CartesianMathBoard(props: Pick<Props, "sceneId" | "sceneVersion" | "onO
 }
 
 function MathBoardBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "MATH_BOARD" }> }) {
-  if (props.block.board_kind === "CARTESIAN") return <CartesianMathBoard {...props}/>;
+  const surface = mathSurfaceKind(props.block.board_kind);
+  if (surface === "cartesian" && props.block.elements[0] && props.block.allowed_actions.includes("MOVE")) return <CartesianMathBoard {...props}/>;
   return <BlockFrame block={props.block}>
-    <NumberLineSurface block={props.block}/>
+    {surface === "number-line" ? <NumberLineSurface block={props.block}/> : <PlotSurface block={props.block} kind={surface}/>}
     {props.block.expressions.length ? <div className="mt-3 space-y-2">{props.block.expressions.map((expression) => <p key={expression.id} className="rounded-xl bg-emerald-50 px-3 py-2 text-sm" dir="auto">{expression.label}: <span dir="ltr">{expression.latex}</span></p>)}</div> : null}
     <SemanticButtons {...props}/>
   </BlockFrame>;
@@ -258,7 +278,24 @@ export function AgenticCanvasWorkspace(props: Props) {
   const orderedBlocks = [...scene.blocks].sort((left, right) => (placements.get(left.block_id)?.order ?? 0) - (placements.get(right.block_id)?.order ?? 0));
   const layout = scene.presentation?.layout ?? "STACK";
   const palette = scene.presentation?.palette ?? "AUTO";
-  const layoutClass = layout === "GRID" || layout === "SPLIT" ? "grid gap-3 md:grid-cols-2" : "space-y-3";
+  const reducedMotion = useReducedMotion();
+  const revealOrder = scene.presentation?.reveal_order ?? [];
+  const [revealed, setRevealed] = useState(() => scene.presentation?.motion === "REVEAL" && !reducedMotion ? 1 : orderedBlocks.length);
+  useEffect(() => {
+    if (scene.presentation?.motion !== "REVEAL" || reducedMotion) { setRevealed(orderedBlocks.length); return; }
+    setRevealed(1);
+    const timer = window.setInterval(() => setRevealed((count) => {
+      if (count >= orderedBlocks.length) { window.clearInterval(timer); return count; }
+      return count + 1;
+    }), 260);
+    return () => window.clearInterval(timer);
+  }, [scene.version, scene.presentation?.motion, reducedMotion, orderedBlocks.length]);
+  const sortedForReveal = [...orderedBlocks].sort((left, right) => {
+    const leftOrder = revealOrder.indexOf(left.block_id); const rightOrder = revealOrder.indexOf(right.block_id);
+    return (leftOrder < 0 ? Number.MAX_SAFE_INTEGER : leftOrder) - (rightOrder < 0 ? Number.MAX_SAFE_INTEGER : rightOrder);
+  });
+  const visibleIds = new Set(sortedForReveal.slice(0, revealed).map((block) => block.block_id));
+  const container = presentationLayout(layout, "SUPPORT", "NORMAL");
   const paletteClass = palette === "NATURE" ? "bg-emerald-50" : palette === "WARM" ? "bg-amber-50" : palette === "COOL" ? "bg-sky-50" : "bg-[#f2f7ff]";
   return <section aria-label="Learning canvas" className="space-y-3">
     <header className={`rounded-2xl px-4 py-3 ${paletteClass}`}>
@@ -266,6 +303,11 @@ export function AgenticCanvasWorkspace(props: Props) {
       <h2 className="mt-1 font-display text-xl text-slate-900" dir="auto">{scene.objective}</h2>
     </header>
     {operationFailed ? <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-900">That Canvas action was not saved. The current Studio state has been restored, and Tutor chat remains available.</p> : null}
-    <div className={layoutClass}>{orderedBlocks.map((block) => <div key={block.block_id} className={placements.get(block.block_id)?.span === "FULL" || placements.get(block.block_id)?.role === "PRIMARY" ? "md:col-span-2" : undefined}><DeclarativeBlock {...props} onOperation={safeOperation} block={block}/></div>)}</div>
+    <div data-agentic-layout={layout} data-agentic-motion={scene.presentation?.motion ?? "NONE"} className={container.container}>{orderedBlocks.map((block) => {
+      const placement = placements.get(block.block_id) ?? { role: "SUPPORT" as const, span: "NORMAL" as const };
+      const plan = presentationLayout(layout, placement.role, placement.span);
+      const isVisible = visibleIds.has(block.block_id);
+      return <motion.div key={block.block_id} data-agentic-region={plan.region} data-agentic-revealed={isVisible ? "true" : "false"} className={plan.className} initial={false} animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 18, scale: scene.presentation?.motion === "SUBTLE" && placement.role === "PRIMARY" ? 1.01 : 1 }} transition={{ duration: reducedMotion ? 0 : 0.24, ease: "easeOut" }} aria-hidden={!isVisible}><DeclarativeBlock {...props} onOperation={safeOperation} block={block}/></motion.div>;
+    })}</div>
   </section>;
 }

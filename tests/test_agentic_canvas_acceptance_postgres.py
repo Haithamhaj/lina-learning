@@ -13,7 +13,7 @@ from test_agentic_canvas_lifecycle_postgres import factory  # noqa: F401
 
 from services.platform.db import models as m
 from services.studio.agent.admission import admit_agentic_canvas_brief
-from services.studio.agentic_canvas import AgenticCanvasSceneV1
+from services.studio.agentic_canvas import AgenticCanvasSceneV2
 from services.studio.contracts import AppendStudioEventCommand, StudioActor
 from services.studio.process_production_acceptance import (
     accept_completed_canvas_run,
@@ -62,9 +62,10 @@ def _scene(*, subject: str, block_type: str, element_count: int = 2) -> dict[str
         "MATH_INPUT": {"notation": "LATEX"},
     }[block_type]
     return {
-        "version": "agentic-canvas-scene-v1",
+        "version": "agentic-canvas-scene-v2",
         "objective": "Represent the relationship so the learner can inspect it.",
         "subject_key": subject,
+        "presentation": {"layout": "FOCUS", "palette": "COOL", "motion": "NONE", "placements": [{"block_id": "generated-block", "role": "PRIMARY", "order": 0, "span": "FULL"}], "reveal_order": []},
         "blocks": [{**common, **subtype}],
     }
 
@@ -141,7 +142,7 @@ def test_completed_proposal_settles_to_active_scene_replays_and_reaches_same_tut
         )
         assert run is not None
         proposal = _scene(subject="MATH", block_type="MATH_BOARD")
-        canonical_proposal = AgenticCanvasSceneV1.model_validate(proposal).model_dump(mode="json")
+        canonical_proposal = AgenticCanvasSceneV2.model_validate(proposal).model_dump(mode="json")
         run.status = "COMPLETED"
         # Match the production worker exactly: both the durable proposal and
         # its digest use the fully materialized typed Scene, including defaults.

@@ -19,7 +19,7 @@ from services.studio.agent.admission import (
     AGENTIC_CANVAS_CAPABILITY_IDENTITY,
     admit_agentic_canvas_brief,
 )
-from services.studio.agentic_canvas import AgenticCanvasSceneV1
+from services.studio.agentic_canvas import AgenticCanvasSceneV2
 from workers.agentic_canvas_handlers import register_agentic_canvas_handlers
 from workers.agentic_canvas_handlers import _classify_agent_failure
 from workers.job_worker import JobHandlerRegistry, run_once
@@ -80,12 +80,13 @@ def _brief(*, objective: str = "Compare two decimals on a number line.") -> dict
     }
 
 
-def _scene() -> AgenticCanvasSceneV1:
-    return AgenticCanvasSceneV1.model_validate(
+def _scene() -> AgenticCanvasSceneV2:
+    return AgenticCanvasSceneV2.model_validate(
         {
-            "version": "agentic-canvas-scene-v1",
+            "version": "agentic-canvas-scene-v2",
             "objective": "Compare two decimals on a number line.",
             "subject_key": "MATH",
+            "presentation": {"layout": "FOCUS", "palette": "COOL", "motion": "NONE", "placements": [{"block_id": "decimal-line", "role": "PRIMARY", "order": 0, "span": "FULL"}], "reveal_order": []},
             "blocks": [
                 {
                     "block_id": "decimal-line",
@@ -145,7 +146,7 @@ def _admitted_message(
         role="tutor",
         content="Tutor response",
         ai_execution_id=parent.id,
-        payload={"agentic_canvas": {"status": "ADMITTED", "brief": brief, "brief_digest": digest}},
+        payload={"agentic_canvas": {"status": "ADMITTED", "brief": brief, "brief_digest": digest, "visual_learner_context": {"version": "visual-learner-context-v1", "core_profile": {"age_years": 10, "grade_level": "5"}, "selected_personal_facts": []}}},
         created_at=datetime.now(UTC),
     )
     session.add(message)
@@ -309,7 +310,7 @@ def test_transient_provider_failure_retries_same_run_and_persists_canonical_dige
         assert job.result == {
             "run_id": str(run_id),
             "run_status": "COMPLETED",
-            "scene_contract": "agentic-canvas-scene-v1",
+                "scene_contract": "agentic-canvas-scene-v2",
             "proposal_digest": expected_digest,
             "scene_id": None,
             "agent_trace": {"selected_tools": [], "tool_call_count": 0},
