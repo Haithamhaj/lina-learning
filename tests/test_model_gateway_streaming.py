@@ -55,7 +55,7 @@ def test_structured_tutor_normalization_preserves_all_luna_semantic_decisions() 
     """Catches a valid v6 decision being dropped before Tutor runtime validation."""
 
     output = _normalize_output(
-        '{"text":"Use a fraction bar.","suggested_actions":[],"teaching_mode":"HOMEWORK","teaching_strategy":"HINT_FIRST","teaching_method_id":"VISUAL_REPRESENTATION","prior_method_relation":"CONTINUATION","segment_relation":"CONTINUE","structured_segment_state":null,"candidate_metadata":null,"workspace_intent":null,"workspace_visual_order":null}',
+        '{"text":"Use a fraction bar.","suggested_actions":[],"teaching_mode":"HOMEWORK","teaching_strategy":"HINT_FIRST","teaching_method_id":"VISUAL_REPRESENTATION","prior_method_relation":"CONTINUATION","segment_relation":"CONTINUE","structured_segment_state":null,"candidate_metadata":null,"workspace_intent":null,"canvas_brief":null,"workspace_visual_order":null}',
         {"response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA},
     )
 
@@ -71,7 +71,7 @@ def test_structured_v10_tutor_normalization_preserves_workspace_intent() -> None
     """A current Tutor response keeps its strict Workspace Intent rather than taking the generic path."""
 
     output = _normalize_output(
-        '{"text":"Try a number line.","suggested_actions":[],"workspace_intent":{"version":"workspace-intent-v1","action":"OPEN_ACTIVITY","subject_key":"MATH","concept_keys":["fraction-equivalence"],"learning_goal":"Compare equivalent fractions.","activity_hint":null,"representation_need":"VISUAL","expected_student_response_mode":"WORKSPACE","presentation_sequence":"PARALLEL","source_references":[],"safe_text_fallback":"Let us compare the fractions."},"workspace_visual_order":null}',
+        '{"text":"Try a number line.","suggested_actions":[],"workspace_intent":{"version":"workspace-intent-v1","action":"OPEN_ACTIVITY","subject_key":"MATH","concept_keys":["fraction-equivalence"],"learning_goal":"Compare equivalent fractions.","activity_hint":null,"representation_need":"VISUAL","expected_student_response_mode":"WORKSPACE","presentation_sequence":"PARALLEL","source_references":[],"safe_text_fallback":"Let us compare the fractions."},"canvas_brief":null,"workspace_visual_order":null}',
         {"response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA},
     )
 
@@ -92,7 +92,7 @@ def test_structured_v10_tutor_normalization_preserves_workspace_intent() -> None
     assert output["candidate_metadata_error"] == "candidate_metadata_missing"
 
     null_output = _normalize_output(
-        '{"text":"Keep going.","suggested_actions":[],"candidate_metadata":null,"workspace_intent":null,"workspace_visual_order":null}',
+        '{"text":"Keep going.","suggested_actions":[],"candidate_metadata":null,"workspace_intent":null,"canvas_brief":null,"workspace_visual_order":null}',
         {"response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA},
     )
     assert null_output["workspace_intent"] is None

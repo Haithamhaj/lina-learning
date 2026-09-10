@@ -14,11 +14,11 @@ Lina is a modular monolith. Next.js provides the Student/Parent surfaces; FastAP
 - **Student sources:** voice transcription and owned image/PDF/DOCX assets are transiently prepared for the same Tutor path after safety.
 - **Intelligence:** completed Segments receive semantic review, then session finalization creates source-linked Event/Evidence; deterministic services maintain state, patterns, card, and decision views.
 - **Personal Facts:** a bounded, reconcilable personal-memory subsystem distinct from Learning Intelligence.
-- **Studio:** durable Runtime/Scene/Event/Snapshot state and bounded Canvas Specialist composition; Studio events retain provenance and rejoin the same Tutor.
+- **Studio:** durable Runtime/Scene/Event/Snapshot state and bounded Canvas Specialist composition; Studio events retain provenance and rejoin the same Tutor. New Agentic Canvas writes use Tutor v11's strictly educational `CanvasBriefV1`, one bounded composition agent, exact deterministic tools, a run-local block registry, and `agentic-canvas-scene-v1`; the existing ownership, job, stale-result, Scene settlement, reducer, interaction, SSE, replay, and Tutor-observation paths remain authoritative. Historical capability-pack scenes remain readable.
 
 ## Technical rules
 
-Application services request AI only through the Model Gateway. AI handles semantic interpretation; deterministic code owns allowed-value checks, policy, lifecycle, counts, recency, persistence, and rebuildability. No normal-turn extra classifier call is authorized for Tutor mode/strategy/method decisions.
+Application services request AI through the Model Gateway. AI handles semantic interpretation; deterministic code owns allowed-value checks, policy, lifecycle, counts, recency, persistence, and rebuildability. No normal-turn extra classifier call is authorized for Tutor mode/strategy/method decisions. `STUDIO-AGENTIC-01` adds only the approved post-Tutor Canvas Agent composition exception; it receives the admitted brief rather than raw conversation or learner records and cannot bypass Studio validation or persistence.
 
 Use migrations for schema changes. Preserve raw inputs and provenance. Artifact failure must not block Tutor. Custom generated HTML/SVG is fallback-only and sandboxed. Reprocessing must start from original sources and version derived outputs.
 

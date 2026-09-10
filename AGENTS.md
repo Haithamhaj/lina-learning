@@ -25,7 +25,7 @@ History, review evidence, and research are non-authoritative.
 
 Product Owner approval is required before changing child safety or Parent Boundary meaning; auth, privacy, ownership, or data isolation; Evidence or Learning Intelligence authority/semantics; destructive schema/data behavior; or irreversible external action. Preserve raw work and source provenance.
 
-Tutor availability is independent of curriculum. Route AI through the Model Gateway. Normal Tutor turns use one primary call; semantic mode, strategy, method, and prior-method relation come from that call, while code validates, enforces policy, and persists canonical values. Canvas is a representation surface; Chat/Tutor remains language and reasoning authority.
+Tutor availability is independent of curriculum. Route application AI through the Model Gateway. Normal Tutor turns use one primary call; semantic mode, strategy, method, prior-method relation, and optional `CanvasBriefV1` come from that call, while code validates, enforces policy, and persists canonical values. Canvas is a representation surface; Chat/Tutor remains language and reasoning authority. The Product Owner-approved `STUDIO-AGENTIC-01` exception is one bounded Canvas Agent composition loop using the OpenAI Agents SDK after Tutor-brief admission; it has no teaching, learner-state, safety, storage, or Studio-state authority and must settle only a project-owned typed Scene through the existing Studio lifecycle.
 
 ## Engineering and verification
 

@@ -74,6 +74,7 @@ def test_foundation_models_match_expected_tables() -> None:
             "studio_student_interactions",
             "studio_tutor_observations",
             "studio_canvas_specialist_runs",
+            "studio_generated_assets",
         }
     assert User.__tablename__ == "users"
     assert Student.__tablename__ == "students"

@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
 import errno
+from datetime import UTC, datetime
 from time import perf_counter
 from urllib.error import HTTPError, URLError
 
@@ -11,12 +11,25 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from services.platform.config.settings import Settings
-from services.platform.db.models import AIExecution, Job, LearningMessage, StudioCanvasSpecialistRun, StudioRuntime, StudioScene
+from services.platform.db.models import (
+    AIExecution,
+    Job,
+    LearningMessage,
+    StudioCanvasSpecialistRun,
+    StudioRuntime,
+    StudioScene,
+)
 from services.platform.jobs import NonRetryableJobError
-from services.studio.agent.admission import AGENTIC_CANVAS_CAPABILITY_IDENTITY, AGENTIC_CANVAS_COMPOSE_JOB, AGENTIC_CANVAS_SCENE_SCHEMA_VERSION, _canonical_digest
+from services.studio.agent.admission import (
+    AGENTIC_CANVAS_CAPABILITY_IDENTITY,
+    AGENTIC_CANVAS_COMPOSE_JOB,
+    AGENTIC_CANVAS_SCENE_SCHEMA_VERSION,
+    _canonical_digest,
+    latest_admitted_agentic_message,
+)
 from services.studio.agent.orchestrator import compose_canvas_scene
 from services.studio.agentic_canvas import AgenticCanvasSceneV1
-from services.studio.canvas_brief import parse_canvas_brief
+from services.studio.canvas_brief import CanvasBriefContractError, parse_canvas_brief
 
 
 def register_agentic_canvas_handlers(
@@ -72,7 +85,10 @@ def register_agentic_canvas_handlers(
             audit = message.payload.get("agentic_canvas") if message is not None and isinstance(message.payload, dict) else None
             post_brief = _matching_audited_brief(audit, run)
             active = session.execute(select(StudioScene).where(StudioScene.studio_runtime_id == run.studio_runtime_id, StudioScene.status == "ACTIVE").with_for_update()).scalar_one_or_none()
-            newest = session.scalars(select(LearningMessage).where(LearningMessage.session_id == run.learning_session_id, LearningMessage.role == "tutor").order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())).first()
+            newest = latest_admitted_agentic_message(
+                session,
+                learning_session_id=run.learning_session_id,
+            )
             if (run.status != "RUNNING" or (run.deadline_at is not None and run.deadline_at <= datetime.now(UTC))
                     or post_brief is None
                     or (active is None and (run.base_scene_id is not None or run.base_scene_version != 0))
@@ -131,7 +147,10 @@ def _preflight(factory: sessionmaker[Session], job: Job) -> _AgenticExecutionEnv
                 or brief is None):
             _fail_in_session(run, "CANVAS_BRIEF_LINEAGE_INVALID")
             raise NonRetryableJobError("CANVAS_BRIEF_LINEAGE_INVALID")
-        newest = session.scalars(select(LearningMessage).where(LearningMessage.session_id == run.learning_session_id, LearningMessage.role == "tutor").order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())).first()
+        newest = latest_admitted_agentic_message(
+            session,
+            learning_session_id=run.learning_session_id,
+        )
         active = session.execute(select(StudioScene).where(StudioScene.studio_runtime_id == run.studio_runtime_id, StudioScene.status == "ACTIVE").with_for_update()).scalar_one_or_none()
         if newest is None or newest.id != message.id or (active is None and (run.base_scene_id is not None or run.base_scene_version != 0)) or (active is not None and (active.id != run.base_scene_id or active.scene_version != run.base_scene_version)):
             run.status, run.failure_metadata, run.completed_at = "REJECTED", {"code": "STALE_AGENTIC_CANVAS_REQUEST"}, datetime.now(UTC)
@@ -150,7 +169,7 @@ def _matching_audited_brief(audit: object, run: StudioCanvasSpecialistRun):
         return None
     try:
         brief = parse_canvas_brief(audit.get("brief"))
-    except Exception:
+    except CanvasBriefContractError:
         return None
     if (
         brief is None

@@ -1,10 +1,10 @@
 """Durable lifecycle tests for the additive Tutor-led Agentic Canvas path."""
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-from hashlib import sha256
 import json
 import os
+from datetime import UTC, datetime, timedelta
+from hashlib import sha256
 from uuid import uuid4
 
 import pytest
@@ -21,7 +21,6 @@ from services.studio.agent.admission import (
 from services.studio.agentic_canvas import AgenticCanvasSceneV1
 from workers.agentic_canvas_handlers import register_agentic_canvas_handlers
 from workers.job_worker import JobHandlerRegistry, run_once
-
 
 pytestmark = pytest.mark.skipif(
     not os.getenv("DATABASE_URL"), reason="PostgreSQL DATABASE_URL is required"
@@ -329,7 +328,7 @@ def test_deadline_is_terminal_without_calling_agent(factory: sessionmaker[Sessio
         assert job is not None and job.status == "FAILED"
 
 
-def test_reconciler_defers_completed_agentic_scene_without_legacy_rejection(
+def test_reconciler_settles_completed_agentic_scene_through_existing_studio_state(
     factory: sessionmaker[Session],
 ) -> None:
     with factory.begin() as session:
@@ -366,7 +365,17 @@ def test_reconciler_defers_completed_agentic_scene_without_legacy_rejection(
         assert completed is not None
         assert completed.status == "COMPLETED"
         assert completed.proposal_payload == _scene().model_dump(mode="json")
-        assert completed.failure_metadata == {"code": "AGENTIC_SCENE_SETTLEMENT_DEFERRED"}
+        assert completed.failure_metadata is None
+        assert completed.scene_id is not None
+        scene = session.get(m.StudioScene, completed.scene_id)
+        assert scene is not None and scene.status == "ACTIVE"
+        assert scene.subject_key == "CANVAS"
+        snapshot = session.scalar(
+            select(m.StudioSnapshot).where(m.StudioSnapshot.studio_runtime_id == completed.studio_runtime_id)
+        )
+        assert snapshot is not None
+        assert snapshot.current_scene_id == scene.id
+        assert snapshot.active_activity_key == "agentic_canvas"
 
 
 def test_post_provider_brief_mutation_is_rejected_before_scene_commit(

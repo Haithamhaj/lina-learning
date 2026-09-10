@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime
-from typing import Mapping
 from uuid import UUID
 
 from sqlalchemy import select
@@ -19,12 +18,19 @@ from services.platform.db.models import (
     StudioStudentInteraction,
     StudioTutorObservation,
 )
-from services.studio.service import StudioStateService, TUTOR_OBSERVATION_FAILURE_CODES
-from services.studio.subjects import production_subject_registry
+from services.studio.agentic_canvas import (
+    AgenticCanvasActionV1,
+    AgenticCanvasSceneV1,
+    build_agentic_tutor_projection,
+)
+from services.studio.service import TUTOR_OBSERVATION_FAILURE_CODES, StudioStateService
+from services.studio.subjects import (
+    agentic_canvas,
+    process_production,
+    production_subject_registry,
+)
+from services.studio.subjects import process_visual as visual
 from services.studio.subjects.registry import SubjectCapabilityError
-
-
-from services.studio.subjects import process_production, process_visual as visual
 
 STUDIO_TUTOR_CONTEXT_SCHEMA_VERSION = "studio-tutor-context-v1"
 OBSERVATION_FAILURE_CODES = TUTOR_OBSERVATION_FAILURE_CODES
@@ -109,7 +115,11 @@ class StudioTutorWorkspaceContext:
     visual_scene: Mapping[str, object] | None = None
 
     def as_model_payload(self) -> dict[str, object]:
-        process = self.active_activity_key in (visual.ACTIVITY_KEY, process_production.ACTIVITY_KEY)
+        projected = self.active_activity_key in (
+            visual.ACTIVITY_KEY,
+            process_production.ACTIVITY_KEY,
+            agentic_canvas.ACTIVITY_KEY,
+        )
         result = {
             "schema_version": STUDIO_TUTOR_CONTEXT_SCHEMA_VERSION,
             "through_sequence": self.through_sequence,
@@ -123,7 +133,7 @@ class StudioTutorWorkspaceContext:
                 "current_scene_capability": (
                     None if self.current_scene_capability is None else self.current_scene_capability.as_model_payload()
                 ),
-                "state": {} if process else dict(self.state_payload),
+                "state": {} if projected else dict(self.state_payload),
             },
             "unseen_events": [_safe_event(event) for event in self.unseen_events],
         }
@@ -134,6 +144,14 @@ class StudioTutorWorkspaceContext:
 
 def _safe_event(event):
     payload = event.as_model_payload()
+    if event.activity_key == agentic_canvas.ACTIVITY_KEY:
+        action = event.payload.get("action")
+        try:
+            parsed = AgenticCanvasActionV1.model_validate(action)
+            payload["payload"] = {"action": parsed.model_dump(mode="json")}
+        except (ValueError, TypeError):
+            payload["payload"] = {}
+        return payload
     if event.activity_key in (visual.ACTIVITY_KEY, process_production.ACTIVITY_KEY):
         # Keep the selected observation range and semantic target; never echo
         # the accepted seed or application artwork through unseen Events.
@@ -276,6 +294,7 @@ def _selected_visual(session, runtime, snapshot, capability):
     profiles = {
         visual.ACTIVITY_KEY: (visual.PROFILE_VERSION, visual.ACTIVITY_VERSION, visual.RENDERER_KEY, visual.RENDERER_VERSION),
         process_production.ACTIVITY_KEY: (process_production.PROFILE_VERSION, process_production.ACTIVITY_VERSION, process_production.RENDERER_KEY, process_production.RENDERER_VERSION),
+        agentic_canvas.ACTIVITY_KEY: (agentic_canvas.PROFILE_VERSION, agentic_canvas.ACTIVITY_VERSION, agentic_canvas.RENDERER_KEY, agentic_canvas.RENDERER_VERSION),
     }
     profile = profiles.get(capability.activity_key)
     if profile is None or (capability.capability_status != "RESOLVED" or capability.subject_profile_version != profile[0]
@@ -290,9 +309,44 @@ def _selected_visual(session, runtime, snapshot, capability):
     if snapshot.state_payload.get("scene_status") not in ("ACCEPTED", "ACTIVE"):
         return None
     seed = snapshot.state_payload.get("scene_seed")
-    if seed != scene.seed_payload or scene.payload_schema_version != (visual.SEED_VERSION if capability.activity_key == visual.ACTIVITY_KEY else process_production.SEED_VERSION):
+    expected_seed_version = (
+        visual.SEED_VERSION
+        if capability.activity_key == visual.ACTIVITY_KEY
+        else process_production.SEED_VERSION
+        if capability.activity_key == process_production.ACTIVITY_KEY
+        else agentic_canvas.SCENE_SCHEMA_VERSION
+    )
+    if seed != scene.seed_payload or scene.payload_schema_version != expected_seed_version:
         return None
     try:
+        if capability.activity_key == agentic_canvas.ACTIVITY_KEY:
+            current = snapshot.state_payload.get(agentic_canvas.ACTIVITY_KEY, seed)
+            parsed_scene = AgenticCanvasSceneV1.model_validate(current)
+            actions: list[AgenticCanvasActionV1] = []
+            for event in session.scalars(
+                select(StudioEvent)
+                .where(
+                    StudioEvent.studio_runtime_id == runtime.id,
+                    StudioEvent.scene_id == scene.id,
+                    StudioEvent.activity_key == agentic_canvas.ACTIVITY_KEY,
+                    StudioEvent.actor == "STUDENT",
+                )
+                .order_by(StudioEvent.sequence.desc())
+                .limit(12)
+            ):
+                action = event.payload.get("action") if isinstance(event.payload, dict) else None
+                try:
+                    actions.append(AgenticCanvasActionV1.model_validate(action))
+                except (ValueError, TypeError):
+                    continue
+            actions.reverse()
+            return build_agentic_tutor_projection(
+                objective=parsed_scene.objective,
+                subject_key=parsed_scene.subject_key,
+                scene_status=str(snapshot.state_payload["scene_status"]),
+                blocks=[block.model_dump(mode="json") for block in parsed_scene.blocks],
+                actions=actions,
+            )
         projector = visual.project_visual if capability.activity_key == visual.ACTIVITY_KEY else process_production.project_visual
         return projector(seed, snapshot.state_payload.get(capability.activity_key, {}))
     except (ValueError, TypeError, KeyError):
@@ -342,7 +396,7 @@ def _selected_scene_capability(
         renderer_version=scene.renderer_version,
         allowed_action_keys=action_keys,
         source_references=(
-            () if scene.activity_key in (visual.ACTIVITY_KEY, process_production.ACTIVITY_KEY) else
+            () if scene.activity_key in (visual.ACTIVITY_KEY, process_production.ACTIVITY_KEY, agentic_canvas.ACTIVITY_KEY) else
             (scene.seed_payload['source_ref'],)
             if scene.activity_key == 'decimal_number_line' and isinstance(scene.seed_payload.get('source_ref'), str)
             else tuple(scene.source_asset_refs)

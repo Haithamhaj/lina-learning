@@ -1,7 +1,7 @@
 """Pure contract checks for the guarded number-line acceptance preflight."""
+from collections import UserDict
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
-from collections import UserDict
 
 import pytest
 
@@ -46,7 +46,7 @@ def test_preflight_returns_sanitized_identity_only_for_the_expected_target():
 
 
 def test_preflight_reads_the_repository_migration_head():
-    assert setup_module().expected_schema_version() == 'a8c4d2e6f901'
+    assert setup_module().expected_schema_version() == '8f4d2a9c6b31'
 
 
 def test_preflight_accepts_the_database_row_mapping_returned_by_sqlalchemy():

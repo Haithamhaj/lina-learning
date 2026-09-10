@@ -1,27 +1,45 @@
 """Canvas Specialist domain handler; queue mechanics stay in the generic worker."""
 from __future__ import annotations
 
+import errno
+import json
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-import errno
 from hashlib import sha256
-import json
-import logging
 from typing import TYPE_CHECKING
-from uuid import UUID
 from urllib.error import HTTPError, URLError
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from services.model_gateway.factory import create_canvas_specialist_gateway
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
-from services.platform.db.models import AIExecution, Job, JobStatus, LearningMessage, LearningSession, ModelTask, StudioCanvasSpecialistRun, StudioRuntime, StudioSnapshot
+from services.platform.db.models import (
+    AIExecution,
+    Job,
+    JobStatus,
+    LearningMessage,
+    LearningSession,
+    ModelTask,
+    StudioCanvasSpecialistRun,
+    StudioRuntime,
+    StudioSnapshot,
+)
 from services.platform.jobs import NonRetryableJobError
-from services.studio.canvas_specialist import CANVAS_SPECIALIST_COMPOSE_JOB, frozen_pack_identity_is_valid, proposal_contract, validate_proposal_against_frozen_pack
 from services.studio.agent.admission import AGENTIC_CANVAS_CAPABILITY_IDENTITY
-from services.studio.process_production_acceptance import accept_completed_process_run
+from services.studio.canvas_specialist import (
+    CANVAS_SPECIALIST_COMPOSE_JOB,
+    frozen_pack_identity_is_valid,
+    proposal_contract,
+    validate_proposal_against_frozen_pack,
+)
+from services.studio.process_production_acceptance import (
+    accept_completed_canvas_run,
+    accept_completed_process_run,
+)
 
 if TYPE_CHECKING:
     from workers.job_worker import JobHandlerRegistry
@@ -29,7 +47,7 @@ if TYPE_CHECKING:
 
 _logger = logging.getLogger(__name__)
 
-def register_canvas_specialist_handlers(registry: "JobHandlerRegistry", *, session_factory: sessionmaker[Session], gateway_factory: Callable[[Session], ModelGateway] = create_canvas_specialist_gateway) -> None:
+def register_canvas_specialist_handlers(registry: JobHandlerRegistry, *, session_factory: sessionmaker[Session], gateway_factory: Callable[[Session], ModelGateway] = create_canvas_specialist_gateway) -> None:
     def handle(job: Job) -> dict[str, object]:
         payload = job.payload if isinstance(job.payload, dict) else {}
         execution = _preflight(session_factory, job, payload)
@@ -273,11 +291,12 @@ def reconcile_canvas_specialist_runs(session: Session, *, now: datetime | None =
             has_snapshot = session.execute(select(StudioSnapshot.id).where(StudioSnapshot.studio_runtime_id == run.studio_runtime_id)).scalar_one_or_none() is not None
             if run.scene_id is None and isinstance(run.proposal_payload, dict) and has_snapshot:
                 if run.capability_profile_version == AGENTIC_CANVAS_CAPABILITY_IDENTITY:
-                    # Agentic Canvas has a distinct typed Scene settlement path.
-                    # Never pass its durable scene contract to the historical
-                    # capability-pack acceptor, which correctly rejects it.
-                    if run.failure_metadata is None:
-                        run.failure_metadata = {"code": "AGENTIC_SCENE_SETTLEMENT_DEFERRED"}
+                    try:
+                        accept_completed_canvas_run(session, run.id)
+                    except Exception:
+                        _logger.exception("Agentic Canvas reconciliation deferred Scene settlement for run %s", run.id)
+                        run.failure_metadata = {"code": "SCENE_SETTLEMENT_DEFERRED"}
+                        continue
                 else:
                     try:
                         accept_completed_process_run(session, run.id)

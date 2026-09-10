@@ -1,16 +1,23 @@
 """Admission of a validated Tutor CanvasBrief into the existing run/job lifecycle."""
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
-import json
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from services.platform.db.models import Job, LearningMessage, LearningSession, StudioCanvasSpecialistRun, StudioRuntime, StudioScene
+from services.platform.db.models import (
+    Job,
+    LearningMessage,
+    LearningSession,
+    StudioCanvasSpecialistRun,
+    StudioRuntime,
+    StudioScene,
+)
 from services.platform.jobs import enqueue_job
 from services.studio.canvas_brief import CanvasBriefContractError, parse_canvas_brief
 
@@ -22,6 +29,36 @@ AGENTIC_CANVAS_SCENE_SCHEMA_VERSION = "agentic-canvas-scene-v1"
 
 def _canonical_digest(value: dict[str, object]) -> str:
     return sha256(json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+
+
+def latest_admitted_agentic_message(
+    session: Session,
+    *,
+    learning_session_id: UUID,
+    lock: bool = False,
+) -> LearningMessage | None:
+    """Return the newest Tutor turn that actually requested Agentic Canvas."""
+
+    statement = (
+        select(LearningMessage)
+        .where(
+            LearningMessage.session_id == learning_session_id,
+            LearningMessage.role == "tutor",
+        )
+        .order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())
+    )
+    if lock:
+        statement = statement.with_for_update()
+    return next(
+        (
+            candidate
+            for candidate in session.scalars(statement)
+            if isinstance(candidate.payload, dict)
+            and isinstance(candidate.payload.get("agentic_canvas"), dict)
+            and candidate.payload["agentic_canvas"].get("status") == "ADMITTED"
+        ),
+        None,
+    )
 
 
 def admit_agentic_canvas_brief(session: Session, *, student_id: UUID, learning_session_id: UUID, source_message_id: UUID, now: datetime | None = None) -> StudioCanvasSpecialistRun | None:
@@ -58,9 +95,13 @@ def admit_agentic_canvas_brief(session: Session, *, student_id: UUID, learning_s
     digest = _canonical_digest(serialized)
     if declared_digest != digest:
         return None
-    # A later Tutor turn makes an old composition request stale before the
-    # worker can claim it. The worker repeats this fence after remote execution.
-    newest = session.scalars(select(LearningMessage).where(LearningMessage.session_id == learning_session_id, LearningMessage.role == "tutor").order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc()).with_for_update()).first()
+    # Only a later eligible Canvas brief supersedes this composition. Ordinary
+    # Chat turns remain independent while Canvas work is in flight.
+    newest = latest_admitted_agentic_message(
+        session,
+        learning_session_id=learning_session_id,
+        lock=True,
+    )
     if newest is None or newest.id != message.id:
         return None
     existing = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.source_message_id == message.id, StudioCanvasSpecialistRun.order_digest == digest, StudioCanvasSpecialistRun.capability_profile_version == AGENTIC_CANVAS_CAPABILITY_IDENTITY)).scalar_one_or_none()
