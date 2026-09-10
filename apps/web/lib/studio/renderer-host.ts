@@ -10,13 +10,15 @@ export type ApprovedStudioRenderer =
   | "CANVAS_MATH_VISUALIZATION"
   | "CANVAS_MATH_INPUT"
   | "ENGLISH_SENTENCE_ORDERING"
-  | "ARABIC_SENTENCE_ORDERING";
+  | "ARABIC_SENTENCE_ORDERING"
+  | "AGENTIC_CANVAS";
 
 type ApprovedContract = Omit<StudioActiveSceneContract, "scene_id" | "scene_version" | "locale" | "direction"> & {
   renderer: ApprovedStudioRenderer;
 };
 
 const approvedContracts: readonly ApprovedContract[] = [
+  { renderer: "AGENTIC_CANVAS", subject_key: "CANVAS", subject_profile_version: "agentic-canvas-profile-v1", activity_key: "agentic_canvas", activity_contract_version: "agentic-canvas-activity-v1", renderer_key: "agentic-canvas", renderer_version: "agentic-canvas-renderer-v1", payload_schema_version: "agentic-canvas-scene-v1" },
   {
     renderer: "CANVAS_SPATIAL_MANIPULATION", subject_key: "MATH", subject_profile_version: "canvas-production-profile-v1",
     activity_key: "canvas_spatial_manipulation", activity_contract_version: "canvas-spatial-activity-v1",

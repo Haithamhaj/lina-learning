@@ -1,6 +1,6 @@
 # Tutor-Led Agentic Canvas Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Execution mode:** Execute continuously through final verification and closure. Use subagent-driven development where available; commits, tests, and live proofs are internal steps, not Product Owner checkpoints.
 
 **Goal:** Replace new Canvas composition writes with one bounded, Tutor-led Agentic Canvas while retaining Studio as durable state authority.
 

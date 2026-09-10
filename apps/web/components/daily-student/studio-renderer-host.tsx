@@ -16,6 +16,7 @@ import { activeSceneRendererState, resolveApprovedStudioRenderer } from "@/lib/s
 import { readSentenceOrderingState } from "@/lib/studio/sentence-ordering";
 import { ProcessProductionWorkspace } from "@/components/studio/process-production-workspace";
 import { CanvasMathInputWorkspace, CanvasMathVisualizationWorkspace, CanvasSpatialWorkspace } from "@/components/studio/canvas-production-workspaces";
+import { AgenticCanvasWorkspace } from "@/components/studio/agentic-canvas-workspace";
 
 type Props = {
   snapshot: StudioSnapshotFrame;
@@ -60,6 +61,7 @@ export function StudioRendererHost({ snapshot, operationPending, onOperation, on
   if (renderer === "CANVAS_SPATIAL_MANIPULATION") return <CanvasSpatialWorkspace {...canvasProps}/>;
   if (renderer === "CANVAS_MATH_VISUALIZATION") return <CanvasMathVisualizationWorkspace {...canvasProps}/>;
   if (renderer === "CANVAS_MATH_INPUT") return <CanvasMathInputWorkspace {...canvasProps}/>;
+  if (renderer === "AGENTIC_CANVAS") return <AgenticCanvasWorkspace sceneId={scene.scene_id} sceneVersion={scene.scene_version} seed={snapshot.active_scene_seed ?? {}} onOperation={onApprovedOperation} />;
 
   if (renderer === "MATH_DECIMAL_PLACE_VALUE") {
     return <DecimalPlaceValueWorkspace sceneId={scene.scene_id} sceneVersion={scene.scene_version} state={readPlaceValueSnapshot(snapshot)} locale={scene.locale} onOperation={onApprovedOperation} onReload={onReload} />;
