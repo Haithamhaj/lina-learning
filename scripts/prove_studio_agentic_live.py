@@ -297,7 +297,10 @@ def semantic_action_for_scene(
                     "block_id": block.block_id,
                     "element_id": element_id,
                     "from_value": None,
-                    "to_value": None,
+                    # SUBMIT interactions can declare a required semantic
+                    # value. The proof uses the caller-provided bounded value
+                    # rather than treating that contract as an empty click.
+                    "to_value": preferred_value if action_key == "SUBMIT" else None,
                 },
             }
     raise RuntimeError("AGENTIC_SCENE_HAS_NO_TUTOR_TRIGGERING_PROOF_ACTION")
