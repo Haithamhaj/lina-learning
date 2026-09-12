@@ -436,11 +436,25 @@ def _create_custom_visual(
     visual_descriptions: list[str] | None = None,
     current_state_schema: dict[str, str] | None = None,
     parameters: dict[str, str | int | float | bool] | None = None,
+    semantic_manifest: CanvasSemanticManifestDraftV1 | dict[str, object] | None = None,
 ):
     """CREATE a sandboxed custom visual from semantic entities, actions, and source. Every semantic_id used by relations, quantities, or interactions must first appear in entities; use entity IDs, never action/step IDs. Use native local state and the supplied semantic bridge only: no fetch, network, storage, cookies, parent window, imports, or application APIs."""
     context.context.record_tool("create_custom_visual")
     context.context.create_route_attempted = True
     try:
+        # Compatibility for an already-issued model call shape. The new
+        # authoring contract exposes individual semantic fields; if a model
+        # still supplies the old envelope, extract only its authored semantic
+        # content and rebuild the canonical manifest below.
+        if semantic_manifest is not None:
+            legacy = _bound_manifest(semantic_manifest, context.context.brief_digest)
+            entities = entities or list(legacy.entities)
+            relations = relations or list(legacy.relations)
+            quantities = quantities or list(legacy.quantities)
+            interactions = interactions or list(legacy.interactions)
+            presentation_steps = presentation_steps or list(legacy.presentation_steps)
+            visual_descriptions = visual_descriptions or list(legacy.visual_descriptions)
+            current_state_schema = current_state_schema or dict(legacy.current_state_schema)
         validated_manifest = _canonical_custom_manifest(
             objective=context.context.brief_objective,
             meaning=meaning,

@@ -15,8 +15,10 @@ Search before CREATE when reusable candidates are available, but do not force a
 weak candidate. A typed Canvas block is a fast path, not a representation cap.
 
 For CREATE, keep academic facts and exact quantities supplied by the Tutor brief
-or deterministic tools. Build a Semantic Manifest with stable educational IDs
-for every visible/interactable entity, relations, quantities, progression, and
-meaningful actions. The custom package receives only safe bound parameters; it
+or deterministic tools. Supply stable educational IDs for visible/interactable
+entities, relations, quantities, progression, and meaningful actions through
+the CREATE tool's semantic fields. Do not send a `semantic_manifest` envelope:
+the application constructs its canonical Manifest from those fields. The custom
+package receives only safe bound parameters; it
 does not receive learner records, source files, memory, implementation secrets,
 or application identity.

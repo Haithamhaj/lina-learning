@@ -415,6 +415,36 @@ def test_custom_visual_semantic_authoring_builds_the_canonical_package_envelope(
     assert "student_id" not in str(package)
 
 
+def test_custom_visual_legacy_manifest_envelope_is_canonicalized_not_rejected() -> None:
+    from types import SimpleNamespace
+
+    from services.studio.agent.orchestrator import CanvasAgentRunContext, _create_custom_visual
+    from services.studio.agent.registry import CanvasBlockRegistry
+
+    context = CanvasAgentRunContext(
+        registry=CanvasBlockRegistry(), brief_digest="c" * 64, brief_objective="Compare coupled slopes."
+    )
+    _create_custom_visual(
+        SimpleNamespace(context=context),
+        block_id="legacy-coupled", meaning="A coupled slope comparison.", label="Coupled slopes",
+        source="window.mount=(root,params,bridge)=>{root.textContent=params.label}",
+        semantic_manifest={
+            "version": "canvas-semantic-manifest-v1", "objective": "Legacy objective.",
+            "representation_summary": "Legacy representation.",
+            "entities": [{"semantic_id": "point-a", "kind": "point", "label": "A", "educational_meaning": "A point.", "visible_description": "Point A."}],
+            "relations": [], "quantities": [], "presentation_steps": [],
+            "interactions": [{"semantic_id": "point-a", "action": "MOVE", "meaning": "Move A.", "value_required": True}],
+            "calculated_results": [], "visual_descriptions": [], "current_state_schema": {}, "provenance": {},
+        },
+        parameters={"label": "A"},
+    )
+
+    package = context.registry.blocks()[0].package
+    assert package is not None
+    assert package.manifest.brief_digest == "c" * 64
+    assert package.manifest.objective == "Compare coupled slopes."
+
+
 def test_create_plan_omission_gets_one_toolless_coherence_repair(monkeypatch) -> None:
     import asyncio
     import json
