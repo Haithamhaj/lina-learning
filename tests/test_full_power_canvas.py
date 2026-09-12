@@ -57,6 +57,19 @@ def test_custom_visual_rejects_html_controls_appended_to_svg_parent() -> None:
         })
 
 
+def test_custom_visual_rejects_dynamic_bridge_semantic_ids() -> None:
+    """Executable events must bind to the canonical Manifest, not a runtime variable."""
+    from services.studio.full_power_canvas import CustomVisualPackageV1
+
+    with pytest.raises(ValidationError, match="SEMANTIC_INTERACTION_BINDING_INVALID"):
+        CustomVisualPackageV1.model_validate({
+            "version": "custom-visual-package-v1", "runtime_kind": "custom-visual",
+            "dependencies": ["native-svg-v1"],
+            "source": "window.mount=(root,params,bridge)=>{let k='fraction-a';bridge.emit('MOVE',{semantic_id:k,value:'3/4'})}",
+            "manifest": _manifest(), "parameter_schema": {"type": "object", "properties": {}},
+        })
+
+
 def test_registry_keeps_private_instance_values_out_of_reusable_definition() -> None:
     from services.studio.full_power_canvas import ReusableVisualArtifactService, VisualArtifactPrivacyError
 

@@ -176,6 +176,16 @@ class CustomVisualPackageV1(BaseModel):
                 raise CustomVisualSecurityError(f"CUSTOM_VISUAL_FORBIDDEN_API:{capability}")
         if "window.mount" not in self.source:
             raise CustomVisualSecurityError("Custom visual source must define window.mount")
+        # The source cannot choose a semantic target dynamically.  Its bridge
+        # calls are the executable half of the canonical Manifest contract;
+        # allowing a variable here would permit a rendered control to emit a
+        # different target from the one that was admitted.
+        for match in re.finditer(r"bridge\.emit\(\s*['\"](?:FOCUS|SELECT|MOVE|SET_VALUE|CONNECT|SUBMIT|REORDER|TOGGLE|STEP|RESET_VIEW)['\"]\s*,\s*\{[^}]*semantic_id\s*:\s*([^,}\s]+)", self.source):
+            value = match.group(1)
+            if not re.fullmatch(r"['\"][a-z][a-z0-9_-]*['\"]", value):
+                raise CustomVisualSecurityError(
+                    "SEMANTIC_INTERACTION_BINDING_INVALID: bridge semantic_id must be a declared literal"
+                )
         # A HTML control appended below an SVG parent has no reliable layout or
         # accessibility box in the opaque document.  This exact error is
         # repairable by the model: mount controls in an HTML container, or use
