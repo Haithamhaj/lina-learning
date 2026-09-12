@@ -387,6 +387,15 @@ def test_custom_visual_validation_failure_is_retained_as_bounded_agent_metadata(
     }]
 
 
+def test_custom_visual_invalid_tool_json_returns_an_actionable_encoding_repair() -> None:
+    from services.studio.agent.orchestrator import _custom_visual_error_payload
+
+    assert _custom_visual_error_payload(ValueError("Invalid JSON input for tool create_custom_visual")) == {
+        "code": "CUSTOM_VISUAL_ARGUMENT_ENCODING_INVALID",
+        "repair": "Resubmit the same source and semantic fields as valid JSON strings; escape quotes and newlines in source. Do not restart composition.",
+    }
+
+
 def test_custom_visual_semantic_authoring_builds_the_canonical_package_envelope() -> None:
     from types import SimpleNamespace
 

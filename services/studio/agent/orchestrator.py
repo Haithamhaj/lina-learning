@@ -442,7 +442,7 @@ def _create_custom_visual(
     # reject legacy/internal boilerplate before canonicalization can run.
     semantic_manifest: dict[str, object] | None = None,
 ):
-    """CREATE a sandboxed custom visual from semantic entities, actions, and source. Every semantic_id used by relations, quantities, or interactions must first appear in entities; use entity IDs, never action/step IDs. Use native local state and the supplied semantic bridge only: no fetch, network, storage, cookies, parent window, imports, or application APIs."""
+    """CREATE a sandboxed custom visual from semantic entities, actions, and source. Submit source as one valid JSON string (escape its quotes and newlines). Every semantic_id used by relations, quantities, or interactions must first appear in entities; use entity IDs, never action/step IDs. Use native local state and the supplied semantic bridge only: no fetch, network, storage, cookies, parent window, imports, or application APIs."""
     context.context.record_tool("create_custom_visual")
     context.context.create_route_attempted = True
     try:
@@ -527,6 +527,14 @@ def _custom_visual_error_payload(error: Exception) -> dict[str, object]:
     """Expose repairable contract failures without source or internal runtime data."""
     if isinstance(error, CustomVisualAuthoringError):
         return dict(error.payload)
+    if "invalid json input for tool" in str(error).casefold():
+        return {
+            "code": "CUSTOM_VISUAL_ARGUMENT_ENCODING_INVALID",
+            "repair": (
+                "Resubmit the same source and semantic fields as valid JSON strings; "
+                "escape quotes and newlines in source. Do not restart composition."
+            ),
+        }
     if isinstance(error, CustomVisualSecurityError):
         message = str(error).casefold()
         capability = "unknown"
