@@ -25,6 +25,11 @@ def test_single_canvas_agent_uses_only_the_bounded_tool_registry() -> None:
     assert {"entities", "interactions", "source"} <= set(custom_schema["properties"])
     assert "manifest" not in custom_schema["properties"]
     assert "artifact_instance_id" not in custom_schema["properties"]
+    # A legacy envelope remains a deliberately untyped compatibility input.
+    # It must not make the SDK validate Lina's canonical Manifest boilerplate
+    # before the system can extract authored semantic fields and canonicalize it.
+    legacy_schema = custom_schema["properties"]["semantic_manifest"]
+    assert "$ref" not in str(legacy_schema)
     code_tool = next(tool for tool in agent.tools if tool.name == "code_interpreter")
     assert code_tool.tool_config == {"type": "code_interpreter", "container": {"type": "auto"}}
 

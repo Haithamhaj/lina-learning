@@ -436,7 +436,11 @@ def _create_custom_visual(
     visual_descriptions: list[str] | None = None,
     current_state_schema: dict[str, str] | None = None,
     parameters: dict[str, str | int | float | bool] | None = None,
-    semantic_manifest: CanvasSemanticManifestDraftV1 | dict[str, object] | None = None,
+    # Compatibility only for a previously advertised authoring shape.  Keep this
+    # untyped at the SDK boundary: the system extracts the model-authored fields
+    # and builds the strict canonical Manifest below.  A Draft model here would
+    # reject legacy/internal boilerplate before canonicalization can run.
+    semantic_manifest: dict[str, object] | None = None,
 ):
     """CREATE a sandboxed custom visual from semantic entities, actions, and source. Every semantic_id used by relations, quantities, or interactions must first appear in entities; use entity IDs, never action/step IDs. Use native local state and the supplied semantic bridge only: no fetch, network, storage, cookies, parent window, imports, or application APIs."""
     context.context.record_tool("create_custom_visual")
@@ -447,7 +451,7 @@ def _create_custom_visual(
         # still supplies the old envelope, extract only its authored semantic
         # content and rebuild the canonical manifest below.
         if semantic_manifest is not None:
-            legacy = semantic_manifest.model_dump(mode="json") if hasattr(semantic_manifest, "model_dump") else dict(semantic_manifest)
+            legacy = dict(semantic_manifest)
             # Do not strictly validate the old envelope first: canonicalization
             # intentionally supplies minimal entity records for relation/action
             # targets that the model named but did not repeat as boilerplate.
