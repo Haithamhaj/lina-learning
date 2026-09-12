@@ -392,7 +392,7 @@ def test_custom_visual_invalid_tool_json_returns_an_actionable_encoding_repair()
 
     assert _custom_visual_error_payload(ValueError("Invalid JSON input for tool create_custom_visual")) == {
         "code": "CUSTOM_VISUAL_ARGUMENT_ENCODING_INVALID",
-        "repair": "Resubmit the same source and semantic fields as valid JSON strings; escape quotes and newlines in source. Do not restart composition.",
+        "repair": "Resubmit the same source and semantic fields as valid JSON. Keep source on one minified line, with single-quoted JavaScript literals and no literal double quotes or newlines. Do not restart composition.",
     }
 
 

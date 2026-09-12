@@ -442,7 +442,7 @@ def _create_custom_visual(
     # reject legacy/internal boilerplate before canonicalization can run.
     semantic_manifest: dict[str, object] | None = None,
 ):
-    """CREATE a sandboxed custom visual from semantic entities, actions, and source. Submit source as one valid JSON string (escape its quotes and newlines). Every semantic_id used by relations, quantities, or interactions must first appear in entities; use entity IDs, never action/step IDs. Use native local state and the supplied semantic bridge only: no fetch, network, storage, cookies, parent window, imports, or application APIs."""
+    """CREATE a sandboxed custom visual from semantic entities, actions, and source. Submit source as one minified valid JSON string: use single-quoted JavaScript literals and no literal newlines or double quotes in source, so the tool-call JSON stays valid. Every semantic_id used by relations, quantities, or interactions must first appear in entities; use entity IDs, never action/step IDs. Use native local state and the supplied semantic bridge only: no fetch, network, storage, cookies, parent window, imports, or application APIs."""
     context.context.record_tool("create_custom_visual")
     context.context.create_route_attempted = True
     try:
@@ -531,8 +531,9 @@ def _custom_visual_error_payload(error: Exception) -> dict[str, object]:
         return {
             "code": "CUSTOM_VISUAL_ARGUMENT_ENCODING_INVALID",
             "repair": (
-                "Resubmit the same source and semantic fields as valid JSON strings; "
-                "escape quotes and newlines in source. Do not restart composition."
+                "Resubmit the same source and semantic fields as valid JSON. Keep source on one "
+                "minified line, with single-quoted JavaScript literals and no literal double quotes or newlines. "
+                "Do not restart composition."
             ),
         }
     if isinstance(error, CustomVisualSecurityError):
