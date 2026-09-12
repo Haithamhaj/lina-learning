@@ -528,7 +528,7 @@ def _custom_visual_error_payload(error: Exception) -> dict[str, object]:
     if isinstance(error, CustomVisualAuthoringError):
         return dict(error.payload)
     if "invalid json input for tool" in str(error).casefold():
-        return {
+        payload: dict[str, object] = {
             "code": "CUSTOM_VISUAL_ARGUMENT_ENCODING_INVALID",
             "repair": (
                 "Resubmit the same source and semantic fields as valid JSON. Keep source on one "
@@ -536,6 +536,17 @@ def _custom_visual_error_payload(error: Exception) -> dict[str, object]:
                 "Do not restart composition."
             ),
         }
+        # Preserve parser location, never the raw generated source. This tells a
+        # bounded authoring repair whether the call was truncated or malformed.
+        current: BaseException | None = error
+        while current is not None:
+            if isinstance(current, json.JSONDecodeError):
+                payload["json_error"] = (
+                    f"{current.msg} at line {current.lineno} column {current.colno}"
+                )
+                break
+            current = current.__cause__ or current.__context__
+        return payload
     if isinstance(error, CustomVisualSecurityError):
         message = str(error).casefold()
         capability = "unknown"

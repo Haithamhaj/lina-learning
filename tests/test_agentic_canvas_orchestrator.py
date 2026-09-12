@@ -388,10 +388,15 @@ def test_custom_visual_validation_failure_is_retained_as_bounded_agent_metadata(
 
 
 def test_custom_visual_invalid_tool_json_returns_an_actionable_encoding_repair() -> None:
+    import json
+
     from services.studio.agent.orchestrator import _custom_visual_error_payload
 
-    assert _custom_visual_error_payload(ValueError("Invalid JSON input for tool create_custom_visual")) == {
+    failure = ValueError("Invalid JSON input for tool create_custom_visual")
+    failure.__cause__ = json.JSONDecodeError("Expecting ',' delimiter", '{"source":"x"}', 11)
+    assert _custom_visual_error_payload(failure) == {
         "code": "CUSTOM_VISUAL_ARGUMENT_ENCODING_INVALID",
+        "json_error": "Expecting ',' delimiter at line 1 column 12",
         "repair": "Resubmit the same source and semantic fields as valid JSON. Keep source on one minified line, with single-quoted JavaScript literals and no literal double quotes or newlines. Do not restart composition.",
     }
 
