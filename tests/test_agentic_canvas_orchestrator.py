@@ -401,6 +401,18 @@ def test_custom_visual_invalid_tool_json_returns_an_actionable_encoding_repair()
     }
 
 
+def test_custom_visual_dynamic_bridge_target_gets_a_semantic_repair() -> None:
+    from services.studio.agent.orchestrator import _custom_visual_error_payload
+    from services.studio.full_power_canvas import CustomVisualSecurityError
+
+    assert _custom_visual_error_payload(
+        CustomVisualSecurityError("SEMANTIC_INTERACTION_BINDING_INVALID: bridge semantic_id must be a declared literal")
+    ) == {
+        "code": "SEMANTIC_INTERACTION_BINDING_INVALID",
+        "repair": "Emit each declared bridge semantic_id as its exact literal Manifest ID; do not use a dynamic variable for semantic_id.",
+    }
+
+
 def test_custom_visual_semantic_authoring_builds_the_canonical_package_envelope() -> None:
     from types import SimpleNamespace
 

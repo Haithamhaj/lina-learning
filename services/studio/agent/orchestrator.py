@@ -549,6 +549,11 @@ def _custom_visual_error_payload(error: Exception) -> dict[str, object]:
         return payload
     if isinstance(error, CustomVisualSecurityError):
         message = str(error).casefold()
+        if "semantic_interaction_binding_invalid" in message:
+            return {
+                "code": "SEMANTIC_INTERACTION_BINDING_INVALID",
+                "repair": "Emit each declared bridge semantic_id as its exact literal Manifest ID; do not use a dynamic variable for semantic_id.",
+            }
         capability = "unknown"
         for name in ("fetch", "xmlhttprequest", "websocket", "cookie", "storage", "window.parent", "import"):
             if name in message:
