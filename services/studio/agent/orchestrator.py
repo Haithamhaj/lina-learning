@@ -537,10 +537,16 @@ def _custom_visual_error_payload(error: Exception) -> dict[str, object]:
             "repair": "Mount declared controls in an HTML container or implement visible SVG-native controls; do not append HTML controls to an SVG parent.",
         }
     fields = _validation_locations(error)
-    return {
+    payload: dict[str, object] = {
         "code": "CUSTOM_VISUAL_MANIFEST_INVALID",
         "missing_fields": fields or ["semantic_manifest"],
     }
+    if not fields:
+        # ValueError validators do not expose Pydantic locations. Their message
+        # is still an actionable semantic constraint and contains no source or
+        # learner data, unlike the generated package itself.
+        payload["repair"] = str(error)[:280]
+    return payload
 
 
 def _manifest_failure_reason(error: Exception) -> str:
