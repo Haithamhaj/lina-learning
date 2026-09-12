@@ -101,6 +101,23 @@ def test_durable_live_action_selection_uses_a_tutor_triggering_scene_contract() 
     }
 
 
+def test_durable_live_action_selection_prefers_custom_submit_choice() -> None:
+    selector = getattr(live, "semantic_action_for_scene", None)
+    assert callable(selector)
+    action = selector({
+        "version": "agentic-canvas-scene-v3", "objective": "Choose the steeper line.", "subject_key": "MATH",
+        "presentation": {"layout": "FOCUS", "palette": "COOL", "motion": "NONE", "placements": [{"block_id": "slopes", "role": "PRIMARY", "span": "FULL", "order": 1}], "reveal_order": []},
+        "blocks": [{
+            "block_id": "slopes", "type": "CUSTOM_VISUAL", "meaning": "Compare slopes.", "title": "Slopes",
+            "accessibility": {"text_equivalent": "Compare slopes.", "aria_label": None}, "allowed_actions": ["SUBMIT"],
+            "elements": [{"id": "origin", "label": "Origin", "current_value": None}, {"id": "choice-b", "label": "Choose line B", "current_value": None}],
+            "artifact_instance_id": "slope-instance", "bridge_nonce": "nonce-123", "custom_visual_build_id": str(uuid4()), "manifest_digest": "a" * 64, "parameters": {},
+        }],
+    })
+    assert action["action_key"] == "SUBMIT"
+    assert action["payload"]["element_id"] == "choice-b"
+
+
 def test_durable_evidence_connection_failure_becomes_a_bounded_case_failure(
     monkeypatch,
 ) -> None:

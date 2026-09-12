@@ -265,6 +265,19 @@ def semantic_action_for_scene(
         for block in scene.blocks:
             if action_key not in block.allowed_actions:
                 continue
+            # A custom Scene's durable block intentionally contains no package
+            # or Manifest. For a submit surface, prefer its named choice
+            # control rather than the first visible semantic entity (which is
+            # commonly an origin or illustration and is not an action target).
+            declared_choice = next(
+                (
+                    element
+                    for element in block.elements
+                    if action_key == "SUBMIT"
+                    and (element.id.startswith("choice-") or element.label.casefold().startswith(("choose", "select")))
+                ),
+                None,
+            )
             preferred = next(
                 (
                     element
@@ -274,7 +287,7 @@ def semantic_action_for_scene(
                 ),
                 None,
             )
-            element = preferred or (block.elements[0] if block.elements else None)
+            element = preferred or declared_choice or (block.elements[0] if block.elements else None)
             element_id = None if element is None else element.id
             return {
                 "action_key": action_key,
