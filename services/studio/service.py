@@ -34,6 +34,15 @@ from services.studio.contracts import (
     CreateTutorObservationCommand,
     StudioEventResultStatus,
 )
+from services.studio.agentic_canvas import (
+    AGENTIC_CANVAS_SCENE_ADAPTER,
+    AgenticCanvasActionV1,
+    CustomVisualBlockV1,
+)
+from services.studio.custom_visual_builds import (
+    CustomVisualBuildResolutionError,
+    CustomVisualBuildResolver,
+)
 from services.studio.interactions import StudioInteractionService
 from services.studio.reducer import (
     CORE_EVENT_SCHEMA_VERSION,
@@ -52,6 +61,13 @@ from services.studio.subjects.registry import SubjectCapabilityError, SubjectCap
 MAX_EVENT_PAYLOAD_BYTES = 8_192
 MAX_SCENE_PAYLOAD_BYTES = 16_384
 MAX_ACCESSIBILITY_PAYLOAD_BYTES = 8_192
+# Scene acceptance is the sole lifecycle event that durably replays both a
+# bounded Scene seed and its bounded accessibility payload.  Its envelope is
+# therefore intentionally larger than an ordinary event, while the individual
+# contracts and the projected snapshot remain independently bounded.
+MAX_SCENE_ACCEPTANCE_EVENT_PAYLOAD_BYTES = (
+    MAX_SCENE_PAYLOAD_BYTES + MAX_ACCESSIBILITY_PAYLOAD_BYTES + 2_048
+)
 MAX_SNAPSHOT_PAYLOAD_BYTES = 16_384
 MAX_FAILURE_METADATA_BYTES = 4_096
 MAX_INTERACTION_PAYLOAD_BYTES = 4_096
@@ -240,11 +256,21 @@ class StudioStateService:
         if durable_event_kind is None or durable_event_schema_version is None:
             raise StudioStateError("Studio events require a resolved durable event contract.")
         event_payload = self._event_payload(command.payload, validation, subject_action=action is not None)
-        self._validate_json_capacity(
-            event_payload,
-            MAX_SUBJECT_EVENT_ENVELOPE_BYTES if action is not None else MAX_EVENT_PAYLOAD_BYTES,
-            "Subject event validation envelope" if action is not None else "Event payload",
+        event_payload_limit = (
+            MAX_SUBJECT_EVENT_ENVELOPE_BYTES
+            if action is not None
+            else MAX_SCENE_ACCEPTANCE_EVENT_PAYLOAD_BYTES
+            if durable_event_kind == "studio.scene.accepted"
+            else MAX_EVENT_PAYLOAD_BYTES
         )
+        event_payload_label = (
+            "Subject event validation envelope"
+            if action is not None
+            else "Scene acceptance event payload"
+            if durable_event_kind == "studio.scene.accepted"
+            else "Event payload"
+        )
+        self._validate_json_capacity(event_payload, event_payload_limit, event_payload_label)
         if command.causal_event_id is not None:
             causal = self.session.execute(
                 select(StudioEvent).where(
@@ -708,6 +734,11 @@ class StudioStateService:
             raise StudioStateError("Subject event subject must match the active Scene subject.")
         if command.activity_key is not None and command.activity_key != scene.activity_key:
             raise StudioStateError("Subject event activity must match the active Scene activity.")
+        self._validate_referenced_custom_visual_action(
+            scene=scene,
+            command=command,
+            activity_state=activity_state,
+        )
         try:
             return self.subject_registry.validate_subject_event(
                 subject_key=scene.subject_key,
@@ -721,6 +752,53 @@ class StudioStateService:
             )
         except SubjectCapabilityError as error:
             raise StudioStateError(str(error)) from error
+
+    def _validate_referenced_custom_visual_action(
+        self,
+        *,
+        scene: StudioScene,
+        command: AppendStudioEventCommand,
+        activity_state: Mapping[str, object] | None,
+    ) -> None:
+        """Resolve the immutable Manifest before the pure Canvas action validator runs."""
+        if scene.activity_key != "agentic_canvas" or activity_state is None:
+            return
+        current = activity_state.get("agentic_canvas", activity_state.get("scene_seed"))
+        if not isinstance(current, Mapping):
+            return
+        try:
+            parsed_scene = AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(dict(current))
+            action = AgenticCanvasActionV1.model_validate(dict(command.payload))
+        except (TypeError, ValueError):
+            return
+        block = next((item for item in parsed_scene.blocks if item.block_id == action.block_id), None)
+        if not isinstance(block, CustomVisualBlockV1) or block.package is not None:
+            return
+        if block.custom_visual_build_id is None or block.manifest_digest is None:
+            raise StudioStateError("Reference custom visual is missing its immutable build identity.")
+        try:
+            resolved = CustomVisualBuildResolver().resolve(
+                self.session,
+                build_id=UUID(block.custom_visual_build_id),
+                student_id=scene.student_id,
+                runtime_id=scene.studio_runtime_id,
+            )
+        except CustomVisualBuildResolutionError as error:
+            raise StudioStateError("Reference custom visual Manifest is unavailable.") from error
+        if resolved.manifest_digest != block.manifest_digest:
+            raise StudioStateError("Reference custom visual Manifest digest is invalid.")
+        declared = next(
+            (
+                item
+                for item in resolved.package.manifest.interactions
+                if item.semantic_id == action.element_id and item.action == action.action
+            ),
+            None,
+        )
+        if declared is None:
+            raise StudioStateError("Custom Canvas action is not declared by its canonical Semantic Manifest.")
+        if declared.value_required and action.to_value is None:
+            raise StudioStateError("Custom Canvas action requires a semantic value.")
 
     @staticmethod
     def _reducer_event(event: StudioEvent, scene: StudioScene | None):

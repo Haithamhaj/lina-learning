@@ -30,17 +30,21 @@ CUSTOM_VISUAL_RUNTIME_KIND = "custom-visual"
 _SEMANTIC_ID = r"^[a-z][a-z0-9_-]*$"
 _SAFE_DEPENDENCIES = frozenset({"native-svg-v1", "motion-v1"})
 _FORBIDDEN_SOURCE_PATTERNS = (
-    r"\bfetch\s*\(", r"\bXMLHttpRequest\b", r"\bWebSocket\b", r"\bEventSource\b",
-    r"\bdocument\.cookie\b", r"\blocalStorage\b", r"\bsessionStorage\b", r"\bindexedDB\b",
-    r"\bwindow\.parent\b", r"\bwindow\.top\b", r"\bimport\s*(?:\(|[^\w])",
-    r"\brequire\s*\(", r"\beval\s*\(", r"\bFunction\s*\(", r"\bnew\s+Worker\b",
-    r"\bserviceWorker\b", r"\bwindow\.open\s*\(", r"\blocation\s*=",
+    (r"\bfetch\s*\(", "fetch"), (r"\bXMLHttpRequest\b", "xmlhttprequest"), (r"\bWebSocket\b", "websocket"), (r"\bEventSource\b", "eventsource"),
+    (r"\bdocument\.cookie\b", "cookie"), (r"\blocalStorage\b", "localstorage"), (r"\bsessionStorage\b", "sessionstorage"), (r"\bindexedDB\b", "indexeddb"),
+    (r"\bwindow\.parent\b", "window.parent"), (r"\bwindow\.top\b", "window.top"), (r"\bimport\s*(?:\(|[^\w])", "import"),
+    (r"\brequire\s*\(", "require"), (r"\beval\s*\(", "eval"), (r"\bFunction\s*\(", "function"), (r"\bnew\s+Worker\b", "worker"),
+    (r"\bserviceWorker\b", "serviceworker"), (r"\bwindow\.open\s*\(", "window.open"), (r"\blocation\s*=", "location"),
 )
 _PRIVATE_MARKERS = ("student_id", "student id", "personal_memory", "learning_intelligence", "private", "cookie", "storage_key", "source_asset")
 
 
 class CustomVisualSecurityError(ValueError):
     """Generated source requested an authority unavailable to visual packages."""
+
+
+class CustomVisualInteractionLayoutError(ValueError):
+    """A declared learner interaction is present but cannot be laid out as usable UI."""
 
 
 class VisualArtifactPrivacyError(ValueError):
@@ -124,6 +128,32 @@ class CanvasSemanticManifestV1(BaseModel):
         return self
 
 
+class CanvasSemanticManifestDraftV1(BaseModel):
+    """Model-authored semantics before the application binds brief provenance."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    version: Literal[CANVAS_SEMANTIC_MANIFEST_VERSION] = CANVAS_SEMANTIC_MANIFEST_VERSION
+    objective: str = Field(min_length=1, max_length=500)
+    representation_summary: str = Field(min_length=1, max_length=600)
+    entities: list[CanvasSemanticEntityV1] = Field(default_factory=list, max_length=48)
+    relations: list[CanvasSemanticRelationV1] = Field(default_factory=list, max_length=96)
+    quantities: list[CanvasSemanticQuantityV1] = Field(default_factory=list, max_length=48)
+    presentation_steps: list[CanvasPresentationStepV1] = Field(default_factory=list, max_length=32)
+    interactions: list[CanvasSemanticInteractionV1] = Field(default_factory=list, max_length=32)
+    calculated_results: list[CanvasSemanticQuantityV1] = Field(default_factory=list, max_length=32)
+    visual_descriptions: list[str] = Field(default_factory=list, max_length=24)
+    current_state_schema: dict[str, str] = Field(default_factory=dict, max_length=24)
+    provenance: dict[str, str] = Field(default_factory=dict, max_length=12)
+
+    def bind_brief_digest(self, brief_digest: str) -> CanvasSemanticManifestV1:
+        """Produce the immutable final contract from trusted run-local provenance."""
+        payload = self.model_dump(mode="json")
+        provenance = dict(payload.get("provenance", {}))
+        provenance["brief_digest"] = brief_digest
+        payload.update(brief_digest=brief_digest, provenance=provenance)
+        return CanvasSemanticManifestV1.model_validate(payload)
+
+
 class CustomVisualPackageV1(BaseModel):
     """A bounded executable package admitted only to the opaque iframe runtime."""
 
@@ -141,11 +171,22 @@ class CustomVisualPackageV1(BaseModel):
             raise CustomVisualSecurityError("Custom visual dependency is outside the approved allowlist")
         if len(self.dependencies) != len(set(self.dependencies)):
             raise CustomVisualSecurityError("Custom visual dependencies must be unique")
-        for pattern in _FORBIDDEN_SOURCE_PATTERNS:
+        for pattern, capability in _FORBIDDEN_SOURCE_PATTERNS:
             if re.search(pattern, self.source, re.IGNORECASE):
-                raise CustomVisualSecurityError("Custom visual source uses a forbidden API")
+                raise CustomVisualSecurityError(f"CUSTOM_VISUAL_FORBIDDEN_API:{capability}")
         if "window.mount" not in self.source:
             raise CustomVisualSecurityError("Custom visual source must define window.mount")
+        # A HTML control appended below an SVG parent has no reliable layout or
+        # accessibility box in the opaque document.  This exact error is
+        # repairable by the model: mount controls in an HTML container, or use
+        # SVG-native controls with pointer/keyboard handling.
+        if (
+            re.search(r"document\.createElement\(\s*['\"]button['\"]\s*\)", self.source, re.IGNORECASE)
+            and re.search(r"\.parentNode\.appendChild\(\s*\w+\s*\)", self.source, re.IGNORECASE)
+        ):
+            raise CustomVisualInteractionLayoutError(
+                "CUSTOM_VISUAL_INTERACTION_CONTROL_NOT_RENDERABLE: mount declared controls in an HTML container, not an SVG parent"
+            )
         if not isinstance(self.parameter_schema.get("type", "object"), str):
             raise CustomVisualSecurityError("Custom visual parameter schema must be a JSON-schema object")
         return self

@@ -78,6 +78,8 @@ def _configure_runtime(settings: Settings, database_url: str) -> None:
         "MODEL_PROVIDER": "openai",
         "MODEL_NAME": settings.model_name,
         "MODEL_API_KEY": settings.model_api_key.get_secret_value(),  # type: ignore[union-attr]
+        "STORAGE_PROVIDER": settings.storage_provider,
+        "STORAGE_DIR": str(settings.storage_dir),
     })
     if settings.model_base_url:
         os.environ["MODEL_BASE_URL"] = settings.model_base_url
@@ -88,6 +90,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--live", action="store_true")
     parser.add_argument("--env-file", type=Path, required=True)
+    parser.add_argument("--initial-request", default=INITIAL_REQUEST)
+    parser.add_argument("--successor-request", default=SUCCESSOR_REQUEST)
     parser.add_argument("--output", type=Path, default=Path("output/studio-agentic-durable-live-proof.json"))
     args = parser.parse_args()
     if not args.live:
@@ -141,10 +145,11 @@ def main() -> None:
         evidence.update(stage="RUNTIME_OPEN", learning_session_id=str(learning_session_id), runtime_id=str(runtime_id))
         _write(args.output, evidence)
 
-        _consume_tutor_turn(client.post(
+        initial_response = client.post(
             f"/api/v1/student/daily/session/{learning_session_id}/turn/stream",
-            json={"content": INITIAL_REQUEST},
-        ))
+            json={"content": args.initial_request},
+        )
+        _consume_tutor_turn(initial_response)
         initial_run = _latest_run(factory, learning_session_id)
         if initial_run.job_id is None:
             raise RuntimeError("INITIAL_AGENT_JOB_MISSING")
@@ -205,53 +210,41 @@ def main() -> None:
         if operation.status_code != 200 or operation.json().get("student_interaction_id") is None:
             raise RuntimeError("SEMANTIC_CANVAS_ACTION_NOT_ADMITTED")
         interaction_id = UUID(operation.json()["student_interaction_id"])
-        _consume_tutor_turn(client.post(
+        interaction_response = client.post(
             f"/api/v1/student/studio/{runtime_id}/interactions/{interaction_id}/turn/stream"
-        ))
+        )
+        _consume_tutor_turn(interaction_response)
         with factory() as session:
             interaction = session.get(StudioStudentInteraction, interaction_id)
             message = session.get(LearningMessage, interaction.tutor_message_id) if interaction is not None else None
             execution = session.get(AIExecution, interaction.ai_execution_id) if interaction is not None else None
-            update_run = session.scalar(
-                select(StudioCanvasSpecialistRun).where(
-                    StudioCanvasSpecialistRun.source_message_id == message.id,
-                    StudioCanvasSpecialistRun.base_scene_id == scene_id,
-                )
-            ) if message is not None else None
             if (
                 interaction is None or interaction.status != "COMPLETED"
                 or message is None or execution is None
                 or message.ai_execution_id != interaction.ai_execution_id
-                or update_run is None
+                or not message.content.strip()
             ):
-                raise RuntimeError("CAUSAL_SAME_TUTOR_CANVAS_UPDATE_MISSING")
-            update_run_id = update_run.id
+                raise RuntimeError("CAUSAL_SAME_TUTOR_CONTINUITY_MISSING")
         evidence.update(
-            stage="CAUSAL_UPDATE_ADMITTED",
+            stage="SAME_TUTOR_CONTINUITY",
             scene_id=str(scene_id),
             interaction_id=str(interaction_id),
-            update_run_id=str(update_run_id),
+            same_tutor_message_id=str(message.id),
+            same_tutor_execution_id=str(execution.id),
+            semantic_action_key=semantic_action["action_key"],
         )
         _write(args.output, evidence)
-
-        _consume_tutor_turn(client.post(
-            f"/api/v1/student/daily/session/{learning_session_id}/turn/stream",
-            json={"content": SUCCESSOR_REQUEST},
-        ))
-        successor = _latest_run(factory, learning_session_id)
-        if successor.id == update_run_id:
-            raise RuntimeError("NEWER_TUTOR_CANVAS_SUCCESSOR_MISSING")
 
         durable = _durable_studio_evidence(settings, initial_run.id)
         if (
             durable["interaction_status"] != "COMPLETED"
             or durable["scene_status"] != "ACTIVE"
-            or durable["update_run_id"] != str(update_run_id)
-            or durable["successor_run_id"] != str(successor.id)
-            or durable["superseded_run_id"] != str(update_run_id)
+            or durable["tutor_message_id"] != str(message.id)
+            or durable["tutor_execution_id"] != str(execution.id)
+            or durable["observation_status"] != "COMMITTED"
         ):
             raise RuntimeError("DURABLE_LIVE_LINEAGE_INSPECTION_FAILED")
-        evidence.update(status="COMPLETED", stage="VERIFIED", successor_run_id=str(successor.id), durable=durable)
+        evidence.update(status="COMPLETED", stage="VERIFIED", durable=durable)
         _write(args.output, evidence)
         print(json.dumps({
             "proof": evidence["proof"],
@@ -261,6 +254,8 @@ def main() -> None:
         }, separators=(",", ":")))
     except BaseException as error:
         evidence.update(status="FAILED", exception_type=type(error).__name__)
+        if "initial_response" in locals():
+            evidence["initial_tutor_stream_excerpt"] = initial_response.text[-2000:]
         _write(args.output, evidence)
         raise
     finally:

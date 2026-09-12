@@ -9,6 +9,9 @@ from uuid import UUID
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from services.platform.storage import ObjectStorage
+from services.studio.custom_visual_builds import persist_custom_visual_build
+from services.studio.full_power_canvas import CustomVisualPackageV1
 
 from services.platform.db.models import (
     LearningMessage,
@@ -87,7 +90,7 @@ def agentic_scene_contract(
     }
 
 
-def accept_completed_canvas_run(session: Session, run_id, *, before_commit=None) -> StudioScene | None:
+def accept_completed_canvas_run(session: Session, run_id, *, storage: ObjectStorage | None = None, before_commit=None) -> StudioScene | None:
     """Accept one valid current Canvas completion without another model call."""
     with session.begin_nested():
         unguarded_run = session.get(StudioCanvasSpecialistRun, run_id)
@@ -114,6 +117,7 @@ def accept_completed_canvas_run(session: Session, run_id, *, before_commit=None)
             return _accept_completed_agentic_run_locked(
                 session,
                 run,
+                storage=storage,
                 before_commit=before_commit,
             )
         message = session.execute(select(LearningMessage).where(LearningMessage.id == run.source_message_id, LearningMessage.session_id == run.learning_session_id, LearningMessage.role == "tutor")).scalar_one_or_none()
@@ -227,6 +231,7 @@ def _accept_completed_agentic_run_locked(
     session: Session,
     run: StudioCanvasSpecialistRun,
     *,
+    storage: ObjectStorage | None = None,
     before_commit=None,
 ) -> StudioScene | None:
     """Settle a validated Agentic proposal through existing Studio state."""
@@ -314,6 +319,23 @@ def _accept_completed_agentic_run_locked(
         run.status, run.failure_metadata = "REJECTED", {"code": "PROPOSAL_TO_SCENE_INVALID"}
         return None
 
+    # New durable v3 writes never embed executable source in Studio state.
+    if any(block.type == "CUSTOM_VISUAL" and block.package is not None for block in scene_payload.blocks):
+        if storage is None:
+            run.status, run.failure_metadata = "REJECTED", {"code": "CUSTOM_VISUAL_STORAGE_UNAVAILABLE"}
+            return None
+        draft = scene_payload.model_dump(mode="json")
+        for block in draft["blocks"]:
+            if block.get("type") != "CUSTOM_VISUAL" or not isinstance(block.get("package"), dict):
+                continue
+            package = CustomVisualPackageV1.model_validate(block["package"])
+            build = persist_custom_visual_build(session, storage=storage, run=run, package=package)
+            block.pop("package", None)
+            block["custom_visual_build_id"] = str(build.id)
+            block["manifest_digest"] = build.manifest_digest
+        scene_payload = AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(draft)
+        contract = agentic_scene_contract(scene_payload, brief.model_dump(mode="json"))
+
     selections = _validated_reusable_selections(run.agent_execution_metadata)
     custom_blocks = [block for block in scene_payload.blocks if block.type == "CUSTOM_VISUAL"]
     if selections and len(custom_blocks) != 1:
@@ -327,6 +349,16 @@ def _accept_completed_agentic_run_locked(
     except ValueError:
         run.status, run.failure_metadata = "REJECTED", {"code": "REUSABLE_VISUAL_SELECTION_INVALID"}
         return None
+    if selections:
+        selected = session.get(VisualArtifactVersion, selected_artifact_version_id)
+        block = custom_blocks[0]
+        if (
+            selected is None
+            or block.custom_visual_build_id != str(selected.implementation_build_id)
+            or block.manifest_digest != (selected.technical_evidence or {}).get("manifest_digest")
+        ):
+            run.status, run.failure_metadata = "REJECTED", {"code": "REUSABLE_VISUAL_IMPLEMENTATION_LINEAGE_INVALID"}
+            return None
 
     state = StudioStateService(session)
     scene = state.accept_scene(
@@ -352,6 +384,25 @@ def _accept_completed_agentic_run_locked(
     )
     for block in scene_payload.blocks:
         if block.type == "CUSTOM_VISUAL":
+            if block.package is None:
+                # Reusable reference blocks still receive an instance row. The
+                # package stays only behind the Build resolver.
+                if selected_artifact_version_id is not None:
+                    version = session.get(VisualArtifactVersion, selected_artifact_version_id)
+                    if version is None:
+                        run.status, run.failure_metadata = "REJECTED", {"code": "REUSABLE_VISUAL_SELECTION_INVALID"}
+                        return None
+                    session.add(VisualArtifactInstance(
+                        artifact_version_id=version.id,
+                        studio_scene_id=scene.id,
+                        student_id=run.student_id,
+                        bound_parameters=dict(block.parameters),
+                        semantic_manifest=dict(version.manifest_contract),
+                        current_semantic_state={},
+                        locale=str(contract["locale"]),
+                        direction=str(contract["direction"]),
+                    ))
+                continue
             artifact_version_id = selected_artifact_version_id
             session.add(VisualArtifactBuild(
                 artifact_version_id=artifact_version_id,
@@ -427,7 +478,7 @@ def _validated_reusable_selections(value: object) -> list[dict[str, object]]:
         return []
     accepted: list[dict[str, object]] = []
     for selection in selections:
-        if not isinstance(selection, dict) or selection.get("mode") not in {"REUSE", "ADAPT"}:
+        if not isinstance(selection, dict) or selection.get("mode") != "REUSE":
             return []
         version_id, parameters = selection.get("version_id"), selection.get("parameters")
         if not isinstance(version_id, str) or not isinstance(parameters, dict):
@@ -437,11 +488,7 @@ def _validated_reusable_selections(value: object) -> list[dict[str, object]]:
 
 
 def _resolve_artifact_version_for_instance(session: Session, *, selection: dict[str, object] | None):
-    """Link REUSE or create the one immutable ADAPT fork at settlement.
-
-    CREATE intentionally returns None: its validated build remains history and
-    is not silently promoted into the reusable registry.
-    """
+    """Link a REUSE instance to its immutable approved implementation Build."""
     if selection is None:
         return None
     try:
@@ -454,37 +501,9 @@ def _resolve_artifact_version_for_instance(session: Session, *, selection: dict[
     artifact = session.get(VisualArtifact, source.artifact_id)
     if artifact is None or artifact.lifecycle_status not in {"VALIDATED", "TRUSTED"} or source.validation_status not in {"VALIDATED", "TRUSTED"}:
         raise ValueError("Selected reusable visual is not trusted for instantiation.")
-    if selection["mode"] == "REUSE":
-        return source.id
-    parameters = selection["parameters"]
-    properties = source.parameter_schema.get("properties", {})
-    if not isinstance(properties, dict) or not set(parameters) <= set(properties):
-        raise ValueError("Adapted reusable visual parameters are outside the declared schema.")
-    definition = dict(source.definition_payload)
-    definition["adapted_from_version_id"] = str(source.id)
-    definition["adaptation_parameters"] = dict(parameters)
-    sibling_count = session.scalar(
-        select(VisualArtifactVersion.version_number)
-        .where(VisualArtifactVersion.artifact_id == source.artifact_id)
-        .order_by(VisualArtifactVersion.version_number.desc())
-        .limit(1)
-    ) or 0
-    adapted = VisualArtifactVersion(
-        artifact_id=source.artifact_id,
-        parent_version_id=source.id,
-        version_number=int(sibling_count) + 1,
-        source_digest=sha256(json.dumps(definition, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest(),
-        runtime_contract_version=source.runtime_contract_version,
-        parameter_schema=dict(source.parameter_schema),
-        manifest_contract=dict(source.manifest_contract),
-        dependency_capabilities=list(source.dependency_capabilities),
-        definition_payload=definition,
-        validation_status="VALIDATED",
-        technical_evidence={"route": "ADAPT", "parent_version_id": str(source.id)},
-    )
-    session.add(adapted)
-    session.flush()
-    return adapted.id
+    if source.implementation_build_id is None:
+        raise ValueError("Selected reusable visual has no canonical Build.")
+    return source.id
 
 
 def _validate_generated_asset_lineage(

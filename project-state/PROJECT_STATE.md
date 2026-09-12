@@ -24,7 +24,7 @@ That baseline already proves:
 - disposable PostgreSQL Agentic lifecycle proof;
 - Clerk-independent production `StudioRendererHost` browser proof.
 
-The Product Owner has approved a new direction because the existing typed visual grammar remains an expressive ceiling. `FULL-POWER-CANVAS-01` is active in an isolated worktree from that baseline. The contract/sandbox/registry implementation is in progress; final real-provider and browser acceptance remains required.
+The Product Owner has approved a new direction because the existing typed visual grammar remains an expressive ceiling. `FULL-POWER-CANVAS-01` is active in an isolated worktree from that baseline. Immutable custom packages now live at the Build boundary; new Scenes retain only a Build reference plus bounded state, and reusable Versions resolve implementation only through the server-owned resolver. Focused contract, migration, PostgreSQL, and frontend checks pass. Fresh CREATE/REUSE/ADAPT browser evidence remains unrun because the disposable live journey terminates after Tutor admission and before its Canvas worker settles a Scene.
 
 ## Active decisions
 
@@ -67,7 +67,7 @@ Do not change without explicit Product Owner approval:
 
 ## Next recommended action
 
-Complete the reusable-agent routing and custom-browser proof, then run the compact final acceptance wave without merging or pushing until approval.
+Restore a persistent live-provider worker session, then run one fresh CREATE → promotion → REUSE → ADAPT browser acceptance wave. Do not merge or push until Product Owner approval.
 
 ## Critical references
 

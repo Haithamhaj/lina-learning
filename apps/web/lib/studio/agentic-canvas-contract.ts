@@ -288,13 +288,9 @@ function parseBlock(value: unknown): AgenticCanvasBlock | null {
     return { ...common, type: value.type, notation: "LATEX", prompt: value.prompt, constraints: value.constraints as string[] };
   }
   if (value.type === "CUSTOM_VISUAL") {
-    const common = parseCommonBlock(value, ["artifact_instance_id", "bridge_nonce", "package", "parameters"]);
-    const packageValue = parseCustomPackage(value.package);
-    if (!common || !identifier(value.artifact_instance_id) || typeof value.bridge_nonce !== "string" || !/^[A-Za-z0-9_-]{8,128}$/.test(value.bridge_nonce) || packageValue === null || !isRecord(value.parameters) || !Object.values(value.parameters).every((item) => ["string", "number", "boolean"].includes(typeof item))) return null;
-    const declaredEntities = new Set(packageValue.manifest.entities.map((item) => item.semantic_id));
-    const declaredActions = new Set(packageValue.manifest.interactions.map((item) => item.action));
-    if (common.elements.some((item) => !declaredEntities.has(item.id)) || common.allowed_actions.some((item) => !declaredActions.has(item))) return null;
-    return { ...common, type: value.type, artifact_instance_id: value.artifact_instance_id, bridge_nonce: value.bridge_nonce, package: packageValue, parameters: value.parameters as Record<string, string | number | boolean> };
+    const common = parseCommonBlock(value, ["artifact_instance_id", "bridge_nonce", "custom_visual_build_id", "manifest_digest", "parameters"]);
+    if (!common || !identifier(value.artifact_instance_id) || typeof value.bridge_nonce !== "string" || !/^[A-Za-z0-9_-]{8,128}$/.test(value.bridge_nonce) || typeof value.custom_visual_build_id !== "string" || !/^[0-9a-f-]{36}$/.test(value.custom_visual_build_id) || typeof value.manifest_digest !== "string" || !/^[a-f0-9]{64}$/.test(value.manifest_digest) || !isRecord(value.parameters) || !Object.values(value.parameters).every((item) => ["string", "number", "boolean"].includes(typeof item))) return null;
+    return { ...common, type: value.type, artifact_instance_id: value.artifact_instance_id, bridge_nonce: value.bridge_nonce, custom_visual_build_id: value.custom_visual_build_id, manifest_digest: value.manifest_digest, parameters: value.parameters as Record<string, string | number | boolean> };
   }
   const common = parseCommonBlock(value, ["studio_generated_asset_id"]);
   if (!common || !safeText(value.studio_generated_asset_id, 1, 64)) return null;

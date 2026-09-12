@@ -369,3 +369,38 @@ def create_custom_visual(
         package=package,
         parameters=parameters or {},
     )
+
+
+def create_reused_custom_visual(
+    *,
+    block_id: str,
+    meaning: str,
+    label: str,
+    artifact_instance_id: str,
+    bridge_nonce: str,
+    build_id: str,
+    manifest_digest: str,
+    manifest: CanvasSemanticManifestV1 | dict[str, object],
+    parameters: dict[str, str | int | float | bool] | None = None,
+) -> AgenticCanvasBlockV1:
+    """Create a reference-only instance of a server-authorized reusable Build."""
+    canonical_manifest = CanvasSemanticManifestV1.model_validate(manifest)
+    elements = [
+        AgenticCanvasElementV1(id=item.semantic_id, label=item.label, current_value=None)
+        for item in canonical_manifest.entities
+    ]
+    return CustomVisualBlockV1(
+        **_common(
+            block_id=block_id,
+            block_type="CUSTOM_VISUAL",
+            meaning=meaning,
+            label=label,
+            elements=elements,
+            allowed_actions=sorted({item.action for item in canonical_manifest.interactions}),
+        ),
+        artifact_instance_id=artifact_instance_id,
+        bridge_nonce=bridge_nonce,
+        custom_visual_build_id=build_id,
+        manifest_digest=manifest_digest,
+        parameters=parameters or {},
+    )

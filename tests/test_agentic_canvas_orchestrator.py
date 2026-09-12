@@ -21,8 +21,20 @@ def test_single_canvas_agent_uses_only_the_bounded_tool_registry() -> None:
     assert set(schemas["create_2d_scene"]["properties"]) >= {"objects", "relations"}
     assert set(schemas["create_diagram"]["properties"]) >= {"nodes", "edges"}
     assert set(schemas["create_text_interaction"]["properties"]) >= {"items", "groups", "relations"}
+    custom_schema = schemas["create_custom_visual"]
+    assert {"entities", "interactions", "source"} <= set(custom_schema["properties"])
+    assert "manifest" not in custom_schema["properties"]
+    assert "artifact_instance_id" not in custom_schema["properties"]
     code_tool = next(tool for tool in agent.tools if tool.name == "code_interpreter")
     assert code_tool.tool_config == {"type": "code_interpreter", "container": {"type": "auto"}}
+
+
+def test_agentic_canvas_deadline_allows_one_bounded_custom_visual_composition() -> None:
+    from datetime import timedelta
+
+    from services.studio.agent.admission import AGENTIC_CANVAS_DEADLINE
+
+    assert AGENTIC_CANVAS_DEADLINE == timedelta(minutes=5)
 
 
 def test_canvas_agent_instructions_make_hosted_tool_selection_semantic_and_bounded() -> None:
@@ -74,6 +86,32 @@ def test_canvas_agent_input_contains_only_the_tutor_authored_semantic_brief() ->
     assert payload == {"canvas_brief": brief.model_dump(mode="json"), "visual_learner_context": visual_context.model_dump(mode="json")}
     assert "student_id" not in json.dumps(payload)
     assert "personal_memory" not in json.dumps(payload)
+
+
+def test_runtime_skills_are_core_plus_deterministic_authorized_specialists() -> None:
+    from services.studio.agent.intelligence import selected_skill_names
+    from services.studio.canvas_brief import CanvasBriefV1, VisualLearnerContextV1
+
+    brief = CanvasBriefV1.model_validate({"version": "canvas-brief-v1", "subject_key": "SCIENCE", "objective": "Explain a continuously coupled changing system.", "student_request": "Move the light continuously.", "requested_representation": None, "facts": [], "relations": [], "quantities": [], "desired_student_action": "Move light while the linked geometry updates continuously.", "must_not_imply": [], "source_references": [], "locale": "ar", "direction": "rtl"})
+    context = VisualLearnerContextV1.model_validate({"version": "visual-learner-context-v1", "core_profile": {"age_years": 10, "grade_level": "5"}, "selected_personal_facts": []})
+
+    skills = selected_skill_names(brief, context)
+    assert {"full-power-routing.md", "visual-composition.md", "tool-selection.md"} <= set(skills)
+    assert {"diagrams-and-processes.md", "spatial-interaction.md", "bilingual-layout.md", "age-adaptive-visuals.md"} <= set(skills)
+    assert "custom-visual-runtime.md" in skills
+
+
+def test_model_visible_tool_descriptions_explain_typed_limits_and_create_escalation() -> None:
+    from services.studio.agent.orchestrator import build_canvas_agent
+
+    tools = {tool.name: tool.description for tool in build_canvas_agent(api_key="test-only-key", model="gpt-5.6-luna").tools if hasattr(tool, "description")}
+    assert "not a continuous simulation" in tools["create_2d_scene"].casefold()
+    assert "not simulation" in tools["create_diagram"].casefold()
+    assert "cannot invent geometry" in tools["create_math_board"].casefold()
+    assert "sandboxed" in tools["create_custom_visual"].casefold()
+    assert "instance values" in tools["instantiate_reusable_visual"].casefold()
+    from services.studio.agent.orchestrator import CANVAS_AGENT_INSTRUCTIONS
+    assert "never use create merely" in CANVAS_AGENT_INSTRUCTIONS.casefold()
 
 
 def test_agent_trace_records_actual_registered_tool_calls_without_arguments() -> None:
@@ -229,6 +267,7 @@ def test_composition_trace_keeps_only_bounded_metadata_for_code_interpreter(
     from services.studio.canvas_brief import CanvasBriefV1, VisualLearnerContextV1
 
     async def fake_run(*args, **kwargs):
+        assert kwargs["max_turns"] == 16
         context = kwargs["context"]
         context.registry.accept(create_math_input(
             block_id="calculated-input",
@@ -316,3 +355,136 @@ def test_composition_trace_keeps_only_bounded_metadata_for_code_interpreter(
     assert "private raw result" not in durable
     assert "code\"" not in durable
     assert "outputs" not in durable
+
+
+def test_custom_visual_validation_failure_is_retained_as_bounded_agent_metadata() -> None:
+    from types import SimpleNamespace
+
+    import pytest
+
+    from services.studio.agent.orchestrator import CanvasAgentRunContext, _create_custom_visual
+    from services.studio.agent.registry import CanvasBlockRegistry
+
+    context = CanvasAgentRunContext(registry=CanvasBlockRegistry())
+    with pytest.raises(ValueError):
+        _create_custom_visual(
+            SimpleNamespace(context=context),
+            block_id="coupled-lines",
+            meaning="Move both points together.",
+            label="Coupled slopes",
+            source="window.mount=(root)=>{root.textContent='safe'}",
+            entities=[],
+        )
+
+    assert context.tool_failures == [{
+        "tool": "create_custom_visual",
+        "reason": '{"code":"CUSTOM_VISUAL_MANIFEST_INVALID","missing_fields":["objective"]}',
+    }]
+
+
+def test_custom_visual_semantic_authoring_builds_the_canonical_package_envelope() -> None:
+    from types import SimpleNamespace
+
+    from services.studio.agent.orchestrator import CanvasAgentRunContext, _create_custom_visual
+    from services.studio.agent.registry import CanvasBlockRegistry
+
+    context = CanvasAgentRunContext(
+        registry=CanvasBlockRegistry(), brief_digest="b" * 64, brief_objective="Compare coupled slopes."
+    )
+    block = _create_custom_visual(
+        SimpleNamespace(context=context),
+        block_id="coupled-slopes", meaning="A continuously coupled slope comparison.", label="Coupled slopes",
+        source="window.mount=(root,params,bridge)=>{root.textContent=params.label}",
+        entities=[{
+            "semantic_id": "point-a", "kind": "point", "label": "A",
+            "educational_meaning": "A draggable point on a line from the origin.",
+            "visible_description": "Point A on the coordinate plane.",
+        }],
+        interactions=[{
+            "semantic_id": "point-a", "action": "MOVE", "meaning": "Move A and update its slope.",
+            "value_required": True,
+        }],
+        parameters={"label": "A"},
+    )
+
+    package = context.registry.blocks()[0].package.model_dump(mode="json")
+    assert context.registry.blocks()[0].artifact_instance_id == "coupled-slopes-artifact"
+    assert package["version"] == "custom-visual-package-v1"
+    assert package["manifest"]["brief_digest"] == "b" * 64
+    assert package["manifest"]["provenance"] == {"brief_digest": "b" * 64, "runtime_kind": "custom-visual"}
+    assert "student_id" not in str(package)
+
+
+def test_create_plan_omission_gets_one_toolless_coherence_repair(monkeypatch) -> None:
+    import asyncio
+    import json
+    from types import SimpleNamespace
+
+    from services.studio.agent.orchestrator import compose_canvas_scene_with_trace
+    from services.studio.agent.tools import create_custom_visual, create_math_input
+    from services.studio.canvas_brief import CanvasBriefV1, VisualLearnerContextV1
+
+    manifest = {
+        "version": "canvas-semantic-manifest-v1", "brief_digest": "a" * 64,
+        "objective": "Compare slopes.", "representation_summary": "A coupled slope visual.",
+        "entities": [{"semantic_id": "point-a", "kind": "point", "label": "A", "educational_meaning": "A draggable point.", "visible_description": "A point."}],
+        "relations": [], "quantities": [], "presentation_steps": [],
+        "interactions": [{"semantic_id": "point-a", "action": "MOVE", "meaning": "Move A.", "value_required": True}],
+        "calculated_results": [], "visual_descriptions": ["A coupled line."],
+        "current_state_schema": {}, "provenance": {"brief_digest": "a" * 64, "runtime_kind": "custom-visual"},
+    }
+    calls = []
+
+    def result_for(plan):
+        return SimpleNamespace(
+            final_output=plan, new_items=[],
+            context_wrapper=SimpleNamespace(usage=SimpleNamespace(
+                requests=1, input_tokens=10, output_tokens=5, total_tokens=15,
+                input_tokens_details=SimpleNamespace(cached_tokens=0),
+            )),
+        )
+
+    async def fake_run(agent, input, **kwargs):
+        calls.append((agent, input, kwargs))
+        if len(calls) == 1:
+            block = kwargs["context"].registry.accept(create_custom_visual(
+                block_id="coupled-slopes", meaning="Coupled slopes.", label="Coupled slopes",
+                artifact_instance_id="coupled-instance", bridge_nonce="nonce-123", dependencies=["native-svg-v1"],
+                source="window.mount=(root)=>{root.textContent='safe'}", manifest=manifest,
+                parameter_schema={"type": "object", "properties": {}},
+            ))
+            kwargs["context"].current_custom_candidate_block_id = block.block_id
+            kwargs["context"].registry.accept(create_math_input(
+                block_id="typed-answer", meaning="Choose a line.", label="Answer", prompt="Choose.", initial_value="", constraints=[],
+            ))
+            return result_for({
+                "version": "agentic-canvas-plan-v1", "objective": "Compare slopes.", "subject_key": "MATH",
+                "layout": "FOCUS", "palette": "COOL", "motion": "NONE",
+                "placements": [{"block_id": "typed-answer", "role": "INTERACTION", "order": 0, "span": "NORMAL"}], "reveal_order": [],
+            })
+        repair = json.loads(input)
+        assert agent.tools == []
+        assert kwargs["max_turns"] == 1
+        assert repair["reason"] == "PLAN_COMPOSITION_INCONSISTENT"
+        assert repair["current_custom_candidate_block_id"] == "coupled-slopes"
+        assert "source" not in json.dumps(repair)
+        return result_for({
+            "version": "agentic-canvas-plan-v1", "objective": "Compare slopes.", "subject_key": "MATH",
+            "layout": "FOCUS_SUPPORT", "palette": "COOL", "motion": "NONE",
+            "placements": [
+                {"block_id": "coupled-slopes", "role": "PRIMARY", "order": 0, "span": "FULL"},
+                {"block_id": "typed-answer", "role": "INTERACTION", "order": 1, "span": "NORMAL"},
+            ], "reveal_order": [],
+        })
+
+    monkeypatch.setattr("services.studio.agent.orchestrator.Runner.run", fake_run)
+    brief = CanvasBriefV1.model_validate({"version": "canvas-brief-v1", "subject_key": "MATH", "objective": "Compare slopes.", "student_request": "Compare slopes.", "requested_representation": None, "facts": [], "relations": [], "quantities": [], "desired_student_action": None, "must_not_imply": [], "source_references": [], "locale": "en", "direction": "ltr"})
+    context = VisualLearnerContextV1.model_validate({"version": "visual-learner-context-v1", "core_profile": {"age_years": 10, "grade_level": "5"}, "selected_personal_facts": []})
+
+    composition = asyncio.run(compose_canvas_scene_with_trace(brief=brief, visual_learner_context=context, api_key="test-only-key", model="gpt-5.6-luna"))
+
+    assert len(calls) == 2
+    assert composition.scene.version == "agentic-canvas-scene-v3"
+    assert composition.plan_repaired is True
+    assert composition.current_custom_candidate_block_id == "coupled-slopes"
+    assert composition.plan_block_ids == ("coupled-slopes", "typed-answer")

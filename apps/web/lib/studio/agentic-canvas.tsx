@@ -267,6 +267,8 @@ function CustomVisualSandbox(props: Pick<Props, "sceneId" | "sceneVersion" | "on
   const frame = useRef<HTMLIFrameElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
   const eventCount = useRef(0);
+  const [pkg, setPkg] = useState<any>(null);
+  useEffect(() => { let active = true; void fetch(`/api/v1/student/studio/scenes/${props.sceneId}/custom-visual-builds/${props.block.custom_visual_build_id}`).then((r) => r.ok ? r.json() : Promise.reject()).then((value) => { if (active) setPkg(value); }).catch(() => { if (active) setStatus("failed"); }); return () => { active = false; }; }, [props.sceneId, props.block.custom_visual_build_id]);
   useEffect(() => {
     const timeout = window.setTimeout(() => setStatus((current) => current === "loading" ? "failed" : current), 4500);
     const receive = (event: MessageEvent<unknown>) => {
@@ -277,16 +279,16 @@ function CustomVisualSandbox(props: Pick<Props, "sceneId" | "sceneVersion" | "on
       if (data.type === "ERROR") { setStatus("failed"); return; }
       if (data.type !== "EVENT" || eventCount.current >= 24 || typeof data.semantic_action !== "string" || typeof data.semantic_id !== "string") return;
       const action = data.semantic_action as AgenticCanvasAction;
-      const declared = props.block.package.manifest.interactions.find((item) => item.action === action && item.semantic_id === data.semantic_id);
+      const declared = pkg?.manifest?.interactions?.find((item: any) => item.action === action && item.semantic_id === data.semantic_id);
       if (!declared || !props.block.elements.some((item) => item.id === data.semantic_id) || (declared.value_required && typeof data.to_value !== "string")) return;
       eventCount.current += 1;
       nextOperation(props, props.block, action, { elementId: data.semantic_id, fromValue: typeof data.from_value === "string" ? data.from_value : undefined, toValue: typeof data.to_value === "string" ? data.to_value : undefined });
     };
     window.addEventListener("message", receive);
     return () => { window.clearTimeout(timeout); window.removeEventListener("message", receive); };
-  }, [props.block, props.sceneId, props.sceneVersion]);
+  }, [props.block, props.sceneId, props.sceneVersion, pkg]);
   return <section className="overflow-hidden rounded-xl border border-slate-200 bg-white" data-custom-visual-sandbox={status}>
-    <iframe ref={frame} title={props.block.title ?? "Interactive learning visual"} sandbox="allow-scripts" referrerPolicy="no-referrer" className="min-h-[24rem] w-full border-0" srcDoc={customSandboxDocument(props.block.package.source, props.block.parameters, props.block.bridge_nonce)}/>
+    {pkg ? <iframe ref={frame} title={props.block.title ?? "Interactive learning visual"} sandbox="allow-scripts" referrerPolicy="no-referrer" className="min-h-[24rem] w-full border-0" srcDoc={customSandboxDocument(pkg.source, props.block.parameters, props.block.bridge_nonce)}/> : null}
     {status === "failed" ? <p role="alert" className="p-3 text-sm text-rose-900">This visual could not run safely. Tutor chat is still available.</p> : null}
   </section>;
 }

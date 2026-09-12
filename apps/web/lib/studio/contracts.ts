@@ -206,7 +206,7 @@ export type AgenticCanvasBlock =
     })
   | (AgenticCanvasBlockBase & { type: "MATH_INPUT"; notation: "LATEX"; prompt: string; constraints: string[] })
   | (AgenticCanvasBlockBase & { type: "IMAGE"; studio_generated_asset_id: string })
-  | (AgenticCanvasBlockBase & { type: "CUSTOM_VISUAL"; artifact_instance_id: string; bridge_nonce: string; package: CustomVisualPackage; parameters: Record<string, string | number | boolean> });
+  | (AgenticCanvasBlockBase & { type: "CUSTOM_VISUAL"; artifact_instance_id: string; bridge_nonce: string; custom_visual_build_id: string; manifest_digest: string; parameters: Record<string, string | number | boolean> });
 
 export type AgenticCanvasPresentation = {
   layout: "FOCUS" | "STACK" | "SPLIT" | "GRID" | "FOCUS_SUPPORT" | "OVERLAY";

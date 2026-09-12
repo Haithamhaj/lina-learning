@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.platform.auth import AuthenticatedPrincipal, UserRole, require_role
-from services.platform.db.models import StudioCanvasSpecialistRun
+from services.platform.db.models import StudioCanvasSpecialistRun, StudioScene
 from services.platform.db.session import get_session
 from services.platform.storage import ObjectStorage, StorageError, create_object_storage
 from services.platform.student_identity import (
@@ -22,6 +22,7 @@ from services.platform.student_identity import (
 )
 from services.studio.feed import StudioEventFeed
 from services.studio.generated_assets import owned_generated_asset, read_generated_asset
+from services.studio.custom_visual_builds import resolve_custom_visual_build, CustomVisualBuildResolutionError
 from services.studio.protocol import (
     StudioCursorConflict,
     StudioOperationConflict,
@@ -191,6 +192,20 @@ def get_studio_generated_asset(
             "X-Content-Type-Options": "nosniff",
         },
     )
+
+
+@router.get("/scenes/{scene_id}/custom-visual-builds/{build_id}")
+def get_custom_visual_build(scene_id: UUID, build_id: UUID, principal: AuthenticatedPrincipal = Depends(require_role(UserRole.STUDENT)), storage: ObjectStorage = Depends(get_studio_object_storage), session: Session = Depends(get_session)) -> dict[str, object]:
+    """Return only the server-authorized immutable package for this runtime."""
+    student_id = _student_id(session, principal)
+    scene = session.get(StudioScene, scene_id)
+    if scene is None or scene.student_id != student_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Studio resource not found.")
+    try:
+        resolved = resolve_custom_visual_build(session, storage=storage, build_id=build_id, student_id=student_id, runtime_id=scene.studio_runtime_id)
+    except CustomVisualBuildResolutionError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Studio resource not found.") from None
+    return resolved.package.model_dump(mode="json")
 
 
 @router.post("/{runtime_id}/operations", response_model=StudioOperationResponse)

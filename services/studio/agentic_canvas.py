@@ -271,11 +271,19 @@ class CustomVisualBlockV1(AgenticCanvasBlockV1):
     type: Literal["CUSTOM_VISUAL"]
     artifact_instance_id: str = Field(min_length=1, max_length=64, pattern=_SEMANTIC_ID)
     bridge_nonce: str = Field(min_length=8, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")
-    package: CustomVisualPackageV1
+    # Package exists only in the pre-settlement Agent proposal. New durable v3
+    # Scenes replace it with the server-owned immutable Build identity.
+    package: CustomVisualPackageV1 | None = None
+    custom_visual_build_id: str | None = Field(default=None, min_length=36, max_length=36)
+    manifest_digest: str | None = Field(default=None, min_length=64, max_length=64, pattern=r"^[a-f0-9]{64}$")
     parameters: dict[str, str | int | float | bool] = Field(default_factory=dict, max_length=32)
 
     @model_validator(mode="after")
     def manifest_matches_block(self) -> "CustomVisualBlockV1":
+        if self.package is None:
+            if self.custom_visual_build_id is None or self.manifest_digest is None:
+                raise ValueError("Durable custom visual blocks require a build and manifest reference")
+            return self
         manifest: CanvasSemanticManifestV1 = self.package.manifest
         manifest_ids = {item.semantic_id for item in manifest.entities}
         element_ids = {item.id for item in self.elements}
@@ -414,37 +422,60 @@ class AgenticCanvasActionV1(BaseModel):
     step_id: str | None = Field(default=None, min_length=1, max_length=64)
 
 
-def build_agentic_tutor_projection(*, objective: str, subject_key: str, scene_status: str, blocks: list[dict[str, object]], actions: list[AgenticCanvasActionV1]) -> dict[str, object]:
+def build_agentic_tutor_projection(
+    *,
+    objective: str,
+    subject_key: str,
+    scene_status: str,
+    blocks: list[dict[str, object]],
+    actions: list[AgenticCanvasActionV1],
+    resolved_custom_manifests: dict[str, CanvasSemanticManifestV1 | dict[str, object]] | None = None,
+) -> dict[str, object]:
     """Return only durable semantic state; browser/layout details never enter Tutor context."""
     parsed_blocks = [TypeAdapter(TypedAgenticCanvasBlockV1).validate_python(block) for block in blocks]
+    resolved_custom_manifests = resolved_custom_manifests or {}
+
+    def custom_manifest(block: CustomVisualBlockV1) -> CanvasSemanticManifestV1:
+        if block.package is not None:
+            return block.package.manifest
+        resolved = resolved_custom_manifests.get(block.block_id)
+        if resolved is None:
+            raise ValueError("Resolved canonical Manifest is required for a reference custom visual")
+        return (
+            resolved
+            if isinstance(resolved, CanvasSemanticManifestV1)
+            else CanvasSemanticManifestV1.model_validate(resolved)
+        )
+
+    def projected_block(block: TypedAgenticCanvasBlockV1) -> dict[str, object]:
+        result: dict[str, object] = {
+            "block_id": block.block_id,
+            "type": block.type,
+            "meaning": block.meaning,
+            "elements": [element.model_dump() for element in block.elements],
+        }
+        if isinstance(block, CustomVisualBlockV1):
+            manifest = custom_manifest(block)
+            result["semantic_manifest"] = {
+                "objective": manifest.objective,
+                "representation_summary": manifest.representation_summary,
+                "entities": [item.model_dump() for item in manifest.entities],
+                "relations": [item.model_dump() for item in manifest.relations],
+                "quantities": [item.model_dump() for item in manifest.quantities],
+                "presentation_steps": [item.model_dump() for item in manifest.presentation_steps],
+                "interactions": [item.model_dump() for item in manifest.interactions],
+                "calculated_results": [item.model_dump() for item in manifest.calculated_results],
+                "visual_descriptions": list(manifest.visual_descriptions),
+                "provenance": dict(manifest.provenance),
+            }
+        return result
+
     return {
         "version": "agentic-canvas-tutor-projection-v1",
         "scene_objective": objective,
         "subject": subject_key,
         "scene_status": scene_status,
-        "blocks": [
-            {
-                "block_id": block.block_id,
-                "type": block.type,
-                "meaning": block.meaning,
-                "elements": [element.model_dump() for element in block.elements],
-                **({
-                    "semantic_manifest": {
-                        "objective": block.package.manifest.objective,
-                        "representation_summary": block.package.manifest.representation_summary,
-                        "entities": [item.model_dump() for item in block.package.manifest.entities],
-                        "relations": [item.model_dump() for item in block.package.manifest.relations],
-                        "quantities": [item.model_dump() for item in block.package.manifest.quantities],
-                        "presentation_steps": [item.model_dump() for item in block.package.manifest.presentation_steps],
-                        "interactions": [item.model_dump() for item in block.package.manifest.interactions],
-                        "calculated_results": [item.model_dump() for item in block.package.manifest.calculated_results],
-                        "visual_descriptions": list(block.package.manifest.visual_descriptions),
-                        "provenance": dict(block.package.manifest.provenance),
-                    }
-                } if isinstance(block, CustomVisualBlockV1) else {}),
-            }
-            for block in parsed_blocks
-        ],
+        "blocks": [projected_block(block) for block in parsed_blocks],
         "current_focus": None,
         "recent_student_actions": [
             {"action": action.action, "block_id": action.block_id, "element_id": action.element_id,

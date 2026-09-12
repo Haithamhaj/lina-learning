@@ -36,6 +36,7 @@ from services.studio.agent.admission import (
 )
 from services.studio.agent.orchestrator import (
     AgenticCanvasCompositionResult,
+    CustomVisualCandidateMissingError,
     HostedGeneratedImage,
     compose_canvas_scene_with_trace,
 )
@@ -88,6 +89,9 @@ def register_agentic_canvas_handlers(
         except Exception as error:
             code, retryable = _classify_agent_failure(error)
             metadata = {"code": code, "provider_attempt": execution.provider_attempt}
+            if isinstance(error, CustomVisualCandidateMissingError):
+                metadata["custom_visual_tool_failures"] = list(error.tool_failures)
+                metadata["custom_visual_model_turns"] = list(error.model_turns)
             if retryable and execution.provider_attempt < execution.provider_max_attempts:
                 _record_retryable_failure(session_factory, execution.run_id, metadata)
                 raise
@@ -141,6 +145,10 @@ def register_agentic_canvas_handlers(
                         or (active is None and (run.base_scene_id is not None or run.base_scene_version != 0))
                         or (active is not None and (active.id != run.base_scene_id or active.scene_version != run.base_scene_version))
                         or newest is None or newest.id != execution.message_id):
+                    # A late result is never rendered, but its bounded trace
+                    # remains operational evidence for diagnosis/replay review.
+                    if isinstance(composition, AgenticCanvasCompositionResult):
+                        run.agent_execution_metadata = agent_trace
                     run.status, run.failure_metadata, run.completed_at = "REJECTED", {"code": "STALE_AGENTIC_CANVAS_RESULT"}, datetime.now(UTC)
                     return {"run_id": str(run.id), "run_status": run.status}
                 if generated_images and storage is None:
@@ -220,7 +228,7 @@ def register_agentic_canvas_handlers(
         if has_snapshot:
             try:
                 with session_factory.begin() as acceptance_session:
-                    accepted = accept_completed_canvas_run(acceptance_session, execution.run_id)
+                    accepted = accept_completed_canvas_run(acceptance_session, execution.run_id, storage=storage)
                     if accepted is not None:
                         durable_result["scene_id"] = str(accepted.id)
             except Exception:
@@ -328,7 +336,13 @@ def _reusable_visuals_for_agent(session: Session) -> dict[str, dict[str, object]
             "semantic_purpose": artifact.semantic_purpose,
             "runtime_kind": artifact.runtime_kind,
             "parameter_schema": dict(version.parameter_schema),
-            "definition": dict(version.definition_payload),
+            # This application-only context deliberately contains no source.
+            # The instantiate tool converts the selected Version to a
+            # reference-only Scene block; execution resolves the immutable
+            # Build through the server-owned resolver.
+            "implementation_build_id": str(version.implementation_build_id) if version.implementation_build_id else None,
+            "manifest_digest": (version.technical_evidence or {}).get("manifest_digest"),
+            "manifest_contract": dict(version.manifest_contract),
         }
         for version, artifact in rows
     }

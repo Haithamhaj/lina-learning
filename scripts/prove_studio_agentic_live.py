@@ -37,7 +37,7 @@ from services.studio.agent.orchestrator import (
     AgenticCanvasCompositionResult,
     compose_canvas_scene_with_trace,
 )
-from services.studio.agentic_canvas import AgenticCanvasSceneV1
+from services.studio.agentic_canvas import AGENTIC_CANVAS_SCENE_ADAPTER, AgenticCanvasScene
 from services.studio.canvas_brief import CanvasBriefV1, VisualLearnerContextV1, audit_canvas_brief
 from services.studio.process_production_acceptance import agentic_scene_contract
 from services.studio.tutor_context import StudioTutorWorkspaceContext
@@ -241,7 +241,7 @@ def _agent_metadata(composition: AgenticCanvasCompositionResult) -> dict[str, ob
     }
 
 
-def _scene_metadata(scene: AgenticCanvasSceneV1, brief: CanvasBriefV1) -> dict[str, object]:
+def _scene_metadata(scene: AgenticCanvasScene, brief: CanvasBriefV1) -> dict[str, object]:
     contract = agentic_scene_contract(scene, brief.model_dump(mode="json"))
     block_types = [block.type for block in scene.blocks]
     return {
@@ -260,7 +260,7 @@ def semantic_action_for_scene(
 ) -> dict[str, object]:
     """Select one real Tutor-triggering action exposed by a composed Scene."""
 
-    scene = AgenticCanvasSceneV1.model_validate(scene_payload)
+    scene = AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(scene_payload)
     for action_key in ("SELECT", "SUBMIT"):
         for block in scene.blocks:
             if action_key not in block.allowed_actions:
@@ -624,7 +624,7 @@ async def run_live(
             and durable["superseded_run_id"] == durable["update_run_id"]
         )
         _append_result(results, _record("LIVE-11", passed=update_passed, run_id=durable["run_id"], update_run_id=durable["update_run_id"], successor_run_id=durable["successor_run_id"], superseded_run_id=durable["superseded_run_id"], update_requested=durable["update_run_id"] is not None, stale_fence_observed=durable["superseded_run_id"] == durable["update_run_id"]), on_progress)
-    replayed = AgenticCanvasSceneV1.model_validate(json.loads(json.dumps(math_scene.model_dump(mode="json"))))
+    replayed = AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(json.loads(json.dumps(math_scene.model_dump(mode="json"))))
     _append_result(results, _record("LIVE-12", passed=replayed == math_scene, scene_contract=replayed.version, scene_digest=_digest(replayed.model_dump(mode="json"))), on_progress)
     return {
         "proof": "STUDIO-AGENTIC-01",

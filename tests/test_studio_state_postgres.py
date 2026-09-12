@@ -846,6 +846,26 @@ def test_scene_capacity_and_injected_snapshot_failure_roll_back_atomically(
         ) == runtime
 
 
+def test_scene_acceptance_event_uses_the_scene_payload_capacity(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """The immutable acceptance event carries the same seed that Scene accepts."""
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "scene-event-capacity")
+        learning_session = _session(session, student)
+        service = StudioStateService(session)
+        service.get_or_create_runtime(student_id=student.id, learning_session_id=learning_session.id)
+        # This is intentionally too large for an ordinary event but valid for
+        # the Scene contract.  Scene acceptance persists this exact seed in its
+        # immutable initial event for replay.
+        scene = service.accept_scene(
+            _scene_command(student, learning_session, seed_payload={"label": "x" * 12_000})
+        )
+        event = session.scalar(select(StudioEvent).where(StudioEvent.scene_id == scene.id))
+        assert event is not None
+        assert event.payload["scene_seed"] == {"label": "x" * 12_000}
+
+
 def test_source_message_and_segment_cross_scope_are_rejected(postgres_session_factory: sessionmaker[Session]) -> None:
     with postgres_session_factory.begin() as session:
         primary = _student(session, "source-primary")

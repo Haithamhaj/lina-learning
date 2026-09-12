@@ -21,7 +21,12 @@ from services.platform.db.models import (
 from services.studio.agentic_canvas import (
     AgenticCanvasActionV1,
     AGENTIC_CANVAS_SCENE_ADAPTER,
+    CustomVisualBlockV1,
     build_agentic_tutor_projection,
+)
+from services.studio.custom_visual_builds import (
+    CustomVisualBuildResolutionError,
+    CustomVisualBuildResolver,
 )
 from services.studio.service import TUTOR_OBSERVATION_FAILURE_CODES, StudioStateService
 from services.studio.subjects import (
@@ -328,6 +333,23 @@ def _selected_visual(session, runtime, snapshot, capability):
         if capability.activity_key == agentic_canvas.ACTIVITY_KEY:
             current = snapshot.state_payload.get(agentic_canvas.ACTIVITY_KEY, seed)
             parsed_scene = AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(current)
+            resolved_custom_manifests: dict[str, object] = {}
+            resolver: CustomVisualBuildResolver | None = None
+            for block in parsed_scene.blocks:
+                if not isinstance(block, CustomVisualBlockV1) or block.package is not None:
+                    continue
+                if block.custom_visual_build_id is None:
+                    return None
+                resolver = resolver or CustomVisualBuildResolver()
+                resolved = resolver.resolve(
+                    session,
+                    build_id=UUID(block.custom_visual_build_id),
+                    student_id=runtime.student_id,
+                    runtime_id=runtime.id,
+                )
+                if block.manifest_digest != resolved.manifest_digest:
+                    return None
+                resolved_custom_manifests[block.block_id] = resolved.package.manifest
             actions: list[AgenticCanvasActionV1] = []
             for event in session.scalars(
                 select(StudioEvent)
@@ -352,10 +374,11 @@ def _selected_visual(session, runtime, snapshot, capability):
                 scene_status=str(snapshot.state_payload["scene_status"]),
                 blocks=[block.model_dump(mode="json") for block in parsed_scene.blocks],
                 actions=actions,
+                resolved_custom_manifests=resolved_custom_manifests,
             )
         projector = visual.project_visual if capability.activity_key == visual.ACTIVITY_KEY else process_production.project_visual
         return projector(seed, snapshot.state_payload.get(capability.activity_key, {}))
-    except (ValueError, TypeError, KeyError):
+    except (ValueError, TypeError, KeyError, CustomVisualBuildResolutionError):
         return None
 
 

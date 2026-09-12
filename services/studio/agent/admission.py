@@ -23,7 +23,10 @@ from services.studio.canvas_brief import CanvasBriefContractError, parse_canvas_
 
 AGENTIC_CANVAS_COMPOSE_JOB = "studio.agentic_canvas.compose.v1"
 AGENTIC_CANVAS_CAPABILITY_IDENTITY = "agentic-canvas-v1"
-AGENTIC_CANVAS_DEADLINE = timedelta(minutes=2)
+# A bounded CREATE may legitimately use registry inspection, exact truth tools,
+# package construction, and a final plan.  Keep the deadline finite but long
+# enough for one such provider turn to settle.
+AGENTIC_CANVAS_DEADLINE = timedelta(minutes=5)
 AGENTIC_CANVAS_SCENE_SCHEMA_VERSION = "agentic-canvas-scene-v3"
 
 

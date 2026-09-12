@@ -1796,6 +1796,9 @@ class VisualArtifactVersion(Base):
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     artifact_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("visual_artifacts.id", ondelete="RESTRICT"), nullable=False)
     parent_version_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("visual_artifact_versions.id", ondelete="RESTRICT"), nullable=True)
+    # New Full-Power reuse resolves executable implementation through this
+    # immutable Build reference; definition_payload is descriptive only.
+    implementation_build_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("visual_artifact_builds.id", ondelete="RESTRICT"), nullable=True)
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     source_digest: Mapped[str] = mapped_column(String(64), nullable=False)
     runtime_contract_version: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -1821,6 +1824,10 @@ class VisualArtifactBuild(Base):
     artifact_version_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("visual_artifact_versions.id", ondelete="SET NULL"), nullable=True)
     source_digest: Mapped[str] = mapped_column(String(64), nullable=False)
     bundle_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    package_storage_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    package_content_type: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    manifest_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    manifest_metadata: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     technical_metadata: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

@@ -33,7 +33,7 @@ def _manifest() -> dict[str, object]:
 def test_custom_visual_rejects_network_source_before_a_sandbox_exists() -> None:
     from services.studio.full_power_canvas import CustomVisualPackageV1, CustomVisualSecurityError
 
-    with pytest.raises(ValidationError, match="forbidden API"):
+    with pytest.raises(ValidationError, match="CUSTOM_VISUAL_FORBIDDEN_API:fetch"):
         CustomVisualPackageV1.model_validate({
             "version": "custom-visual-package-v1",
             "runtime_kind": "custom-visual",
@@ -41,6 +41,19 @@ def test_custom_visual_rejects_network_source_before_a_sandbox_exists() -> None:
             "source": "window.mount = () => fetch('https://example.test')",
             "manifest": _manifest(),
             "parameter_schema": {"type": "object", "properties": {}},
+        })
+
+
+def test_custom_visual_rejects_html_controls_appended_to_svg_parent() -> None:
+    """A declared choice must be visible and usable in the opaque sandbox."""
+    from services.studio.full_power_canvas import CustomVisualPackageV1
+
+    with pytest.raises(ValidationError, match="CONTROL_NOT_RENDERABLE"):
+        CustomVisualPackageV1.model_validate({
+            "version": "custom-visual-package-v1", "runtime_kind": "custom-visual",
+            "dependencies": ["native-svg-v1"],
+            "source": "window.mount=(root)=>{const svg=document.createElementNS('x','svg');root.appendChild(svg);const b=document.createElement('button');svg.parentNode.appendChild(b)}",
+            "manifest": _manifest(), "parameter_schema": {"type": "object", "properties": {}},
         })
 
 
@@ -111,6 +124,64 @@ def test_custom_package_materializes_only_as_a_v3_agentic_scene() -> None:
     assert scene.version == "agentic-canvas-scene-v3"
 
 
+def test_create_candidate_requires_a_coherent_registered_final_plan() -> None:
+    """CREATE may supersede candidates, but cannot silently fall back to typed blocks."""
+    from services.studio.agent.registry import (
+        CanvasBlockRegistry,
+        PlanCompositionInconsistencyError,
+    )
+    from services.studio.agent.tools import create_custom_visual, create_math_input
+    from services.studio.agentic_canvas import AgenticCanvasPlanV1
+
+    registry = CanvasBlockRegistry()
+    earlier = registry.accept(create_custom_visual(
+        block_id="earlier-custom", meaning="An earlier coupled view.", label="Earlier",
+        artifact_instance_id="earlier-instance", bridge_nonce="nonce-123", dependencies=["native-svg-v1"],
+        source="window.mount=(root)=>{root.textContent='earlier'}", manifest=_manifest(),
+        parameter_schema={"type": "object", "properties": {}},
+    ))
+    current = registry.accept(create_custom_visual(
+        block_id="current-custom", meaning="The selected coupled view.", label="Current",
+        artifact_instance_id="current-instance", bridge_nonce="nonce-456", dependencies=["native-svg-v1"],
+        source="window.mount=(root)=>{root.textContent='current'}", manifest=_manifest(),
+        parameter_schema={"type": "object", "properties": {}},
+    ))
+    registry.accept(create_math_input(
+        block_id="typed-support", meaning="A supporting answer.", label="Answer",
+        prompt="Choose the steeper line.", initial_value="", constraints=[],
+    ))
+
+    def plan(*block_ids: str) -> AgenticCanvasPlanV1:
+        return AgenticCanvasPlanV1.model_validate({
+            "version": "agentic-canvas-plan-v1", "objective": "Compare slopes.", "subject_key": "MATH",
+            "layout": "FOCUS_SUPPORT", "palette": "COOL", "motion": "NONE",
+            "placements": [
+                {"block_id": block_id, "role": "PRIMARY" if index == 0 else "SUPPORT", "order": index, "span": "FULL" if index == 0 else "NORMAL"}
+                for index, block_id in enumerate(block_ids)
+            ],
+            "reveal_order": [],
+        })
+
+    with pytest.raises(PlanCompositionInconsistencyError, match="PLAN_COMPOSITION_INCONSISTENT"):
+        registry.materialize_plan(plan("typed-support"), current_custom_candidate_block_id=current.block_id)
+
+    repaired = registry.materialize_plan(
+        plan(current.block_id, "typed-support"),
+        current_custom_candidate_block_id=current.block_id,
+    )
+    assert repaired.version == "agentic-canvas-scene-v3"
+    assert [block.block_id for block in repaired.blocks] == [current.block_id, "typed-support"]
+
+    with pytest.raises(ValueError, match="not produced by a registered tool"):
+        registry.materialize_plan(
+            plan(current.block_id, "unregistered-custom"),
+            current_custom_candidate_block_id=current.block_id,
+        )
+
+    # The current candidate supersedes the earlier valid package; it is not required.
+    assert earlier.block_id not in {block.block_id for block in repaired.blocks}
+
+
 def test_tutor_projection_exposes_manifest_without_generated_source() -> None:
     from services.studio.agent.tools import create_custom_visual
     from services.studio.agentic_canvas import build_agentic_tutor_projection
@@ -129,6 +200,37 @@ def test_tutor_projection_exposes_manifest_without_generated_source() -> None:
     assert "window.mount" not in encoded
 
 
+def test_tutor_projection_for_reference_custom_visual_uses_resolved_manifest() -> None:
+    """A settled Scene carries a build reference, never generated implementation."""
+    from services.studio.agentic_canvas import build_agentic_tutor_projection
+
+    block = {
+        "block_id": "fraction-custom",
+        "type": "CUSTOM_VISUAL",
+        "meaning": "Move the exact blue fraction marker.",
+        "title": "Fraction comparison",
+        "accessibility": {"text_equivalent": "A movable fraction.", "aria_label": None},
+        "allowed_actions": ["MOVE"],
+        "elements": [{"id": "fraction-a", "label": "one half", "current_value": "1/2"}],
+        "artifact_instance_id": "fraction-instance",
+        "bridge_nonce": "nonce-123",
+        "custom_visual_build_id": "555f790a-c452-49df-b009-b0178a403783",
+        "manifest_digest": "b" * 64,
+        "parameters": {"label": "1/2"},
+    }
+    projection = build_agentic_tutor_projection(
+        objective="Compare fractions.",
+        subject_key="MATH",
+        scene_status="ACTIVE",
+        blocks=[block],
+        actions=[],
+        resolved_custom_manifests={block["block_id"]: _manifest()},
+    )
+
+    assert projection["blocks"][0]["semantic_manifest"]["representation_summary"].startswith("A movable")
+    assert "package" not in str(projection)
+
+
 def test_reusable_custom_visual_is_instantiated_from_a_version_without_exposing_its_source() -> None:
     from services.studio.agent.orchestrator import CanvasAgentRunContext, _instantiate_reusable_visual
     from services.studio.agent.registry import CanvasBlockRegistry
@@ -141,7 +243,9 @@ def test_reusable_custom_visual_is_instantiated_from_a_version_without_exposing_
                 "semantic_purpose": "Compare exact fractions on a shared ruler.",
                 "runtime_kind": "custom-visual",
                 "parameter_schema": {"type": "object", "properties": {"left": {"type": "string"}}},
-                "definition": {"dependencies": ["native-svg-v1"], "source": "window.mount=(root,params,bridge)=>{root.textContent=params.left}"},
+                "implementation_build_id": "555f790a-c452-49df-b009-b0178a403783",
+                "manifest_digest": "b" * 64,
+                "manifest_contract": _manifest(),
             }
         },
     )
@@ -151,8 +255,12 @@ def test_reusable_custom_visual_is_instantiated_from_a_version_without_exposing_
 
     response = _instantiate_reusable_visual(
         Wrapper(), version_id="version-1", block_id="reused-ruler", meaning="Compare exact fractions.", label="Shared fraction ruler",
-        artifact_instance_id="reused-instance", bridge_nonce="nonce-123", manifest_json=__import__("json").dumps(_manifest()), parameters_json='{"left":"1/2"}', mode="REUSE",
+        artifact_instance_id="reused-instance", bridge_nonce="nonce-123", parameters={"left": "1/2"}, mode="REUSE",
     )
     assert response["type"] == "CUSTOM_VISUAL"
     assert context.reusable_selections[0]["mode"] == "REUSE"
     assert "window.mount" not in str(response)
+    assert "package" not in response
+    block = next(block for block in context.registry.blocks() if block.block_id == "reused-ruler")
+    assert block.package is None
+    assert block.custom_visual_build_id == "555f790a-c452-49df-b009-b0178a403783"

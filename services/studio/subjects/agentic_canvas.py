@@ -95,11 +95,14 @@ def validate_action(payload: Mapping[str, object]) -> ValidationResult:
         if element is None:
             raise ValueError("Agentic Canvas action references an unknown element.")
     if isinstance(block, CustomVisualBlockV1):
-        declared = next((item for item in block.package.manifest.interactions if item.semantic_id == action.element_id and item.action == action.action), None)
-        if declared is None:
-            raise ValueError("Custom Canvas action is not declared by its Semantic Manifest.")
-        if declared.value_required and action.to_value is None:
-            raise ValueError("Custom Canvas action requires a semantic value.")
+        # Durable reference scenes retain the declared action surface; the
+        # server resolver verifies the immutable Manifest before delivery.
+        if block.package is not None:
+            declared = next((item for item in block.package.manifest.interactions if item.semantic_id == action.element_id and item.action == action.action), None)
+            if declared is None:
+                raise ValueError("Custom Canvas action is not declared by its Semantic Manifest.")
+            if declared.value_required and action.to_value is None:
+                raise ValueError("Custom Canvas action requires a semantic value.")
     if action.action in {"MOVE", "SET_VALUE", "CONNECT"}:
         if element is None or action.to_value is None:
             raise ValueError("Agentic Canvas mutation requires an element and semantic value.")
