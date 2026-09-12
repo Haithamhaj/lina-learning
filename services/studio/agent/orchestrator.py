@@ -572,6 +572,9 @@ def _custom_visual_error_payload(error: Exception) -> dict[str, object]:
         "code": "CUSTOM_VISUAL_MANIFEST_INVALID",
         "missing_fields": fields or ["semantic_manifest"],
     }
+    messages = _validation_messages(error)
+    if messages:
+        payload["validation_messages"] = messages
     if not fields:
         # ValueError validators do not expose Pydantic locations. Their message
         # is still an actionable semantic constraint and contains no source or
@@ -608,6 +611,19 @@ def _validation_locations(error: Exception) -> list[str]:
                 )
             locations.append(path)
     return locations
+
+
+def _validation_messages(error: Exception) -> list[str]:
+    """Expose bounded validator messages, never rejected input/source content."""
+    details = getattr(error, "errors", None)
+    if not callable(details):
+        return []
+    messages: list[str] = []
+    for item in details(include_input=False, include_url=False)[:4]:
+        message = item.get("msg")
+        if isinstance(message, str) and message:
+            messages.append(message[:160])
+    return messages
 
 
 def _search_reusable_visuals(

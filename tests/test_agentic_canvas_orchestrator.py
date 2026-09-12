@@ -383,7 +383,7 @@ def test_custom_visual_validation_failure_is_retained_as_bounded_agent_metadata(
 
     assert context.tool_failures == [{
         "tool": "create_custom_visual",
-        "reason": '{"code":"CUSTOM_VISUAL_MANIFEST_INVALID","missing_fields":["objective"]}',
+        "reason": '{"code":"CUSTOM_VISUAL_MANIFEST_INVALID","missing_fields":["objective"],"validation_messages":["String should have at least 1 character"]}',
     }]
 
 
