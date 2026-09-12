@@ -350,9 +350,15 @@ def create_custom_visual(
         "manifest": manifest,
         "parameter_schema": parameter_schema,
     })
+    # Put declared action targets first in the durable semantic surface.  This
+    # makes an action consumer select a canonical interaction target rather
+    # than an incidental visible entity such as an origin or decoration.
+    entities_by_id = {item.semantic_id: item for item in package.manifest.entities}
+    interaction_ids = [item.semantic_id for item in package.manifest.interactions]
+    ordered_ids = [*dict.fromkeys([*interaction_ids, *(item.semantic_id for item in package.manifest.entities)])]
     elements = [
-        AgenticCanvasElementV1(id=item.semantic_id, label=item.label, current_value=None)
-        for item in package.manifest.entities
+        AgenticCanvasElementV1(id=semantic_id, label=entities_by_id[semantic_id].label, current_value=None)
+        for semantic_id in ordered_ids
     ]
     actions = sorted({item.action for item in package.manifest.interactions})
     return CustomVisualBlockV1(
@@ -385,9 +391,12 @@ def create_reused_custom_visual(
 ) -> AgenticCanvasBlockV1:
     """Create a reference-only instance of a server-authorized reusable Build."""
     canonical_manifest = CanvasSemanticManifestV1.model_validate(manifest)
+    entities_by_id = {item.semantic_id: item for item in canonical_manifest.entities}
+    interaction_ids = [item.semantic_id for item in canonical_manifest.interactions]
+    ordered_ids = [*dict.fromkeys([*interaction_ids, *(item.semantic_id for item in canonical_manifest.entities)])]
     elements = [
-        AgenticCanvasElementV1(id=item.semantic_id, label=item.label, current_value=None)
-        for item in canonical_manifest.entities
+        AgenticCanvasElementV1(id=semantic_id, label=entities_by_id[semantic_id].label, current_value=None)
+        for semantic_id in ordered_ids
     ]
     return CustomVisualBlockV1(
         **_common(
