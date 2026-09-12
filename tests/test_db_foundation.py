@@ -27,6 +27,10 @@ def test_postgres_urls_use_psycopg_driver() -> None:
 
 def test_foundation_models_match_expected_tables() -> None:
     assert set(Base.metadata.tables) == {
+        "visual_artifacts",
+        "visual_artifact_versions",
+        "visual_artifact_instances",
+        "visual_artifact_builds",
         "users",
         "students",
         "parent_student_relationships",

@@ -4,6 +4,19 @@ import pytest
 from pydantic import ValidationError
 
 
+@pytest.mark.parametrize("source", [
+    "window.mount=(root,params,bridge)=>{",
+    "window.mount=(root,params,bridge)=>bridge.emit({action:'SELECT',semantic_id:'fraction-a',value:'3/4'})",
+])
+def test_custom_visual_rejects_broken_syntax_and_object_bridge_binding(source):
+    from services.studio.full_power_canvas import CustomVisualPackageV1
+    with pytest.raises(ValidationError, match="SYNTAX_INVALID|SEMANTIC_INTERACTION_BINDING_INVALID"):
+        CustomVisualPackageV1.model_validate({
+            "version": "custom-visual-package-v1", "runtime_kind": "custom-visual",
+            "dependencies": ["native-svg-v1"], "source": source, "manifest": _manifest(),
+        })
+
+
 def _manifest() -> dict[str, object]:
     return {
         "version": "canvas-semantic-manifest-v1",
@@ -44,6 +57,16 @@ def test_custom_visual_rejects_network_source_before_a_sandbox_exists() -> None:
         })
 
 
+def test_ordinary_function_expression_is_not_the_dynamic_function_constructor():
+    from services.studio.full_power_canvas import CustomVisualPackageV1
+    payload = {"version": "custom-visual-package-v1", "runtime_kind": "custom-visual",
+        "dependencies": ["native-svg-v1"], "manifest": _manifest(),
+        "source": "window.mount=function(root,params,bridge){root.textContent='Compare';};"}
+    assert CustomVisualPackageV1.model_validate(payload).source == payload["source"]
+    with pytest.raises(ValidationError, match="FORBIDDEN_API:function"):
+        CustomVisualPackageV1.model_validate({**payload, "source": "window.mount=Function('return 1');"})
+
+
 def test_custom_visual_rejects_html_controls_appended_to_svg_parent() -> None:
     """A declared choice must be visible and usable in the opaque sandbox."""
     from services.studio.full_power_canvas import CustomVisualPackageV1
@@ -57,17 +80,15 @@ def test_custom_visual_rejects_html_controls_appended_to_svg_parent() -> None:
         })
 
 
-def test_custom_visual_rejects_dynamic_bridge_semantic_ids() -> None:
-    """Executable events must bind to the canonical Manifest, not a runtime variable."""
+def test_custom_visual_allows_shared_handlers_with_runtime_manifest_enforcement() -> None:
     from services.studio.full_power_canvas import CustomVisualPackageV1
-
-    with pytest.raises(ValidationError, match="SEMANTIC_INTERACTION_BINDING_INVALID"):
-        CustomVisualPackageV1.model_validate({
-            "version": "custom-visual-package-v1", "runtime_kind": "custom-visual",
-            "dependencies": ["native-svg-v1"],
-            "source": "window.mount=(root,params,bridge)=>{let k='fraction-a';bridge.emit('MOVE',{semantic_id:k,value:'3/4'})}",
-            "manifest": _manifest(), "parameter_schema": {"type": "object", "properties": {}},
-        })
+    package = CustomVisualPackageV1.model_validate({
+        "version": "custom-visual-package-v1", "runtime_kind": "custom-visual",
+        "dependencies": ["native-svg-v1"],
+        "source": "window.mount=(root,params,bridge)=>{const id='fraction-a';bridge.emit('MOVE',id,{to_value:'3/4'})}",
+        "manifest": _manifest(), "parameter_schema": {"type": "object", "properties": {}},
+    })
+    assert package.manifest.interactions[0].semantic_id == "fraction-a"
 
 
 def test_custom_visual_rejects_bridge_tuple_not_declared_by_manifest() -> None:
@@ -289,3 +310,6 @@ def test_reusable_custom_visual_is_instantiated_from_a_version_without_exposing_
     block = next(block for block in context.registry.blocks() if block.block_id == "reused-ruler")
     assert block.package is None
     assert block.custom_visual_build_id == "555f790a-c452-49df-b009-b0178a403783"
+    assert [item.model_dump(mode="json") for item in block.semantic_interactions] == [
+        {"semantic_id": "fraction-a", "action": "MOVE", "value_required": True}
+    ]

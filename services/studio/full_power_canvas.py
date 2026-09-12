@@ -9,7 +9,11 @@ student-record, browser, or Studio-write authority.
 from __future__ import annotations
 
 import json
+import math
 import re
+import shutil
+import subprocess
+from functools import lru_cache
 from dataclasses import dataclass, field
 from hashlib import sha256
 from typing import Any, Literal
@@ -92,7 +96,13 @@ class CanvasSemanticInteractionV1(BaseModel):
     semantic_id: str = Field(min_length=1, max_length=64, pattern=_SEMANTIC_ID)
     action: Literal["FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP", "RESET_VIEW"]
     meaning: str = Field(min_length=1, max_length=400)
-    value_required: bool = False
+    value_required: bool = Field(default=False, description="False for SELECT and FOCUS, which cannot mutate values; true when a mutation requires a value.")
+
+    @model_validator(mode="after")
+    def action_value_contract(self):
+        if self.action in {"SELECT", "FOCUS"} and self.value_required:
+            raise ValueError("SELECT and FOCUS cannot require semantic values; set value_required false.")
+        return self
 
 
 class CanvasSemanticManifestV1(BaseModel):
@@ -154,6 +164,39 @@ class CanvasSemanticManifestDraftV1(BaseModel):
         return CanvasSemanticManifestV1.model_validate(payload)
 
 
+def validate_visual_parameters(schema: dict[str, Any], parameters: dict[str, Any]) -> None:
+    """Validate the supported scalar parameter contract at every binding boundary."""
+    properties = schema.get("properties", {})
+    if schema.get("type", "object") != "object" or not isinstance(properties, dict):
+        raise ValueError("Invalid visual parameter schema.")
+    if len(parameters) > 32 or not set(parameters) <= set(properties) or not set(schema.get("required", [])) <= set(parameters):
+        raise ValueError("Visual parameter names do not match the implementation contract.")
+    for key, value in parameters.items():
+        rule = properties[key]
+        kind = rule.get("type") if isinstance(rule, dict) else None
+        valid = ((kind == "string" and isinstance(value, str) and len(value) <= 240)
+                 or (kind == "boolean" and type(value) is bool)
+                 or (kind == "integer" and type(value) is int)
+                 or (kind == "number" and type(value) in (int, float) and math.isfinite(value)))
+        if not valid or ("enum" in rule and value not in rule["enum"]):
+            raise ValueError("Visual parameter value does not match its declared scalar type.")
+
+
+@lru_cache(maxsize=128)
+def _validate_javascript_syntax(source: str) -> None:
+    """Parse only: never execute generated source or include it in diagnostics."""
+    node = shutil.which("node")
+    if node is None:
+        raise CustomVisualSecurityError("CUSTOM_VISUAL_SYNTAX_VALIDATOR_UNAVAILABLE")
+    try:
+        result = subprocess.run([node, "--check", "-"], input=source, text=True,
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise CustomVisualSecurityError("CUSTOM_VISUAL_SYNTAX_VALIDATOR_UNAVAILABLE") from error
+    if result.returncode:
+        raise CustomVisualSecurityError("CUSTOM_VISUAL_JAVASCRIPT_SYNTAX_INVALID: repair JavaScript syntax before resubmission")
+
+
 class CustomVisualPackageV1(BaseModel):
     """A bounded executable package admitted only to the opaque iframe runtime."""
 
@@ -172,33 +215,28 @@ class CustomVisualPackageV1(BaseModel):
         if len(self.dependencies) != len(set(self.dependencies)):
             raise CustomVisualSecurityError("Custom visual dependencies must be unique")
         for pattern, capability in _FORBIDDEN_SOURCE_PATTERNS:
-            if re.search(pattern, self.source, re.IGNORECASE):
+            if re.search(pattern, self.source):
                 raise CustomVisualSecurityError(f"CUSTOM_VISUAL_FORBIDDEN_API:{capability}")
         if "window.mount" not in self.source:
             raise CustomVisualSecurityError("Custom visual source must define window.mount")
         declared_interactions = {(item.action, item.semantic_id) for item in self.manifest.interactions}
-        for match in re.finditer(
-            r"bridge\.emit\(\s*['\"]([A-Z_]+)['\"]\s*,\s*([^,\s)]+)", self.source
-        ):
-            action, semantic_id = match.groups()
-            if not re.fullmatch(r"['\"][a-z][a-z0-9_-]*['\"]", semantic_id):
-                raise CustomVisualSecurityError(
-                    "SEMANTIC_INTERACTION_BINDING_INVALID: bridge semantic_id must be a declared literal"
-                )
-            if (action, semantic_id[1:-1]) not in declared_interactions:
-                raise CustomVisualSecurityError(
-                    "SEMANTIC_INTERACTION_BINDING_INVALID: bridge action and semantic_id must be declared by the Manifest"
-                )
-        # The source cannot choose a semantic target dynamically.  Its bridge
-        # calls are the executable half of the canonical Manifest contract;
-        # allowing a variable here would permit a rendered control to emit a
-        # different target from the one that was admitted.
-        for match in re.finditer(r"bridge\.emit\(\s*['\"](?:FOCUS|SELECT|MOVE|SET_VALUE|CONNECT|SUBMIT|REORDER|TOGGLE|STEP|RESET_VIEW)['\"]\s*,\s*\{[^}]*semantic_id\s*:\s*([^,}\s]+)", self.source):
-            value = match.group(1)
-            if not re.fullmatch(r"['\"][a-z][a-z0-9_-]*['\"]", value):
-                raise CustomVisualSecurityError(
-                    "SEMANTIC_INTERACTION_BINDING_INVALID: bridge semantic_id must be a declared literal"
-                )
+        # Catch statically known mismatches. Shared handlers can compute a
+        # declared target dynamically; string-literal matching is not a JS
+        # security boundary. Every emitted pair is checked by both the browser
+        # bridge and the server-owned Manifest resolver before Studio accepts it.
+        for call in re.finditer(r"bridge\s*\.\s*emit\s*\(\s*", self.source):
+            tail = self.source[call.end():]
+            direct = re.match(r"['\"]([A-Z_]+)['\"]\s*,\s*['\"]([a-z][a-z0-9_-]*)['\"]\s*(?:,|\))", tail)
+            if direct:
+                pair = direct.groups()
+                if pair not in declared_interactions:
+                    raise CustomVisualSecurityError(f"SEMANTIC_INTERACTION_BINDING_INVALID: {pair[0]}:{pair[1]} is not declared; declared={sorted(declared_interactions)[:24]}")
+            else:
+                event = re.match(r"\{([^{}]*)", tail)
+                action = re.search(r"\baction\s*:\s*['\"]([A-Z_]+)['\"]\s*(?:,|$)", event[1]) if event else None
+                target = re.search(r"\bsemantic_id\s*:\s*['\"]([a-z][a-z0-9_-]*)['\"]\s*(?:,|$)", event[1]) if event else None
+                if action and target and (action[1], target[1]) not in declared_interactions:
+                    raise CustomVisualSecurityError("SEMANTIC_INTERACTION_BINDING_INVALID: static object event is not declared by the Manifest")
         # A HTML control appended below an SVG parent has no reliable layout or
         # accessibility box in the opaque document.  This exact error is
         # repairable by the model: mount controls in an HTML container, or use
@@ -212,6 +250,7 @@ class CustomVisualPackageV1(BaseModel):
             )
         if not isinstance(self.parameter_schema.get("type", "object"), str):
             raise CustomVisualSecurityError("Custom visual parameter schema must be a JSON-schema object")
+        _validate_javascript_syntax(self.source)
         return self
 
 

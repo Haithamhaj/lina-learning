@@ -50,6 +50,7 @@ def test_create_math_board_returns_a_declarative_agentic_canvas_block() -> None:
 
 def test_registry_names_are_bounded_to_the_approved_canvas_tools() -> None:
     assert tool_names() == (
+        "refine_custom_visual",
         "compute_math",
         "convert_units",
         "create_math_board",

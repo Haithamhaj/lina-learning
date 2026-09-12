@@ -9,9 +9,9 @@ from uuid import UUID, uuid4
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from services.platform.db.models import StudioCanvasSpecialistRun, VisualArtifact, VisualArtifactBuild, VisualArtifactVersion
+from services.platform.db.models import StudioCanvasSpecialistRun, StudioScene, VisualArtifact, VisualArtifactBuild, VisualArtifactVersion, VisualArtifactInstance
 from services.platform.storage import ObjectStorage, StorageIntegrityError, create_object_storage
-from services.studio.full_power_canvas import CanvasSemanticManifestV1, CustomVisualPackageV1
+from services.studio.full_power_canvas import CanvasSemanticManifestV1, CustomVisualPackageV1, _reject_private
 
 
 class CustomVisualBuildResolutionError(ValueError):
@@ -55,7 +55,7 @@ def repair_custom_visual_source(
     repaired_source: str,
 ) -> VisualArtifactBuild:
     """Persist one source-only revision while preserving the canonical Manifest."""
-    package = parent.package.model_copy(update={"source": repaired_source})
+    package = CustomVisualPackageV1.model_validate({**parent.package.model_dump(mode="json"), "source": repaired_source})
     build = persist_custom_visual_build(
         session,
         storage=storage,
@@ -110,6 +110,8 @@ class CustomVisualBuildResolver:
         source_run = session.get(StudioCanvasSpecialistRun, source_run_id) if isinstance(source_run_id, str) else None
         if build is None or build.status != "VALIDATED" or source_run is None or source_run.student_id != student_id:
             raise CustomVisualBuildResolutionError("Reusable visual implementation is outside this learner ownership boundary.")
+        if version.source_digest != build.source_digest:
+            raise CustomVisualBuildResolutionError("Reusable visual source digest is inconsistent.")
         return _resolve_build_payload(session, storage=self._storage, build=build)
 
 
@@ -119,8 +121,20 @@ def resolve_custom_visual_build(session: Session, *, storage: ObjectStorage, bui
         raise CustomVisualBuildResolutionError("Custom visual build is unavailable.")
     run_id = build.technical_metadata.get("source_run_id")
     run = session.get(StudioCanvasSpecialistRun, run_id) if isinstance(run_id, str) else None
-    if run is None or run.student_id != student_id or run.studio_runtime_id != runtime_id:
-        raise CustomVisualBuildResolutionError("Custom visual build is outside this Studio runtime.")
+    if run is None or run.student_id != student_id:
+        raise CustomVisualBuildResolutionError("Custom visual build is outside this learner ownership boundary.")
+    if run.studio_runtime_id != runtime_id:
+        # Cross-runtime reads require a persisted instance of this exact Version
+        # in the requesting learner runtime. A globally visible version is not authorization.
+        instance = session.scalar(select(VisualArtifactInstance.id)
+            .join(VisualArtifactVersion, VisualArtifactVersion.id == VisualArtifactInstance.artifact_version_id)
+            .join(StudioScene, StudioScene.id == VisualArtifactInstance.studio_scene_id)
+            .where(VisualArtifactVersion.implementation_build_id == build_id,
+                   VisualArtifactInstance.student_id == student_id,
+                   StudioScene.student_id == student_id,
+                   StudioScene.studio_runtime_id == runtime_id).limit(1))
+        if instance is None:
+            raise CustomVisualBuildResolutionError("Custom visual build is outside this Studio runtime.")
     return _resolve_build_payload(session, storage=storage, build=build, allow_source_layout_repair=allow_source_layout_repair)
 
 
@@ -145,6 +159,8 @@ def _resolve_build_payload(session: Session, *, storage: ObjectStorage, build: V
             source=raw["source"], manifest=CanvasSemanticManifestV1.model_validate(raw["manifest"]),
             parameter_schema=raw.get("parameter_schema", {}),
         )
+    if build.source_digest != sha256(package.source.encode()).hexdigest():
+        raise CustomVisualBuildResolutionError("Custom visual source digest is invalid.")
     manifest_digest = sha256(json.dumps(
         package.manifest.model_dump(mode="json"), sort_keys=True, separators=(",", ":"), ensure_ascii=False,
     ).encode()).hexdigest()
@@ -177,8 +193,14 @@ def promote_custom_visual_build(
     # Registry payload is descriptive metadata only; executable authority is
     # implementation_build_id and is always resolved server side.
     manifest = package.manifest.model_dump(mode="json")
-    from services.studio.full_power_canvas import _reject_private
-    _reject_private(manifest)
+    _reject_private({"manifest": manifest, "purpose": semantic_purpose, "schema": parameter_schema, "source": package.source})
+    build = session.get(VisualArtifactBuild, build_id)
+    assert build is not None
+    existing = session.scalar(select(VisualArtifactVersion).where(VisualArtifactVersion.implementation_build_id == build_id))
+    if existing is not None:
+        return existing
+    if parameter_schema and parameter_schema != package.parameter_schema:
+        raise ValueError("Promotion cannot change the immutable implementation parameter contract.")
     artifact = session.scalar(select(VisualArtifact).where(VisualArtifact.stable_slug == stable_slug).with_for_update())
     if artifact is None:
         artifact = VisualArtifact(
@@ -232,13 +254,16 @@ def adapt_promoted_custom_visual_build(
     parent = session.get(VisualArtifactVersion, parent_version_id)
     if parent is None or parent.implementation_build_id is None:
         raise CustomVisualBuildResolutionError("ADAPT parent version is unavailable.")
-    artifact = session.get(VisualArtifact, parent.artifact_id)
+    artifact = session.scalar(select(VisualArtifact).where(VisualArtifact.id == parent.artifact_id).with_for_update())
     if artifact is None or artifact.lifecycle_status not in {"VALIDATED", "TRUSTED"} or parent.validation_status not in {"VALIDATED", "TRUSTED"}:
         raise CustomVisualBuildResolutionError("ADAPT parent version is not trusted.")
     old = resolver.resolve_artifact_version(session, version_id=parent.id, student_id=student_id, runtime_id=runtime_id)
     if package.source == old.package.source:
         raise ValueError("ADAPT must change generalized implementation, not only instance parameters.")
-    _reject_private(package.manifest.model_dump(mode="json"))
+    if run.student_id != student_id or run.studio_runtime_id != runtime_id:
+        raise CustomVisualBuildResolutionError("ADAPT run ownership is inconsistent.")
+    package = CustomVisualPackageV1.model_validate(package.model_dump(mode="json"))
+    _reject_private({"manifest": package.manifest.model_dump(mode="json"), "source": package.source, "schema": package.parameter_schema})
     build = persist_custom_visual_build(
         session,
         storage=storage,

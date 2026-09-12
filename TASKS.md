@@ -15,9 +15,10 @@ An explicit current Product Owner instruction authorizes its requested working s
 
 ### FULL-POWER-CANVAS-01 — Full-Power Hybrid Canvas
 
-**Status:** ACTIVE
+**Status:** DONE — local engineering closure; no push/merge/deployment
 **Authority:** Product Owner approved `docs/FULL-POWER-CANVAS-01_ARCHITECTURE_IMPLEMENTATION_SPEC.md`
 **Baseline:** `62df59bcc8c43074c223d79b73bcf97a0905ed4c`
+**Closure evidence:** `docs/FULL-POWER-CANVAS-01_CLOSURE.md` (actual persisted CREATE/REUSE/ADAPT, screenshots, source-review lineage and evidence limits).
 **Execution mode:** continuous native Codex; no Superpowers; no Product Owner checkpoints except protected blockers.
 
 **Purpose:** Remove the expressive visual ceiling while preserving Tutor authority, Studio persistence, filtered learner context, safety, ownership, provenance, and cost observability.

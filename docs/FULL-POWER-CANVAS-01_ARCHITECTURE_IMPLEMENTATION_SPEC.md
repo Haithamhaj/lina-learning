@@ -1,9 +1,9 @@
 # FULL-POWER-CANVAS-01 — Architecture & Implementation Specification
 
 **Project:** Lina Personal Learning System  
-**Status:** READY FOR PRODUCT OWNER APPROVAL  
+**Status:** APPROVED — implementation and local acceptance evidence in `FULL-POWER-CANVAS-01_CLOSURE.md`
 **Scope:** Full-Power AI Learning Canvas, safe custom visual runtime, reusable visual artifact registry, Tutor explainability bridge, reuse/adapt/create execution model  
-**Current implementation baseline:** `codex/canvas-visual-intelligence-01` @ `62df59bcc8c43074c223d79b73bcf97a0905ed4c`  
+**Historical starting baseline:** `codex/canvas-visual-intelligence-01` @ `62df59bcc8c43074c223d79b73bcf97a0905ed4c`
 **Architectural parent:** completed STUDIO-AGENTIC-01 baseline @ `d0bbc17c6cb74ce6162ac4a465cd261e1dd61075`  
 **Audience:** Product Owner, Codex, AI implementation agents, reviewers  
 

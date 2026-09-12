@@ -26,6 +26,8 @@ from services.platform.db.models import (
     LearningMessage,
     StudioCanvasSpecialistRun,
     StudioStudentInteraction,
+    Student,
+    User,
 )
 from services.platform.db.session import get_session
 from services.platform.db.test_environment import require_disposable_test_database
@@ -56,6 +58,21 @@ def _write(output: Path, evidence: dict[str, object]) -> None:
 def _consume_tutor_turn(response) -> None:
     if response.status_code != 200 or "event: turn" not in response.text:
         raise RuntimeError("REAL_TUTOR_STREAM_DID_NOT_COMPLETE")
+
+
+def _operation_rejection_code(response) -> str:
+    """Expose a bounded server-generated admission reason to the live harness."""
+
+    try:
+        body = response.json()
+    except ValueError:
+        return f"HTTP_{response.status_code}"
+    detail = body.get("detail") if isinstance(body, dict) else None
+    if not isinstance(detail, str):
+        return f"HTTP_{response.status_code}"
+    # Studio admission errors are server-generated contract errors. Keep the
+    # durable proof free of student text and arbitrary response bodies.
+    return detail[:240].replace("\n", " ")
 
 
 def _latest_run(factory: sessionmaker[Session], learning_session_id: UUID) -> StudioCanvasSpecialistRun:
@@ -91,6 +108,7 @@ def main() -> None:
     parser.add_argument("--live", action="store_true")
     parser.add_argument("--env-file", type=Path, required=True)
     parser.add_argument("--initial-request", default=INITIAL_REQUEST)
+    parser.add_argument("--owner-run-id", type=UUID, help="Continue as the same disposable proof owner for registry REUSE/ADAPT")
     parser.add_argument("--successor-request", default=SUCCESSOR_REQUEST)
     parser.add_argument("--output", type=Path, default=Path("output/studio-agentic-durable-live-proof.json"))
     args = parser.parse_args()
@@ -112,6 +130,13 @@ def main() -> None:
     engine = create_engine(normalize_database_url(database_url))
     factory = sessionmaker(engine, expire_on_commit=False)
     proof_subject = f"studio-agentic-live-{uuid4().hex}"
+    if args.owner_run_id:
+        with factory() as session:
+            owner_run = session.get(StudioCanvasSpecialistRun, args.owner_run_id)
+            owner = session.scalar(select(User).join(Student).where(Student.id == owner_run.student_id)) if owner_run else None
+            if owner is None or not owner.external_subject.startswith("studio-agentic-live-"):
+                raise RuntimeError("Existing disposable proof owner required")
+            proof_subject = owner.external_subject
     evidence: dict[str, object] = {
         "proof": "STUDIO-AGENTIC-01-DURABLE",
         "schema_version": "studio-agentic-durable-live-proof-v1",
@@ -208,7 +233,9 @@ def main() -> None:
             },
         )
         if operation.status_code != 200 or operation.json().get("student_interaction_id") is None:
-            raise RuntimeError("SEMANTIC_CANVAS_ACTION_NOT_ADMITTED")
+            raise RuntimeError(
+                f"SEMANTIC_CANVAS_ACTION_NOT_ADMITTED:{_operation_rejection_code(operation)}"
+            )
         interaction_id = UUID(operation.json()["student_interaction_id"])
         interaction_response = client.post(
             f"/api/v1/student/studio/{runtime_id}/interactions/{interaction_id}/turn/stream"

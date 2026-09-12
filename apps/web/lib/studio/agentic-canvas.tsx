@@ -1,5 +1,7 @@
 "use client";
 
+import { CUSTOM_CHANNEL, customSandboxDocument } from "./custom-visual-sandbox";
+
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 
@@ -252,21 +254,13 @@ function GeneratedImage({ block, loadGeneratedAsset }: { block: Extract<AgenticC
   </div>;
 }
 
-const CUSTOM_CHANNEL = "lina-full-power-canvas-v1";
-
-function customSandboxDocument(source: string, parameters: Record<string, string | number | boolean>, nonce: string) {
-  const params = JSON.stringify(parameters).replace(/</g, "\\u003c");
-  const safeSource = source.replace(/<\/script/gi, "<\\/script");
-  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"></head><body><main id="root"></main><script>
-const bridge={emit:(semantic_action,semantic_id,detail={})=>parent.postMessage({channel:'${CUSTOM_CHANNEL}',type:'EVENT',nonce:'${nonce}',semantic_action,semantic_id,from_value:detail.from_value??null,to_value:detail.to_value??null},'*')};
-try { ${safeSource}\nif(typeof window.mount!=='function')throw new Error('mount unavailable');window.mount(document.getElementById('root'),${params},bridge);parent.postMessage({channel:'${CUSTOM_CHANNEL}',type:'READY',nonce:'${nonce}'},'*'); } catch(error) { parent.postMessage({channel:'${CUSTOM_CHANNEL}',type:'ERROR',nonce:'${nonce}',message:'Custom visual could not start.'},'*'); }
-</script></body></html>`;
-}
 
 function CustomVisualSandbox(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "CUSTOM_VISUAL" }> }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
   const eventCount = useRef(0);
+  const eventWindow = useRef(0);
+  const initialState = useRef(Object.fromEntries(props.block.elements.map(item => [item.id, item.current_value])));
   const [pkg, setPkg] = useState<any>(null);
   useEffect(() => { let active = true; void fetch(`/api/v1/student/studio/scenes/${props.sceneId}/custom-visual-builds/${props.block.custom_visual_build_id}`).then((r) => r.ok ? r.json() : Promise.reject()).then((value) => { if (active) setPkg(value); }).catch(() => { if (active) setStatus("failed"); }); return () => { active = false; }; }, [props.sceneId, props.block.custom_visual_build_id]);
   useEffect(() => {
@@ -277,18 +271,23 @@ function CustomVisualSandbox(props: Pick<Props, "sceneId" | "sceneVersion" | "on
       if (data.channel !== CUSTOM_CHANNEL || data.nonce !== props.block.bridge_nonce) return;
       if (data.type === "READY") { setStatus("ready"); return; }
       if (data.type === "ERROR") { setStatus("failed"); return; }
+      if (performance.now() - eventWindow.current > 1000) { eventCount.current = 0; eventWindow.current = performance.now(); }
       if (data.type !== "EVENT" || eventCount.current >= 24 || typeof data.semantic_action !== "string" || typeof data.semantic_id !== "string") return;
       const action = data.semantic_action as AgenticCanvasAction;
       const declared = pkg?.manifest?.interactions?.find((item: any) => item.action === action && item.semantic_id === data.semantic_id);
       if (!declared || !props.block.elements.some((item) => item.id === data.semantic_id) || (declared.value_required && typeof data.to_value !== "string")) return;
       eventCount.current += 1;
-      nextOperation(props, props.block, action, { elementId: data.semantic_id, fromValue: typeof data.from_value === "string" ? data.from_value : undefined, toValue: typeof data.to_value === "string" ? data.to_value : undefined });
+      const mutation = action !== "SELECT" && action !== "FOCUS";
+      const current = props.block.elements.find(item => item.id === data.semantic_id)?.current_value;
+      nextOperation(props, props.block, action, { elementId: data.semantic_id,
+        fromValue: mutation && typeof current === "string" ? current : undefined,
+        toValue: mutation && typeof data.to_value === "string" ? data.to_value : undefined });
     };
     window.addEventListener("message", receive);
     return () => { window.clearTimeout(timeout); window.removeEventListener("message", receive); };
   }, [props.block, props.sceneId, props.sceneVersion, pkg]);
   return <section className="overflow-hidden rounded-xl border border-slate-200 bg-white" data-custom-visual-sandbox={status}>
-    {pkg ? <iframe ref={frame} title={props.block.title ?? "Interactive learning visual"} sandbox="allow-scripts" referrerPolicy="no-referrer" className="min-h-[24rem] w-full border-0" srcDoc={customSandboxDocument(pkg.source, props.block.parameters, props.block.bridge_nonce)}/> : null}
+    {pkg ? <iframe ref={frame} title={props.block.title ?? "Interactive learning visual"} sandbox="allow-scripts" referrerPolicy="no-referrer" className="min-h-[24rem] w-full border-0" style={{ minHeight: 384, width: "100%" }} srcDoc={customSandboxDocument(pkg.source, props.block.parameters, props.block.bridge_nonce, initialState.current)}/> : null}
     {status === "failed" ? <p role="alert" className="p-3 text-sm text-rose-900">This visual could not run safely. Tutor chat is still available.</p> : null}
   </section>;
 }
@@ -303,7 +302,7 @@ function DeclarativeBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOpe
     <GeneratedImage block={props.block} loadGeneratedAsset={props.loadGeneratedAsset}/>
     <SemanticButtons {...props}/>
   </BlockFrame>;
-  if (props.block.type === "CUSTOM_VISUAL") return <BlockFrame block={props.block}><CustomVisualSandbox {...props} block={props.block}/></BlockFrame>;
+  if (props.block.type === "CUSTOM_VISUAL") return <BlockFrame block={props.block}><CustomVisualSandbox key={`${props.sceneId}:${props.block.custom_visual_build_id}`} {...props} block={props.block}/></BlockFrame>;
   return <BlockFrame block={props.block}><ElementList block={props.block}/><SemanticButtons {...props}/></BlockFrame>;
 }
 
@@ -349,7 +348,7 @@ export function AgenticCanvasWorkspace(props: Props) {
       const placement = placements.get(block.block_id) ?? { role: "SUPPORT" as const, span: "NORMAL" as const };
       const plan = presentationLayout(layout, placement.role, placement.span);
       const isVisible = visibleIds.has(block.block_id);
-      return <motion.div key={block.block_id} data-agentic-region={plan.region} data-agentic-revealed={isVisible ? "true" : "false"} className={plan.className} initial={false} animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 18, scale: scene.presentation?.motion === "SUBTLE" && placement.role === "PRIMARY" ? 1.01 : 1 }} transition={{ duration: reducedMotion ? 0 : 0.24, ease: "easeOut" }} aria-hidden={!isVisible}><DeclarativeBlock {...props} onOperation={safeOperation} block={block}/></motion.div>;
+      return <motion.div key={block.block_id} data-agentic-region={plan.region} data-agentic-revealed={isVisible ? "true" : "false"} className={plan.className} initial={false} animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 18, scale: scene.presentation?.motion === "SUBTLE" && placement.role === "PRIMARY" && block.type !== "CUSTOM_VISUAL" ? 1.01 : 1 }} transition={{ duration: reducedMotion ? 0 : 0.24, ease: "easeOut" }} aria-hidden={!isVisible}><DeclarativeBlock {...props} onOperation={safeOperation} block={block}/></motion.div>;
     })}</div>
   </section>;
 }

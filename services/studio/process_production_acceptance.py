@@ -10,8 +10,8 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from services.platform.storage import ObjectStorage
-from services.studio.custom_visual_builds import persist_custom_visual_build
-from services.studio.full_power_canvas import CustomVisualPackageV1
+from services.studio.custom_visual_builds import persist_custom_visual_build, adapt_promoted_custom_visual_build, CustomVisualBuildResolver
+from services.studio.full_power_canvas import CustomVisualPackageV1, validate_visual_parameters
 
 from services.platform.db.models import (
     LearningMessage,
@@ -319,6 +319,10 @@ def _accept_completed_agentic_run_locked(
         run.status, run.failure_metadata = "REJECTED", {"code": "PROPOSAL_TO_SCENE_INVALID"}
         return None
 
+    selections = _validated_reusable_selections(run.agent_execution_metadata)
+    if isinstance(run.agent_execution_metadata, dict) and run.agent_execution_metadata.get("reusable_selections") and not selections:
+        run.status, run.failure_metadata = "REJECTED", {"code": "REUSABLE_VISUAL_SELECTION_INVALID"}
+        return None
     # New durable v3 writes never embed executable source in Studio state.
     if any(block.type == "CUSTOM_VISUAL" and block.package is not None for block in scene_payload.blocks):
         if storage is None:
@@ -329,14 +333,25 @@ def _accept_completed_agentic_run_locked(
             if block.get("type") != "CUSTOM_VISUAL" or not isinstance(block.get("package"), dict):
                 continue
             package = CustomVisualPackageV1.model_validate(block["package"])
-            build = persist_custom_visual_build(session, storage=storage, run=run, package=package)
+            if selections and selections[0]["mode"] == "ADAPT":
+                selection = selections[0]
+                if len(draft["blocks"]) != 1 or selection.get("block_id") != block["block_id"]:
+                    raise ValueError("ADAPT must identify its single custom implementation block.")
+                child = adapt_promoted_custom_visual_build(session, resolver=CustomVisualBuildResolver(storage),
+                    storage=storage, parent_version_id=UUID(str(selection["version_id"])),
+                    student_id=run.student_id, runtime_id=run.studio_runtime_id, run=run,
+                    package=package, generalized_change=str(selection["generalized_change"]))
+                build = session.get(VisualArtifactBuild, child.implementation_build_id)
+                assert build is not None
+                selections = [{"version_id": str(child.id), "mode": "REUSE", "parameters": dict(block["parameters"])}]
+            else:
+                build = persist_custom_visual_build(session, storage=storage, run=run, package=package)
             block.pop("package", None)
             block["custom_visual_build_id"] = str(build.id)
             block["manifest_digest"] = build.manifest_digest
         scene_payload = AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(draft)
         contract = agentic_scene_contract(scene_payload, brief.model_dump(mode="json"))
 
-    selections = _validated_reusable_selections(run.agent_execution_metadata)
     custom_blocks = [block for block in scene_payload.blocks if block.type == "CUSTOM_VISUAL"]
     if selections and len(custom_blocks) != 1:
         run.status, run.failure_metadata = "REJECTED", {"code": "REUSABLE_VISUAL_SELECTION_INVALID"}
@@ -350,14 +365,30 @@ def _accept_completed_agentic_run_locked(
         run.status, run.failure_metadata = "REJECTED", {"code": "REUSABLE_VISUAL_SELECTION_INVALID"}
         return None
     if selections:
+        try:
+            if storage is None:
+                raise ValueError("Reusable visual storage is unavailable.")
+            CustomVisualBuildResolver(storage).resolve_artifact_version(session,
+                version_id=selected_artifact_version_id, student_id=run.student_id, runtime_id=run.studio_runtime_id)
+        except ValueError:
+            run.status, run.failure_metadata = "REJECTED", {"code": "REUSABLE_VISUAL_OWNERSHIP_INVALID"}
+            return None
         selected = session.get(VisualArtifactVersion, selected_artifact_version_id)
         block = custom_blocks[0]
         if (
             selected is None
+            or dict(block.parameters) != selections[0]["parameters"]
             or block.custom_visual_build_id != str(selected.implementation_build_id)
             or block.manifest_digest != (selected.technical_evidence or {}).get("manifest_digest")
         ):
             run.status, run.failure_metadata = "REJECTED", {"code": "REUSABLE_VISUAL_IMPLEMENTATION_LINEAGE_INVALID"}
+            return None
+
+    if selections:
+        try:
+            validate_visual_parameters(selected.parameter_schema, dict(custom_blocks[0].parameters))
+        except ValueError:
+            run.status, run.failure_metadata = "REJECTED", {"code": "REUSABLE_VISUAL_PARAMETERS_INVALID"}
             return None
 
     state = StudioStateService(session)
@@ -478,12 +509,17 @@ def _validated_reusable_selections(value: object) -> list[dict[str, object]]:
         return []
     accepted: list[dict[str, object]] = []
     for selection in selections:
-        if not isinstance(selection, dict) or selection.get("mode") != "REUSE":
+        if not isinstance(selection, dict) or selection.get("mode") not in {"REUSE", "ADAPT"}:
             return []
         version_id, parameters = selection.get("version_id"), selection.get("parameters")
         if not isinstance(version_id, str) or not isinstance(parameters, dict):
             return []
-        accepted.append({"version_id": version_id, "mode": selection["mode"], "parameters": dict(parameters)})
+        record = {"version_id": version_id, "mode": selection["mode"], "parameters": dict(parameters)}
+        if selection["mode"] == "ADAPT":
+            if not isinstance(selection.get("generalized_change"), str) or not selection["generalized_change"].strip() or not isinstance(selection.get("block_id"), str):
+                return []
+            record.update(generalized_change=selection["generalized_change"], block_id=selection["block_id"])
+        accepted.append(record)
     return accepted
 
 

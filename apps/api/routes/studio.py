@@ -201,8 +201,14 @@ def get_custom_visual_build(scene_id: UUID, build_id: UUID, principal: Authentic
     scene = session.get(StudioScene, scene_id)
     if scene is None or scene.student_id != student_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Studio resource not found.")
+    block = next((block for block in scene.seed_payload.get("blocks", [])
+                  if isinstance(block, dict) and block.get("custom_visual_build_id") == str(build_id)), None)
+    if block is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Studio resource not found.")
     try:
         resolved = resolve_custom_visual_build(session, storage=storage, build_id=build_id, student_id=student_id, runtime_id=scene.studio_runtime_id)
+        if block.get("manifest_digest") != resolved.manifest_digest:
+            raise CustomVisualBuildResolutionError("Scene Manifest digest mismatch.")
     except CustomVisualBuildResolutionError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Studio resource not found.") from None
     return resolved.package.model_dump(mode="json")

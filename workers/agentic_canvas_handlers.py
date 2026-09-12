@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from time import perf_counter
 from urllib.error import HTTPError, URLError
 
-from sqlalchemy import select
+from sqlalchemy import String, cast, select
 from sqlalchemy.orm import Session, sessionmaker
 from agents.tracing import gen_trace_id
 from agents.exceptions import ModelBehaviorError
@@ -23,6 +23,7 @@ from services.platform.db.models import (
     StudioScene,
     StudioSnapshot,
     VisualArtifact,
+    VisualArtifactBuild,
     VisualArtifactVersion,
 )
 from services.platform.jobs import NonRetryableJobError
@@ -36,6 +37,7 @@ from services.studio.agent.admission import (
 )
 from services.studio.agent.orchestrator import (
     AgenticCanvasCompositionResult,
+    CanvasCompositionModelBehaviorError,
     CustomVisualCandidateMissingError,
     HostedGeneratedImage,
     compose_canvas_scene_with_trace,
@@ -92,6 +94,9 @@ def register_agentic_canvas_handlers(
             if isinstance(error, CustomVisualCandidateMissingError):
                 metadata["custom_visual_tool_failures"] = list(error.tool_failures)
                 metadata["custom_visual_model_turns"] = list(error.model_turns)
+            if isinstance(error, CanvasCompositionModelBehaviorError):
+                metadata["model_behavior_tool_failures"] = list(error.tool_failures)
+                metadata["model_behavior_model_turns"] = list(error.model_turns)
             if retryable and execution.provider_attempt < execution.provider_max_attempts:
                 _record_retryable_failure(session_factory, execution.run_id, metadata)
                 raise
@@ -314,7 +319,7 @@ class _AgenticExecutionEnvelope:
         self.reusable_visuals = reusable_visuals
 
 
-def _reusable_visuals_for_agent(session: Session) -> dict[str, dict[str, object]]:
+def _reusable_visuals_for_agent(session: Session, *, student_id) -> dict[str, dict[str, object]]:
     """Read the tiny trusted registry into an ephemeral agent context.
 
     Candidate builds stay out of selection.  The source is never passed to the
@@ -323,7 +328,11 @@ def _reusable_visuals_for_agent(session: Session) -> dict[str, dict[str, object]
     rows = session.execute(
         select(VisualArtifactVersion, VisualArtifact)
         .join(VisualArtifact, VisualArtifact.id == VisualArtifactVersion.artifact_id)
+        .join(VisualArtifactBuild, VisualArtifactBuild.id == VisualArtifactVersion.implementation_build_id)
+        .join(StudioCanvasSpecialistRun, cast(StudioCanvasSpecialistRun.id, String) == VisualArtifactBuild.technical_metadata["source_run_id"].astext)
         .where(
+            StudioCanvasSpecialistRun.student_id == student_id,
+            VisualArtifactBuild.status == "VALIDATED",
             VisualArtifact.lifecycle_status.in_(("VALIDATED", "TRUSTED")),
             VisualArtifactVersion.validation_status.in_(("VALIDATED", "TRUSTED")),
         )
@@ -397,7 +406,7 @@ def _preflight(factory: sessionmaker[Session], job: Job) -> _AgenticExecutionEnv
                     else:
                         run.status, run.started_at = "RUNNING", run.started_at or datetime.now(UTC)
                         run.sdk_trace_id = run.sdk_trace_id or gen_trace_id()
-                        envelope = _AgenticExecutionEnvelope(run_id=run.id, student_id=run.student_id, session_id=run.learning_session_id, message_id=message.id, parent_execution_id=message.ai_execution_id, brief=brief, visual_learner_context=visual_learner_context, provider_attempt=claimed.attempt_count, provider_max_attempts=claimed.max_attempts, sdk_trace_id=run.sdk_trace_id, reusable_visuals=_reusable_visuals_for_agent(session))
+                        envelope = _AgenticExecutionEnvelope(run_id=run.id, student_id=run.student_id, session_id=run.learning_session_id, message_id=message.id, parent_execution_id=message.ai_execution_id, brief=brief, visual_learner_context=visual_learner_context, provider_attempt=claimed.attempt_count, provider_max_attempts=claimed.max_attempts, sdk_trace_id=run.sdk_trace_id, reusable_visuals=_reusable_visuals_for_agent(session, student_id=run.student_id))
     # Raising inside ``factory.begin()`` rolls back the terminal Run state.
     # Commit that authoritative state first, then fail the queue Job.
     if terminal_error is not None:

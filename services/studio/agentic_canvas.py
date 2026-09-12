@@ -265,6 +265,15 @@ class ImageBlockV1(AgenticCanvasBlockV1):
     studio_generated_asset_id: str = Field(min_length=1, max_length=64)
 
 
+class CustomVisualInteractionContractV1(BaseModel):
+    """Bounded runtime action surface; canonical Manifest remains authoritative."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    semantic_id: str = Field(min_length=1, max_length=64, pattern=_SEMANTIC_ID)
+    action: Literal["FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP", "RESET_VIEW"]
+    value_required: bool = False
+
+
 class CustomVisualBlockV1(AgenticCanvasBlockV1):
     """Generated package data; execution remains exclusively in the browser sandbox."""
 
@@ -277,6 +286,7 @@ class CustomVisualBlockV1(AgenticCanvasBlockV1):
     custom_visual_build_id: str | None = Field(default=None, min_length=36, max_length=36)
     manifest_digest: str | None = Field(default=None, min_length=64, max_length=64, pattern=r"^[a-f0-9]{64}$")
     parameters: dict[str, str | int | float | bool] = Field(default_factory=dict, max_length=32)
+    semantic_interactions: list[CustomVisualInteractionContractV1] = Field(default_factory=list, max_length=24)
 
     @model_validator(mode="after")
     def manifest_matches_block(self) -> "CustomVisualBlockV1":
@@ -292,6 +302,10 @@ class CustomVisualBlockV1(AgenticCanvasBlockV1):
         allowed = {item.action for item in manifest.interactions}
         if not set(self.allowed_actions) <= allowed:
             raise ValueError("Custom visual block actions must be declared by its Semantic Manifest")
+        declared = {(item.semantic_id, item.action, item.value_required) for item in manifest.interactions}
+        projected = {(item.semantic_id, item.action, item.value_required) for item in self.semantic_interactions}
+        if projected and projected != declared:
+            raise ValueError("Custom visual interaction contract must match its Semantic Manifest")
         return self
 
 
@@ -456,6 +470,8 @@ def build_agentic_tutor_projection(
         }
         if isinstance(block, CustomVisualBlockV1):
             manifest = custom_manifest(block)
+            result["instance_parameters"] = dict(block.parameters)
+            result["state_authority"] = "Current instance parameters and saved student actions override original build example values."
             result["semantic_manifest"] = {
                 "objective": manifest.objective,
                 "representation_summary": manifest.representation_summary,

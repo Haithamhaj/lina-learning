@@ -8,6 +8,7 @@ import pytest
 
 from scripts import prove_studio_agentic_live as live
 from scripts.prove_studio_agentic_live import LiveEvidenceRecorder
+from scripts.prove_studio_agentic_durable_live import _operation_rejection_code
 from services.platform.config.settings import Settings
 
 
@@ -116,6 +117,19 @@ def test_durable_live_action_selection_prefers_custom_submit_choice() -> None:
     })
     assert action["action_key"] == "SUBMIT"
     assert action["payload"]["element_id"] == "choice-b"
+
+
+def test_durable_live_operation_rejection_is_bounded_to_server_detail() -> None:
+    class RejectedOperation:
+        status_code = 422
+
+        @staticmethod
+        def json() -> dict[str, str]:
+            return {"detail": "Custom Canvas action is not declared by its canonical Semantic Manifest."}
+
+    assert _operation_rejection_code(RejectedOperation()) == (
+        "Custom Canvas action is not declared by its canonical Semantic Manifest."
+    )
 
 
 def test_durable_evidence_connection_failure_becomes_a_bounded_case_failure(

@@ -533,8 +533,10 @@ def test_valid_strategy_outcome_supports_and_contradiction_weakens_strategy_patt
         valid = _evidence(session, student=student, event_type="strategy_outcome", strategy_key="decompose_word_problem", observed_outcome="Student completed a new problem independently", dimensions=_dimensions(strategy_effectiveness="enabled_independent_success", understanding="demonstrated", independence="independent"))
         contradict = _evidence(session, student=student, event_type="strategy_outcome", strategy_key="decompose_word_problem", observed_outcome="Student remained unable to proceed", dimensions=_dimensions(strategy_effectiveness="ineffective"), relationship="contradicts")
 
-        apply_evidence_to_patterns(session, evidence_id=valid.id)
-        apply_evidence_to_patterns(session, evidence_id=contradict.id)
+        # Freeze recency at the fixture date; this test covers contradiction, not decay.
+        observed_now = datetime(2026, 8, 22, 12, tzinfo=UTC)
+        apply_evidence_to_patterns(session, evidence_id=valid.id, now=observed_now)
+        apply_evidence_to_patterns(session, evidence_id=contradict.id, now=observed_now)
 
         pattern = session.query(LearnerPattern).filter_by(pattern_type="strategy_effectiveness").one()
         assert pattern.status == "WEAKENING"

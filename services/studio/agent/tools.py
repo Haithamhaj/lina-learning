@@ -21,6 +21,7 @@ from services.studio.agentic_canvas import (
     AgenticCanvasBlockV1,
     AgenticCanvasElementV1,
     CustomVisualBlockV1,
+    CustomVisualInteractionContractV1,
     DiagramBlockV1,
     DiagramEdgeV1,
     DiagramNodeV1,
@@ -41,6 +42,7 @@ from services.studio.full_power_canvas import CanvasSemanticManifestV1, CustomVi
 
 
 _TOOL_NAMES = (
+    "refine_custom_visual",
     "compute_math",
     "convert_units",
     "create_math_board",
@@ -361,6 +363,12 @@ def create_custom_visual(
         for semantic_id in ordered_ids
     ]
     actions = sorted({item.action for item in package.manifest.interactions})
+    interaction_contract = [
+        CustomVisualInteractionContractV1(
+            semantic_id=item.semantic_id, action=item.action, value_required=item.value_required,
+        )
+        for item in package.manifest.interactions
+    ]
     return CustomVisualBlockV1(
         **_common(
             block_id=block_id,
@@ -374,6 +382,7 @@ def create_custom_visual(
         bridge_nonce=bridge_nonce,
         package=package,
         parameters=parameters or {},
+        semantic_interactions=interaction_contract,
     )
 
 
@@ -412,4 +421,10 @@ def create_reused_custom_visual(
         custom_visual_build_id=build_id,
         manifest_digest=manifest_digest,
         parameters=parameters or {},
+        semantic_interactions=[
+            CustomVisualInteractionContractV1(
+                semantic_id=item.semantic_id, action=item.action, value_required=item.value_required,
+            )
+            for item in canonical_manifest.interactions
+        ],
     )

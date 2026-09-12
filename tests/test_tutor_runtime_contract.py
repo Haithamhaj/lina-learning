@@ -23,7 +23,7 @@ def test_tutor_turn_v11_requires_nullable_visual_order_without_rewriting_other_m
     """SAFE-02 keeps one strict output contract for visible text and hidden decisions."""
 
     assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v11"
-    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject", "workspace_intent", "canvas_brief", "workspace_visual_order"]
+    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject", "workspace_intent", "canvas_brief", "canvas_visual_context_selection", "workspace_visual_order"]
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["provisional_broad_subject"] == {
         "type": ["string", "null"],
         "enum": [

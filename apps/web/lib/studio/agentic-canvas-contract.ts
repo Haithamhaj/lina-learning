@@ -288,9 +288,24 @@ function parseBlock(value: unknown): AgenticCanvasBlock | null {
     return { ...common, type: value.type, notation: "LATEX", prompt: value.prompt, constraints: value.constraints as string[] };
   }
   if (value.type === "CUSTOM_VISUAL") {
-    const common = parseCommonBlock(value, ["artifact_instance_id", "bridge_nonce", "custom_visual_build_id", "manifest_digest", "parameters"]);
+    const customFields = ["artifact_instance_id", "bridge_nonce", "custom_visual_build_id", "manifest_digest", "parameters"];
+    // Pydantic serializes the absent internal package as null on durable v3
+    // Scenes. Accept that absence; executable packages are never Scene input.
+    if (Object.prototype.hasOwnProperty.call(value, "package")) {
+      if (value.package !== null) return null;
+      customFields.push("package");
+    }
+    const hasInteractionContract = Object.prototype.hasOwnProperty.call(value, "semantic_interactions");
+    const common = parseCommonBlock(value, hasInteractionContract ? [...customFields, "semantic_interactions"] : customFields);
     if (!common || !identifier(value.artifact_instance_id) || typeof value.bridge_nonce !== "string" || !/^[A-Za-z0-9_-]{8,128}$/.test(value.bridge_nonce) || typeof value.custom_visual_build_id !== "string" || !/^[0-9a-f-]{36}$/.test(value.custom_visual_build_id) || typeof value.manifest_digest !== "string" || !/^[a-f0-9]{64}$/.test(value.manifest_digest) || !isRecord(value.parameters) || !Object.values(value.parameters).every((item) => ["string", "number", "boolean"].includes(typeof item))) return null;
-    return { ...common, type: value.type, artifact_instance_id: value.artifact_instance_id, bridge_nonce: value.bridge_nonce, custom_visual_build_id: value.custom_visual_build_id, manifest_digest: value.manifest_digest, parameters: value.parameters as Record<string, string | number | boolean> };
+    const semanticInteractions = hasInteractionContract
+      ? parseArray(value.semantic_interactions, 24, (item) => {
+          if (!isRecord(item) || !exactKeys(item, ["semantic_id", "action", "value_required"]) || !identifier(item.semantic_id) || !enumValue(item.action, ACTIONS) || typeof item.value_required !== "boolean") return null;
+          return { semantic_id: item.semantic_id, action: item.action, value_required: item.value_required };
+        })
+      : [];
+    if (semanticInteractions === null) return null;
+    return { ...common, type: value.type, artifact_instance_id: value.artifact_instance_id, bridge_nonce: value.bridge_nonce, custom_visual_build_id: value.custom_visual_build_id, manifest_digest: value.manifest_digest, parameters: value.parameters as Record<string, string | number | boolean>, semantic_interactions: semanticInteractions };
   }
   const common = parseCommonBlock(value, ["studio_generated_asset_id"]);
   if (!common || !safeText(value.studio_generated_asset_id, 1, 64)) return null;

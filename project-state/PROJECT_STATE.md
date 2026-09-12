@@ -2,80 +2,44 @@
 
 ## Current goal
 
-Implement `FULL-POWER-CANVAS-01` so Lina's Canvas becomes a full-power hybrid visual composer with REUSE / ADAPT / CREATE, safe custom visual execution, reusable visual artifacts, and guaranteed same-Tutor understanding through a Semantic Manifest.
+FULL-POWER-CANVAS-01 is locally complete with reviewed CREATE → browser → Studio → same Tutor, promotion, REUSE and ADAPT evidence. Do not push or merge without Product Owner authorization.
 
 ## Current reality
 
-The current migration baseline is remote commit:
+Authoritative checkout: `.worktrees/full-power-canvas-01`, branch `codex/full-power-canvas-01`; takeover HEAD `53d14b8e2dafd1fd695bf8284ac4123b9d28c3c5`. The former worker/admission blocker is resolved. Final regression: 1395 passed, 12 skipped; TypeScript and repository-truth checks passed.
 
-`62df59bcc8c43074c223d79b73bcf97a0905ed4c`
+Immutable custom packages live in ObjectStorage Builds. Studio v3 stores small references and bounded state. Actual real-provider CREATE, reviewed production-renderer interaction, selective promotion, same-owner cross-runtime REUSE without new source, and structural ADAPT parent/child lineage are recorded in `docs/FULL-POWER-CANVAS-01_CLOSURE.md`.
 
-on the completed `codex/canvas-visual-intelligence-01` work.
-
-That baseline already proves:
-
-- Tutor-led Agentic Canvas;
-- bounded server-resolved visual learner context;
-- Scene v2 visual-plan persistence;
-- typed geometry rendering;
-- generated-asset ownership;
-- Studio lifecycle/settlement/replay;
-- same-Tutor continuity;
-- disposable PostgreSQL Agentic lifecycle proof;
-- Clerk-independent production `StudioRendererHost` browser proof.
-
-The Product Owner has approved a new direction because the existing typed visual grammar remains an expressive ceiling. `FULL-POWER-CANVAS-01` is active in an isolated worktree from that baseline. Immutable custom packages now live at the Build boundary; new Scenes retain only a Build reference plus bounded state, and reusable Versions resolve implementation only through the server-owned resolver. Focused contract, migration, PostgreSQL, and frontend checks pass. Fresh CREATE/REUSE/ADAPT browser evidence remains unrun because the disposable live journey terminates after Tutor admission and before its Canvas worker settles a Scene.
+CREATE now includes the shared production sandbox's browser preview at two widths and a small pointer probe. The same Canvas Agent receives screenshots before finalization. Technical preview failure or clipped controls cannot be accepted. One source-only visual correction preserves canonical meaning; a failed correction cannot silently accept the earlier defective candidate.
 
 ## Active decisions
 
-- Canvas Agent becomes a full-power **visual composer**, not a second Tutor.
-- Typed renderers remain a fast path, not a capability ceiling.
-- Routing is **REUSE → ADAPT → CREATE**, with learning quality above forced reuse.
-- Custom generated visual code is first-class only inside an isolated sandbox.
-- Successful generalized visuals may be versioned and promoted into a Reusable Visual Registry.
-- Build history and reusable registry are separate.
-- Every finalized Canvas runtime kind produces a Semantic Manifest with stable semantic IDs.
-- Same Primary Tutor must understand meaningful Canvas state/actions.
-- Exact Math/Science truth comes from typed/deterministic data/tools.
-- Existing learner-context filtering is reused unchanged.
-- Native Codex only for this execution; no Superpowers.
-- Lightweight TDD and focused verification during development; one integrated acceptance near closure.
+- One Primary Tutor retains teaching authority; one Canvas Agent composes visuals.
+- Typed surfaces are a fast path. Custom source is first-class only in the isolated runtime.
+- Parameters-only changes are REUSE; new capabilities are ADAPT with explicit immutable lineage.
+- Two initial CREATE attempts at most; one source-only visual correction; three total attempts at most. No open-ended regeneration.
+- Registry promotion is selective and owner-scoped. Build history, reusable definitions and student instances remain separate.
+- Reviewed source revisions preserve original Builds, Scenes, provider proposals and events. Registered revisions get child Versions and Instances.
+- Node, existing Playwright and installed Chrome are required for worker preview; missing preview support fails closed.
 
 ## Protected areas
 
-Do not change without explicit Product Owner approval:
-
-- child safety / Parent Boundary meaning;
-- ownership, privacy, or data isolation;
-- Learning Intelligence authority/semantics;
-- Primary Tutor teaching authority;
-- raw source provenance/rebuildability;
-- Model Gateway authority;
-- Studio persistence/interaction authority;
-- destructive schema/data behavior;
-- unrestricted network/application authority for generated visual code.
+Primary Tutor authority; child safety and Parent Boundaries; owner/privacy isolation; Learning Intelligence semantics; Model Gateway; original source/provenance; Studio event/replay authority; no generated-code application or network access.
 
 ## Active risks
 
-- A sandbox that is only "prompt-safe" rather than technically isolated would be insufficient.
-- A Reusable Visual Registry can become a junk drawer unless promotion is selective.
-- Reuse can become a quality ceiling if the Agent is discouraged from CREATE.
-- Custom generation can increase latency/cost if preview/refinement loops are unbounded.
-- Tutor continuity fails if Semantic Manifest is treated as optional.
-- Real visual quality must be judged from real Agent-produced browser output, not only fixtures.
-- Production static export still depends on valid Clerk configuration; this is not a blocker for the existing Clerk-independent renderer proof.
+Automatic screenshot/pointer review is bounded quality evidence, not a guarantee of mathematical or pedagogical correctness. Narrow custom visuals can still benefit from UI refinement. Promotion requires visual review; earlier diagnostic failures are retained and are not counted as successful acceptance.
+
+Production Next prerender requires `CLERK_PUBLISHABLE_KEY`, absent in this execution environment. Clerk login, deployment and real-Lina learning benefit are not established by the disposable-owner browser proof.
 
 ## Next recommended action
 
-Restore a persistent live-provider worker session, then run one fresh CREATE → promotion → REUSE → ADAPT browser acceptance wave. Do not merge or push until Product Owner approval.
+Review the completed local closure evidence. Any push/merge/deployment or resumption of UI-REFINE-01 requires its own Product Owner instruction.
 
 ## Critical references
 
+- `docs/FULL-POWER-CANVAS-01_CLOSURE.md`
 - `docs/FULL-POWER-CANVAS-01_ARCHITECTURE_IMPLEMENTATION_SPEC.md`
 - `docs/PROJECT_REFERENCE.md`
 - `docs/IMPLEMENTATION_PLAN.md`
-- `docs/LEARNING_INTELLIGENCE_SPEC.md`
-- `docs/CHILD_SAFETY_POLICY.md`
-- `research/repository/TECHNOLOGY_REUSE_CATALOG.md`
-- `AGENTS.md`
 - `TASKS.md`

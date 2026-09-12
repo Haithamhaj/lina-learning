@@ -2,7 +2,11 @@
 
 ## Status
 
-Approved execution architecture for the next implementation slice: `FULL-POWER-CANVAS-01`.
+Approved execution architecture for `FULL-POWER-CANVAS-01`. Current local implementation and evidence: `docs/FULL-POWER-CANVAS-01_CLOSURE.md`.
+
+CREATE uses strict semantic fields → validated immutable package → shared production sandbox preview (wide/narrow and pointer probe) → same-agent review → at most one source-only visual correction → reference-only Scene. Clipped controls or failed preview cannot be finalized. At most two initial authoring attempts plus one successful preview correction are allowed; no unbounded generation loop. The composing worker requires the existing Node/Playwright runtime and installed Chrome; missing preview support fails closed.
+
+Ordinary parameter changes are REUSE. Structural ADAPT carries a validated parent Version and creates a child Build/Version. A trusted source-only correction of a registered implementation creates a further child Version and Instance, preserving previous source, Manifest and Studio history. Promotion remains selective and owner-scoped.
 
 ## Current baseline
 

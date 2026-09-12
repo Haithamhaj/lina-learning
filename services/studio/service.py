@@ -787,6 +787,17 @@ class StudioStateService:
             raise StudioStateError("Reference custom visual Manifest is unavailable.") from error
         if resolved.manifest_digest != block.manifest_digest:
             raise StudioStateError("Reference custom visual Manifest digest is invalid.")
+        if block.semantic_interactions:
+            projected = {
+                (item.semantic_id, item.action, item.value_required)
+                for item in block.semantic_interactions
+            }
+            canonical = {
+                (item.semantic_id, item.action, item.value_required)
+                for item in resolved.package.manifest.interactions
+            }
+            if projected != canonical:
+                raise StudioStateError("Reference custom visual interaction contract is invalid.")
         declared = next(
             (
                 item

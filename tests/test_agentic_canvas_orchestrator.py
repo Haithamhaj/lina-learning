@@ -1,6 +1,24 @@
 from __future__ import annotations
 
 
+def test_pydantic_wrapped_bridge_failure_retains_the_actual_repair_stage():
+    import pytest
+    from pydantic import ValidationError
+    from test_full_power_canvas import _manifest
+    from services.studio.full_power_canvas import CustomVisualPackageV1
+    from services.studio.agent.orchestrator import _custom_visual_error_payload
+    with pytest.raises(ValidationError) as raised:
+        CustomVisualPackageV1.model_validate({"version": "custom-visual-package-v1",
+            "runtime_kind": "custom-visual", "dependencies": ["native-svg-v1"],
+            "manifest": _manifest(),
+            "source": "window.mount=(root,params,bridge)=>bridge.emit('SELECT','fraction-a')"})
+    repair = _custom_visual_error_payload(raised.value)
+    assert repair["code"] == "SEMANTIC_INTERACTION_BINDING_INVALID"
+    assert "SELECT:fraction-a" in repair["binding_error"]
+    assert "missing_fields" not in repair
+    assert "window.mount" not in str(repair)
+
+
 def test_single_canvas_agent_uses_only_the_bounded_tool_registry() -> None:
     from services.studio.agent.orchestrator import build_canvas_agent
     from services.studio.agent.tools import tool_names
@@ -25,11 +43,10 @@ def test_single_canvas_agent_uses_only_the_bounded_tool_registry() -> None:
     assert {"entities", "interactions", "source"} <= set(custom_schema["properties"])
     assert "manifest" not in custom_schema["properties"]
     assert "artifact_instance_id" not in custom_schema["properties"]
-    # A legacy envelope remains a deliberately untyped compatibility input.
-    # It must not make the SDK validate Lina's canonical Manifest boilerplate
-    # before the system can extract authored semantic fields and canonicalize it.
-    legacy_schema = custom_schema["properties"]["semantic_manifest"]
-    assert "$ref" not in str(legacy_schema)
+    assert "semantic_manifest" not in custom_schema["properties"]
+    assert custom_schema["additionalProperties"] is False
+    assert set(custom_schema["required"]) == set(custom_schema["properties"])
+    assert next(tool for tool in agent.tools if tool.name == "create_custom_visual").strict_json_schema
     code_tool = next(tool for tool in agent.tools if tool.name == "code_interpreter")
     assert code_tool.tool_config == {"type": "code_interpreter", "container": {"type": "auto"}}
 
@@ -40,6 +57,44 @@ def test_agentic_canvas_deadline_allows_one_bounded_custom_visual_composition() 
     from services.studio.agent.admission import AGENTIC_CANVAS_DEADLINE
 
     assert AGENTIC_CANVAS_DEADLINE == timedelta(minutes=5)
+
+
+def test_model_behavior_failure_retains_only_bounded_composition_diagnostics(monkeypatch) -> None:
+    """A live retry must retain route evidence without persisting model content."""
+
+    import asyncio
+
+    import pytest
+    from agents.exceptions import ModelBehaviorError
+
+    from services.studio.agent import orchestrator
+    from services.studio.canvas_brief import CanvasBriefV1, VisualLearnerContextV1
+
+    async def failed_run(*_args, **_kwargs):
+        raise ModelBehaviorError("raw model output must not be retained")
+
+    monkeypatch.setattr(orchestrator.Runner, "run", failed_run)
+    brief = CanvasBriefV1.model_validate({
+        "version": "canvas-brief-v1", "subject_key": "MATH", "objective": "Compare slopes.",
+        "student_request": "Compare two lines.", "requested_representation": "Coordinate plane.",
+        "facts": [], "relations": [], "quantities": [], "desired_student_action": "Select a line.",
+        "must_not_imply": [], "source_references": [], "locale": "en", "direction": "ltr",
+    })
+    learner = VisualLearnerContextV1.model_validate({
+        "version": "visual-learner-context-v1", "core_profile": {"age_years": 10, "grade_level": "5"},
+        "selected_personal_facts": [],
+    })
+
+    with pytest.raises(orchestrator.CanvasCompositionModelBehaviorError) as raised:
+        asyncio.run(orchestrator.compose_canvas_scene_with_trace(
+            brief=brief, visual_learner_context=learner, api_key="test-only-key", model="gpt-5.6-luna"
+        ))
+
+    # The mock does not invoke SDK hooks; real provider turns populate this
+    # same bounded field before a later retry is scheduled.
+    assert raised.value.model_turns == ()
+    assert raised.value.tool_failures == ()
+    assert "raw model output" not in str(raised.value.tool_failures)
 
 
 def test_canvas_agent_instructions_make_hosted_tool_selection_semantic_and_bounded() -> None:
@@ -409,7 +464,8 @@ def test_custom_visual_dynamic_bridge_target_gets_a_semantic_repair() -> None:
         CustomVisualSecurityError("SEMANTIC_INTERACTION_BINDING_INVALID: bridge semantic_id must be a declared literal")
     ) == {
         "code": "SEMANTIC_INTERACTION_BINDING_INVALID",
-        "repair": "Emit each declared bridge semantic_id as its exact literal Manifest ID; do not use a dynamic variable for semantic_id.",
+        "repair": "Make each emitted action/semantic_id tuple match the declared interactions; do not invent new action or entity IDs.",
+        "binding_error": "SEMANTIC_INTERACTION_BINDING_INVALID: bridge semantic_id must be a declared literal",
     }
 
 

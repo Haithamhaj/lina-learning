@@ -46,7 +46,7 @@ def test_preflight_returns_sanitized_identity_only_for_the_expected_target():
 
 
 def test_preflight_reads_the_repository_migration_head():
-    assert setup_module().expected_schema_version() == '9b6e2c4d8f01'
+    assert setup_module().expected_schema_version() == 'f4b8d2e9c1a7'
 
 
 def test_preflight_accepts_the_database_row_mapping_returned_by_sqlalchemy():

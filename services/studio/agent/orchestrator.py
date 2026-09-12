@@ -20,10 +20,14 @@ from agents import (
     RunContextWrapper,
     Runner,
     RunHooks,
+    ToolOutputImage,
+    ToolOutputText,
     function_tool,
 )
+from agents.exceptions import ModelBehaviorError
 from agents.tracing import gen_trace_id
 from openai import AsyncOpenAI
+from pydantic import BaseModel, ConfigDict, Field
 
 from services.studio.agent.registry import CanvasBlockRegistry, PlanCompositionInconsistencyError
 from services.studio.agent.tools import (
@@ -116,8 +120,38 @@ Registry search returns only semantic summaries. For CREATE, pass semantic entit
 relations, quantities, interactions, and values as structured tool arguments; do not
 pass a semantic_manifest envelope. The system deterministically constructs its
 canonical Manifest, package envelope, provenance, instance identity, and parameter
-schema. Use mode REUSE for an unchanged structure and ADAPT only when a new
-version is needed. The source itself is never placed in a plan or narrative."""
+schema. Use instantiate_reusable_visual for REUSE. For ADAPT, submit the changed
+generalized implementation to create_custom_visual with parent_version_id from
+registry search and generalized_change explaining the capability that parameters
+cannot express. The server creates the child Build and Version lineage. The source itself is never placed in a plan or narrative.
+SELECT/FOCUS send identity only, never an answer value. Each visible answer option
+must emit its own distinct declared semantic ID; a shared control that carries an
+answer value must instead declare SET_VALUE. Restore mutable values from
+bridge.state using exactly the emitted semantic ID, with nullish parameter
+fallbacks so zero survives. Persist toggle values as strings. For responsive SVG
+pointer conversion use getScreenCTM().inverse(), not bounding-box scaling; isolate
+signed coordinates/fractions as LTR and preserve both signs in rational arithmetic.
+Use bridge.emit('MOVE','point-a',{to_value:'(2,3)'}) for a MOVE of declared entity point-a
+with string values and action/semantic IDs from your declared interactions.
+Shared handlers may compute the ID from the declared entity set; every emitted
+pair is validated against the canonical Manifest by the browser and by Studio.
+Maintain continuous visual feedback locally but emit MOVE once on pointer release.
+Initialize all changeable values from parameters. Do not hardcode the example values.
+On mount restore previously saved semantic values from bridge.state[semantic_id]
+when non-null, otherwise use the initial parameters. Read and emit exactly the
+same semantic_id (e.g. read bridge.state['point-a'] and emit MOVE on 'point-a');
+do not invent a separate move-point-a ID. This supports reload/replay.
+For SVG pointer input, transform screen coordinates with getScreenCTM().inverse()
+so dragging remains accurate under responsive scaling and letterboxing. Exact
+rational signs depend on both numerator and denominator, including negative runs.
+Choice controls report the learner selection; do not assert that any selected answer
+is correct. The Primary Tutor interprets the observation.
+CREATE returns actual isolated browser screenshots at wide and narrow widths, plus a small real pointer-drag probe when a draggable exists. These images are review inputs: never call image_generation to redraw them or replace interactive source.
+Review both before finalizing. Verify lines connect their points, exact values,
+legibility, and that each choice identifies itself. You may correct one concrete
+visual defect with refine_custom_visual supplying source only. No aesthetic loops.
+Keep the SVG and all controls visible in a responsive 384px-high viewport; preserve
+coordinate transforms, zero-run/vertical lines, and exact rise/run when dragging."""
 
 
 @dataclass
@@ -138,6 +172,8 @@ class CanvasAgentRunContext:
     brief_objective: str = ""
     create_route_attempted: bool = False
     custom_attempt_count: int = 0
+    custom_preview_count: int = 0
+    custom_preview_valid: bool = True
 
     def record_tool(self, name: str) -> None:
         self.tool_calls.append(name)
@@ -227,6 +263,18 @@ class CustomVisualCandidateMissingError(ValueError):
         # exclude generated source, prompts, and model prose.
         self.tool_failures = tuple(dict(item) for item in tool_failures[-2:])
         self.model_turns = tuple(dict(item) for item in model_turns[-16:])
+
+
+class CanvasCompositionModelBehaviorError(ModelBehaviorError):
+    """A provider-format failure with bounded, non-content composition evidence."""
+
+    def __init__(self, *, context: CanvasAgentRunContext) -> None:
+        super().__init__("CANVAS_COMPOSITION_MODEL_BEHAVIOR_FAILURE")
+        # Never preserve model output, generated source, or learner content on
+        # this failure path. These fields are sufficient to distinguish an
+        # invalid tool call from a malformed final plan on a later retry.
+        self.tool_failures = tuple(dict(item) for item in context.tool_failures[-2:])
+        self.model_turns = tuple(dict(item) for item in context.model_turns[-16:])
 
 
 @dataclass(frozen=True, slots=True)
@@ -441,10 +489,17 @@ def _create_custom_visual(
     # and builds the strict canonical Manifest below.  A Draft model here would
     # reject legacy/internal boilerplate before canonicalization can run.
     semantic_manifest: dict[str, object] | str | None = None,
+    parent_version_id: str | None = None,
+    generalized_change: str | None = None,
 ):
     """CREATE a sandboxed custom visual from semantic entities, actions, and source. Submit source as one minified valid JSON string: use single-quoted JavaScript literals and no literal newlines or double quotes in source, so the tool-call JSON stays valid. Every semantic_id used by relations, quantities, or interactions must first appear in entities; use entity IDs, never action/step IDs. Use native local state and the supplied semantic bridge only: no fetch, network, storage, cookies, parent window, imports, or application APIs."""
     context.context.record_tool("create_custom_visual")
     context.context.create_route_attempted = True
+    if parent_version_id is not None:
+        if parent_version_id not in context.context.reusable_visuals or not generalized_change or not generalized_change.strip():
+            raise ValueError("ADAPT requires an available parent Version and a generalized capability change.")
+    elif generalized_change is not None:
+        raise ValueError("A generalized ADAPT change requires a parent Version.")
     try:
         # Compatibility for an already-issued model call shape. The new
         # authoring contract exposes individual semantic fields; if a model
@@ -499,6 +554,9 @@ def _create_custom_visual(
         # candidate. It is still registry-owned; finalization must reference
         # this exact canonical block rather than inventing an ID.
         context.context.current_custom_candidate_block_id = summary["block_id"]
+        if parent_version_id is not None:
+            context.context.reusable_selections = [{"version_id": parent_version_id, "mode": "ADAPT",
+                "parameters": parameters or {}, "generalized_change": generalized_change, "block_id": block_id}]
         return summary
     except (TypeError, ValueError) as exc:
         payload = _custom_visual_error_payload(exc)
@@ -506,11 +564,107 @@ def _create_custom_visual(
         raise CustomVisualAuthoringError(payload) from exc
 
 
+class CustomVisualParameterV1(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=64)
+    value: str | int | float | bool
+
+
+class CustomVisualStateFieldV1(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=64)
+    description: str = Field(min_length=1, max_length=160)
+
+
+def _create_custom_visual_strict(
+    context: RunContextWrapper[CanvasAgentRunContext],
+    block_id: str,
+    meaning: str,
+    label: str,
+    source: str,
+    entities: list[CanvasSemanticEntityV1],
+    relations: list[CanvasSemanticRelationV1],
+    quantities: list[CanvasSemanticQuantityV1],
+    interactions: list[CanvasSemanticInteractionV1],
+    presentation_steps: list[CanvasPresentationStepV1],
+    visual_descriptions: list[str],
+    state_fields: list[CustomVisualStateFieldV1],
+    parameters: list[CustomVisualParameterV1],
+    parent_version_id: str | None,
+    generalized_change: str | None,
+):
+    """CREATE a sandboxed interactive visual; ADAPT with a parent Version only for a generalized capability change. Source is valid JavaScript defining window.mount(root,params,bridge). Parameters are named scalar instance values, never embedded source. For example, bridge.emit('MOVE','point-a',{to_value:'(2,3)'}) moves the declared point-a; bridge.emit('SELECT','choose-a') reports a declared choice. Use your actual entity IDs and declared action enum values, never placeholders. The server constructs all package identities and validates syntax, semantics and isolation before accepting the Build."""
+    # An attempted correction supersedes confidence in the earlier candidate.
+    # A failed correction cannot silently finalize the known-defective preview.
+    context.context.current_custom_candidate_block_id = None
+    if len(parameters) > 32 or len({item.name for item in parameters}) != len(parameters):
+        raise ValueError("Custom visual parameters must have at most 32 unique names.")
+    summary = _create_custom_visual(context, block_id=block_id, meaning=meaning, label=label, source=source,
+        entities=entities, relations=relations, quantities=quantities, interactions=interactions,
+        presentation_steps=presentation_steps, visual_descriptions=visual_descriptions,
+        current_state_schema={item.name: item.description for item in state_fields},
+        parameters={item.name: item.value for item in parameters},
+        parent_version_id=parent_version_id, generalized_change=generalized_change)
+    return _preview_created_visual(context, summary, source, {item.name: item.value for item in parameters}, block_id)
+
+
+def _preview_created_visual(context, summary, source, parameters, block_id):
+    from services.studio.custom_visual_preview import preview_custom_visual
+    try:
+        preview = preview_custom_visual(source=source, parameters=parameters)
+    except ValueError:
+        context.context.current_custom_candidate_block_id = None
+        raise
+    context.context.custom_attempt_count += 1
+    context.context.custom_preview_count += 1
+    findings = [finding for view in preview["views"] for finding in view.get("findings", [])]
+    context.context.custom_preview_valid = not findings
+    if context.context.model_turns:
+        context.context.model_turns[-1]["browser_preview"] = {
+            "status": "RENDERED", "block_id": block_id,
+            "views": [{"width": view["width"], "image_digest": sha256(view["image_url"].encode()).hexdigest()} for view in preview["views"]]}
+    output = [ToolOutputText(text=json.dumps({**summary, "preview": "RENDERED", "technical_findings": findings, "finalization_allowed": not findings,
+        "review_instruction": "Review all actual sandbox screenshots and the real pointer-probe event against the brief and math. A small drag must not jump to an unrelated coordinate. Finalize only if coherent. For a concrete error, call refine_custom_visual once with corrected source only. The server preserves the canonical Manifest, parameters and lineage. Do not change the teaching objective.",
+        "remaining_create_attempts": max(0, 2-context.context.custom_preview_count)}))]
+    for view in preview["views"]:
+        output.extend([ToolOutputText(text=f"Actual {view['width']}px sandbox preview: {view['text']}"),
+            ToolOutputImage(image_url=view["image_url"], detail="high")])
+    return output
+
+
+
+def _refine_custom_visual(context: RunContextWrapper[CanvasAgentRunContext], source: str):
+    """Correct one concrete defect visible in the CREATE screenshots. Supply corrected JavaScript only. The server preserves the canonical meaning, parameters and registry lineage; never redesign the lesson."""
+    if context.context.custom_preview_count >= 2 or context.context.custom_attempt_count >= 3:
+        raise ValueError("Custom visual refinement budget exhausted.")
+    candidate = next((b for b in context.context.registry.blocks() if b.block_id == context.context.current_custom_candidate_block_id), None)
+    if candidate is None or candidate.package is None:
+        raise ValueError("Source refinement requires the current previewed candidate.")
+    selection = next((item for item in context.context.reusable_selections if item.get("block_id") == candidate.block_id), {})
+    context.context.current_custom_candidate_block_id = None
+    manifest = candidate.package.manifest
+    block_id = candidate.block_id[:54] + "-refined"
+    summary = _create_custom_visual(context, block_id=block_id, meaning=candidate.meaning,
+        label=candidate.title or "Interactive visual", source=source,
+        entities=manifest.entities, relations=manifest.relations, quantities=manifest.quantities,
+        interactions=manifest.interactions, presentation_steps=manifest.presentation_steps,
+        visual_descriptions=manifest.visual_descriptions, current_state_schema=manifest.current_state_schema,
+        parameters=candidate.parameters, parent_version_id=selection.get("version_id"),
+        generalized_change=selection.get("generalized_change"))
+    context.context.record_tool("refine_custom_visual")
+    return _preview_created_visual(context, summary, source, candidate.parameters, block_id)
+
+
+def _refine_custom_visual_enabled(context: RunContextWrapper[CanvasAgentRunContext], agent: Agent[CanvasAgentRunContext]) -> bool:
+    return context.context.current_custom_candidate_block_id is not None and context.context.custom_attempt_count < 3 and context.context.custom_preview_count < 2
+
+
 def _custom_visual_tool_error(
     context: RunContextWrapper[CanvasAgentRunContext], error: Exception
 ) -> str:
     """Retain a bounded reason when SDK argument validation rejects CREATE first."""
     context.context.create_route_attempted = True
+    context.context.current_custom_candidate_block_id = None
     context.context.custom_attempt_count += 1
     payload = _custom_visual_error_payload(error)
     context.context.record_tool_failure("create_custom_visual", json.dumps(payload, separators=(",", ":")))
@@ -529,6 +683,8 @@ def _custom_visual_error_payload(error: Exception) -> dict[str, object]:
     """Expose repairable contract failures without source or internal runtime data."""
     if isinstance(error, CustomVisualAuthoringError):
         return dict(error.payload)
+    if str(error).startswith("CUSTOM_VISUAL_PREVIEW_"):
+        return {"code": str(error), "repair": "Correct a concrete mount failure in the same visual if possible; browser preview is required and cannot be bypassed."}
     if "invalid json input for tool" in str(error).casefold():
         payload: dict[str, object] = {
             "code": "CUSTOM_VISUAL_ARGUMENT_ENCODING_INVALID",
@@ -549,19 +705,30 @@ def _custom_visual_error_payload(error: Exception) -> dict[str, object]:
                 break
             current = current.__cause__ or current.__context__
         return payload
+    details = getattr(error, "errors", None)
+    if callable(details):
+        for item in details(include_input=False, include_url=False):
+            underlying = item.get("ctx", {}).get("error")
+            if isinstance(underlying, (CustomVisualSecurityError, CustomVisualInteractionLayoutError)):
+                return _custom_visual_error_payload(underlying)
     if isinstance(error, CustomVisualSecurityError):
         message = str(error).casefold()
         if "semantic_interaction_binding_invalid" in message:
             return {
                 "code": "SEMANTIC_INTERACTION_BINDING_INVALID",
-                "repair": "Emit each declared bridge semantic_id as its exact literal Manifest ID; do not use a dynamic variable for semantic_id.",
+                "repair": "Make each emitted action/semantic_id tuple match the declared interactions; do not invent new action or entity IDs.",
+                "binding_error": str(error)[:700],
             }
+        if "javascript_syntax_invalid" in message:
+            return {"code": "CUSTOM_VISUAL_JAVASCRIPT_SYNTAX_INVALID", "repair": "Correct JavaScript delimiters and syntax in the same source; do not redesign or change semantic IDs."}
+        if "syntax_validator_unavailable" in message:
+            return {"code": "CUSTOM_VISUAL_SYNTAX_VALIDATOR_UNAVAILABLE"}
         capability = "unknown"
         for name in ("fetch", "xmlhttprequest", "websocket", "cookie", "storage", "window.parent", "import"):
             if name in message:
                 capability = name
                 break
-        return {"code": "CUSTOM_VISUAL_FORBIDDEN_API", "forbidden_capability": capability}
+        return {"code": "CUSTOM_VISUAL_FORBIDDEN_API", "forbidden_capability": capability, "validation_error": str(error)[:280]}
     if isinstance(error, CustomVisualInteractionLayoutError):
         return {
             "code": "CUSTOM_VISUAL_INTERACTION_CONTROL_NOT_RENDERABLE",
@@ -677,13 +844,12 @@ def _instantiate_reusable_visual(
     canonical_manifest = candidate.get("manifest_contract")
     if not isinstance(build_id, str) or not isinstance(manifest_digest, str) or not isinstance(canonical_manifest, dict):
         raise ValueError("Reusable visual has no authorized canonical implementation.")
+    from services.studio.full_power_canvas import validate_visual_parameters
     schema = candidate.get("parameter_schema")
     if not isinstance(schema, dict):
         raise ValueError("Reusable visual parameters are invalid.")
     parameters = parameters or {}
-    properties = schema.get("properties", {})
-    if not isinstance(properties, dict) or not set(parameters) <= set(properties):
-        raise ValueError("Reusable visual parameters are outside the approved schema.")
+    validate_visual_parameters(schema, parameters)
     block = create_reused_custom_visual(
         block_id=block_id,
         meaning=meaning,
@@ -702,7 +868,7 @@ def _instantiate_reusable_visual(
 def _composition_tool_enabled(
     context: RunContextWrapper[CanvasAgentRunContext], agent: Agent[CanvasAgentRunContext],
 ) -> bool:
-    """Once CREATE succeeded, the remaining phase is plan finalization only."""
+    """After CREATE only bounded source refinement and plan finalization remain."""
     return (
         context.context.current_custom_candidate_block_id is None
         and not context.context.create_route_attempted
@@ -712,14 +878,12 @@ def _composition_tool_enabled(
 def _custom_visual_tool_enabled(
     context: RunContextWrapper[CanvasAgentRunContext], agent: Agent[CanvasAgentRunContext],
 ) -> bool:
-    return (
-        context.context.current_custom_candidate_block_id is None
-        and context.context.custom_attempt_count < 2
-    )
+    return context.context.current_custom_candidate_block_id is None and context.context.custom_attempt_count < 2
 
 
 def _agent_tools():
     return [
+        function_tool(_refine_custom_visual, name_override="refine_custom_visual", is_enabled=_refine_custom_visual_enabled, failure_error_function=_custom_visual_tool_error),
         function_tool(_compute_math, name_override="compute_math", is_enabled=_composition_tool_enabled),
         function_tool(_convert_units, name_override="convert_units", is_enabled=_composition_tool_enabled),
         function_tool(_create_math_board, name_override="create_math_board", is_enabled=_composition_tool_enabled),
@@ -728,9 +892,9 @@ def _agent_tools():
         function_tool(_create_text_interaction, name_override="create_text_interaction", is_enabled=_composition_tool_enabled),
         function_tool(_create_math_input, name_override="create_math_input", is_enabled=_composition_tool_enabled),
         function_tool(
-            _create_custom_visual,
+            _create_custom_visual_strict,
             name_override="create_custom_visual",
-            strict_mode=False,
+            strict_mode=True,
             failure_error_function=_custom_visual_tool_error,
             is_enabled=_custom_visual_tool_enabled,
         ),
@@ -833,7 +997,7 @@ def _agent_function_tool_names() -> frozenset[str]:
     return frozenset({
         "compute_math", "convert_units", "create_math_board", "create_2d_scene",
         "create_diagram", "create_text_interaction", "create_math_input", "create_custom_visual",
-        "search_reusable_visuals", "instantiate_reusable_visual",
+        "search_reusable_visuals", "instantiate_reusable_visual", "refine_custom_visual",
     })
 
 
@@ -844,6 +1008,8 @@ def _produced_block_ids(output: object) -> tuple[str, ...]:
             value = json.loads(value)
         except json.JSONDecodeError:
             return ()
+    if isinstance(value, list):
+        return tuple(block_id for item in value for block_id in _produced_block_ids(_value(item, "text") or {}))
     block_id = _value(value, "block_id")
     return (block_id,) if isinstance(block_id, str) and re.fullmatch(r"[a-z][a-z0-9_-]{0,63}", block_id) else ()
 
@@ -911,7 +1077,7 @@ def _parameter_schema(parameters: dict[str, str | int | float | bool]) -> dict[s
     kind = {str: "string", int: "integer", float: "number", bool: "boolean"}
     return {"type": "object", "properties": {
         key: {"type": kind[type(value)]} for key, value in parameters.items()
-    }}
+    }, "required": list(parameters), "additionalProperties": False}
 
 
 def _canonical_custom_manifest(
@@ -997,23 +1163,26 @@ async def compose_canvas_scene_with_trace(*, brief: CanvasBriefV1, visual_learne
     )
     trace_id = sdk_trace_id or gen_trace_id()
     agent = build_canvas_agent(api_key=api_key, model=model, base_url=base_url, brief=brief, visual_learner_context=visual_learner_context)
-    initial_result = await Runner.run(
-        agent,
-        input=canvas_agent_input(brief, visual_learner_context),
-        context=context,
-        hooks=CanvasCompositionRunHooks(),
-        # CREATE can require one registry inspection plus a bounded visual package
-        # and its final typed plan. Keep the limit finite, but do not cut off an
-        # otherwise valid adequacy decision before it can settle.
-        max_turns=16,
-        run_config=RunConfig(
-            workflow_name="lina-agentic-canvas-compose",
-            trace_id=trace_id,
-            trace_include_sensitive_data=False,
-        ),
-    )
+    try:
+        initial_result = await Runner.run(
+            agent,
+            input=canvas_agent_input(brief, visual_learner_context),
+            context=context,
+            hooks=CanvasCompositionRunHooks(),
+            # CREATE can require one registry inspection plus a bounded visual package
+            # and its final typed plan. Keep the limit finite, but do not cut off an
+            # otherwise valid adequacy decision before it can settle.
+            max_turns=16,
+            run_config=RunConfig(
+                workflow_name="lina-agentic-canvas-compose",
+                trace_id=trace_id,
+                trace_include_sensitive_data=False,
+            ),
+        )
+    except ModelBehaviorError as error:
+        raise CanvasCompositionModelBehaviorError(context=context) from error
     plan = AgenticCanvasPlanV1.model_validate(initial_result.final_output)
-    if context.create_route_attempted and context.current_custom_candidate_block_id is None:
+    if context.create_route_attempted and (context.current_custom_candidate_block_id is None or not context.custom_preview_valid):
         _record_final_plan_validation(context, CustomVisualCandidateMissingError.code)
         raise CustomVisualCandidateMissingError(
             tool_failures=context.tool_failures,
@@ -1039,22 +1208,25 @@ async def compose_canvas_scene_with_trace(*, brief: CanvasBriefV1, visual_learne
             tools=[],
             instructions=agent.instructions + "\n\nYou are in one final-plan coherence repair. Return only the corrected plan.",
         )
-        repair_result = await Runner.run(
-            repair_agent,
-            input=_plan_repair_input(
-                plan=plan,
-                registry=context.registry,
-                current_custom_candidate_block_id=context.current_custom_candidate_block_id or "",
-            ),
-            context=context,
-            hooks=CanvasCompositionRunHooks(),
-            max_turns=1,
-            run_config=RunConfig(
-                workflow_name="lina-agentic-canvas-plan-repair",
-                trace_id=trace_id,
-                trace_include_sensitive_data=False,
-            ),
-        )
+        try:
+            repair_result = await Runner.run(
+                repair_agent,
+                input=_plan_repair_input(
+                    plan=plan,
+                    registry=context.registry,
+                    current_custom_candidate_block_id=context.current_custom_candidate_block_id or "",
+                ),
+                context=context,
+                hooks=CanvasCompositionRunHooks(),
+                max_turns=1,
+                run_config=RunConfig(
+                    workflow_name="lina-agentic-canvas-plan-repair",
+                    trace_id=trace_id,
+                    trace_include_sensitive_data=False,
+                ),
+            )
+        except ModelBehaviorError as error:
+            raise CanvasCompositionModelBehaviorError(context=context) from error
         plan = AgenticCanvasPlanV1.model_validate(repair_result.final_output)
         scene = context.registry.materialize_plan(
             plan,

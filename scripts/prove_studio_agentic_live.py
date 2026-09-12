@@ -265,6 +265,15 @@ def semantic_action_for_scene(
         for block in scene.blocks:
             if action_key not in block.allowed_actions:
                 continue
+            interactions = getattr(block, "semantic_interactions", [])
+            declared_targets = {
+                item.semantic_id
+                for item in interactions
+                if item.action == action_key
+            }
+            eligible = [element for element in block.elements if not interactions or element.id in declared_targets]
+            if not eligible:
+                continue
             # A custom Scene's durable block intentionally contains no package
             # or Manifest. For a submit surface, prefer its named choice
             # control rather than the first visible semantic entity (which is
@@ -272,8 +281,9 @@ def semantic_action_for_scene(
             declared_choice = next(
                 (
                     element
-                    for element in block.elements
+                    for element in eligible
                     if action_key in {"SELECT", "SUBMIT"}
+                    and (not declared_targets or element.id in declared_targets)
                     and (
                         element.id.startswith(("choice-", "choice_"))
                         or element.label.casefold().startswith(("choose", "select"))
@@ -284,14 +294,24 @@ def semantic_action_for_scene(
             preferred = next(
                 (
                     element
-                    for element in block.elements
+                    for element in eligible
                     if preferred_value is not None
                     and preferred_value in {element.label, element.current_value}
                 ),
                 None,
             )
-            element = preferred or declared_choice or (block.elements[0] if block.elements else None)
+            element = preferred or declared_choice or eligible[0]
             element_id = None if element is None else element.id
+            declared = next(
+                (item for item in interactions if item.action == action_key and item.semantic_id == element_id),
+                None,
+            )
+            required_value = bool(getattr(declared, "value_required", False))
+            semantic_value = (
+                element_id.rsplit("-", 1)[-1]
+                if required_value and element_id is not None
+                else None
+            )
             return {
                 "action_key": action_key,
                 "payload": {
@@ -303,7 +323,7 @@ def semantic_action_for_scene(
                     # SUBMIT interactions can declare a required semantic
                     # value. The proof uses the caller-provided bounded value
                     # rather than treating that contract as an empty click.
-                    "to_value": preferred_value if action_key == "SUBMIT" else None,
+                    "to_value": semantic_value if required_value else (preferred_value if action_key == "SUBMIT" else None),
                 },
             }
     raise RuntimeError("AGENTIC_SCENE_HAS_NO_TUTOR_TRIGGERING_PROOF_ACTION")
