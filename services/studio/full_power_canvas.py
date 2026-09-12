@@ -176,6 +176,19 @@ class CustomVisualPackageV1(BaseModel):
                 raise CustomVisualSecurityError(f"CUSTOM_VISUAL_FORBIDDEN_API:{capability}")
         if "window.mount" not in self.source:
             raise CustomVisualSecurityError("Custom visual source must define window.mount")
+        declared_interactions = {(item.action, item.semantic_id) for item in self.manifest.interactions}
+        for match in re.finditer(
+            r"bridge\.emit\(\s*['\"]([A-Z_]+)['\"]\s*,\s*([^,\s)]+)", self.source
+        ):
+            action, semantic_id = match.groups()
+            if not re.fullmatch(r"['\"][a-z][a-z0-9_-]*['\"]", semantic_id):
+                raise CustomVisualSecurityError(
+                    "SEMANTIC_INTERACTION_BINDING_INVALID: bridge semantic_id must be a declared literal"
+                )
+            if (action, semantic_id[1:-1]) not in declared_interactions:
+                raise CustomVisualSecurityError(
+                    "SEMANTIC_INTERACTION_BINDING_INVALID: bridge action and semantic_id must be declared by the Manifest"
+                )
         # The source cannot choose a semantic target dynamically.  Its bridge
         # calls are the executable half of the canonical Manifest contract;
         # allowing a variable here would permit a rendered control to emit a
