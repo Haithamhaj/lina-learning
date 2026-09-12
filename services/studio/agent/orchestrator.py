@@ -440,7 +440,7 @@ def _create_custom_visual(
     # untyped at the SDK boundary: the system extracts the model-authored fields
     # and builds the strict canonical Manifest below.  A Draft model here would
     # reject legacy/internal boilerplate before canonicalization can run.
-    semantic_manifest: dict[str, object] | None = None,
+    semantic_manifest: dict[str, object] | str | None = None,
 ):
     """CREATE a sandboxed custom visual from semantic entities, actions, and source. Submit source as one minified valid JSON string: use single-quoted JavaScript literals and no literal newlines or double quotes in source, so the tool-call JSON stays valid. Every semantic_id used by relations, quantities, or interactions must first appear in entities; use entity IDs, never action/step IDs. Use native local state and the supplied semantic bridge only: no fetch, network, storage, cookies, parent window, imports, or application APIs."""
     context.context.record_tool("create_custom_visual")
@@ -451,7 +451,9 @@ def _create_custom_visual(
         # still supplies the old envelope, extract only its authored semantic
         # content and rebuild the canonical manifest below.
         if semantic_manifest is not None:
-            legacy = dict(semantic_manifest)
+            legacy = json.loads(semantic_manifest) if isinstance(semantic_manifest, str) else dict(semantic_manifest)
+            if not isinstance(legacy, dict):
+                raise ValueError("Legacy semantic_manifest must encode an object.")
             # Do not strictly validate the old envelope first: canonicalization
             # intentionally supplies minimal entity records for relation/action
             # targets that the model named but did not repeat as boilerplate.

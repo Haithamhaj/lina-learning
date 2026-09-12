@@ -477,6 +477,31 @@ def test_custom_visual_legacy_manifest_envelope_is_canonicalized_not_rejected() 
     assert [entity.semantic_id for entity in package.manifest.entities] == ["point-a"]
 
 
+def test_custom_visual_legacy_manifest_json_string_is_canonicalized() -> None:
+    import json
+    from types import SimpleNamespace
+
+    from services.studio.agent.orchestrator import CanvasAgentRunContext, _create_custom_visual
+    from services.studio.agent.registry import CanvasBlockRegistry
+
+    context = CanvasAgentRunContext(
+        registry=CanvasBlockRegistry(), brief_digest="d" * 64, brief_objective="Compare coupled slopes."
+    )
+    _create_custom_visual(
+        SimpleNamespace(context=context),
+        block_id="string-legacy", meaning="A coupled slope comparison.", label="Coupled slopes",
+        source="window.mount=(root,params,bridge)=>{root.textContent=params.label}",
+        semantic_manifest=json.dumps({
+            "objective": "Legacy objective.", "representation_summary": "Legacy representation.",
+            "entities": [], "relations": [], "quantities": [], "presentation_steps": [],
+            "interactions": [{"semantic_id": "point-a", "action": "MOVE", "meaning": "Move A.", "value_required": True}],
+            "visual_descriptions": [], "current_state_schema": {},
+        }),
+        parameters={"label": "A"},
+    )
+    assert context.registry.blocks()[0].package is not None
+
+
 def test_create_plan_omission_gets_one_toolless_coherence_repair(monkeypatch) -> None:
     import asyncio
     import json
