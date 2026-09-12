@@ -273,8 +273,11 @@ def semantic_action_for_scene(
                 (
                     element
                     for element in block.elements
-                    if action_key == "SUBMIT"
-                    and (element.id.startswith("choice-") or element.label.casefold().startswith(("choose", "select")))
+                    if action_key in {"SELECT", "SUBMIT"}
+                    and (
+                        element.id.startswith(("choice-", "choice_"))
+                        or element.label.casefold().startswith(("choose", "select"))
+                    )
                 ),
                 None,
             )
