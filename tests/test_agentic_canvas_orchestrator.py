@@ -431,7 +431,7 @@ def test_custom_visual_legacy_manifest_envelope_is_canonicalized_not_rejected() 
         semantic_manifest={
             "version": "canvas-semantic-manifest-v1", "objective": "Legacy objective.",
             "representation_summary": "Legacy representation.",
-            "entities": [{"semantic_id": "point-a", "kind": "point", "label": "A", "educational_meaning": "A point.", "visible_description": "Point A."}],
+            "entities": [],
             "relations": [], "quantities": [], "presentation_steps": [],
             "interactions": [{"semantic_id": "point-a", "action": "MOVE", "meaning": "Move A.", "value_required": True}],
             "calculated_results": [], "visual_descriptions": [], "current_state_schema": {}, "provenance": {},
@@ -443,6 +443,7 @@ def test_custom_visual_legacy_manifest_envelope_is_canonicalized_not_rejected() 
     assert package is not None
     assert package.manifest.brief_digest == "c" * 64
     assert package.manifest.objective == "Compare coupled slopes."
+    assert [entity.semantic_id for entity in package.manifest.entities] == ["point-a"]
 
 
 def test_create_plan_omission_gets_one_toolless_coherence_repair(monkeypatch) -> None:

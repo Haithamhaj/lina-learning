@@ -447,14 +447,17 @@ def _create_custom_visual(
         # still supplies the old envelope, extract only its authored semantic
         # content and rebuild the canonical manifest below.
         if semantic_manifest is not None:
-            legacy = _bound_manifest(semantic_manifest, context.context.brief_digest)
-            entities = entities or list(legacy.entities)
-            relations = relations or list(legacy.relations)
-            quantities = quantities or list(legacy.quantities)
-            interactions = interactions or list(legacy.interactions)
-            presentation_steps = presentation_steps or list(legacy.presentation_steps)
-            visual_descriptions = visual_descriptions or list(legacy.visual_descriptions)
-            current_state_schema = current_state_schema or dict(legacy.current_state_schema)
+            legacy = semantic_manifest.model_dump(mode="json") if hasattr(semantic_manifest, "model_dump") else dict(semantic_manifest)
+            # Do not strictly validate the old envelope first: canonicalization
+            # intentionally supplies minimal entity records for relation/action
+            # targets that the model named but did not repeat as boilerplate.
+            entities = entities or legacy.get("entities", [])
+            relations = relations or legacy.get("relations", [])
+            quantities = quantities or legacy.get("quantities", [])
+            interactions = interactions or legacy.get("interactions", [])
+            presentation_steps = presentation_steps or legacy.get("presentation_steps", [])
+            visual_descriptions = visual_descriptions or legacy.get("visual_descriptions", [])
+            current_state_schema = current_state_schema or legacy.get("current_state_schema", {})
         validated_manifest = _canonical_custom_manifest(
             objective=context.context.brief_objective,
             meaning=meaning,
