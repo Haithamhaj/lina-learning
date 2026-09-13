@@ -1,4 +1,4 @@
-"""Private object-storage contracts and the local development provider."""
+"""Private object-storage contracts and configured providers."""
 
 from .factory import create_object_storage
 from .keys import validate_storage_key
@@ -17,6 +17,7 @@ from .models import (
     StorageProviderUnavailable,
     StoredObject,
 )
+from .replit import ReplitObjectStorage
 from .s3 import MetadataRotationReport, S3ObjectStorage
 
 __all__ = [
@@ -30,6 +31,7 @@ __all__ = [
     "ObjectNotFoundError",
     "ObjectStorage",
     "PrivateAccess",
+    "ReplitObjectStorage",
     "StorageError",
     "StorageIntegrityError",
     "StorageProviderUnavailable",
