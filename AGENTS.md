@@ -11,8 +11,8 @@ Read in this order when relevant:
 1. `docs/PROJECT_REFERENCE.md` — durable product truth and cross-domain boundaries.
 2. `docs/LEARNING_INTELLIGENCE_SPEC.md` — Evidence / Intelligence semantics.
 3. `docs/CHILD_SAFETY_POLICY.md` — child-safety and Parent Boundary authority.
-4. `docs/IMPLEMENTATION_PLAN.md` — current technical architecture and execution direction.
-5. `docs/FULL-POWER-CANVAS-01_ARCHITECTURE_IMPLEMENTATION_SPEC.md` — approved Full-Power Canvas architecture and acceptance authority.
+4. `docs/IMPLEMENTATION_PLAN.md` — current technical architecture.
+5. `docs/FULL-POWER-CANVAS-01_ARCHITECTURE_IMPLEMENTATION_SPEC.md` — retained Full-Power implementation and acceptance specification.
 6. `research/repository/TECHNOLOGY_REUSE_CATALOG.md` — reusable technology/capability reference.
 7. `project-state/PROJECT_STATE.md` — current operational snapshot.
 8. `TASKS.md` — executable queue and dependencies.
@@ -21,7 +21,7 @@ If two governing documents conflict, the most recently approved Product Owner de
 
 ## Current implementation mode
 
-The approved current execution direction is `FULL-POWER-CANVAS-01`.
+`FULL-POWER-CANVAS-01` engineering/build work is complete and published. Do not resume hardening, change Canvas architecture, or begin production use from historical task text. The next controlled real-use / production-use phase requires separate Product Owner authorization.
 
 Use **native Codex capabilities only** for this work. Do not use Superpowers or any `superpowers:*` workflow/skill. Native reasoning, repository inspection, editing, debugging, browser work, testing, and native subagents are allowed.
 
@@ -140,7 +140,7 @@ Do not build exhaustive upfront test matrices.
 
 During implementation use focused verification. Do not repeatedly rerun the entire Python/PostgreSQL/browser/live-provider suite after small changes.
 
-The primary release gate is one final integrated acceptance wave that includes real-provider and real-browser proof for representative REUSE, ADAPT, CREATE, Tutor round-trip, and sandbox-negative behavior, followed by one broad regression near closure.
+For a separately authorized production-use phase, treat real-provider/browser evidence, authenticated Daily use, reliability and learning-benefit evidence as distinct gates. AI Development Review is advisory and cannot certify correctness or release readiness.
 
 A task is not complete because unit tests pass. Visual completion requires actual rendered evidence.
 

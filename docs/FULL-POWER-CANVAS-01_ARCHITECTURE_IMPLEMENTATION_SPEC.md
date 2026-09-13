@@ -9,6 +9,8 @@
 
 ---
 
+> Historical approved implementation specification. The architecture it established is implemented; current architecture and next-phase authority live in `docs/IMPLEMENTATION_PLAN.md`, `docs/PROJECT_REFERENCE.md`, `project-state/PROJECT_STATE.md`, and `TASKS.md`. This document remains the detailed rationale and acceptance record and does not authorize new Canvas work by itself.
+
 # 0. Executive Decision
 
 Lina's Canvas is no longer governed as a finite catalogue of typed renderers with custom generation as a weak fallback.
@@ -1846,4 +1848,3 @@ After approval:
 3. prepare one compact Codex execution prompt using this spec as the attached authority;
 4. start implementation from the approved current Canvas baseline in a separate worktree/branch;
 5. require real-provider + real-browser final evidence before final acceptance.
-

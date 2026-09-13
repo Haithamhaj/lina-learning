@@ -1,6 +1,8 @@
 # Full-Power Canvas hardening: engineering and acceptance evidence
 
-Baseline: `ebac3fef92427ac203d241f7cd60eafdb1187c6c`, branch `codex/full-power-canvas-01`, checkout `.worktrees/full-power-canvas-01`. Root main and unrelated work are preserved. Runtime model: **gpt-5.6-luna**. No live-generated source was manually repaired. No push, merge or deployment.
+> Historical hardening evidence. It records observed engineering results and limits; it does not authorize further hardening or define current production-use readiness.
+
+Baseline: `ebac3fef92427ac203d241f7cd60eafdb1187c6c`, branch `codex/full-power-canvas-01`, checkout `.worktrees/full-power-canvas-01`. Root main and unrelated work are preserved. Runtime model: **gpt-5.6-luna**. No live-generated source was manually repaired. At the time of the evidence collection, no push, merge or deployment was authorized.
 
 **Independent verification and automatic correction are implemented and live-proven. Broad production acceptance is not met.** Model and protected architecture remain unchanged.
 

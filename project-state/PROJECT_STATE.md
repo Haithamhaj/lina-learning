@@ -2,27 +2,21 @@
 
 ## Current goal
 
-Full-Power Canvas engineering/build closure and independent development-review evidence/reports are complete and published on the current branch. Production-use acceptance remains unmet. Merge and deployment are not authorized.
+Repository truth is reconciled after the published Full-Power Canvas engineering/build closure. The next controlled real-use / production-use phase is not yet authorized. Merge and deployment are not authorized.
 
 ## Current reality
 
-Independent Canvas development review is implemented locally: scoped operator capture, bounded private evidence pack and one-shot AI report in a separate database table, with no student-intelligence/runtime hook. A real six-image Luna report completed; it missed a known grid-scale defect. Local engineering verification is complete; reviewer accuracy remains unaccepted. See `docs/proposals/CANVAS-DEVELOPMENT-REVIEW.md`.
+Lina remains a modular monolith. Primary Tutor owns teaching; the implemented Full-Power Hybrid Canvas composes typed, REUSE, ADAPT and CREATE representations and returns bounded Semantic Manifest/Studio state to the same Tutor. Immutable Build/ObjectStorage references remain authoritative; generated custom code runs only in the approved sandbox.
 
-Authoritative checkout: `.worktrees/full-power-canvas-01`, branch `codex/full-power-canvas-01`, accepted baseline `ebac3fef92427ac203d241f7cd60eafdb1187c6c`. The root checkout and unrelated work are preserved.
+Selective CREATE, promotion, true REUSE and true ADAPT have desktop production-equivalent browser evidence. Selective REUSE demonstrated materially lower observed Luna time/cost than CREATE (7.189s/$0.006012 versus 55.588s/$0.032735 for the documented exact pair). These are engineering observations, not a general performance guarantee.
 
-Production preview uses the exact isolated sandbox, actual wide/narrow controls, per-action replay and bounded diagnostic deadlines. Actual ASGI disconnect cleanup now cancels unfinished Canvas Tutor streams promptly; real reload → CANCELLED → next choice COMPLETED is proven. Same-Luna independent verification can veto the composer's self-review and return defects to the existing correction tools. A live sentence run demonstrated veto → automatic source correction → independent acceptance → immutable settlement; actual browser confirmation/reorder/reload worked. This is not universal educational acceptance.
-
-Desktop acceptance is active at 640×384 and 960×384. Early independent review now returns defects while authoring budget remains. Canonical state-read diagnostics, subpixel replay comparison, capability-aware REUSE summaries and painted screenshot capture address measured false failures and routing omissions. The final six-case desktop wave completed 2/6 protocols; human review rejected its reflection grid despite positive Luna review. Earlier exact-pair CREATE/ADAPT/REUSE qualifications remain separate. No generated source was manually repaired. A new exact-pair ADAPT child has completed immutable lineage, actual partition/choice/submission, full reload and Tutor handoffs at both desktop widths. Broad CREATE reliability remains open.
-
-Selective promotion and true REUSE of one exact fraction lesson are proven against the same Build/digest: 7.189s Luna time and $0.006012 estimated token cost, versus its accepted CREATE at 55.588s / $0.032735. General parameter suitability is not established.
-
-Integrated regression: 1420 passed, 12 skipped on isolated PostgreSQL 55438. Live evidence DB 55434 is preserved. Real Chrome sandbox/queue checks, TypeScript and full Next production build passed. Metrics retain development runs and failures; detailed report distinguishes protocol, browser and educational evidence.
+Canvas Development Review is an internal on-demand path: it lists experiences, captures a bounded independent review record, runs one advisory AI analysis, and preserves prior reports for comparison. It does not write Learning Intelligence, learner profile/personalization or Tutor memory. The first real report missed the known unequal grid-proportion defect, so AI review is not a correctness or release gate. See `docs/proposals/CANVAS-DEVELOPMENT-REVIEW.md`.
 
 ## Active decisions
 
 - Primary Tutor owns teaching; Canvas composes and verifies representation only.
-- Luna remains the runtime model. Independent verification has no tools, teaching or persistence authority.
-- At most two CREATE and three source corrections, four total authoring attempts (two CREATE leave two corrections); shared 16 composition turns, plus one final-plan-only repair. Exhaustion does not reopen authoring.
+- GPT-5.6 Luna remains the runtime Canvas model. Independent verification and Development Review have no teaching, source-change or release authority.
+- The current Canvas authoring budget is at most four total attempts: at most two CREATE attempts and at most three source-only refinements, with a shared 16-turn composition ceiling and one final-plan-only repair. Exhaustion does not reopen authoring.
 - Parameters-only changes are REUSE; new capability requires ADAPT lineage. Promotion remains selective and owner-scoped.
 - Immutable Build/ObjectStorage source and digest verification remain authoritative; Scenes hold bounded references/state.
 
@@ -32,16 +26,17 @@ Primary Tutor authority; child safety and Parent Boundaries; owner/privacy isola
 
 ## Active risks
 
-Luna's independent review improves veto/correction evidence but cannot guarantee educational correctness. Broad production CREATE is not accepted. Authenticated Clerk/Daily login, deployment, real-Lina learning benefit and traffic reliability are not established by disposable-owner proofs. Existing promoted Versions are not retroactively certified by the new checks.
+Broad unrestricted production CREATE reliability is not accepted. Authenticated Daily use, deployment, traffic reliability and real learner learning benefit are not established by disposable-owner proofs. Runtime CREATE latency/cost remain material considerations. Existing promoted Versions are not retroactively certified by AI review or later checks.
 
 ## Next recommended action
 
-Begin a separately authorized production-use phase only when the Product Owner requests it. It must reassess correctness/replay defects, authenticated Daily use, reliability and learning benefit without treating AI review as a correctness gate. Product Owner deferred mobile on 2026-09-13; no model change is authorized.
+Begin a separately authorized controlled real-use / production-use phase only when the Product Owner requests it. It must reassess correctness/replay defects, authenticated Daily use, reliability and learning benefit without treating AI review as a correctness gate. Mobile was explicitly deferred and is not the current release gate; no model change is authorized.
 
 ## Critical references
 
 - `docs/FULL-POWER-CANVAS-HARDENING.md`
 - `docs/FULL-POWER-CANVAS-HARDENING_METRICS.json`
 - `docs/FULL-POWER-CANVAS-01_ARCHITECTURE_IMPLEMENTATION_SPEC.md`
+- `docs/proposals/CANVAS-DEVELOPMENT-REVIEW.md`
 - `docs/PROJECT_REFERENCE.md`
 - `TASKS.md`

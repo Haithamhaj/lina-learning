@@ -11,7 +11,7 @@ An explicit current Product Owner instruction authorizes its requested working s
 | STUDIO-AGENTIC-01 | DONE | Tutor-led Agentic Canvas, bounded Agents SDK composition, typed Scene settlement, generated-asset lineage, interactions, same-Tutor continuity, replay, real-provider proof. |
 | CANVAS-VISUAL-INTELLIGENCE-01 | DONE | Filtered visual learner context, Scene v2 presentation persistence, stronger visual skills, deterministic geometry rendering, disposable PostgreSQL and production-renderer browser proof. |
 
-## Active implementation
+## Completed engineering closure
 
 ### CANVAS-DEVELOPMENT-REVIEW-01 — Independent engineering evidence and AI reports
 
@@ -40,7 +40,7 @@ browser interactions and quality review; before/after timing/token/cost evidence
 
 ### FULL-POWER-CANVAS-01 — Full-Power Hybrid Canvas
 
-**Status:** DONE — local engineering closure; no push/merge/deployment
+**Status:** DONE — published engineering closure; no merge/deployment
 **Authority:** Product Owner approved `docs/FULL-POWER-CANVAS-01_ARCHITECTURE_IMPLEMENTATION_SPEC.md`
 **Baseline:** `62df59bcc8c43074c223d79b73bcf97a0905ed4c`
 **Closure evidence:** `docs/FULL-POWER-CANVAS-01_CLOSURE.md` (actual persisted CREATE/REUSE/ADAPT, screenshots, source-review lineage and evidence limits).
@@ -61,7 +61,9 @@ Tutor
 → same Tutor
 ```
 
-### Ordered work items
+### Historical implementation breakdown
+
+FPC-01..06 below are retained to explain how the completed architecture was built. They are not an active execution queue and do not authorize further Canvas work.
 
 #### FPC-01 — Governance and contract foundations
 **Dependencies:** completed baseline only
@@ -105,16 +107,15 @@ Tutor
 **Likely areas:** real-provider acceptance scripts, Clerk-independent production `StudioRendererHost` browser harness, evidence output.
 **Verification:** exact Agent-produced artifact rendered in browser; screenshots reviewed against prior quality floor; focused affected PostgreSQL/security gates; typecheck/build status; `git diff --check`; one broad regression near closure.
 
-## Execution rule
+## Historical execution rule
 
 FPC-01..06 are one continuous implementation slice. They are **not approval checkpoints**. Codex may combine or reorder reversible implementation work when repository evidence shows a simpler correct path.
 
-Do not stop after each item, commit, or test. Solve ordinary engineering problems autonomously.
+Do not treat this historical instruction as authority for new work.
 
-## Paused / later
+## Next phase — not authorized
 
 | Task | Status | Reason |
 | --- | --- | --- |
-| UI-REFINE-01 | PLANNED | Resume after Full-Power Canvas stabilizes the Workspace capability surface so UI refinement does not optimize around a superseded Canvas ceiling. |
-| DAILY-E2E-01 | PLANNED | Authenticated disposable-Student end-to-end Daily journey after current Canvas implementation slice. |
-| REAL-LINA-01 | PLANNED | Real learner-use observation after the implementation is stable enough to produce meaningful experience evidence. |
+| CONTROLLED-PRODUCTION-USE-01 | NOT AUTHORIZED | A separately approved real-use / controlled-production phase must establish authenticated Daily use, reliability, correctness/replay and learning-benefit evidence. It must not treat AI Development Review as release authority. |
+| UI-REFINE-01 | LATER | UI work is not part of the current closure. |

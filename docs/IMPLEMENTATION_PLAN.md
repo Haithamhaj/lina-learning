@@ -2,9 +2,9 @@
 
 ## Status
 
-Approved execution architecture for `FULL-POWER-CANVAS-01`. Current local implementation and evidence: `docs/FULL-POWER-CANVAS-01_CLOSURE.md`.
+Current technical architecture for implemented `FULL-POWER-CANVAS-01`. `docs/FULL-POWER-CANVAS-01_CLOSURE.md` and `docs/FULL-POWER-CANVAS-HARDENING.md` are historical engineering evidence, not current execution instructions.
 
-CREATE uses strict semantic fields → validated immutable package → shared production sandbox preview (wide/narrow and pointer probe) → same-agent review → at most one source-only visual correction → reference-only Scene. Clipped controls or failed preview cannot be finalized. At most two initial authoring attempts plus one successful preview correction are allowed; no unbounded generation loop. The composing worker requires the existing Node/Playwright runtime and installed Chrome; missing preview support fails closed.
+CREATE uses strict semantic fields → validated immutable package → shared production sandbox preview (wide/narrow and pointer probe) → bounded independent review/refinement → reference-only Scene. Clipped controls or failed preview cannot be finalized. The current runtime permits at most four total authoring attempts: at most two CREATE attempts and at most three source-only refinements, sharing one budget; no unbounded generation loop. The composing worker requires the existing Node/Playwright runtime and installed Chrome; missing preview support fails closed.
 
 Ordinary parameter changes are REUSE. Structural ADAPT carries a validated parent Version and creates a child Build/Version. A trusted source-only correction of a registered implementation creates a further child Version and Instance, preserving previous source, Manifest and Studio history. Promotion remains selective and owner-scoped.
 
@@ -99,7 +99,7 @@ Routing is quality-first and cost-aware:
 
 ```text
 REUSE  = existing artifact strongly fits
-ADAPT  = existing structure fits; parameter/presentation changes are enough
+ADAPT  = generalized capability must change while preserving validated parent lineage
 CREATE = existing artifacts would compromise the learning representation
 ```
 
@@ -153,10 +153,10 @@ Visible/interactive educational objects use stable semantic IDs.
 
 Routine trusted REUSE should not require model visual review.
 
-Custom CREATE should normally use:
+Custom CREATE uses the current shared authoring budget:
 
 ```text
-generate → render → preview → accept OR one refinement
+generate → render → preview → accept OR bounded source-only refinement
 ```
 
 A second correction is justified only by validation/render failure or another concrete acceptance failure. Avoid open-ended self-critique loops.

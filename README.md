@@ -70,12 +70,16 @@ The accepted repository baseline includes:
 - optional source-preserving content/RAG grounding;
 - Voice/STT and Student-owned image, PDF, and DOCX sources;
 - durable Studio/Canvas runtime with Chat–Canvas–Tutor continuity;
+- Full-Power Hybrid Canvas: typed capabilities plus immutable REUSE / ADAPT / CREATE builds in the approved sandbox;
+- an on-demand, advisory Canvas Development Review path for internal engineering review; and
 - current MATH, SCIENCE, ENGLISH, and ARABIC Studio support; and
 - the Daily Student surface.
 
 MATH, SCIENCE, ENGLISH, and ARABIC are the current structured Studio product subjects. Tutor and general conversation are not restricted to those four subjects; broader structured Studio support is not implied.
 
-Implementation is distinct from proof of long-term value. Authenticated Daily end-to-end acceptance, recurring real Lina use, and longitudinal personalization calibration remain separate gates.
+Engineering evidence proves selective CREATE, promotion, true REUSE, true ADAPT and desktop production-equivalent browser paths. It does not establish broad unrestricted CREATE reliability, authenticated Daily production use, deployment, or real learner learning benefit. Mobile is explicitly deferred and is not the current engineering release gate. Canvas Development Review is separate from Learning Intelligence, learner profile/personalization and Tutor memory; its AI reports are advisory, not correctness or release authority.
+
+The next phase is a separately authorized controlled real-use / production-use phase. It is not started by this repository state.
 
 ## Architecture and reading order
 

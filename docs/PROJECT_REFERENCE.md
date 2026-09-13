@@ -184,6 +184,10 @@ Parent disagreement can trigger review/revalidation but does not directly overwr
 
 ## Current implementation baseline
 
+Full-Power Hybrid Canvas is implemented in the modular monolith. It supports typed capabilities and immutable REUSE / ADAPT / CREATE Build paths, approved sandbox execution for custom generated code, Semantic Manifest → Studio → same-Tutor continuity, and selective reusable Artifact Version promotion. Engineering proof exists for CREATE, selective promotion, true REUSE and true ADAPT through desktop production-equivalent browser evidence. This is not acceptance of unrestricted CREATE reliability, authenticated Daily production use, deployment, or learner learning benefit.
+
+Canvas Development Review is an internal, on-demand engineering capability. It stores independent review records that reference authoritative Canvas evidence and is separate from Learning Intelligence, learner profile/personalization and Tutor memory. Its AI reviewer is advisory only and cannot modify learner state, Tutor behavior, source code or release decisions. The operator guide is `docs/proposals/CANVAS-DEVELOPMENT-REVIEW.md`.
+
 The migration baseline for FULL-POWER-CANVAS-01 is the completed Agentic Canvas / Visual Intelligence branch at:
 
 `62df59bcc8c43074c223d79b73bcf97a0905ed4c`

@@ -1,6 +1,8 @@
 # FULL-POWER-CANVAS-01 — local engineering closure evidence
 
-Date: 2026-09-12. Worktree: `.worktrees/full-power-canvas-01`, branch `codex/full-power-canvas-01`, takeover HEAD `53d14b8e2dafd1fd695bf8284ac4123b9d28c3c5`. Existing dirty implementation was preserved and completed. No push or merge is authorized by this closure.
+> Historical engineering closure evidence, dated 2026-09-12. It does not define current execution authority. The branch was subsequently reconciled and published; merge and deployment remain separate decisions.
+
+Date: 2026-09-12. Worktree: `.worktrees/full-power-canvas-01`, branch `codex/full-power-canvas-01`, takeover HEAD `53d14b8e2dafd1fd695bf8284ac4123b9d28c3c5`. Existing dirty implementation was preserved and completed. At the time of this closure, no push or merge was authorized.
 
 ## Result and boundaries
 
