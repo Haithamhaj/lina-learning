@@ -15,14 +15,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
-  const proxyUrl = process.env.CLERK_PROXY_URL;
 
   return (
     <html lang="en">
       <body>
-        <Providers publishableKey={publishableKey} proxyUrl={proxyUrl}>
-          {children}
-        </Providers>
+        <Providers publishableKey={publishableKey}>{children}</Providers>
       </body>
     </html>
   );
