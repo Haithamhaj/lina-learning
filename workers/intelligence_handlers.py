@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -163,6 +164,11 @@ def register_intelligence_handlers(
             segment_id = UUID(str(raw_ids["segment_id"]))
         except ValueError as error:
             raise ValueError("SegmentReviewLineageError") from error
+        raw_closed_at = payload.get("closed_at")
+        try:
+            requested_closed_at = datetime.fromisoformat(raw_closed_at) if isinstance(raw_closed_at, str) else None
+        except ValueError:
+            requested_closed_at = None
         with session_factory() as session:
             learning_session = session.get(LearningSession, session_id, with_for_update=True)
             segment = session.get(LearningSegment, segment_id, with_for_update=True)
@@ -171,8 +177,9 @@ def register_intelligence_handlers(
                 or segment is None
                 or learning_session.student_id != student_id
                 or segment.session_id != learning_session.id
-                or not isinstance(payload.get("closed_at"), str)
-                or payload.get("closed_at") != (segment.closed_at.isoformat() if segment.closed_at else None)
+                or requested_closed_at is None
+                or requested_closed_at.tzinfo is None
+                or requested_closed_at != segment.closed_at
                 or payload.get("closure_reason") != segment.closure_reason
             ):
                 raise SegmentReviewLineageError("SegmentReviewLineageError")

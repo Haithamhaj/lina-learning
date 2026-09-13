@@ -57,8 +57,9 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture
-def factory() -> sessionmaker[Session]:
-    engine = create_engine(normalize_database_url(os.environ["DATABASE_URL"]))
+def factory(request: pytest.FixtureRequest) -> sessionmaker[Session]:
+    connect_args = {"options": f"-c timezone={request.param}"} if hasattr(request, "param") else {}
+    engine = create_engine(normalize_database_url(os.environ["DATABASE_URL"]), connect_args=connect_args)
     with engine.begin() as connection:
         connection.execute(text("TRUNCATE ai_executions, jobs, users CASCADE"))
     yield sessionmaker(engine, expire_on_commit=False)
@@ -1230,7 +1231,22 @@ def test_capacity_rejects_complete_raw_segment_without_calling_model(factory: se
         assert review.output is None
 
 
-def test_worker_claims_b_request_and_completes_staged_review(factory: sessionmaker[Session]) -> None:
+@pytest.mark.parametrize(
+    ("factory", "request_closed_at", "expected_status"),
+    [
+        ("UTC", "2026-08-29T12:00:00+00:00", "COMPLETED"),
+        ("Asia/Riyadh", "2026-08-29T12:00:00+00:00", "COMPLETED"),
+        ("UTC", "2026-08-29T15:00:00+03:00", "COMPLETED"),
+        ("UTC", "2026-08-29T12:00:01+00:00", "PENDING"),
+        ("UTC", "2026-08-29T12:00:00", "PENDING"),
+        ("UTC", "invalid", "PENDING"),
+        ("UTC", None, "PENDING"),
+    ],
+    indirect=["factory"],
+)
+def test_worker_claims_b_request_and_completes_staged_review(
+    factory: sessionmaker[Session], request_closed_at: str | None, expected_status: str,
+) -> None:
     """Catches B's pending request remaining unhandled after C registration."""
 
     with factory.begin() as session:
@@ -1244,22 +1260,28 @@ def test_worker_claims_b_request_and_completes_staged_review(factory: sessionmak
                 "session_id": str(learning_session.id),
                 "student_id": str(student.id),
                 "review_request_version": SEGMENT_REVIEW_REQUEST_VERSION,
-                "closed_at": segment.closed_at.isoformat(),
+                "closed_at": request_closed_at,
                 "closure_reason": segment.closure_reason,
             },
             idempotency_key=f"fixture:{segment.id}",
         )
         segment_id = segment.id
 
+    provider = _Provider(_output())
     registry = JobHandlerRegistry()
     register_intelligence_handlers(
         registry,
         session_factory=factory,
-        segment_evidence_gateway_factory=lambda session: _gateway(session, _Provider(_output())),
+        segment_evidence_gateway_factory=lambda session: _gateway(session, provider),
     )
-    assert run_once(factory, registry, worker_id="fixture-worker") is not None
+    assert run_once(factory, registry, worker_id="fixture-worker").value == expected_status
 
     with factory() as session:
+        if expected_status == "PENDING":
+            assert session.query(SegmentLearningReview).filter_by(segment_id=segment_id).count() == 0
+            assert provider.calls == 0
+            assert "SegmentReviewLineageError" in session.query(Job).one().last_error
+            return
         review = session.query(SegmentLearningReview).filter_by(segment_id=segment_id).one()
         assert review.status == "COMPLETED"
 
