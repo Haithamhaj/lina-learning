@@ -35,7 +35,7 @@ diverse wide/narrow live acceptance without developer source repair.
 one integrated regression near closure; six diverse real-Luna cases with actual
 browser interactions and quality review; before/after timing/token/cost evidence.
 **Result:** 1420 integrated tests passed, 12 skipped. Desktop-only acceptance is ACTIVE after early independent review, canonical state diagnostics, capability-aware REUSE and reliable screenshot capture. True qualified REUSE and desktop ADAPT lineage/browser handoffs are verified; individual fraction, balance and Arabic sentence CREATE interactions work. Broad CREATE reliability remains unaccepted; the final captured Canvas configuration completed 2/6 protocols, with a human-detected semantic false acceptance in reflection. See `docs/FULL-POWER-CANVAS-HARDENING.md` and its portable metrics for measured evidence.
-**Closure:** Branch publication is authorized. No merge or deployment. Broad production CREATE reliability, authenticated Daily use and learning benefit remain separate production-use gates.
+**Closure:** Engineering closure branch is published. No merge or deployment. Broad production CREATE reliability, authenticated Daily use and learning benefit remain separate production-use gates.
 
 
 ### FULL-POWER-CANVAS-01 — Full-Power Hybrid Canvas

@@ -2,7 +2,7 @@
 
 ## Current goal
 
-Full-Power Canvas engineering/build closure and independent development-review evidence/reports are complete. Production-use acceptance remains unmet. Branch publication is authorized; merge and deployment are not.
+Full-Power Canvas engineering/build closure and independent development-review evidence/reports are complete and published on the current branch. Production-use acceptance remains unmet. Merge and deployment are not authorized.
 
 ## Current reality
 

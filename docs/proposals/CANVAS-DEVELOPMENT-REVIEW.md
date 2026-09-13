@@ -1,6 +1,6 @@
 # Canvas development review
 
-Status: local engineering implementation verified; reviewer accuracy remains unaccepted. Product Owner requested an independent development archive and an AI reviewer, and explicitly authorized sending the prepared evidence to OpenAI on 2026-09-13. Branch publication is authorized; no merge or deployment.
+Status: local engineering implementation verified and published on `codex/full-power-canvas-01`; reviewer accuracy remains unaccepted. Product Owner requested an independent development archive and an AI reviewer, and explicitly authorized sending the prepared evidence to OpenAI on 2026-09-13. No merge or deployment.
 
 ## Purpose and boundary
 
