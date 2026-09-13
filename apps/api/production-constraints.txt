@@ -1,0 +1,5 @@
+# Reserved VMs do not provide GPUs. Constrain Docling's transitive PyTorch
+# dependencies to matching CPU wheels so the deployment image stays below
+# Replit's 8 GiB image limit.
+torch==2.9.1+cpu
+torchvision==0.24.1+cpu

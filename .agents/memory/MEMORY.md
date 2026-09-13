@@ -6,3 +6,4 @@
 - [S3 managed multipart publishing](s3-managed-multipart.md) — managed transfers need conditional staging publish to preserve immutable originals.
 - [S3 secret rotation](s3-secret-rotation.md) — freeze writes, preserve object properties, and keep the old HMAC secret until post-rotation reads succeed.
 - [Private internal workflow ports](private-workflow-ports.md) — Replit may re-add a public mapping when a console workflow waits on an internal port.
+- [Python deployment image size](python-deployment-image-size.md) — persist runtime dependencies, use CPU-only ML wheels, and clear uv cache before image creation.

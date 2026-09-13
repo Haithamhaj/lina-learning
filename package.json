@@ -13,7 +13,7 @@
     "start": "npm --prefix apps/web run start",
     "start:production": "python scripts/production_supervisor.py",
     "typecheck": "npm --prefix apps/web run typecheck",
-    "build:python": "uv venv --clear .venv-production && uv pip install --python .venv-production/bin/python --requirements apps/api/requirements.txt && .venv-production/bin/python -m scripts.validate_production_runtime",
+    "build:python": "uv venv --clear .venv-production && uv pip install --python .venv-production/bin/python --index-url https://download.pytorch.org/whl/cpu --constraint apps/api/production-constraints.txt torch torchvision && uv pip install --python .venv-production/bin/python --constraint apps/api/production-constraints.txt --requirements apps/api/requirements.txt && .venv-production/bin/python -m scripts.validate_production_runtime && uv cache clean",
     "build": "npm run build:python && npm --prefix apps/web run build",
     "test:db:up": "uv run --with-requirements apps/api/requirements.txt --with pytest python scripts/test_postgres.py up",
     "test:db:down": "uv run --with-requirements apps/api/requirements.txt --with pytest python scripts/test_postgres.py down",
