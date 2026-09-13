@@ -39,6 +39,7 @@ class _ChildState:
     restart_count: int = 0
     restart_at: float = 0.0
     first_started_at: float | None = None
+    started_at: float | None = None
     last_return_code: int | None = None
 
 
@@ -53,6 +54,7 @@ def production_children() -> tuple[ChildSpec, ...]:
     uv = (
         "uv",
         "run",
+        "--offline",
         "--with-requirements",
         "apps/api/requirements.txt",
     )
@@ -96,6 +98,7 @@ class ProcessSupervisor:
     restart_limit: int = 5
     restart_backoff_seconds: float = 1.0
     max_restart_backoff_seconds: float = 30.0
+    restart_reset_seconds: float = 300.0
     shutdown_grace_seconds: float = 10.0
     popen: Callable[..., subprocess.Popen[bytes]] = subprocess.Popen
     clock: Callable[[], float] = time.monotonic
@@ -112,6 +115,8 @@ class ProcessSupervisor:
             raise ValueError("restart_backoff_seconds must be positive")
         if self.max_restart_backoff_seconds < self.restart_backoff_seconds:
             raise ValueError("max_restart_backoff_seconds must not be smaller than backoff")
+        if self.restart_reset_seconds <= 0:
+            raise ValueError("restart_reset_seconds must be positive")
         if self.shutdown_grace_seconds < 0:
             raise ValueError("shutdown_grace_seconds must not be negative")
         self._states = [_ChildState(child) for child in self.children]
@@ -144,6 +149,16 @@ class ProcessSupervisor:
                     if process is not None:
                         return_code = process.poll()
                         if return_code is None:
+                            if (
+                                state.restart_count
+                                and state.started_at is not None
+                                and now - state.started_at >= self.restart_reset_seconds
+                            ):
+                                _logger.info(
+                                    "%s remained stable; resetting restart count",
+                                    state.spec.name,
+                                )
+                                state.restart_count = 0
                             continue
                         state.last_return_code = return_code
                         state.process = None
@@ -213,8 +228,9 @@ class ProcessSupervisor:
             env=environment,
             start_new_session=True,
         )
+        state.started_at = self.clock()
         if state.first_started_at is None:
-            state.first_started_at = self.clock()
+            state.first_started_at = state.started_at
 
     def _shutdown(self) -> None:
         processes = [state.process for state in self._states if state.process is not None]

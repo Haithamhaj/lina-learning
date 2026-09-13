@@ -148,15 +148,40 @@ class ReplitObjectStorage:
         # published object as complete and prevents a retry from replacing it.
         with self._key_lock(key):
             metadata_key = self._metadata_key(key)
-            if self._exists(key) or self._exists(metadata_key):
-                raise ObjectAlreadyExistsError(
-                    f"Refusing to replace existing object: {key}"
-                )
-            self._upload(metadata_key, self._encode_reservation(key))
-            self._upload(key, content)
-            self._upload(metadata_key, self._encode_metadata(object_metadata))
+            has_object = self._exists(key)
+            has_metadata = self._exists(metadata_key)
+            if not has_metadata:
+                if has_object:
+                    raise StorageIntegrityError(
+                        f"Incomplete object transaction: {key}"
+                    )
+                self._upload(metadata_key, self._encode_reservation(object_metadata))
+                self._ensure_bytes(key, content, object_metadata)
+                self._upload(metadata_key, self._encode_metadata(object_metadata))
+            else:
+                reservation = self._download(metadata_key)
+                state = self._reservation_state(reservation, key)
+                if state == "complete":
+                    # A complete sidecar is immutable, but a missing object
+                    # means the transaction is corrupt rather than a collision.
+                    if not has_object:
+                        raise StorageIntegrityError(
+                            f"Incomplete object transaction: {key}"
+                        )
+                    self._decode_metadata(reservation, key)
+                    raise ObjectAlreadyExistsError(
+                        f"Refusing to replace existing object: {key}"
+                    )
 
-        return object_metadata
+                expected = self._decode_reservation(reservation, key)
+                if not self._same_expected_object(expected, object_metadata):
+                    raise ObjectAlreadyExistsError(
+                        f"Refusing to replace existing object: {key}"
+                    )
+                self._ensure_bytes(key, content, expected)
+                self._upload(metadata_key, self._encode_metadata(expected))
+
+        return object_metadata if not has_metadata else expected
 
     def head(self, key: str) -> ObjectMetadata:
         key = validate_storage_key(key)
@@ -172,6 +197,19 @@ class ReplitObjectStorage:
         if not has_object or not has_metadata:
             raise StorageIntegrityError(f"Incomplete object transaction: {key}")
         return self._decode_metadata(self._download(metadata_key), key)
+
+    def _ensure_bytes(
+        self, key: str, content: bytes, metadata: ObjectMetadata
+    ) -> None:
+        """Publish bytes only when absent, and verify any bytes already present."""
+
+        if not self._exists(key):
+            self._upload(key, content)
+        stored = self._download(key)
+        if len(stored) != metadata.size:
+            raise StorageIntegrityError(f"Size mismatch for object: {key}")
+        if hashlib.sha256(stored).hexdigest() != metadata.checksum_sha256:
+            raise StorageIntegrityError(f"Checksum mismatch for object: {key}")
 
     def get(self, key: str) -> StoredObject:
         key = validate_storage_key(key)
@@ -259,12 +297,102 @@ class ReplitObjectStorage:
         return f"{_METADATA_PREFIX}{digest}.json"
 
     @staticmethod
-    def _encode_reservation(key: str) -> bytes:
+    def _encode_reservation(metadata: ObjectMetadata) -> bytes:
         return json.dumps(
-            {"key": key, "state": "reserved"},
+            {
+                "checksum_sha256": metadata.checksum_sha256,
+                "content_type": metadata.content_type,
+                "key": metadata.key,
+                "metadata": dict(metadata.metadata),
+                "size": metadata.size,
+                "state": "reserved",
+                "stored_at": (
+                    metadata.stored_at.isoformat() if metadata.stored_at else None
+                ),
+            },
             separators=(",", ":"),
             sort_keys=True,
         ).encode("utf-8")
+
+    @staticmethod
+    def _reservation_state(content: bytes, key: str) -> str:
+        try:
+            payload = json.loads(content.decode("utf-8"))
+            state = payload["state"]
+        except (UnicodeDecodeError, AttributeError, KeyError, TypeError, ValueError,
+                json.JSONDecodeError) as exc:
+            raise StorageIntegrityError(
+                f"Invalid reservation for object: {key}"
+            ) from exc
+        if state not in {"reserved", "complete"}:
+            raise StorageIntegrityError(f"Invalid reservation for object: {key}")
+        return state
+
+    @staticmethod
+    def _decode_reservation(content: bytes, key: str) -> ObjectMetadata:
+        try:
+            payload = json.loads(content.decode("utf-8"))
+            if payload.get("state") != "reserved":
+                raise StorageIntegrityError(f"Incomplete object transaction: {key}")
+            object_key = payload["key"]
+            content_type = payload["content_type"]
+            size = payload["size"]
+            checksum = payload["checksum_sha256"]
+            user_metadata = payload["metadata"]
+            stored_at_value = payload["stored_at"]
+            if (
+                object_key != key
+                or not isinstance(content_type, str)
+                or not content_type.strip()
+                or isinstance(size, bool)
+                or not isinstance(size, int)
+                or size < 0
+                or not isinstance(checksum, str)
+                or len(checksum) != 64
+                or any(character not in "0123456789abcdef" for character in checksum)
+                or not isinstance(user_metadata, dict)
+                or any(
+                    not isinstance(name, str) or not isinstance(value, str)
+                    for name, value in user_metadata.items()
+                )
+                or (
+                    stored_at_value is not None
+                    and not isinstance(stored_at_value, str)
+                )
+            ):
+                raise ValueError
+            stored_at = (
+                datetime.fromisoformat(stored_at_value)
+                if stored_at_value is not None
+                else None
+            )
+        except StorageIntegrityError:
+            raise
+        except (UnicodeDecodeError, AttributeError, KeyError, TypeError, ValueError,
+                json.JSONDecodeError) as exc:
+            raise StorageIntegrityError(
+                f"Invalid reservation for object: {key}"
+            ) from exc
+        return ObjectMetadata(
+            key=key,
+            content_type=content_type,
+            size=size,
+            checksum_sha256=checksum,
+            metadata=dict(user_metadata),
+            stored_at=stored_at,
+        )
+
+    @staticmethod
+    def _same_expected_object(
+        expected: ObjectMetadata, incoming: ObjectMetadata
+    ) -> bool:
+        return (
+            expected.key == incoming.key
+            and expected.content_type == incoming.content_type
+            and expected.size == incoming.size
+            and expected.checksum_sha256 == incoming.checksum_sha256
+            and dict(expected.metadata) == dict(incoming.metadata)
+        )
 
     @staticmethod
     def _encode_metadata(metadata: ObjectMetadata) -> bytes:

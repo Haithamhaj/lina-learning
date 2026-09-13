@@ -39,9 +39,11 @@ const appearance = {
 export function Providers({
   children,
   publishableKey,
+  proxyUrl,
 }: {
   children: ReactNode;
   publishableKey?: string;
+  proxyUrl?: string;
 }) {
   const pathname = usePathname();
   const isDevelopmentDemoRequest =
@@ -59,6 +61,7 @@ export function Providers({
   return (
     <ClerkProvider
       publishableKey={publishableKey}
+      proxyUrl={proxyUrl}
       appearance={appearance}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"

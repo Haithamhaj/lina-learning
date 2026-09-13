@@ -132,10 +132,13 @@ def test_replit_storage_detects_changed_bytes() -> None:
         storage.get("documents/file.txt")
 
 
-def test_failed_upload_keeps_reservation_and_cannot_be_replaced() -> None:
+def test_failed_upload_before_bytes_resumes_only_identical_put() -> None:
     class FailingClient(FakeReplitClient):
+        fail_once = True
+
         def upload_from_bytes(self, name: str, content: bytes) -> None:
-            if name == "documents/failed.txt":
+            if name == "documents/failed.txt" and self.fail_once:
+                self.fail_once = False
                 raise RuntimeError("simulated upload failure")
             super().upload_from_bytes(name, content)
 
@@ -143,11 +146,65 @@ def test_failed_upload_keeps_reservation_and_cannot_be_replaced() -> None:
     storage = ReplitObjectStorage(client=client, signing_secret="test-secret")
 
     with pytest.raises(StorageProviderUnavailable, match="upload failed"):
-        storage.put("documents/failed.txt", b"content")
+        storage.put(
+            "documents/failed.txt",
+            b"content",
+            content_type="text/plain",
+            metadata={"source": "test"},
+        )
+    stored = storage.put(
+        "documents/failed.txt",
+        b"content",
+        content_type="text/plain",
+        metadata={"source": "test"},
+    )
+    assert storage.get(stored.key).content == b"content"
     with pytest.raises(ObjectAlreadyExistsError):
         storage.put("documents/failed.txt", b"replacement")
-    with pytest.raises(StorageIntegrityError, match="Incomplete"):
-        storage.head("documents/failed.txt")
+
+
+def test_failed_upload_after_bytes_resumes_only_identical_put() -> None:
+    class FailingMetadataClient(FakeReplitClient):
+        fail_complete_once = True
+        metadata_key: str
+
+        def upload_from_bytes(self, name: str, content: bytes) -> None:
+            if (
+                name == self.metadata_key
+                and name in self.objects
+                and self.fail_complete_once
+            ):
+                self.fail_complete_once = False
+                raise RuntimeError("simulated metadata upload failure")
+            super().upload_from_bytes(name, content)
+
+    client = FailingMetadataClient()
+    storage = ReplitObjectStorage(client=client, signing_secret="test-secret")
+    client.metadata_key = storage._metadata_key("documents/failed.txt")
+
+    with pytest.raises(StorageProviderUnavailable, match="upload failed"):
+        storage.put(
+            "documents/failed.txt",
+            b"content",
+            content_type="text/plain",
+            metadata={"source": "test"},
+        )
+    assert client.objects["documents/failed.txt"] == b"content"
+
+    stored = storage.put(
+        "documents/failed.txt",
+        b"content",
+        content_type="text/plain",
+        metadata={"source": "test"},
+    )
+    assert storage.get(stored.key).content == b"content"
+    with pytest.raises(ObjectAlreadyExistsError):
+        storage.put(
+            "documents/failed.txt",
+            b"replacement",
+            content_type="text/plain",
+            metadata={"source": "test"},
+        )
 
 
 def test_replit_process_contention_has_one_winner_and_one_collision() -> None:

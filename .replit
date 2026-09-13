@@ -36,17 +36,18 @@ outputType = "webview"
 name = "Backend API"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev:api"
-waitForPort = 8000
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+
 
 [deployment]
 deploymentTarget = "vm"
@@ -67,3 +68,9 @@ MODEL_PROVIDER = "openai"
 NEXT_PUBLIC_API_BASE_URL = "/api"
 NEXT_PUBLIC_APP_ENV = "production"
 STORAGE_PROVIDER = "replit"
+
+[userenv.shared]
+REPLIT_STORAGE_BUCKET_ID = "replit-objstore-01d06202-35ea-40df-a3f9-adb5842f38f2"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-01d06202-35ea-40df-a3f9-adb5842f38f2"

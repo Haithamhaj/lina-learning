@@ -85,6 +85,7 @@ class Settings(BaseSettings):
     api_port: int = Field(default=8000, ge=1, le=65535)
     web_origin: str = "http://localhost:5000"
     allowed_origins: list[str] = Field(default_factory=list)
+    replit_domains: str | None = None
 
     # Clerk publishable configuration is safe to use for JWT key discovery.
     # The secret key remains managed by Clerk and is never read by the browser.
@@ -156,9 +157,19 @@ class Settings(BaseSettings):
     def validate_service_requirements(self) -> "Settings":
         """Fail clearly when an enabled deployment mode is incomplete."""
 
+        deployment_origins: list[str] = []
+        if self.app_env == "production" and self.replit_domains:
+            deployment_origins = [
+                _normalize_trusted_origin(f"https://{domain.strip()}")
+                for domain in self.replit_domains.split(",")
+                if domain.strip()
+            ]
+            if deployment_origins and self.web_origin == "http://localhost:5000":
+                self.web_origin = deployment_origins[0]
+
         self.web_origin = _normalize_trusted_origin(self.web_origin)
         if not self.allowed_origins:
-            self.allowed_origins = [self.web_origin]
+            self.allowed_origins = deployment_origins or [self.web_origin]
         self.allowed_origins = list(
             dict.fromkeys(_normalize_trusted_origin(origin) for origin in self.allowed_origins)
         )
@@ -171,6 +182,8 @@ class Settings(BaseSettings):
                 missing.append("DATABASE_URL")
             if self.storage_provider == "local":
                 missing.append("STORAGE_PROVIDER (must not be 'local' in production)")
+            if not self.web_origin.startswith("https://"):
+                missing.append("WEB_ORIGIN (must be HTTPS in production)")
 
         if self.storage_provider == "s3":
             for name, value in (

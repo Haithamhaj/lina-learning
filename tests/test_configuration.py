@@ -109,6 +109,24 @@ def test_production_configuration_rejects_local_storage(
         )
 
 
+def test_production_configuration_uses_replit_deployment_domains() -> None:
+    settings = Settings(
+        _env_file=None,
+        app_env="production",
+        session_secret="s",
+        database_url="postgresql://localhost/db",
+        storage_provider="replit",
+        replit_storage_bucket_id="bucket-id",
+        replit_domains="lina.example.com,lina-custom.example.org",
+    )
+
+    assert settings.web_origin == "https://lina.example.com"
+    assert settings.allowed_origins == [
+        "https://lina.example.com",
+        "https://lina-custom.example.org",
+    ]
+
+
 def test_s3_configuration_requires_private_storage_values(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
