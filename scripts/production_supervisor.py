@@ -10,7 +10,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from types import FrameType
-from typing import Callable, Sequence
+from typing import Callable, Mapping, Sequence
 
 
 _LOG = logging.getLogger("lina.production")
@@ -20,12 +20,20 @@ _LOG = logging.getLogger("lina.production")
 class ChildSpec:
     name: str
     command: tuple[str, ...]
+    environment: Mapping[str, str] = field(default_factory=dict)
 
 
 def production_children() -> tuple[ChildSpec, ...]:
     python = os.environ.get("LINA_PRODUCTION_PYTHON", ".venv-production/bin/python")
+    next_environment = {"HOSTNAME": "0.0.0.0", "PORT": "5000"}
+    if clerk_publishable_key := os.environ.get("CLERK_PUBLISHABLE_KEY"):
+        next_environment["NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"] = clerk_publishable_key
     return (
-        ChildSpec("next", ("npm", "--prefix", "apps/web", "run", "start")),
+        ChildSpec(
+            "next",
+            ("node", "apps/web/.next/standalone/apps/web/server.js"),
+            next_environment,
+        ),
         ChildSpec("api", (python, "-m", "uvicorn", "apps.api.main:app", "--host", "127.0.0.1", "--port", "8000")),
         ChildSpec("worker", (python, "-m", "workers.job_worker")),
     )
@@ -55,7 +63,11 @@ class ProcessSupervisor:
         try:
             for child in self.children:
                 _LOG.info("Starting %s: %s", child.name, " ".join(child.command))
-                self._processes.append(self.popen(list(child.command), start_new_session=True))
+                environment = os.environ.copy()
+                environment.update(child.environment)
+                self._processes.append(
+                    self.popen(list(child.command), env=environment, start_new_session=True)
+                )
             while not self._shutdown_requested:
                 for child, process in zip(self.children, self._processes, strict=True):
                     if (code := process.poll()) is not None:

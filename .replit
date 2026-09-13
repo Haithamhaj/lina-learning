@@ -54,7 +54,7 @@ timeoutMs = 180000
 
 [deployment]
 deploymentTarget = "vm"
-build = ["npm", "run", "build"]
+build = ["bash", "scripts/build_replit_production.sh"]
 run = ["npm", "run", "start:production"]
 
 [userenv.production]
