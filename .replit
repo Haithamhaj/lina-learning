@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "python-base-3.13", "postgresql-16"]
+modules = ["nodejs-24", "python-3.12", "postgresql-16"]
 
 [nix]
 channel = "stable-25_05"
@@ -48,10 +48,20 @@ outputType = "console"
 localPort = 5000
 externalPort = 80
 
-[[ports]]
-localPort = 8000
-externalPort = 8000
-
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 180000
+
+[deployment]
+deploymentTarget = "vm"
+build = ["npm", "run", "build"]
+run = ["npm", "run", "start:production"]
+
+[userenv.production]
+APP_ENV = "production"
+MODEL_PROVIDER = "openai"
+MODEL_NAME = "gpt-5.6-luna"
+NEXT_PUBLIC_API_BASE_URL = "/api"
+NEXT_PUBLIC_APP_ENV = "production"
+NEXT_PUBLIC_CLERK_PROXY_URL = "/api/__clerk"
+STORAGE_PROVIDER = "replit"

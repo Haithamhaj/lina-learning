@@ -59,6 +59,7 @@ export function Providers({
   return (
     <ClerkProvider
       publishableKey={publishableKey}
+      proxyUrl={process.env.NEXT_PUBLIC_CLERK_PROXY_URL}
       appearance={appearance}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"

@@ -15,7 +15,7 @@ from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 EnvironmentName = Literal["development", "test", "production"]
-StorageProvider = Literal["local", "s3"]
+StorageProvider = Literal["local", "s3", "replit"]
 ModelProvider = Literal["mock", "openai"]
 _HOSTNAME_PATTERN = re.compile(
     r"(?=.{1,253}\Z)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*"

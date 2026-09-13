@@ -3,6 +3,7 @@
 from .factory import create_object_storage
 from .keys import validate_storage_key
 from .local import LocalObjectStorage
+from .replit import ReplitObjectStorage
 from .models import (
     ExpiredPrivateAccessToken,
     InvalidPrivateAccessToken,
@@ -30,6 +31,7 @@ __all__ = [
     "ObjectNotFoundError",
     "ObjectStorage",
     "PrivateAccess",
+    "ReplitObjectStorage",
     "StorageError",
     "StorageIntegrityError",
     "StorageProviderUnavailable",
