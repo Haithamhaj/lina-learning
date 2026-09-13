@@ -9,6 +9,9 @@ test("production packaging creates a self-contained Next standalone artifact", a
 
   assert.equal(nextConfig.output, "standalone");
   assert.match(script, /UV_NO_CACHE=1/);
+  assert.match(script, /build_temp_dir="\.replit-build-tmp"/);
+  assert.match(script, /export TMPDIR="\$build_temp_dir"/);
+  assert.match(script, /trap 'rm -rf -- "\$build_temp_dir"' EXIT/);
   assert.match(script, /npm ci/);
   assert.match(script, /NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY/);
   assert.match(script, /apps\/web\/\.next\/standalone/);
