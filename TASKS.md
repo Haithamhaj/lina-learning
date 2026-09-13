@@ -2,6 +2,58 @@
 
 An explicit current Product Owner instruction authorizes its requested working slice. Status labels provide operational context; roadmap presence alone does not authorize implementation.
 
+## Current review patch
+
+### TUTOR-PEDAGOGY-REFINE-01 — Bounded Option D instruction refinement
+
+**Status:** IMPLEMENTATION AND STRUCTURAL REVIEW COMPLETE / INDEPENDENT REVIEW ACCEPTED (`ACCEPT_PATCH_FOR_COMMIT`).
+**Authority:** Product Owner approved the exact section-C wording and one duplicate deletion from the A–G review, then accepted independent review and authorized one local closure commit only. No push, merge, deployment, or paid evaluation.
+**Engineering baseline:** `codex/full-power-canvas-01`, `b5ebfffc613a0cfac93bb461263a7c0b53070028`; tracked files matched HEAD before editing. This is not a deployment assertion.
+**Scope:** Replace only the teaching block from “Prefer short sentences” through the emoji sentence in `services/tutor/runtime.py`; remove only the three-line pedagogical sentence beginning “When repeated confusion” from `runtime/tutor/visual-guidance-v1.md`. Preserve the following DID_NOT_HELP and method-relation rules, operational Canvas instructions, and every other runtime contract.
+**Reference:** `docs/TUTOR_PEDAGOGY_REFERENCE.md`, copied byte-for-byte from the Product Owner-supplied Downloads file; SHA-256 `5e50985b7bc2a8d7842a1193e8ae0384c6c81ee4abdbcf44b123ad8123f122ac`. Authoring/evaluation only; no runtime load or Student truth.
+
+| Reference sections / matrix rows | Bounded change |
+| --- | --- |
+| §§5–6; rows 1–6, 22 | Relevant prerequisites, useful attempts, concise worked reasoning, contingent support and fading; no fixed hint/success counts. |
+| §§8–9; rows 7–10, 15–16 | Useful application checks, actionable correction/self-correction, selective deeper questions; no Evidence-seeking checks. Existing misconception/source rules unchanged. |
+| §7; rows 11–13 | Explicit object/visual/verbal/symbolic connections; move the duplicate stalled-learning guidance into the common block. |
+| §10; rows 17, 19–20 | Useful progression/variation, low-pressure recall with feedback; no review schedule or automatic transfer claim. |
+| §§8, 10–13; rows 14, 18, 21, 23, 25–26 | Detailed comparison, interleaving, metacognition, and subject overlays remain reference/evaluation material; no dedicated runtime rules. |
+| §12; row 24 | Existing conditional visual/number-line capabilities retained; no mandatory representation. |
+| §§2–3, 14 | Existing current-behavior priority, Profile/Memory, Evidence/support/method-lineage, Safety and source boundaries retained. |
+
+**Verification (2026-09-13):** Updated three wording-dependent existing contract tests: initial RED was 3 failed / 17 passed before runtime edits; subsequent focused suite 151 passed in 0.44 s. Disposable PostgreSQL 17/pgvector suite 153 passed in 19.10 s, no skips. No historical data used or reprocessed; isolated temporary cluster stopped after tests.
+Commands used from this worktree with the already installed Python interpreter:
+```sh
+PYTHONDONTWRITEBYTECODE=1 "$PYTHON" -m pytest -q -p no:cacheprovider tests/test_tutor_runtime_contract.py tests/test_tutor_runtime_scenarios.py tests/test_tutor_context_capacity.py tests/test_tutor_context_contract.py tests/test_studio_tutor_context.py tests/test_process_visual_awareness.py tests/test_candidate_event_contract.py
+```
+For PostgreSQL, used existing `scripts.test_postgres.test_environment(test_database_url())` with `LINA_TEST_DATABASE_PORT=64037`, canonical database `lina_learning_test`, and `MODEL_PROVIDER=mock`; ran `python -m alembic upgrade head`, then:
+```sh
+"$PYTHON" -m pytest -q -p no:cacheprovider tests/test_session_evidence_consolidation_postgres.py tests/test_segment_learning_review_postgres.py tests/test_session_finalization_postgres.py tests/test_studio_state_postgres.py tests/test_studio_gateway_composition_postgres.py tests/test_studio_tutor_context_postgres.py tests/test_process_visual_awareness_postgres.py tests/test_candidate_event_postgres.py
+```
+`PYTHON` denotes the existing `/Users/haitham/development/Lina Personal Learning System/.venv/bin/python`; tests import this selected worktree, not the main checkout. No new environment/dependency was installed.
+
+**Actual-patch measurements:** Compared HEAD instruction literals against the imported edited instructions; exact approved replacement verified. Assembled instructions 19,091 → 19,088 characters (replacement block 1,593 → 1,831, duplicate removal 241). New assembled instruction SHA-256: `2e2123f5d96a0dd937e4323c5842eff389129e31adad3416808554fce1ebcc59`. Existing `tutor_turn_v11` schema and execution lineage unchanged; no separate Tutor instruction-version field was found or invented.
+Used existing `tests/test_tutor_context_capacity.py` helpers and `tests/test_process_visual_awareness.py` workspace/source fixture through existing builders and capacity guards, in memory with network disabled. Both variants used identical objects. Boundary cases extend fixture strings synthetically, not real Student data or evidence of admission correctness.
+
+| Case | Final capacity metric, before → after | Final provider JSON, before → after | Context result |
+| --- | --- | --- | --- |
+| Chat fixture | 40,661 → 40,655 | 40,750 → 40,744 | No removal |
+| Chat at limit minus 1 | 63,999 → 63,993 | 64,088 → 64,082 | No removal |
+| Chat initially limit plus 100 | 63,684 → 63,678 | 63,773 → 63,767 | Same semantic-recall exchange removed |
+| Studio Process fixture | 35,108 → 35,102 | 35,197 → 35,191 | Full visual/source retained |
+| Studio at limit minus 1 | 63,999 → 63,993 | 64,088 → 64,082 | Full visual/source retained |
+| Studio initially limit plus 100 | 63,974 → 63,968 | 64,063 → 64,057 | Identical reduced visual; source retained |
+
+Capacity remains 64,000 serialized instruction/input/schema characters; output limit remains 2,000 tokens. Provider-adapter serialization used the locally configured model string `mock` without transmission. JSON escaping accounts for the -6 serialized versus -3 raw-character change. Non-instruction fields matched; no additional context removal. Token counts, latency, cost, and behavioral gains were not measured.
+
+**Acceptance limits:** Comparative teaching quality NOT YET EVALUATED; longitudinal learning benefit NOT ESTABLISHED. String/mock/compatibility tests are not teaching-quality evidence. Later existing evaluation must verify (1) clear, manageable, child-appropriate explanations, and (2) a useful chance to apply correction when appropriate, without forced retries after every answer. Preserve support attribution, meaningful transfer conditions and method-outcome lineage; different valid dialogue may yield different Evidence, so do not require identical Evidence outputs. Paid/live evaluations were not run.
+**Out of scope:** Existing CanvasBrief/legacy-workspace instruction drift remains unchanged; Canvas-to-Evidence coverage is not inferred absent and no coverage work is included. Full reference remains non-governing authoring material.
+**Hygiene:** `python scripts/check_repository_truth.py` and `git diff --check` passed. Exact source-boundary comparison confirmed no runtime code/text changes outside the approved block/deletion; reference byte identity passed; index remained unchanged.
+**Independent closure review:** Accepted for local commit. The independent reviewer reran 151 tests and inspected 153 PostgreSQL test results from the implementation run; the latter were not independently rerun. Runtime, visual-guidance, test and reference content remain unchanged from the accepted patch. Closure reruns only repository-truth and diff checks, not the database suite. Repository-truth and working-tree diff checks passed. The full staged diff check reports 32 trailing-whitespace lines, all original Markdown two-space hard breaks in the byte-identical reference; preserved as approved. The other five staged files pass the whitespace check.
+**Provenance limitation (non-blocking):** The existing instruction-provenance limitation remains; `tutor_turn_v11` is unchanged. For later evaluation, use the existing evaluation record to associate execution/message IDs with the code version and actual instruction hash. No provenance mechanism is introduced.
+**Next:** Retain the accepted patch in one local commit. Comparative teaching quality remains NOT YET EVALUATED and longitudinal learning benefit NOT ESTABLISHED; later evaluation requires separate authorization. No push, merge or deployment.
+
 ## Current completed baseline
 
 | Task | Status | Scope / evidence |

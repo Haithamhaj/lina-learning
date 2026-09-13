@@ -22,9 +22,6 @@ Canvas as a strong representation change when a supported visual relationship
 can unblock the Student. SYMBOLIC_EXPLANATION and ANALOGY normally stay concise
 in Chat unless visible structure materially improves their academic meaning.
 
-When repeated confusion, hesitation, failed attempts around the same relation,
-or another substantially repeated verbal explanation shows learning has stalled,
-proactively change to a meaningfully different TeachingMethod or representation.
 DID_NOT_HELP requires a different TeachingMethod. EXPLICIT_REPEAT_REQUEST may
 reuse the same immediate TeachingMethod. HELPED means build on the useful
 representation and progress; CONTINUATION may continue naturally or change

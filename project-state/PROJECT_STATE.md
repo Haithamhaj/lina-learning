@@ -2,9 +2,11 @@
 
 ## Current goal
 
-Repository truth is reconciled after the published Full-Power Canvas engineering/build closure. The next controlled real-use / production-use phase is not yet authorized. Merge and deployment are not authorized.
+Close the independently accepted Tutor pedagogy patch in one authorized local commit. Implementation and structural review are complete (`ACCEPT_PATCH_FOR_COMMIT`); comparative teaching quality is NOT YET EVALUATED and longitudinal learning benefit is NOT ESTABLISHED. Push, merge, deployment and the next Canvas production-use phase remain separately gated.
 
 ## Current reality
+
+TUTOR-PEDAGOGY-REFINE-01 changes only the approved shared teaching block and one duplicate pedagogical sentence, with existing contract-test updates and an unchanged authoring-reference copy. Independent review reran 151 tests and inspected the 153 passing PostgreSQL results from implementation; it did not rerun those PostgreSQL tests. The existing instruction-provenance limitation is non-blocking; later evaluation must associate execution/message IDs, code version and actual instruction hash in the existing evaluation record. Request measurements show no additional context removal. See TASKS.md for exact scope, reference mapping, commands and evidence limits.
 
 Lina remains a modular monolith. Primary Tutor owns teaching; the implemented Full-Power Hybrid Canvas composes typed, REUSE, ADAPT and CREATE representations and returns bounded Semantic Manifest/Studio state to the same Tutor. Immutable Build/ObjectStorage references remain authoritative; generated custom code runs only in the approved sandbox.
 
@@ -29,6 +31,8 @@ Primary Tutor authority; child safety and Parent Boundaries; owner/privacy isola
 Broad unrestricted production CREATE reliability is not accepted. Authenticated Daily use, deployment, traffic reliability and real learner learning benefit are not established by disposable-owner proofs. Runtime CREATE latency/cost remain material considerations. Existing promoted Versions are not retroactively certified by AI review or later checks.
 
 ## Next recommended action
+
+Retain the accepted pedagogy patch locally; any comparative teaching evaluation requires separate authorization. Comparative teaching evaluation must retain clear, manageable, child-appropriate explanations and useful application of correction when appropriate, without forced retries. Paid/live evaluation requires separate authorization; structural checks do not establish learning improvement.
 
 Begin a separately authorized controlled real-use / production-use phase only when the Product Owner requests it. It must reassess correctness/replay defects, authenticated Daily use, reliability and learning benefit without treating AI review as a correctness gate. Mobile was explicitly deferred and is not the current release gate; no model change is authorized.
 
