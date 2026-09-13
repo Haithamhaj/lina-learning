@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+from functools import lru_cache
 
 from services.studio.canvas_brief import CanvasBriefV1, VisualLearnerContextV1
 
 
 _ROOT = Path(__file__).resolve().parents[3] / "runtime" / "canvas-agent"
-_CORE = ("full-power-routing.md", "visual-composition.md", "tool-selection.md")
+_CORE = ("full-power-routing.md", "visual-composition.md", "tool-selection.md", "custom-visual-runtime.md")
 _SPECIALISTS = {
     "math": "math-visualization.md",
     "science": "diagrams-and-processes.md",
@@ -21,6 +22,7 @@ _SPECIALISTS = {
 }
 
 
+@lru_cache(maxsize=16)
 def _text(name: str) -> str:
     return (_ROOT / "skills" / name).read_text(encoding="utf-8")
 

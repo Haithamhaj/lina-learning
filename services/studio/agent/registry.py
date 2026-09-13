@@ -10,10 +10,10 @@ class PlanCompositionInconsistencyError(ValueError):
 
     code = "PLAN_COMPOSITION_INCONSISTENT"
 
-    def __init__(self, current_custom_candidate_block_id: str) -> None:
+    def __init__(self, current_custom_candidate_block_id: str, *, reason: str = "omitted current custom candidate") -> None:
         self.current_custom_candidate_block_id = current_custom_candidate_block_id
         super().__init__(
-            f"{self.code}: final plan omitted current custom candidate "
+            f"{self.code}: final plan {reason} "
             f"{current_custom_candidate_block_id!r}"
         )
 
@@ -42,6 +42,7 @@ class CanvasBlockRegistry:
         plan: AgenticCanvasPlanV1,
         *,
         current_custom_candidate_block_id: str | None = None,
+        excluded_block_ids: set[str] | None = None,
     ) -> AgenticCanvasScene:
         """Resolve a plan only from tool-owned blocks and enforce CREATE coherence.
 
@@ -55,6 +56,8 @@ class CanvasBlockRegistry:
                 raise ValueError("Canvas current custom candidate was not produced by a registered tool")
             if current_custom_candidate_block_id not in {placement.block_id for placement in plan.placements}:
                 raise PlanCompositionInconsistencyError(current_custom_candidate_block_id)
+        if (excluded_block_ids or set()) & {placement.block_id for placement in plan.placements}:
+            raise PlanCompositionInconsistencyError(current_custom_candidate_block_id or "", reason="included a superseded custom candidate instead of only the current candidate")
         blocks = []
         for placement in sorted(plan.placements, key=lambda item: item.order):
             block_id = placement.block_id

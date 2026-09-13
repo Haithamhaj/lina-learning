@@ -6,6 +6,7 @@ import errno
 import logging
 from datetime import UTC, datetime
 from time import perf_counter
+from services.model_gateway.pricing import estimate_openai_cost
 from urllib.error import HTTPError, URLError
 
 from sqlalchemy import String, cast, select
@@ -68,7 +69,9 @@ def register_agentic_canvas_handlers(
     storage: ObjectStorage | None = None,
 ) -> None:
     def handle(job: Job) -> dict[str, object]:
+        preflight_started = perf_counter()
         execution = _preflight(session_factory, job)
+        preflight_ms = round((perf_counter()-preflight_started)*1000)
         if execution is None:
             return {"run_status": "SKIPPED"}
         settings = settings_factory()
@@ -90,13 +93,14 @@ def register_agentic_canvas_handlers(
             ))
         except Exception as error:
             code, retryable = _classify_agent_failure(error)
-            metadata = {"code": code, "provider_attempt": execution.provider_attempt}
+            metadata = {"code": code, "provider_attempt": execution.provider_attempt, "latency_ms": round((perf_counter()-started)*1000), "model": settings.model_name}
             if isinstance(error, CustomVisualCandidateMissingError):
                 metadata["custom_visual_tool_failures"] = list(error.tool_failures)
                 metadata["custom_visual_model_turns"] = list(error.model_turns)
             if isinstance(error, CanvasCompositionModelBehaviorError):
                 metadata["model_behavior_tool_failures"] = list(error.tool_failures)
                 metadata["model_behavior_model_turns"] = list(error.model_turns)
+            _record_failed_composition_execution(session_factory, execution, settings.model_name, error, code, metadata["latency_ms"])
             if retryable and execution.provider_attempt < execution.provider_max_attempts:
                 _record_retryable_failure(session_factory, execution.run_id, metadata)
                 raise
@@ -127,6 +131,7 @@ def register_agentic_canvas_handlers(
             )
             raise NonRetryableJobError("AGENTIC_SCENE_INVALID") from error
         durable_result: dict[str, object]
+        persistence_started = perf_counter()
         try:
             with session_factory.begin() as session:
                 unguarded_run = session.get(StudioCanvasSpecialistRun, execution.run_id)
@@ -183,7 +188,7 @@ def register_agentic_canvas_handlers(
                     cache_write_tokens=None,
                     output_tokens=int(usage.get("output_tokens", 0)) if usage else None,
                     latency_ms=latency_ms,
-                    estimated_cost_usd=None,
+                    estimated_cost_usd=estimate_openai_cost(settings.model_name, aggregate_input_tokens, int(usage.get("output_tokens", 0)) if usage else None, cached_input_tokens=cached_input_tokens or 0, cache_write_tokens=0),
                     success=True,
                     failure_code=None,
                     operation_id=run.id,
@@ -204,7 +209,7 @@ def register_agentic_canvas_handlers(
                         for key, value in agent_trace.items()
                         if key != "sdk_trace_id"
                     }
-                    agent_trace.update({"latency_ms": latency_ms, "proposal_digest": proposal_digest})
+                    agent_trace.update({"latency_ms": latency_ms, "proposal_digest": proposal_digest, "preflight_ms": preflight_ms, "persistence_ms": round((perf_counter()-persistence_started)*1000), "estimated_token_cost_usd": ai_execution.estimated_cost_usd})
                     run.agent_execution_metadata = agent_trace
                 run.proposal_payload, run.proposal_digest, run.ai_execution_id, run.status, run.completed_at, run.failure_metadata = proposal, proposal_digest, ai_execution.id, "COMPLETED", datetime.now(UTC), None
                 has_snapshot = session.execute(
@@ -230,6 +235,7 @@ def register_agentic_canvas_handlers(
             raise NonRetryableJobError("GENERATED_ASSET_INVALID") from error
         # The provider result is durable before this short deterministic
         # settlement transaction. Reconciliation remains crash-window repair.
+        settlement_started = perf_counter()
         if has_snapshot:
             try:
                 with session_factory.begin() as acceptance_session:
@@ -242,10 +248,14 @@ def register_agentic_canvas_handlers(
                     execution.run_id,
                 )
                 _mark_scene_settlement_deferred(session_factory, execution.run_id)
-        with session_factory() as session:
+        with session_factory.begin() as session:
             settled_run = session.get(StudioCanvasSpecialistRun, execution.run_id)
             if settled_run is None:
                 raise ValueError("AGENTIC_CANVAS_RUN_MISSING")
+            if isinstance(composition, AgenticCanvasCompositionResult):
+                settled_run.agent_execution_metadata = {**(settled_run.agent_execution_metadata or {}), "settlement_ms": round((perf_counter()-settlement_started)*1000), "worker_total_ms": round((perf_counter()-preflight_started)*1000)}
+            if isinstance(composition, AgenticCanvasCompositionResult):
+                durable_result["agent_trace"] = dict(settled_run.agent_execution_metadata)
             durable_result["run_status"] = settled_run.status
             durable_result["scene_id"] = (
                 str(settled_run.scene_id) if settled_run.scene_id is not None else None
@@ -453,6 +463,27 @@ def _runtime_then_run_locked(session: Session, run_id):
         .where(StudioCanvasSpecialistRun.id == run_id)
         .with_for_update()
     ).scalar_one_or_none()
+
+
+def _record_failed_composition_execution(factory, execution, model, error, code, latency_ms):
+    """Retain observed failed-attempt usage; a later success cannot erase its cost."""
+    turns = list(getattr(error, "model_turns", ()))
+    completed = [turn for turn in turns if "input_tokens" in turn]
+    inputs = sum(int(turn.get("input_tokens", 0)) for turn in completed) if completed else None
+    cached = sum(int(turn.get("cached_input_tokens", 0) or 0) for turn in completed) if completed else None
+    outputs = sum(int(turn.get("output_tokens", 0)) for turn in completed) if completed else None
+    # A lost provider response has unknown usage, not a zero-cost estimate.
+    complete_usage = bool(turns) and len(completed) == len(turns) and len(turns) < 16
+    with factory.begin() as session:
+        session.add(AIExecution(task="canvas_agent_orchestration", provider="openai-agents-sdk", model=model,
+            input_tokens=max(0, inputs-(cached or 0)) if inputs is not None else None,
+            cached_input_tokens=cached, cache_write_tokens=None, output_tokens=outputs,
+            latency_ms=latency_ms,
+            estimated_cost_usd=estimate_openai_cost(model, inputs, outputs, cached_input_tokens=cached or 0, cache_write_tokens=0) if complete_usage else None,
+            success=False, failure_code=code, operation_id=execution.run_id,
+            operation_type="agentic_canvas_compose", parent_execution_id=execution.parent_execution_id,
+            student_id=execution.student_id, learning_session_id=execution.session_id,
+            source_message_id=execution.message_id, source_candidate_event_ids=[]))
 
 
 def _record_retryable_failure(factory: sessionmaker[Session], run_id, metadata: dict[str, object]) -> None:

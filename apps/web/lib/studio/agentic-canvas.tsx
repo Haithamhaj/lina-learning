@@ -1,8 +1,8 @@
 "use client";
 
-import { CUSTOM_CHANNEL, customSandboxDocument } from "./custom-visual-sandbox";
+import { CUSTOM_CHANNEL, customSandboxDocument, customVisualViewportHeight } from "./custom-visual-sandbox";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 
 import type { AgenticCanvasAction, AgenticCanvasBlock, StudioOperation } from "./contracts";
@@ -49,6 +49,9 @@ function Failure({ onReload }: Pick<Props, "onReload">) {
 }
 
 function BlockFrame({ block, children }: { block: AgenticCanvasBlock; children: React.ReactNode }) {
+  if (block.type === "CUSTOM_VISUAL") return <article aria-label={block.accessibility.aria_label ?? block.accessibility.text_equivalent} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    {children}
+  </article>;
   return <article aria-label={block.accessibility.aria_label ?? block.accessibility.text_equivalent} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
     {block.title ? <h3 className="font-display text-xl font-semibold text-slate-900" dir="auto">{block.title}</h3> : null}
     <p className="mt-1 text-sm leading-6 text-slate-600" dir="auto">{block.meaning}</p>
@@ -257,6 +260,17 @@ function GeneratedImage({ block, loadGeneratedAsset }: { block: Extract<AgenticC
 
 function CustomVisualSandbox(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "CUSTOM_VISUAL" }> }) {
   const frame = useRef<HTMLIFrameElement>(null);
+  const container = useRef<HTMLElement>(null);
+  const [frameHeight, setFrameHeight] = useState(384);
+  useLayoutEffect(() => {
+    const element = container.current;
+    if (!element) return;
+    const resize = () => setFrameHeight(customVisualViewportHeight(element.clientWidth));
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
   const eventCount = useRef(0);
   const eventWindow = useRef(0);
@@ -286,8 +300,8 @@ function CustomVisualSandbox(props: Pick<Props, "sceneId" | "sceneVersion" | "on
     window.addEventListener("message", receive);
     return () => { window.clearTimeout(timeout); window.removeEventListener("message", receive); };
   }, [props.block, props.sceneId, props.sceneVersion, pkg]);
-  return <section className="overflow-hidden rounded-xl border border-slate-200 bg-white" data-custom-visual-sandbox={status}>
-    {pkg ? <iframe ref={frame} title={props.block.title ?? "Interactive learning visual"} sandbox="allow-scripts" referrerPolicy="no-referrer" className="min-h-[24rem] w-full border-0" style={{ minHeight: 384, width: "100%" }} srcDoc={customSandboxDocument(pkg.source, props.block.parameters, props.block.bridge_nonce, initialState.current)}/> : null}
+  return <section ref={container} className="overflow-hidden rounded-xl border border-slate-200 bg-white" data-custom-visual-sandbox={status}>
+    {pkg ? <iframe ref={frame} title={props.block.title ?? "Interactive learning visual"} sandbox="allow-scripts" referrerPolicy="no-referrer" style={{ height: frameHeight, width: "100%", border: 0, display: "block" }} srcDoc={customSandboxDocument(pkg.source, props.block.parameters, props.block.bridge_nonce, initialState.current)}/> : null}
     {status === "failed" ? <p role="alert" className="p-3 text-sm text-rose-900">This visual could not run safely. Tutor chat is still available.</p> : null}
   </section>;
 }
@@ -310,10 +324,47 @@ function DeclarativeBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOpe
 export function AgenticCanvasWorkspace(props: Props) {
   const scene = parseAgenticCanvasScene(props.seed);
   const [operationFailed, setOperationFailed] = useState(false);
+  const [replayEpoch, setReplayEpoch] = useState(0);
+  const current = useRef({ props, scene });
+  current.current = { props, scene };
+  const operationTail = useRef(Promise.resolve());
+  const queuedCount = useRef(0);
+  const queueEpoch = useRef(0);
+  useEffect(() => () => { queueEpoch.current += 1; }, [props.sceneId]);
   if (scene === null) return <Failure onReload={props.onReload}/>;
-  const safeOperation = async (operation: StudioOperation) => {
-    const accepted = await settleAgenticCanvasOperation(props.onOperation, operation);
-    setOperationFailed(!accepted);
+  const safeOperation = (operation: StudioOperation) => {
+    const epoch = queueEpoch.current;
+    if (queuedCount.current >= 24) {
+      queueEpoch.current += 1;
+      setOperationFailed(true);
+      props.onReload();
+      setReplayEpoch(value => value + 1);
+      return Promise.resolve();
+    }
+    queuedCount.current += 1;
+    const run = async () => {
+      try {
+        // A committed snapshot/React callback must be visible before the next event.
+        await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        const latest = current.current;
+        if (epoch !== queueEpoch.current || latest.props.sceneId !== operation.scene_id) return;
+        const block = latest.scene?.blocks.find(item => item.block_id === operation.payload.block_id);
+        if (!block) return;
+        const element = block.elements.find(item => item.id === operation.payload.element_id);
+        const mutation = operation.action_key !== "SELECT" && operation.action_key !== "FOCUS";
+        const pending = { ...operation, base_scene_version: latest.props.sceneVersion,
+          payload: { ...operation.payload, from_value: mutation ? element?.current_value ?? null : null } };
+        const accepted = await settleAgenticCanvasOperation(latest.props.onOperation, pending);
+        if (!accepted) {
+          queueEpoch.current += 1;
+          latest.props.onReload();
+          setReplayEpoch(value => value + 1);
+        }
+        setOperationFailed(!accepted);
+      } finally { queuedCount.current -= 1; }
+    };
+    operationTail.current = operationTail.current.then(run, run);
+    return operationTail.current;
   };
   const placements = new Map(scene.presentation?.placements.map((placement) => [placement.block_id, placement]) ?? []);
   const orderedBlocks = [...scene.blocks].sort((left, right) => (placements.get(left.block_id)?.order ?? 0) - (placements.get(right.block_id)?.order ?? 0));
@@ -339,16 +390,16 @@ export function AgenticCanvasWorkspace(props: Props) {
   const container = presentationLayout(layout, "SUPPORT", "NORMAL");
   const paletteClass = palette === "NATURE" ? "bg-emerald-50" : palette === "WARM" ? "bg-amber-50" : palette === "COOL" ? "bg-sky-50" : "bg-[#f2f7ff]";
   return <section aria-label="Learning canvas" className="space-y-3">
-    <header className={`rounded-2xl px-4 py-3 ${paletteClass}`}>
+    {orderedBlocks.some(block => block.type === "CUSTOM_VISUAL") ? null : <header className={`rounded-2xl px-4 py-3 ${paletteClass}`}>
       <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#496a8b]">Canvas</p>
       <h2 className="mt-1 font-display text-xl text-slate-900" dir="auto">{scene.objective}</h2>
-    </header>
-    {operationFailed ? <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-900">That Canvas action was not saved. The current Studio state has been restored, and Tutor chat remains available.</p> : null}
+    </header>}
+    {operationFailed ? <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-900">That Canvas action was not saved. Reload Workspace to verify the saved state. Tutor chat remains available.</p> : null}
     <div data-agentic-layout={layout} data-agentic-motion={scene.presentation?.motion ?? "NONE"} className={container.container}>{orderedBlocks.map((block) => {
       const placement = placements.get(block.block_id) ?? { role: "SUPPORT" as const, span: "NORMAL" as const };
       const plan = presentationLayout(layout, placement.role, placement.span);
       const isVisible = visibleIds.has(block.block_id);
-      return <motion.div key={block.block_id} data-agentic-region={plan.region} data-agentic-revealed={isVisible ? "true" : "false"} className={plan.className} initial={false} animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 18, scale: scene.presentation?.motion === "SUBTLE" && placement.role === "PRIMARY" && block.type !== "CUSTOM_VISUAL" ? 1.01 : 1 }} transition={{ duration: reducedMotion ? 0 : 0.24, ease: "easeOut" }} aria-hidden={!isVisible}><DeclarativeBlock {...props} onOperation={safeOperation} block={block}/></motion.div>;
+      return <motion.div key={block.block_id} data-agentic-region={plan.region} data-agentic-revealed={isVisible ? "true" : "false"} className={plan.className} initial={false} animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 18, scale: scene.presentation?.motion === "SUBTLE" && placement.role === "PRIMARY" && block.type !== "CUSTOM_VISUAL" ? 1.01 : 1 }} transition={{ duration: reducedMotion ? 0 : 0.24, ease: "easeOut" }} aria-hidden={!isVisible}><DeclarativeBlock key={block.type === "CUSTOM_VISUAL" ? replayEpoch : undefined} {...props} onOperation={safeOperation} block={block}/></motion.div>;
     })}</div>
   </section>;
 }

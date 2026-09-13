@@ -938,6 +938,7 @@ class StudioInteractionTutorService:
                 "says the Student action should reveal or emphasize a new relationship, emit the updated "
                 "canvas_brief in this same Primary Tutor result as well as responding in Chat. "
                 "Do not invent a Student question, explanation, reasoning, or source message. "
+                "When the active Scene is Full-Power Canvas, use canvas_brief for any visual change and keep legacy workspace_intent null. "
                 f"The result is internal and not yet a delivered Tutor turn.{workspace_input}"
             ),
             "max_output_tokens": get_settings().tutor_max_output_tokens,

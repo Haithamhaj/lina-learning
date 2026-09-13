@@ -47,6 +47,14 @@ class CustomVisualSecurityError(ValueError):
     """Generated source requested an authority unavailable to visual packages."""
 
 
+class CustomVisualSyntaxError(CustomVisualSecurityError):
+    """Bounded parser location/category, without source excerpts or host paths."""
+
+    def __init__(self, diagnostic: dict[str, int | str | None]):
+        self.diagnostic = diagnostic
+        super().__init__("CUSTOM_VISUAL_JAVASCRIPT_SYNTAX_INVALID")
+
+
 class CustomVisualInteractionLayoutError(ValueError):
     """A declared learner interaction is present but cannot be laid out as usable UI."""
 
@@ -190,11 +198,20 @@ def _validate_javascript_syntax(source: str) -> None:
         raise CustomVisualSecurityError("CUSTOM_VISUAL_SYNTAX_VALIDATOR_UNAVAILABLE")
     try:
         result = subprocess.run([node, "--check", "-"], input=source, text=True,
-                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
+                                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=3)
     except (OSError, subprocess.TimeoutExpired) as error:
         raise CustomVisualSecurityError("CUSTOM_VISUAL_SYNTAX_VALIDATOR_UNAVAILABLE") from error
     if result.returncode:
-        raise CustomVisualSecurityError("CUSTOM_VISUAL_JAVASCRIPT_SYNTAX_INVALID: repair JavaScript syntax before resubmission")
+        # Node's stderr includes source and a stack. Export only a numeric
+        # location and an allowlisted category; never pass raw stderr onward.
+        diagnostic = result.stderr or ""
+        location = re.search(r"(?m)^\[stdin\]:(\d+)\s*$", diagnostic)
+        caret = re.search(r"(?m)^([ \t]*)\^+\s*$", diagnostic)
+        categories = ("Unexpected token", "Unexpected identifier", "Unexpected end of input",
+                      "Invalid or unexpected token", "missing ) after argument list")
+        category = next((value for value in categories if f"SyntaxError: {value}" in diagnostic), "Invalid JavaScript syntax")
+        raise CustomVisualSyntaxError({"line": int(location[1]) if location else None,
+            "column": len(caret[1]) + 1 if caret else None, "category": category})
 
 
 class CustomVisualPackageV1(BaseModel):

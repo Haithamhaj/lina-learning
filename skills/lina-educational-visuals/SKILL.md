@@ -22,8 +22,8 @@ active task boundaries. Preserve accepted exact activities and Studio ownership.
 5. Verify keyboard/tap equivalence, visible focus, non-color distinction, text
    equivalent and reduced-motion information equivalence. Ordinal progress uses
    Stage N of M / المرحلة N من M, never ambiguous N/M.
-6. Inspect asset provenance/rights and semantic handles; no raw executable model
-   content or learner details in reusable content.
+6. Inspect asset provenance/rights and semantic handles; keep custom executable source in owned, immutable sandbox Builds, referenced
+   from bounded Scenes/Versions; never embed learner details in reusable content.
 7. Inspect actual initial/intermediate/final screenshots and interrupted motion,
    wide/narrow, long labels and Arabic/English/mixed. Parsing/tests alone are not
    visual review. Compare [bad cycle cards](../../docs/reviews/STUDIO-VISUAL-PROCESS-01/VISUAL_CHECKPOINT.md)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 
 def test_pydantic_wrapped_bridge_failure_retains_the_actual_repair_stage():
     import pytest
@@ -28,7 +30,9 @@ def test_single_canvas_agent_uses_only_the_bounded_tool_registry() -> None:
 
     assert agent.handoffs == []
     assert tuple(tool.name for tool in agent.tools) == tool_names()
-    assert agent.output_type is AgenticCanvasPlanV1
+    assert issubclass(agent.output_type, AgenticCanvasPlanV1)
+    assert "visual_review" in agent.output_type.model_fields
+    assert "visual_review" in agent.output_type.model_json_schema()["properties"]
     assert "Tutor" in agent.instructions
     assert "write Studio" in agent.instructions
     schemas = {
@@ -59,7 +63,8 @@ def test_agentic_canvas_deadline_allows_one_bounded_custom_visual_composition() 
     assert AGENTIC_CANVAS_DEADLINE == timedelta(minutes=5)
 
 
-def test_model_behavior_failure_retains_only_bounded_composition_diagnostics(monkeypatch) -> None:
+@pytest.mark.parametrize("budget_exhausted", [False, True])
+def test_model_behavior_failure_retains_only_bounded_composition_diagnostics(monkeypatch, budget_exhausted) -> None:
     """A live retry must retain route evidence without persisting model content."""
 
     import asyncio
@@ -71,6 +76,9 @@ def test_model_behavior_failure_retains_only_bounded_composition_diagnostics(mon
     from services.studio.canvas_brief import CanvasBriefV1, VisualLearnerContextV1
 
     async def failed_run(*_args, **_kwargs):
+        if budget_exhausted:
+            _kwargs["context"].model_turns.append({"input_tokens": 123, "output_tokens": 7})
+            raise orchestrator.MaxTurnsExceeded("raw model output must not be retained")
         raise ModelBehaviorError("raw model output must not be retained")
 
     monkeypatch.setattr(orchestrator.Runner, "run", failed_run)
@@ -85,14 +93,18 @@ def test_model_behavior_failure_retains_only_bounded_composition_diagnostics(mon
         "selected_personal_facts": [],
     })
 
-    with pytest.raises(orchestrator.CanvasCompositionModelBehaviorError) as raised:
+    expected = orchestrator.CanvasCompositionBudgetError if budget_exhausted else orchestrator.CanvasCompositionModelBehaviorError
+    with pytest.raises(expected) as raised:
         asyncio.run(orchestrator.compose_canvas_scene_with_trace(
             brief=brief, visual_learner_context=learner, api_key="test-only-key", model="gpt-5.6-luna"
         ))
 
     # The mock does not invoke SDK hooks; real provider turns populate this
     # same bounded field before a later retry is scheduled.
-    assert raised.value.model_turns == ()
+    assert raised.value.model_turns == (({"input_tokens":123,"output_tokens":7},) if budget_exhausted else ())
+    if budget_exhausted:
+        from workers.agentic_canvas_handlers import _classify_agent_failure
+        assert _classify_agent_failure(raised.value)[1] is False
     assert raised.value.tool_failures == ()
     assert "raw model output" not in str(raised.value.tool_failures)
 
@@ -100,7 +112,7 @@ def test_model_behavior_failure_retains_only_bounded_composition_diagnostics(mon
 def test_canvas_agent_instructions_make_hosted_tool_selection_semantic_and_bounded() -> None:
     from services.studio.agent.orchestrator import CANVAS_AGENT_INSTRUCTIONS
 
-    instructions = CANVAS_AGENT_INSTRUCTIONS.casefold()
+    instructions = " ".join(CANVAS_AGENT_INSTRUCTIONS.casefold().split())
     assert "original illustrative image" in instructions
     assert "typed geometric or diagram primitives" in instructions
     assert "do not replace that requested illustration with typed primitives" in instructions
@@ -143,7 +155,7 @@ def test_canvas_agent_input_contains_only_the_tutor_authored_semantic_brief() ->
     })
     payload = json.loads(canvas_agent_input(brief, visual_context))
 
-    assert payload == {"canvas_brief": brief.model_dump(mode="json"), "visual_learner_context": visual_context.model_dump(mode="json")}
+    assert payload == {"reusable_visuals": [], "canvas_brief": brief.model_dump(mode="json"), "visual_learner_context": visual_context.model_dump(mode="json")}
     assert "student_id" not in json.dumps(payload)
     assert "personal_memory" not in json.dumps(payload)
 
@@ -495,7 +507,8 @@ def test_custom_visual_semantic_authoring_builds_the_canonical_package_envelope(
     )
 
     package = context.registry.blocks()[0].package.model_dump(mode="json")
-    assert context.registry.blocks()[0].artifact_instance_id == "coupled-slopes-artifact"
+    assert context.registry.blocks()[0].artifact_instance_id.startswith("visual-")
+    assert len(context.registry.blocks()[0].artifact_instance_id) <= 64
     assert package["version"] == "custom-visual-package-v1"
     assert package["manifest"]["brief_digest"] == "b" * 64
     assert package["manifest"]["provenance"] == {"brief_digest": "b" * 64, "runtime_kind": "custom-visual"}
@@ -558,7 +571,8 @@ def test_custom_visual_legacy_manifest_json_string_is_canonicalized() -> None:
     assert context.registry.blocks()[0].package is not None
 
 
-def test_create_plan_omission_gets_one_toolless_coherence_repair(monkeypatch) -> None:
+@pytest.mark.parametrize("failure_kind", ["omitted_candidate", "semantic_reveal_id"])
+def test_create_plan_omission_gets_one_toolless_coherence_repair(monkeypatch, failure_kind) -> None:
     import asyncio
     import json
     from types import SimpleNamespace
@@ -603,7 +617,7 @@ def test_create_plan_omission_gets_one_toolless_coherence_repair(monkeypatch) ->
             return result_for({
                 "version": "agentic-canvas-plan-v1", "objective": "Compare slopes.", "subject_key": "MATH",
                 "layout": "FOCUS", "palette": "COOL", "motion": "NONE",
-                "placements": [{"block_id": "typed-answer", "role": "INTERACTION", "order": 0, "span": "NORMAL"}], "reveal_order": [],
+                "placements": [{"block_id": "typed-answer" if failure_kind == "omitted_candidate" else "coupled-slopes", "role": "INTERACTION", "order": 0, "span": "NORMAL"}], "reveal_order": [] if failure_kind == "omitted_candidate" else ["point-a"],
             })
         repair = json.loads(input)
         assert agent.tools == []
@@ -631,3 +645,100 @@ def test_create_plan_omission_gets_one_toolless_coherence_repair(monkeypatch) ->
     assert composition.plan_repaired is True
     assert composition.current_custom_candidate_block_id == "coupled-slopes"
     assert composition.plan_block_ids == ("coupled-slopes", "typed-answer")
+
+
+def test_empty_registry_and_review_phase_do_not_expose_unusable_or_hosted_tools():
+    import asyncio
+    from agents import RunContextWrapper
+    from services.studio.agent.orchestrator import build_canvas_agent, CanvasAgentRunContext
+    from services.studio.agent.registry import CanvasBlockRegistry
+    agent = build_canvas_agent(api_key='test-only-key', model='gpt-5.6-luna')
+    context = RunContextWrapper(CanvasAgentRunContext(registry=CanvasBlockRegistry()))
+    names = {tool.name for tool in asyncio.run(agent.get_all_tools(context))}
+    assert 'search_reusable_visuals' not in names
+    assert 'instantiate_reusable_visual' not in names
+    assert {'create_custom_visual', 'image_generation', 'code_interpreter'} <= names
+    context.context.create_route_attempted = True
+    context.context.current_custom_candidate_block_id = 'candidate'
+    names = {tool.name for tool in asyncio.run(agent.get_all_tools(context))}
+    assert names == {'create_custom_visual', 'refine_custom_visual'}
+    context.context.custom_attempt_count = 4
+    assert asyncio.run(agent.get_all_tools(context)) == []
+
+
+def test_same_agent_quality_review_requires_every_quality_dimension_and_no_defect():
+    from services.studio.agent.orchestrator import CanvasVisualReviewV1
+    payload = dict(block_id='visual', educational_correctness=True, semantic_integrity=True, representation_adequacy=True,
+        interaction_and_feedback=True, responsive_legibility=True, state_replay=True,
+        visual_hierarchy_and_text_economy=True, evidence='Observed actions and replay in both viewports.', unresolved_defects=[])
+    assert CanvasVisualReviewV1(**payload).accepted()
+    for name, value in payload.items():
+        if value is True:
+            assert not CanvasVisualReviewV1(**{**payload, name: False}).accepted()
+    assert not CanvasVisualReviewV1(**{**payload, 'unresolved_defects':['Clipped narrow control']}).accepted()
+
+
+def test_inline_reusable_catalog_excludes_source_and_private_application_context():
+    import json
+    from services.studio.agent.orchestrator import _reusable_summaries
+    summaries = _reusable_summaries({'version': dict(stable_slug='balance', semantic_purpose='Equivalent quantities',
+        runtime_kind='custom-visual', parameter_schema={'type':'object'}, source='DO NOT EXPOSE', student_id='PRIVATE',
+        implementation_build_id='APPLICATION-ONLY', manifest_contract={'private':'APPLICATION-ONLY'})})
+    serialized = json.dumps(summaries)
+    assert summaries[0]['version_id'] == 'version'
+    assert 'DO NOT EXPOSE' not in serialized and 'PRIVATE' not in serialized and 'APPLICATION-ONLY' not in serialized
+
+
+def test_superseded_preview_images_only_are_removed():
+    from types import SimpleNamespace
+    from agents.run_config import ModelInputData
+    from services.studio.agent.orchestrator import _current_preview_input
+
+    items = [
+        {'type': 'message', 'content': [{'type': 'input_image', 'image_url': 'student-original'}]},
+        {'type': 'function_call', 'name': 'create_custom_visual', 'call_id': 'old'},
+        {'type': 'function_call_output', 'call_id': 'old', 'output': [
+            {'type': 'input_text', 'text': 'prior diagnostics'},
+            {'type': 'input_image', 'image_url': 'old-preview'}]},
+        {'type': 'function_call', 'name': 'refine_custom_visual', 'call_id': 'new'},
+        {'type': 'function_call_output', 'call_id': 'new', 'output': [
+            {'type': 'input_image', 'image_url': 'current-preview'}]},
+    ]
+    result = _current_preview_input(SimpleNamespace(model_data=ModelInputData(input=items, instructions='safety')))
+    assert result.instructions == 'safety'
+    assert result.input[0] == items[0]
+    assert result.input[2]['output'] == [{'type': 'input_text', 'text': 'prior diagnostics'}]
+    assert result.input[-1] == items[-1]
+    assert len(items[2]['output']) == 2
+    assert _current_preview_input(SimpleNamespace(model_data=ModelInputData(input=items[:3], instructions='safety'))).input == items[:3]
+
+
+def test_authoring_parameter_bound_is_visible_in_schema():
+    import pytest
+    from services.studio.agent.orchestrator import CustomVisualParameterV1
+    from pydantic import ValidationError
+    schema = CustomVisualParameterV1.model_json_schema()
+    assert {'type': 'string', 'maxLength': 240} in schema['properties']['value']['anyOf']
+    with pytest.raises(ValidationError):
+        CustomVisualParameterV1(name='labels', value='x' * 241)
+
+
+def test_redacted_tool_error_does_not_invent_an_encoding_or_manifest_cause():
+    from services.studio.agent.orchestrator import _custom_visual_error_payload
+    result = _custom_visual_error_payload(ValueError('Invalid JSON input for tool create_custom_visual'))
+    assert result['code'] == 'CUSTOM_VISUAL_ARGUMENT_INVALID'
+    assert 'missing_fields' not in result
+    assert _custom_visual_error_payload(ValueError('Visual parameter value does not match its declared scalar type.'))['code'] == 'CUSTOM_VISUAL_PARAMETER_INVALID'
+
+
+
+def test_reusable_catalog_exposes_actual_capabilities_without_source_or_storage_ids():
+    from services.studio.agent.orchestrator import _reusable_summaries
+    result = _reusable_summaries({'version': {'stable_slug':'equal-parts','semantic_purpose':'Compare portions',
+        'runtime_kind':'custom-visual','parameter_schema':{},'implementation_build_id':'private-build',
+        'source':'private implementation', 'manifest_contract': {'representation_summary':'Two equal-whole bars',
+            'visual_descriptions':['Two bars with shared partitions'],
+            'interactions':[{'semantic_id':'partition','action':'SET_VALUE','meaning':'Change bar partitions'}]}}})[0]
+    assert result['declared_capabilities']['representation'] == 'Two equal-whole bars'
+    assert result['declared_capabilities']['interactions'][0]['semantic_id'] == 'partition'
+    assert 'source' not in result and 'implementation_build_id' not in result

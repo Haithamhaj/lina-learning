@@ -91,7 +91,8 @@ Use:
 
 ```text
 REUSE when fit is strong
-ADAPT when structure is fit but parameters/presentation must change
+REUSE also for parameters/presentation expressible by the existing schema
+ADAPT only when generalized capability must change
 CREATE when reuse/adaptation would compromise the learning representation
 ```
 

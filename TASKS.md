@@ -13,6 +13,21 @@ An explicit current Product Owner instruction authorizes its requested working s
 
 ## Active implementation
 
+### FULL-POWER-CANVAS-HARDENING — Production autonomy and measured quality
+
+**Status:** ACTIVE — desktop acceptance; mobile deferred by Product Owner 2026-09-13
+**Authority:** Product Owner request 2026-09-12, continued 2026-09-13.
+**Baseline:** `ebac3fef92427ac203d241f7cd60eafdb1187c6c`.
+**Scope:** General production preview/interaction/replay and bounded same-Luna review;
+instruction reconciliation; measured CREATE/REUSE efficiency and observability;
+diverse wide/narrow live acceptance without developer source repair.
+**Verification:** Focused contract/browser/security tests during implementation;
+one integrated regression near closure; six diverse real-Luna cases with actual
+browser interactions and quality review; before/after timing/token/cost evidence.
+**Result:** 1420 integrated tests passed, 12 skipped. Desktop-only acceptance is ACTIVE after early independent review, canonical state diagnostics, capability-aware REUSE and reliable screenshot capture. True qualified REUSE and desktop ADAPT lineage/browser handoffs are verified; individual fraction, balance and Arabic sentence CREATE interactions work. Broad CREATE reliability remains unaccepted; the final captured Canvas configuration completed 2/6 protocols, with a human-detected semantic false acceptance in reflection. See `docs/FULL-POWER-CANVAS-HARDENING.md` and its portable metrics for measured evidence.
+**Closure:** Local engineering commit only; task is not DONE. No push, merge or deployment.
+
+
 ### FULL-POWER-CANVAS-01 — Full-Power Hybrid Canvas
 
 **Status:** DONE — local engineering closure; no push/merge/deployment

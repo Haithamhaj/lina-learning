@@ -293,7 +293,10 @@ def test_transient_provider_failure_retries_same_run_and_persists_canonical_dige
     with factory() as session:
         run, job = session.get(m.StudioCanvasSpecialistRun, run_id), session.get(m.Job, job_id)
         assert run is not None and run.status == "PENDING"
-        assert run.failure_metadata == {"code": "TRANSIENT_PROVIDER_FAILURE", "provider_attempt": 1}
+        assert run.failure_metadata["code"] == "TRANSIENT_PROVIDER_FAILURE"
+        assert run.failure_metadata["provider_attempt"] == 1
+        assert run.failure_metadata["latency_ms"] >= 0
+        assert run.failure_metadata["model"] == "test-agentic-model"
         assert job is not None and job.status == "PENDING"
         retry_at = job.run_after
 
@@ -415,7 +418,7 @@ def test_worker_immediately_settles_completed_agentic_scene_through_existing_stu
         assert completed.proposal_payload == _scene().model_dump(mode="json")
         assert completed.failure_metadata is None
         assert completed.sdk_trace_id.startswith("trace_")
-        assert completed.agent_execution_metadata == {
+        assert {key: value for key, value in completed.agent_execution_metadata.items() if key not in {"preflight_ms", "persistence_ms", "settlement_ms", "worker_total_ms", "estimated_token_cost_usd"}} == {
             "model": "test-agentic-model",
             "usage": {
                 "requests": 2,

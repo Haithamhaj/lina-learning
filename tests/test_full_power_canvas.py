@@ -4,6 +4,19 @@ import pytest
 from pydantic import ValidationError
 
 
+def test_syntax_diagnostic_locates_failure_without_source_or_execution():
+    from services.studio.full_power_canvas import _validate_javascript_syntax, CustomVisualSecurityError
+    from services.studio.agent.orchestrator import _custom_visual_error_payload
+    _validate_javascript_syntax("throw new Error('must not execute');")
+    with pytest.raises(CustomVisualSecurityError) as caught:
+        _validate_javascript_syntax("// private-marker-not-for-diagnostics\nwindow.mount = => {};")
+    payload = _custom_visual_error_payload(caught.value)
+    assert payload['syntax_diagnostic']['line'] == 2
+    assert payload['syntax_diagnostic']['category'] == 'Unexpected token'
+    assert 'private-marker' not in str(payload)
+    assert 'window.mount' not in str(payload)
+
+
 @pytest.mark.parametrize("source", [
     "window.mount=(root,params,bridge)=>{",
     "window.mount=(root,params,bridge)=>bridge.emit({action:'SELECT',semantic_id:'fraction-a',value:'3/4'})",

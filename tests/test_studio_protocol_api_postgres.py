@@ -786,8 +786,9 @@ def test_canvas_tutor_stream_claims_once_and_persists_no_fake_student_message(
         _clear_overrides()
 
 
+@pytest.mark.parametrize("disconnect_mode", ["iterator", "transport", "before_body"])
 def test_canvas_terminal_disconnect_cancels_running_interaction_but_preserves_tutor_truth(
-    postgres_session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch,
+    postgres_session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch, disconnect_mode: str,
 ) -> None:
     """Catches a terminal SSE close stranding a persisted Canvas turn in RUNNING."""
 
@@ -851,10 +852,28 @@ def test_canvas_terminal_disconnect_cancels_running_interaction_but_preserves_tu
             )
 
             async def consume_terminal_then_disconnect() -> None:
-                iterator = response.body_iterator
-                assert "event: delta" in str(await anext(iterator))
-                assert "event: turn" in str(await anext(iterator))
-                await iterator.aclose()
+                if disconnect_mode == "iterator":
+                    iterator = response.body_iterator
+                    assert "event: delta" in str(await anext(iterator))
+                    assert "event: turn" in str(await anext(iterator))
+                    await iterator.aclose()
+                    return
+                # Exercise Starlette's real disconnect/cancellation path. Keep
+                # response alive: garbage collection must not own DB cleanup.
+                import anyio
+                disconnected = anyio.Event()
+                async def receive():
+                    await disconnected.wait()
+                    return {"type": "http.disconnect"}
+                async def send(message):
+                    if (disconnect_mode == "before_body" and message["type"] == "http.response.start") or b"event: turn" in message.get("body", b""):
+                        disconnected.set()
+                        await anyio.sleep_forever()
+                await response({"type": "http", "asgi": {"version": "3.0", "spec_version": "2.0"}}, receive, send)
+                # A production event loop stays alive. asyncio.run shutdown can
+                # otherwise close forgotten generators and conceal this defect.
+                with postgres_session_factory() as check_session:
+                    assert check_session.get(StudioStudentInteraction, interaction_id).status == "CANCELLED"
 
             asyncio.run(consume_terminal_then_disconnect())
         with postgres_session_factory.begin() as session:
@@ -865,8 +884,9 @@ def test_canvas_terminal_disconnect_cancels_running_interaction_but_preserves_tu
             assert interaction is not None
             assert interaction.status == "CANCELLED"
             assert interaction.tutor_message_id is None
-            assert session.query(LearningMessage).filter_by(session_id=learning_session_id, role="tutor").count() == 1
-            assert session.query(AIExecution).filter_by(operation_id=interaction_id, success=True).count() == 1
+            expected_turns = 0 if disconnect_mode == "before_body" else 1
+            assert session.query(LearningMessage).filter_by(session_id=learning_session_id, role="tutor").count() == expected_turns
+            assert session.query(AIExecution).filter_by(operation_id=interaction_id, success=True).count() == expected_turns
             assert observation is not None and observation.status == "CANCELLED"
             runtime = session.get(type(runtime), runtime_id)
             assert runtime is not None and runtime.last_tutor_observation_sequence == 0

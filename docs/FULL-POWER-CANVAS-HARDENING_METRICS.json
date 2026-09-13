@@ -1,0 +1,3409 @@
+{
+  "scope": "Observed Canvas calls only; no hosted-tool fees or Tutor costs. Failures retained. Zero observed calls is not proof of zero billed usage.",
+  "rows": [
+    {
+      "run": "after-bounded-balance_state",
+      "protocol_status": "FAILED",
+      "run_id": "7455b7eb-72c1-4781-9c22-fd8e058bd697",
+      "harness_elapsed_ms": 93189,
+      "model_calls": 4,
+      "luna_ms": 71592,
+      "input_tokens": 47144,
+      "output_tokens": 8449,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.048919,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 52887,
+        "refine_custom_visual": 12916,
+        "final_plan_or_review": 5789
+      },
+      "preview_ms": 4680,
+      "tool_argument_bytes": 26250,
+      "system_chars": [
+        10559,
+        10559,
+        10559,
+        10559
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-bounded-classification",
+      "protocol_status": "FAILED",
+      "run_id": "e18441b6-3ec4-4cf1-a98d-f2ee8739733e",
+      "harness_elapsed_ms": 94745,
+      "model_calls": 4,
+      "luna_ms": 60816,
+      "input_tokens": 85069,
+      "output_tokens": 6117,
+      "cached_input_tokens": 16541,
+      "estimated_token_cost_usd": 0.05344205,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 31306,
+        "refine_custom_visual": 20746,
+        "final_plan_or_review": 8764
+      },
+      "preview_ms": 13301,
+      "tool_argument_bytes": 15319,
+      "system_chars": [
+        9606,
+        9606,
+        9606,
+        9606
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-bounded-fraction_relationship",
+      "protocol_status": "FAILED",
+      "run_id": "7f83e9b9-b7e9-4ef0-b722-a784ed91555c",
+      "harness_elapsed_ms": 83836,
+      "model_calls": 4,
+      "luna_ms": 54285,
+      "input_tokens": 43669,
+      "output_tokens": 6077,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0400655,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 43812,
+        "refine_custom_visual": 3747,
+        "final_plan_or_review": 6726
+      },
+      "preview_ms": 2999,
+      "tool_argument_bytes": 19790,
+      "system_chars": [
+        10913,
+        10913,
+        10913,
+        10913
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-bounded-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "c78c68c1-f1c6-40f9-baf2-2ec8cb22048b",
+      "harness_elapsed_ms": 69121,
+      "model_calls": 4,
+      "luna_ms": 46132,
+      "input_tokens": 35310,
+      "output_tokens": 5240,
+      "cached_input_tokens": 6954,
+      "estimated_token_cost_usd": 0.0302457,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 19735,
+        "refine_custom_visual": 19448,
+        "final_plan_or_review": 6949
+      },
+      "preview_ms": 9162,
+      "tool_argument_bytes": 14305,
+      "system_chars": [
+        10559,
+        10559,
+        10559,
+        10559
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-bounded-sentence_structure",
+      "protocol_status": "COMPLETED",
+      "run_id": "0bb1bf52-a30c-4975-a6aa-f03e5b69e929",
+      "harness_elapsed_ms": 93377,
+      "model_calls": 4,
+      "luna_ms": 54728,
+      "input_tokens": 76455,
+      "output_tokens": 5189,
+      "cached_input_tokens": 14622,
+      "estimated_token_cost_usd": 0.0472146,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 32777,
+        "refine_custom_visual": 16392,
+        "final_plan_or_review": 5559
+      },
+      "preview_ms": 5066,
+      "tool_argument_bytes": 13915,
+      "system_chars": [
+        10316,
+        10316,
+        10316,
+        10316
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-bounded-water_cycle",
+      "protocol_status": "FAILED",
+      "run_id": "6cc8cef4-f4ee-4dbb-94f0-12f898636ef4",
+      "harness_elapsed_ms": 77776,
+      "model_calls": 4,
+      "luna_ms": 54438,
+      "input_tokens": 49138,
+      "output_tokens": 6040,
+      "cached_input_tokens": 12732,
+      "estimated_token_cost_usd": 0.0369596,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 26898,
+        "refine_custom_visual": 21007,
+        "final_plan_or_review": 6533
+      },
+      "preview_ms": 8987,
+      "tool_argument_bytes": 16119,
+      "system_chars": [
+        10591,
+        10591,
+        10591,
+        10591
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-contract-balance_state",
+      "protocol_status": "COMPLETED",
+      "run_id": "2f1559a8-58f0-41cb-a2ca-8571d49ea629",
+      "harness_elapsed_ms": 78973,
+      "model_calls": 4,
+      "luna_ms": 53089,
+      "input_tokens": 58075,
+      "output_tokens": 5231,
+      "cached_input_tokens": 2760,
+      "estimated_token_cost_usd": 0.0434885,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 29561,
+        "refine_custom_visual": 16935,
+        "final_plan_or_review": 6593
+      },
+      "preview_ms": 4184,
+      "tool_argument_bytes": 12097,
+      "system_chars": [
+        10628,
+        10628,
+        10628,
+        10628
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-contract-classification",
+      "protocol_status": "FAILED",
+      "run_id": "4ca5c262-016a-4286-a0fa-1887045e4e95",
+      "harness_elapsed_ms": 114413,
+      "model_calls": 4,
+      "luna_ms": 81449,
+      "input_tokens": 53318,
+      "output_tokens": 7828,
+      "cached_input_tokens": 2872,
+      "estimated_token_cost_usd": 0.0488506,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 30633,
+        "refine_custom_visual": 44732,
+        "final_plan_or_review": 6084
+      },
+      "preview_ms": 21110,
+      "tool_argument_bytes": 17379,
+      "system_chars": [
+        11056,
+        11056,
+        11056,
+        11056
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-contract-fraction_relationship",
+      "protocol_status": "COMPLETED",
+      "run_id": "518fe50f-fcae-4b3e-9cb1-902b777dbba2",
+      "harness_elapsed_ms": 63618,
+      "model_calls": 3,
+      "luna_ms": 33482,
+      "input_tokens": 33338,
+      "output_tokens": 3948,
+      "cached_input_tokens": 2891,
+      "estimated_token_cost_usd": 0.02721205,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 22383,
+        "refine_custom_visual": 6144,
+        "final_plan_or_review": 4955
+      },
+      "preview_ms": 3395,
+      "tool_argument_bytes": 11075,
+      "system_chars": [
+        11180,
+        11180,
+        11180
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-contract-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "2d829475-3b83-4613-8888-3b551c41f500",
+      "harness_elapsed_ms": 74527,
+      "model_calls": 4,
+      "luna_ms": 58007,
+      "input_tokens": 52391,
+      "output_tokens": 5420,
+      "cached_input_tokens": 2810,
+      "estimated_token_cost_usd": 0.041191,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 39271,
+        "refine_custom_visual": 11897,
+        "final_plan_or_review": 6839
+      },
+      "preview_ms": 4767,
+      "tool_argument_bytes": 14004,
+      "system_chars": [
+        10826,
+        10826,
+        10826,
+        10826
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-contract-sentence_structure",
+      "protocol_status": "COMPLETED",
+      "run_id": "560c79d7-eedd-4216-8063-85530ce02a6f",
+      "harness_elapsed_ms": 67134,
+      "model_calls": 3,
+      "luna_ms": 37207,
+      "input_tokens": 36458,
+      "output_tokens": 3478,
+      "cached_input_tokens": 2760,
+      "estimated_token_cost_usd": 0.027421,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 28739,
+        "refine_custom_visual": 3025,
+        "final_plan_or_review": 5443
+      },
+      "preview_ms": 4573,
+      "tool_argument_bytes": 9952,
+      "system_chars": [
+        10583,
+        10583,
+        10583
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-contract-water_cycle",
+      "protocol_status": "FAILED",
+      "run_id": "a0e10f27-fe54-4af3-8bb8-54da6600a83b",
+      "harness_elapsed_ms": 73419,
+      "model_calls": 4,
+      "luna_ms": 58556,
+      "input_tokens": 35081,
+      "output_tokens": 5701,
+      "cached_input_tokens": 8729,
+      "estimated_token_cost_usd": 0.03071545,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 38504,
+        "refine_custom_visual": 13168,
+        "final_plan_or_review": 6884
+      },
+      "preview_ms": 976,
+      "tool_argument_bytes": 16836,
+      "system_chars": [
+        10858,
+        10858,
+        10858,
+        10858
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-controls-balance_state",
+      "protocol_status": "FAILED",
+      "run_id": "75355823-15f4-4963-89aa-dda40706e266",
+      "harness_elapsed_ms": 66156,
+      "model_calls": 3,
+      "luna_ms": 48801,
+      "input_tokens": 34347,
+      "output_tokens": 5700,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0342735,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 27303,
+        "refine_custom_visual": 11509,
+        "final_plan_or_review": 9989
+      },
+      "preview_ms": 3238,
+      "tool_argument_bytes": 14987,
+      "system_chars": [
+        9407,
+        9407,
+        9407
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-controls-classification",
+      "protocol_status": "FAILED",
+      "run_id": "b54571bd-fd9f-490e-9ff0-c18db4fab192",
+      "harness_elapsed_ms": 61224,
+      "model_calls": 3,
+      "luna_ms": 49619,
+      "input_tokens": 23171,
+      "output_tokens": 6837,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0320965,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 42105,
+        "final_plan_or_review": 7514
+      },
+      "preview_ms": 865,
+      "tool_argument_bytes": 21276,
+      "system_chars": [
+        9637,
+        9637,
+        9637
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-controls-fraction_relationship",
+      "protocol_status": "COMPLETED",
+      "run_id": "89578af0-6a40-434b-b493-6b55220a8e1a",
+      "harness_elapsed_ms": 118221,
+      "model_calls": 7,
+      "luna_ms": 82408,
+      "input_tokens": 76582,
+      "output_tokens": 11129,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.071678,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 56043,
+        "refine_custom_visual": 16253,
+        "final_plan_or_review": 10112
+      },
+      "preview_ms": 6401,
+      "tool_argument_bytes": 34131,
+      "system_chars": [
+        9761,
+        9761,
+        9761,
+        9761,
+        9761,
+        9761,
+        9761
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-controls-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "e6146d50-478b-4299-b95a-f314de900544",
+      "harness_elapsed_ms": 117185,
+      "model_calls": 6,
+      "luna_ms": 94376,
+      "input_tokens": 51520,
+      "output_tokens": 12500,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.06326,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 76045,
+        "refine_custom_visual": 6640,
+        "final_plan_or_review": 11691
+      },
+      "preview_ms": 5534,
+      "tool_argument_bytes": 34343,
+      "system_chars": [
+        9407,
+        9407,
+        9407,
+        9407,
+        9407,
+        9407
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-controls-sentence_structure",
+      "protocol_status": "FAILED",
+      "run_id": "576a77b0-873f-421f-b6a4-44448f6628ec",
+      "harness_elapsed_ms": 58013,
+      "model_calls": 3,
+      "luna_ms": 43978,
+      "input_tokens": 21493,
+      "output_tokens": 5930,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0285365,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 36831,
+        "final_plan_or_review": 7147
+      },
+      "preview_ms": 894,
+      "tool_argument_bytes": 19610,
+      "system_chars": [
+        9164,
+        9164,
+        9164
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-controls-water_cycle",
+      "protocol_status": "COMPLETED",
+      "run_id": "b930c3d9-0f8c-401a-94aa-b1a513aa7493",
+      "harness_elapsed_ms": 103821,
+      "model_calls": 5,
+      "luna_ms": 70716,
+      "input_tokens": 62353,
+      "output_tokens": 9135,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0585815,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 52884,
+        "final_plan_or_review": 9884,
+        "refine_custom_visual": 7948
+      },
+      "preview_ms": 4966,
+      "tool_argument_bytes": 26382,
+      "system_chars": [
+        9439,
+        9439,
+        9439,
+        9439,
+        9439
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-diagnostics-balance_state",
+      "protocol_status": "FAILED",
+      "run_id": "aece2540-7cb2-4301-9569-0aec02bcb1e5",
+      "harness_elapsed_ms": 133278,
+      "model_calls": 6,
+      "luna_ms": 111605,
+      "input_tokens": 66324,
+      "output_tokens": 11872,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.068778,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 64049,
+        "refine_custom_visual": 31021,
+        "final_plan_or_review": 16535
+      },
+      "preview_ms": 5519,
+      "tool_argument_bytes": 26766,
+      "system_chars": [
+        9874,
+        9874,
+        9874,
+        9874,
+        9874,
+        9874
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-diagnostics-classification",
+      "protocol_status": "FAILED",
+      "run_id": "fa89c784-5538-4531-a33d-5e0caf57413f",
+      "harness_elapsed_ms": 92234,
+      "model_calls": 4,
+      "luna_ms": 71981,
+      "input_tokens": 52157,
+      "output_tokens": 9459,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0544555,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 48053,
+        "refine_custom_visual": 18916,
+        "final_plan_or_review": 5012
+      },
+      "preview_ms": 7774,
+      "tool_argument_bytes": 27141,
+      "system_chars": [
+        10104,
+        10104,
+        10104,
+        10104
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-diagnostics-sentence_structure",
+      "protocol_status": "FAILED",
+      "run_id": "de2fe373-15a2-4c06-9265-3659288151bf",
+      "harness_elapsed_ms": 121207,
+      "model_calls": 6,
+      "luna_ms": 77456,
+      "input_tokens": 82854,
+      "output_tokens": 8726,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.067605,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 49445,
+        "refine_custom_visual": 16095,
+        "final_plan_or_review": 11916
+      },
+      "preview_ms": 11363,
+      "tool_argument_bytes": 24578,
+      "system_chars": [
+        9631,
+        9631,
+        9631,
+        9631,
+        9631,
+        9631
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-editpilot-fraction_relationship",
+      "protocol_status": "FAILED",
+      "run_id": "67642e6f-0d3e-4595-ba7e-ac7e97d130da",
+      "harness_elapsed_ms": 67624,
+      "model_calls": 4,
+      "luna_ms": 50416,
+      "input_tokens": 42519,
+      "output_tokens": 5563,
+      "cached_input_tokens": 7260,
+      "estimated_token_cost_usd": 0.0346815,
+      "model_turn_phase_ms": {
+        "compute_math": 3884,
+        "create_custom_visual": 28626,
+        "refine_custom_visual": 12176,
+        "final_plan_or_review": 5730
+      },
+      "preview_ms": 4605,
+      "tool_argument_bytes": 13649,
+      "system_chars": [
+        9485,
+        9485,
+        9485,
+        9485
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-editpilot-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "cd491f7c-beb9-4687-aaf7-d30d0a970ed9",
+      "harness_elapsed_ms": 111520,
+      "model_calls": 7,
+      "luna_ms": 94527,
+      "input_tokens": 71208,
+      "output_tokens": 12752,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.07386,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 60080,
+        "refine_custom_visual": 22227,
+        "final_plan_or_review": 12220
+      },
+      "preview_ms": 5011,
+      "tool_argument_bytes": 35771,
+      "system_chars": [
+        9131,
+        9131,
+        9131,
+        9131,
+        9131,
+        9131,
+        9131
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-independent-bounds-balance_state",
+      "protocol_status": "COMPLETED",
+      "run_id": "4904020a-86f7-4238-9b66-483ca5c99c02",
+      "harness_elapsed_ms": 74488,
+      "model_calls": 4,
+      "luna_ms": 45171,
+      "input_tokens": 43648,
+      "output_tokens": 4919,
+      "cached_input_tokens": 12294,
+      "estimated_token_cost_usd": 0.0310487,
+      "model_turn_phase_ms": {
+        "compute_math": 6766,
+        "create_custom_visual": 26550,
+        "refine_custom_visual": 6631,
+        "final_plan_or_review": 5224
+      },
+      "preview_ms": 3570,
+      "tool_argument_bytes": 13208,
+      "system_chars": [
+        12260,
+        12260,
+        12260,
+        12260
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-independent-bounds-classification",
+      "protocol_status": "FAILED",
+      "run_id": "d8c5788a-914d-4146-a74a-5b134a27e00d",
+      "harness_elapsed_ms": 87676,
+      "model_calls": 4,
+      "luna_ms": 67268,
+      "input_tokens": 57829,
+      "output_tokens": 6125,
+      "cached_input_tokens": 4294,
+      "estimated_token_cost_usd": 0.0453572,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 32829,
+        "refine_custom_visual": 26446,
+        "final_plan_or_review": 7993
+      },
+      "preview_ms": 8706,
+      "tool_argument_bytes": 14192,
+      "system_chars": [
+        12490,
+        12490,
+        12490,
+        12490
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-independent-bounds-fraction_relationship",
+      "protocol_status": "COMPLETED",
+      "run_id": "5481a57a-bd61-4291-8276-011e5f820856",
+      "harness_elapsed_ms": 86861,
+      "model_calls": 3,
+      "luna_ms": 55588,
+      "input_tokens": 37486,
+      "output_tokens": 5311,
+      "cached_input_tokens": 4313,
+      "estimated_token_cost_usd": 0.03273515,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 38141,
+        "refine_custom_visual": 12394,
+        "final_plan_or_review": 5053
+      },
+      "preview_ms": 4656,
+      "tool_argument_bytes": 12533,
+      "system_chars": [
+        12614,
+        12614,
+        12614
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-independent-bounds-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "c5df9ade-a258-4b33-8405-1a777b243acb",
+      "harness_elapsed_ms": 77392,
+      "model_calls": 4,
+      "luna_ms": 60442,
+      "input_tokens": 51795,
+      "output_tokens": 6691,
+      "cached_input_tokens": 12829,
+      "estimated_token_cost_usd": 0.04019745,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 32669,
+        "refine_custom_visual": 19415,
+        "final_plan_or_review": 8358
+      },
+      "preview_ms": 3168,
+      "tool_argument_bytes": 17105,
+      "system_chars": [
+        12260,
+        12260,
+        12260,
+        12260
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-independent-bounds-sentence_structure",
+      "protocol_status": "COMPLETED",
+      "run_id": "8009b6b4-bbd7-4ee5-a49a-dcc935095e6d",
+      "harness_elapsed_ms": 77650,
+      "model_calls": 3,
+      "luna_ms": 50908,
+      "input_tokens": 45086,
+      "output_tokens": 4402,
+      "cached_input_tokens": 4182,
+      "estimated_token_cost_usd": 0.0338671,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 34584,
+        "refine_custom_visual": 6335,
+        "final_plan_or_review": 9989
+      },
+      "preview_ms": 4118,
+      "tool_argument_bytes": 12259,
+      "system_chars": [
+        12017,
+        12017,
+        12017
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-independent-bounds-water_cycle",
+      "protocol_status": "COMPLETED",
+      "run_id": "91bf261d-136b-429a-a8a0-9cf0103f351a",
+      "harness_elapsed_ms": 81125,
+      "model_calls": 4,
+      "luna_ms": 50982,
+      "input_tokens": 67797,
+      "output_tokens": 5265,
+      "cached_input_tokens": 4244,
+      "estimated_token_cost_usd": 0.0477837,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 27191,
+        "refine_custom_visual": 16994,
+        "final_plan_or_review": 6797
+      },
+      "preview_ms": 5798,
+      "tool_argument_bytes": 13749,
+      "system_chars": [
+        12292,
+        12292,
+        12292,
+        12292
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-mobile-balance_state",
+      "protocol_status": "FAILED",
+      "run_id": "7228733d-d4b4-4eed-9b67-666a44e82e84",
+      "harness_elapsed_ms": 94748,
+      "model_calls": 4,
+      "luna_ms": 75035,
+      "input_tokens": 48711,
+      "output_tokens": 7010,
+      "cached_input_tokens": 2912,
+      "estimated_token_cost_usd": 0.0440751,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 48410,
+        "refine_custom_visual": 20393,
+        "final_plan_or_review": 6232
+      },
+      "preview_ms": 5322,
+      "tool_argument_bytes": 14847,
+      "system_chars": [
+        11335,
+        11335,
+        11335,
+        11335
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-mobile-classification",
+      "protocol_status": "FAILED",
+      "run_id": "eefd77bf-3276-4d3e-8d94-36e3ac16148a",
+      "harness_elapsed_ms": 71986,
+      "model_calls": 4,
+      "luna_ms": 52015,
+      "input_tokens": 46132,
+      "output_tokens": 6735,
+      "cached_input_tokens": 10920,
+      "estimated_token_cost_usd": 0.038357,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 32197,
+        "refine_custom_visual": 12845,
+        "final_plan_or_review": 6973
+      },
+      "preview_ms": 5955,
+      "tool_argument_bytes": 16812,
+      "system_chars": [
+        11565,
+        11565,
+        11565,
+        11565
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-mobile-fraction_relationship",
+      "protocol_status": "COMPLETED",
+      "run_id": "f64209cb-31fd-41d8-8ed3-194de84e885f",
+      "harness_elapsed_ms": 64924,
+      "model_calls": 3,
+      "luna_ms": 34884,
+      "input_tokens": 27553,
+      "output_tokens": 3687,
+      "cached_input_tokens": 2993,
+      "estimated_token_cost_usd": 0.02349065,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 26807,
+        "refine_custom_visual": 3670,
+        "final_plan_or_review": 4407
+      },
+      "preview_ms": 2444,
+      "tool_argument_bytes": 10554,
+      "system_chars": [
+        11689,
+        11689,
+        11689
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-mobile-reflection",
+      "protocol_status": "COMPLETED",
+      "run_id": "e921488d-31b7-42f0-ac4b-4697d6110f4e",
+      "harness_elapsed_ms": 79596,
+      "model_calls": 4,
+      "luna_ms": 47157,
+      "input_tokens": 39506,
+      "output_tokens": 4944,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.034585,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 27098,
+        "refine_custom_visual": 15555,
+        "final_plan_or_review": 4504
+      },
+      "preview_ms": 5168,
+      "tool_argument_bytes": 12906,
+      "system_chars": [
+        11335,
+        11335,
+        11335,
+        11335
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-mobile-sentence_structure",
+      "protocol_status": "FAILED",
+      "run_id": "9946d70a-cda0-437d-943f-85cedabd85b0",
+      "harness_elapsed_ms": 82730,
+      "model_calls": 4,
+      "luna_ms": 64857,
+      "input_tokens": 39477,
+      "output_tokens": 7609,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0425655,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 50965,
+        "refine_custom_visual": 7601,
+        "final_plan_or_review": 6291
+      },
+      "preview_ms": 1600,
+      "tool_argument_bytes": 23111,
+      "system_chars": [
+        11092,
+        11092,
+        11092,
+        11092
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-mobile-water_cycle",
+      "protocol_status": "COMPLETED",
+      "run_id": "e4057056-6dc6-4131-b721-97d39e59c3cc",
+      "harness_elapsed_ms": 72653,
+      "model_calls": 3,
+      "luna_ms": 42414,
+      "input_tokens": 38895,
+      "output_tokens": 4066,
+      "cached_input_tokens": 2924,
+      "estimated_token_cost_usd": 0.0303297,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 27013,
+        "refine_custom_visual": 5396,
+        "final_plan_or_review": 10005
+      },
+      "preview_ms": 4281,
+      "tool_argument_bytes": 12237,
+      "system_chars": [
+        11367,
+        11367,
+        11367
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-pilot-fraction",
+      "protocol_status": "FAILED",
+      "run_id": "173952a7-1564-42ce-90b3-2c21fad6b1c2",
+      "harness_elapsed_ms": 15228,
+      "model_calls": 0,
+      "luna_ms": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": null,
+      "model_turn_phase_ms": {},
+      "preview_ms": 0,
+      "tool_argument_bytes": 0,
+      "system_chars": [],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-pilot2-fraction",
+      "protocol_status": "FAILED",
+      "run_id": "264d87eb-8a88-474a-9c5e-14b5bb9b2ad3",
+      "harness_elapsed_ms": 169417,
+      "model_calls": 7,
+      "luna_ms": 145766,
+      "input_tokens": 83140,
+      "output_tokens": 17937,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.095381,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 100129,
+        "refine_custom_visual": 33564,
+        "final_plan_or_review": 12073
+      },
+      "preview_ms": 5490,
+      "tool_argument_bytes": 48521,
+      "system_chars": [
+        8618,
+        8618,
+        8618,
+        8618,
+        8618,
+        8618,
+        8618
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-pilot3-fraction",
+      "protocol_status": "FAILED",
+      "run_id": "81a112ad-f018-4506-b21d-734ba3a35efd",
+      "harness_elapsed_ms": 76978,
+      "model_calls": 3,
+      "luna_ms": 60218,
+      "input_tokens": 34764,
+      "output_tokens": 6289,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.036249,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 33705,
+        "refine_custom_visual": 19655,
+        "final_plan_or_review": 6858
+      },
+      "preview_ms": 2001,
+      "tool_argument_bytes": 16452,
+      "system_chars": [
+        8575,
+        8575,
+        8575
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-replay-balance_state",
+      "protocol_status": "FAILED",
+      "run_id": "8fd7ee08-4e15-40c3-bbaf-2dfba8ce67fd",
+      "harness_elapsed_ms": 80748,
+      "model_calls": 4,
+      "luna_ms": 62836,
+      "input_tokens": 49633,
+      "output_tokens": 6123,
+      "cached_input_tokens": 2974,
+      "estimated_token_cost_usd": 0.0418472,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 37786,
+        "refine_custom_visual": 18829,
+        "final_plan_or_review": 6221
+      },
+      "preview_ms": 4218,
+      "tool_argument_bytes": 14787,
+      "system_chars": [
+        11665,
+        11665,
+        11665,
+        11665
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-replay-classification",
+      "protocol_status": "FAILED",
+      "run_id": null,
+      "harness_elapsed_ms": 10848,
+      "model_calls": 0,
+      "luna_ms": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": null,
+      "model_turn_phase_ms": {},
+      "preview_ms": 0,
+      "tool_argument_bytes": 0,
+      "system_chars": [],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-replay-fraction_relationship",
+      "protocol_status": "COMPLETED",
+      "run_id": "f5381abc-04e5-4e4f-9e3d-c30b095b5884",
+      "harness_elapsed_ms": 75274,
+      "model_calls": 5,
+      "luna_ms": 43067,
+      "input_tokens": 60182,
+      "output_tokens": 4489,
+      "cached_input_tokens": 20945,
+      "estimated_token_cost_usd": 0.03413275,
+      "model_turn_phase_ms": {
+        "compute_math": 3512,
+        "create_custom_visual": 24638,
+        "refine_custom_visual": 10710,
+        "final_plan_or_review": 4207
+      },
+      "preview_ms": 2747,
+      "tool_argument_bytes": 11173,
+      "system_chars": [
+        11467,
+        11467,
+        11467,
+        11467,
+        11467
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-replay-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "80dfbf54-d942-4588-a1ec-9f2962024ecf",
+      "harness_elapsed_ms": 89111,
+      "model_calls": 4,
+      "luna_ms": 73001,
+      "input_tokens": 40837,
+      "output_tokens": 8324,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0453905,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 56047,
+        "refine_custom_visual": 12762,
+        "final_plan_or_review": 4192
+      },
+      "preview_ms": 1903,
+      "tool_argument_bytes": 24114,
+      "system_chars": [
+        11665,
+        11665,
+        11665,
+        11665
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-replay-sentence_structure",
+      "protocol_status": "FAILED",
+      "run_id": "64bacaf8-decf-460a-97dc-d3b1c08657ff",
+      "harness_elapsed_ms": 75348,
+      "model_calls": 4,
+      "luna_ms": 58940,
+      "input_tokens": 52763,
+      "output_tokens": 7283,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0482305,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 46797,
+        "refine_custom_visual": 7694,
+        "final_plan_or_review": 4449
+      },
+      "preview_ms": 4146,
+      "tool_argument_bytes": 22047,
+      "system_chars": [
+        11422,
+        11422,
+        11422,
+        11422
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-replay-water_cycle",
+      "protocol_status": "COMPLETED",
+      "run_id": "f755af02-de59-4b5d-9bac-c92154e5bd39",
+      "harness_elapsed_ms": 70816,
+      "model_calls": 3,
+      "luna_ms": 38910,
+      "input_tokens": 36585,
+      "output_tokens": 4091,
+      "cached_input_tokens": 2986,
+      "estimated_token_cost_usd": 0.0292218,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 24901,
+        "refine_custom_visual": 7709,
+        "final_plan_or_review": 6300
+      },
+      "preview_ms": 2543,
+      "tool_argument_bytes": 11189,
+      "system_chars": [
+        11697,
+        11697,
+        11697
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-responsive-contract-balance_state",
+      "protocol_status": "COMPLETED",
+      "run_id": "e906889b-025c-4b44-9789-1d10c3c049e3",
+      "harness_elapsed_ms": 66943,
+      "model_calls": 4,
+      "luna_ms": 39102,
+      "input_tokens": 44046,
+      "output_tokens": 4583,
+      "cached_input_tokens": 12448,
+      "estimated_token_cost_usd": 0.0301704,
+      "model_turn_phase_ms": {
+        "compute_math": 2976,
+        "create_custom_visual": 26314,
+        "refine_custom_visual": 5002,
+        "final_plan_or_review": 4810
+      },
+      "preview_ms": 3596,
+      "tool_argument_bytes": 12974,
+      "system_chars": [
+        12631,
+        12631,
+        12631,
+        12631
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-responsive-contract-classification",
+      "protocol_status": "COMPLETED",
+      "run_id": "502aa37b-c52e-451d-b8a1-43b030ffdcf1",
+      "harness_elapsed_ms": 109553,
+      "model_calls": 5,
+      "luna_ms": 74137,
+      "input_tokens": 63645,
+      "output_tokens": 8856,
+      "cached_input_tokens": 10070,
+      "estimated_token_cost_usd": 0.053859,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 49131,
+        "refine_custom_visual": 20349,
+        "final_plan_or_review": 4657
+      },
+      "preview_ms": 13501,
+      "tool_argument_bytes": 25522,
+      "system_chars": [
+        12861,
+        12861,
+        12861,
+        12861,
+        12861
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-responsive-contract-fraction_relationship",
+      "protocol_status": "COMPLETED",
+      "run_id": "e341d511-c3ac-457a-82cf-b3e82f688f73",
+      "harness_elapsed_ms": 89303,
+      "model_calls": 4,
+      "luna_ms": 57133,
+      "input_tokens": 57027,
+      "output_tokens": 5591,
+      "cached_input_tokens": 4390,
+      "estimated_token_cost_usd": 0.043311,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 28716,
+        "refine_custom_visual": 23485,
+        "final_plan_or_review": 4932
+      },
+      "preview_ms": 6386,
+      "tool_argument_bytes": 14399,
+      "system_chars": [
+        12985,
+        12985,
+        12985,
+        12985
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-responsive-contract-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "424fdf90-1064-4e91-9d7a-d51437d3e531",
+      "harness_elapsed_ms": 96212,
+      "model_calls": 5,
+      "luna_ms": 80128,
+      "input_tokens": 60794,
+      "output_tokens": 9159,
+      "cached_input_tokens": 4309,
+      "estimated_token_cost_usd": 0.05593495,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 57107,
+        "refine_custom_visual": 17565,
+        "final_plan_or_review": 5456
+      },
+      "preview_ms": 4699,
+      "tool_argument_bytes": 25873,
+      "system_chars": [
+        12631,
+        12631,
+        12631,
+        12631,
+        12631
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-responsive-contract-sentence_structure",
+      "protocol_status": "COMPLETED",
+      "run_id": "8e90a251-055a-4db9-8a76-e4e3a25ec784",
+      "harness_elapsed_ms": 70488,
+      "model_calls": 3,
+      "luna_ms": 37178,
+      "input_tokens": 38089,
+      "output_tokens": 4616,
+      "cached_input_tokens": 4113,
+      "estimated_token_cost_usd": 0.03104165,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 24320,
+        "refine_custom_visual": 7843,
+        "final_plan_or_review": 5015
+      },
+      "preview_ms": 10919,
+      "tool_argument_bytes": 12382,
+      "system_chars": [
+        11678,
+        11678,
+        11678
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "after-responsive-contract-water_cycle",
+      "protocol_status": "FAILED",
+      "run_id": "4c272d23-7faa-49f8-905f-6348ba54522f",
+      "harness_elapsed_ms": 84886,
+      "model_calls": 4,
+      "luna_ms": 62673,
+      "input_tokens": 67030,
+      "output_tokens": 6300,
+      "cached_input_tokens": 4321,
+      "estimated_token_cost_usd": 0.05047055,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 30388,
+        "refine_custom_visual": 20858,
+        "final_plan_or_review": 11427
+      },
+      "preview_ms": 8285,
+      "tool_argument_bytes": 13289,
+      "system_chars": [
+        12663,
+        12663,
+        12663,
+        12663
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "baseline-balance_state",
+      "protocol_status": "FAILED",
+      "run_id": "efc421ef-50db-45e2-835b-0557512a396d",
+      "harness_elapsed_ms": 132102,
+      "model_calls": 7,
+      "luna_ms": 91704,
+      "input_tokens": 61525,
+      "output_tokens": 8498,
+      "cached_input_tokens": 15916,
+      "estimated_token_cost_usd": 0.0490943,
+      "model_turn_phase_ms": {
+        "search_reusable_visuals": 5858,
+        "create_custom_visual": 59637,
+        "refine_custom_visual": 13139,
+        "final_plan_or_review": 13070
+      },
+      "preview_ms": 3637,
+      "tool_argument_bytes": 26003,
+      "system_chars": [
+        13441,
+        13441,
+        13441,
+        13441,
+        13441,
+        13441,
+        13441
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "baseline-classification",
+      "protocol_status": "FAILED",
+      "run_id": "8920ad12-2d50-4fc8-a391-64b3dc689fbb",
+      "harness_elapsed_ms": 63329,
+      "model_calls": 4,
+      "luna_ms": 45107,
+      "input_tokens": 36406,
+      "output_tokens": 4430,
+      "cached_input_tokens": 8102,
+      "estimated_token_cost_usd": 0.0278471,
+      "model_turn_phase_ms": {
+        "search_reusable_visuals": 2715,
+        "create_custom_visual": 20861,
+        "refine_custom_visual": 13166,
+        "final_plan_or_review": 8365
+      },
+      "preview_ms": 2614,
+      "tool_argument_bytes": 14432,
+      "system_chars": [
+        13671,
+        13671,
+        13671,
+        13671
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "baseline-fraction_relationship",
+      "protocol_status": "COMPLETED",
+      "run_id": "12457e49-9699-4315-8cc5-b86fa25265b0",
+      "harness_elapsed_ms": 86616,
+      "model_calls": 4,
+      "luna_ms": 48004,
+      "input_tokens": 38821,
+      "output_tokens": 5608,
+      "cached_input_tokens": 8101,
+      "estimated_token_cost_usd": 0.03258905,
+      "model_turn_phase_ms": {
+        "search_reusable_visuals": 5043,
+        "create_custom_visual": 23913,
+        "refine_custom_visual": 15793,
+        "final_plan_or_review": 3255
+      },
+      "preview_ms": 3608,
+      "tool_argument_bytes": 15895,
+      "system_chars": [
+        13795,
+        13795,
+        13795,
+        13795
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "baseline-reflection",
+      "protocol_status": "COMPLETED",
+      "run_id": "971098d4-a072-4661-8d59-22bed36af426",
+      "harness_elapsed_ms": 85951,
+      "model_calls": 4,
+      "luna_ms": 54455,
+      "input_tokens": 37951,
+      "output_tokens": 5741,
+      "cached_input_tokens": 7963,
+      "estimated_token_cost_usd": 0.03261515,
+      "model_turn_phase_ms": {
+        "search_reusable_visuals": 3152,
+        "create_custom_visual": 29981,
+        "refine_custom_visual": 16864,
+        "final_plan_or_review": 4458
+      },
+      "preview_ms": 2611,
+      "tool_argument_bytes": 16793,
+      "system_chars": [
+        13441,
+        13441,
+        13441,
+        13441
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "baseline-sentence_structure",
+      "protocol_status": "COMPLETED",
+      "run_id": "a82ff520-29ef-403c-9f1f-f13bc37ccea3",
+      "harness_elapsed_ms": 58599,
+      "model_calls": 3,
+      "luna_ms": 28331,
+      "input_tokens": 24721,
+      "output_tokens": 2404,
+      "cached_input_tokens": 7846,
+      "estimated_token_cost_usd": 0.0160418,
+      "model_turn_phase_ms": {
+        "search_reusable_visuals": 3931,
+        "create_custom_visual": 18795,
+        "final_plan_or_review": 5605
+      },
+      "preview_ms": 1389,
+      "tool_argument_bytes": 8036,
+      "system_chars": [
+        13198,
+        13198,
+        13198
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "baseline-water_cycle",
+      "protocol_status": "COMPLETED",
+      "run_id": "341e06fd-d160-4323-aab6-83e6587badbb",
+      "harness_elapsed_ms": 119783,
+      "model_calls": 5,
+      "luna_ms": 83109,
+      "input_tokens": 57243,
+      "output_tokens": 9412,
+      "cached_input_tokens": 8031,
+      "estimated_token_cost_usd": 0.05324355,
+      "model_turn_phase_ms": {
+        "search_reusable_visuals": 3054,
+        "create_custom_visual": 51779,
+        "refine_custom_visual": 24024,
+        "final_plan_or_review": 4252
+      },
+      "preview_ms": 2734,
+      "tool_argument_bytes": 30915,
+      "system_chars": [
+        13473,
+        13473,
+        13473,
+        13473,
+        13473
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-acceptance-balance_state",
+      "protocol_status": "FAILED",
+      "run_id": "29bfa6f0-8ccd-4b70-876d-1be75e1dd878",
+      "harness_elapsed_ms": 122183,
+      "model_calls": 6,
+      "luna_ms": 98358,
+      "input_tokens": 81673,
+      "output_tokens": 9493,
+      "cached_input_tokens": 4478,
+      "estimated_token_cost_usd": 0.0673004,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 43626,
+        "refine_custom_visual": 18413,
+        "final_plan_or_review": 11366,
+        "independent_review": 24953
+      },
+      "preview_ms": 9623,
+      "tool_argument_bytes": 16409,
+      "system_chars": [
+        13594,
+        13594,
+        13594,
+        13594,
+        1289,
+        13594
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-acceptance-classification",
+      "protocol_status": "FAILED",
+      "run_id": "4d8b057a-2bd4-4548-ab74-7f13c3deb065",
+      "harness_elapsed_ms": 161259,
+      "model_calls": 7,
+      "luna_ms": 135724,
+      "input_tokens": 90428,
+      "output_tokens": 13786,
+      "cached_input_tokens": 4540,
+      "estimated_token_cost_usd": 0.084529,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 66849,
+        "refine_custom_visual": 25197,
+        "final_plan_or_review": 19122,
+        "independent_review": 24556
+      },
+      "preview_ms": 13103,
+      "tool_argument_bytes": 29728,
+      "system_chars": [
+        13824,
+        13824,
+        13824,
+        13824,
+        1289,
+        13824,
+        13824
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-acceptance-fraction_relationship",
+      "protocol_status": "COMPLETED",
+      "run_id": "6bb8ce71-9856-4594-a68a-e8c08781de2f",
+      "harness_elapsed_ms": 116632,
+      "model_calls": 5,
+      "luna_ms": 72404,
+      "input_tokens": 58951,
+      "output_tokens": 7561,
+      "cached_input_tokens": 4559,
+      "estimated_token_cost_usd": 0.05010695,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 28188,
+        "refine_custom_visual": 23409,
+        "final_plan_or_review": 5067,
+        "independent_review": 15740
+      },
+      "preview_ms": 7618,
+      "tool_argument_bytes": 14455,
+      "system_chars": [
+        13948,
+        13948,
+        13948,
+        13948,
+        1289
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-acceptance-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "77bc144d-2975-4312-a62d-d6141e2a47b0",
+      "harness_elapsed_ms": 81837,
+      "model_calls": 4,
+      "luna_ms": 64887,
+      "input_tokens": 48914,
+      "output_tokens": 7439,
+      "cached_input_tokens": 10356,
+      "estimated_token_cost_usd": 0.0421138,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 25526,
+        "refine_custom_visual": 32472,
+        "final_plan_or_review": 6889
+      },
+      "preview_ms": 2805,
+      "tool_argument_bytes": 16747,
+      "system_chars": [
+        13594,
+        13594,
+        13594,
+        13594
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-acceptance-sentence_structure",
+      "protocol_status": "FAILED",
+      "run_id": "c806fb03-a09d-484c-b313-27bfacb0159f",
+      "harness_elapsed_ms": 77473,
+      "model_calls": 3,
+      "luna_ms": 59869,
+      "input_tokens": 39646,
+      "output_tokens": 7174,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.041345,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 50981,
+        "final_plan_or_review": 8888
+      },
+      "preview_ms": 2194,
+      "tool_argument_bytes": 20809,
+      "system_chars": [
+        13351,
+        13351,
+        13351
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-acceptance-water_cycle",
+      "protocol_status": "FAILED",
+      "run_id": "46516568-b16c-464b-881e-e0ef5eefc674",
+      "harness_elapsed_ms": 89548,
+      "model_calls": 4,
+      "luna_ms": 66490,
+      "input_tokens": 47975,
+      "output_tokens": 5365,
+      "cached_input_tokens": 4490,
+      "estimated_token_cost_usd": 0.038062,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 43187,
+        "refine_custom_visual": 15567,
+        "final_plan_or_review": 7736
+      },
+      "preview_ms": 7799,
+      "tool_argument_bytes": 13471,
+      "system_chars": [
+        13626,
+        13626,
+        13626,
+        13626
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-activation-classification",
+      "protocol_status": "FAILED",
+      "run_id": "fad81f01-a43c-4b25-aaba-a91ff61cabdb",
+      "harness_elapsed_ms": 160921,
+      "model_calls": 8,
+      "luna_ms": 135360,
+      "input_tokens": 75066,
+      "output_tokens": 13890,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.079203,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 27286,
+        "independent_review": 74278,
+        "refine_custom_visual": 33796
+      },
+      "preview_ms": 14347,
+      "tool_argument_bytes": 16173,
+      "system_chars": [
+        14660,
+        2832,
+        14660,
+        2832,
+        14660,
+        2832,
+        14660,
+        2832
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-activation-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "d434ee26-b7c2-456e-bfd1-d71e4ee899ed",
+      "harness_elapsed_ms": 170184,
+      "model_calls": 8,
+      "luna_ms": 148352,
+      "input_tokens": 77194,
+      "output_tokens": 15150,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.084047,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 31660,
+        "independent_review": 68547,
+        "refine_custom_visual": 48145
+      },
+      "preview_ms": 8920,
+      "tool_argument_bytes": 18743,
+      "system_chars": [
+        14430,
+        2832,
+        14430,
+        2832,
+        14430,
+        2832,
+        14430,
+        2832
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-adapt-fraction_number_line_adapt",
+      "protocol_status": "FAILED",
+      "run_id": "4b282162-dc2e-497a-a921-ea588e7adab2",
+      "harness_elapsed_ms": 87210,
+      "model_calls": 6,
+      "luna_ms": 67505,
+      "input_tokens": 64293,
+      "output_tokens": 6554,
+      "cached_input_tokens": 11579,
+      "estimated_token_cost_usd": 0.04659795,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 23048,
+        "refine_custom_visual": 11412,
+        "final_plan_or_review": 12314,
+        "independent_review": 20731
+      },
+      "preview_ms": 5033,
+      "tool_argument_bytes": 11049,
+      "system_chars": [
+        12963,
+        12963,
+        12963,
+        12963,
+        2206,
+        12963
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-capability-adapt-fraction_number_line_adapt",
+      "protocol_status": "FAILED",
+      "run_id": "392aca59-0132-4791-b12f-e286f6ad2593",
+      "harness_elapsed_ms": 204850,
+      "model_calls": 8,
+      "luna_ms": 179827,
+      "input_tokens": 87129,
+      "output_tokens": 17023,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0946335,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 69685,
+        "independent_review": 76294,
+        "refine_custom_visual": 24635,
+        "final_plan_or_review": 9213
+      },
+      "preview_ms": 5770,
+      "tool_argument_bytes": 28927,
+      "system_chars": [
+        13278,
+        2206,
+        13278,
+        2206,
+        13278,
+        2206,
+        13278,
+        13278
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-capability-reuse-fraction_relationship",
+      "protocol_status": "COMPLETED",
+      "run_id": "6bdb31f5-d81d-4769-a2df-03e5debbe24d",
+      "harness_elapsed_ms": 35306,
+      "model_calls": 2,
+      "luna_ms": 7537,
+      "input_tokens": 18974,
+      "output_tokens": 364,
+      "cached_input_tokens": 9353,
+      "estimated_token_cost_usd": 0.00637015,
+      "model_turn_phase_ms": {
+        "instantiate_reusable_visual": 4089,
+        "final_plan_or_review": 3448
+      },
+      "preview_ms": 0,
+      "tool_argument_bytes": 493,
+      "system_chars": [
+        14263,
+        14263
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-diagnostics-classification",
+      "protocol_status": "FAILED",
+      "run_id": "8ade1059-3ffd-48ed-af15-cf73a1f95188",
+      "harness_elapsed_ms": 146693,
+      "model_calls": 7,
+      "luna_ms": 102316,
+      "input_tokens": 73463,
+      "output_tokens": 11036,
+      "cached_input_tokens": 11249,
+      "estimated_token_cost_usd": 0.06477745,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 25192,
+        "independent_review": 28203,
+        "refine_custom_visual": 40210,
+        "final_plan_or_review": 8711
+      },
+      "preview_ms": 25363,
+      "tool_argument_bytes": 17010,
+      "system_chars": [
+        14202,
+        2603,
+        14202,
+        14202,
+        2603,
+        14202,
+        14202
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-diagnostics-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "4540430f-4cdb-400b-83be-726c3248d240",
+      "harness_elapsed_ms": 160961,
+      "model_calls": 7,
+      "luna_ms": 142961,
+      "input_tokens": 67759,
+      "output_tokens": 16927,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0846605,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 50559,
+        "independent_review": 45129,
+        "refine_custom_visual": 36578,
+        "final_plan_or_review": 10695
+      },
+      "preview_ms": 5998,
+      "tool_argument_bytes": 30907,
+      "system_chars": [
+        13972,
+        13972,
+        2603,
+        13972,
+        2603,
+        13972,
+        13972
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-early-adapt-fraction_number_line_adapt",
+      "protocol_status": "COMPLETED",
+      "run_id": "19c65aea-74ce-442f-ad5f-b404f060e90e",
+      "harness_elapsed_ms": 35370,
+      "model_calls": 2,
+      "luna_ms": 7093,
+      "input_tokens": 17881,
+      "output_tokens": 455,
+      "cached_input_tokens": 8746,
+      "estimated_token_cost_usd": 0.0063698,
+      "model_turn_phase_ms": {
+        "instantiate_reusable_visual": 3870,
+        "final_plan_or_review": 3223
+      },
+      "preview_ms": 0,
+      "tool_argument_bytes": 635,
+      "system_chars": [
+        13396,
+        13396
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-early-review-reflection",
+      "protocol_status": "COMPLETED",
+      "run_id": "0418915e-a6c1-4c65-8702-deb81fdb4878",
+      "harness_elapsed_ms": 170115,
+      "model_calls": 7,
+      "luna_ms": 138387,
+      "input_tokens": 76602,
+      "output_tokens": 13589,
+      "cached_input_tokens": 12727,
+      "estimated_token_cost_usd": 0.07334085,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 65018,
+        "independent_review": 43096,
+        "refine_custom_visual": 23711,
+        "final_plan_or_review": 6562
+      },
+      "preview_ms": 3951,
+      "tool_argument_bytes": 29521,
+      "system_chars": [
+        13594,
+        2206,
+        13594,
+        13594,
+        13594,
+        2206,
+        13594
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-final-fraction_relationship",
+      "protocol_status": "COMPLETED",
+      "run_id": "14c9cd0e-ba2c-4685-9bac-f5c496b03b90",
+      "harness_elapsed_ms": 143356,
+      "model_calls": 7,
+      "luna_ms": 103535,
+      "input_tokens": 69022,
+      "output_tokens": 9427,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.062792,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 28048,
+        "independent_review": 60991,
+        "refine_custom_visual": 10346,
+        "final_plan_or_review": 4150
+      },
+      "preview_ms": 6287,
+      "tool_argument_bytes": 13415,
+      "system_chars": [
+        14263,
+        2206,
+        14263,
+        2206,
+        14263,
+        2206,
+        14263
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-final-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "0f427ab4-1d84-47ad-86e6-c3c51c73c3a0",
+      "harness_elapsed_ms": 117562,
+      "model_calls": 6,
+      "luna_ms": 101448,
+      "input_tokens": 63267,
+      "output_tokens": 9524,
+      "cached_input_tokens": 12493,
+      "estimated_token_cost_usd": 0.05458365,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 35266,
+        "independent_review": 37029,
+        "refine_custom_visual": 23252,
+        "final_plan_or_review": 5901
+      },
+      "preview_ms": 3070,
+      "tool_argument_bytes": 16428,
+      "system_chars": [
+        13909,
+        2206,
+        13909,
+        13909,
+        2206,
+        13909
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-isolated-acceptance-fraction_relationship",
+      "protocol_status": "FAILED",
+      "run_id": "c4695a4f-2cc6-41e8-8ca4-4850c1600248",
+      "harness_elapsed_ms": 120665,
+      "model_calls": 7,
+      "luna_ms": 103794,
+      "input_tokens": 76079,
+      "output_tokens": 10793,
+      "cached_input_tokens": 20164,
+      "estimated_token_cost_usd": 0.0613447,
+      "model_turn_phase_ms": {
+        "compute_math": 4070,
+        "create_custom_visual": 65318,
+        "independent_review": 17209,
+        "refine_custom_visual": 9446,
+        "final_plan_or_review": 7751
+      },
+      "preview_ms": 2811,
+      "tool_argument_bytes": 25088,
+      "system_chars": [
+        14263,
+        14263,
+        2206,
+        14263,
+        14263,
+        14263,
+        14263
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-isolated-acceptance-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "a3792ad9-8010-4dcc-b068-e12ffeb34284",
+      "harness_elapsed_ms": 164260,
+      "model_calls": 8,
+      "luna_ms": 146228,
+      "input_tokens": 79186,
+      "output_tokens": 13696,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.080681,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 59613,
+        "independent_review": 61662,
+        "refine_custom_visual": 17405,
+        "final_plan_or_review": 7548
+      },
+      "preview_ms": 5705,
+      "tool_argument_bytes": 24731,
+      "system_chars": [
+        13909,
+        2206,
+        13909,
+        2206,
+        13909,
+        2206,
+        13909,
+        13909
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-isolated-adapt-fraction_number_line_adapt",
+      "protocol_status": "FAILED",
+      "run_id": "066eb68c-8305-4050-b938-8938017483d9",
+      "harness_elapsed_ms": 144325,
+      "model_calls": 5,
+      "luna_ms": 121803,
+      "input_tokens": 59336,
+      "output_tokens": 12012,
+      "cached_input_tokens": 11895,
+      "estimated_token_cost_usd": 0.06035125,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 70286,
+        "independent_review": 24224,
+        "refine_custom_visual": 20210,
+        "final_plan_or_review": 7083
+      },
+      "preview_ms": 2913,
+      "tool_argument_bytes": 25272,
+      "system_chars": [
+        13278,
+        2206,
+        13278,
+        13278,
+        13278
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-painted-acceptance-fraction_relationship",
+      "protocol_status": "FAILED",
+      "run_id": "b416cc89-b44c-45d3-9fea-c0354eccacc7",
+      "harness_elapsed_ms": 161848,
+      "model_calls": 8,
+      "luna_ms": 126130,
+      "input_tokens": 81423,
+      "output_tokens": 12400,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0779115,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 54363,
+        "independent_review": 41784,
+        "refine_custom_visual": 21689,
+        "final_plan_or_review": 8294
+      },
+      "preview_ms": 18612,
+      "tool_argument_bytes": 23060,
+      "system_chars": [
+        14263,
+        2206,
+        14263,
+        2206,
+        14263,
+        2206,
+        14263,
+        14263
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-painted-acceptance-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "654a849b-9d9f-4323-9e73-cb871161185b",
+      "harness_elapsed_ms": 110936,
+      "model_calls": 6,
+      "luna_ms": 92721,
+      "input_tokens": 51584,
+      "output_tokens": 9646,
+      "cached_input_tokens": 10130,
+      "estimated_token_cost_usd": 0.0501715,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 50696,
+        "independent_review": 28872,
+        "refine_custom_visual": 13153
+      },
+      "preview_ms": 4015,
+      "tool_argument_bytes": 23636,
+      "system_chars": [
+        13909,
+        13909,
+        2206,
+        13909,
+        13909,
+        2206
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-painted-acceptance-sentence_structure",
+      "protocol_status": "FAILED",
+      "run_id": "5bc2cfea-c856-41a1-af8d-d797f1e12e95",
+      "harness_elapsed_ms": 149112,
+      "model_calls": 7,
+      "luna_ms": 125513,
+      "input_tokens": 67589,
+      "output_tokens": 12607,
+      "cached_input_tokens": 10681,
+      "estimated_token_cost_usd": 0.06680905,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 42528,
+        "independent_review": 47222,
+        "refine_custom_visual": 27436,
+        "final_plan_or_review": 8327
+      },
+      "preview_ms": 11544,
+      "tool_argument_bytes": 24109,
+      "system_chars": [
+        12956,
+        2206,
+        12956,
+        12956,
+        2206,
+        12956,
+        12956
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-painted-acceptance-water_cycle",
+      "protocol_status": "FAILED",
+      "run_id": "5746fb90-bbbb-4fd0-b269-f6663f73434c",
+      "harness_elapsed_ms": 181560,
+      "model_calls": 7,
+      "luna_ms": 153784,
+      "input_tokens": 87373,
+      "output_tokens": 15915,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0914315,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 66473,
+        "independent_review": 34554,
+        "refine_custom_visual": 43492,
+        "final_plan_or_review": 9265
+      },
+      "preview_ms": 12288,
+      "tool_argument_bytes": 34795,
+      "system_chars": [
+        13941,
+        2206,
+        13941,
+        2206,
+        13941,
+        13941,
+        13941
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-painted-adapt-fraction_number_line_adapt",
+      "protocol_status": "FAILED",
+      "run_id": "4b82db7e-270a-4f74-bcc7-085190a40686",
+      "harness_elapsed_ms": 196126,
+      "model_calls": 8,
+      "luna_ms": 150228,
+      "input_tokens": 72736,
+      "output_tokens": 14979,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.081305,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 60216,
+        "independent_review": 70240,
+        "refine_custom_visual": 19772
+      },
+      "preview_ms": 25650,
+      "tool_argument_bytes": 25367,
+      "system_chars": [
+        13278,
+        2206,
+        13278,
+        2206,
+        13278,
+        2206,
+        13278,
+        2206
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-release-wave-balance_state",
+      "protocol_status": "FAILED",
+      "run_id": "a5e69807-e8e2-4e4b-9510-8a3ae4e776a2",
+      "harness_elapsed_ms": 196744,
+      "model_calls": 9,
+      "luna_ms": 164055,
+      "input_tokens": 90356,
+      "output_tokens": 17736,
+      "cached_input_tokens": 8637,
+      "estimated_token_cost_usd": 0.09449935,
+      "model_turn_phase_ms": {
+        "compute_math": 7066,
+        "create_custom_visual": 77914,
+        "independent_review": 45068,
+        "refine_custom_visual": 22799,
+        "final_plan_or_review": 11208
+      },
+      "preview_ms": 15335,
+      "tool_argument_bytes": 33357,
+      "system_chars": [
+        14813,
+        14813,
+        2832,
+        14813,
+        2832,
+        14813,
+        2832,
+        14813,
+        14813
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-release-wave-classification",
+      "protocol_status": "COMPLETED",
+      "run_id": "5d87711f-22ff-4573-907f-27e4eaff98b3",
+      "harness_elapsed_ms": 94686,
+      "model_calls": 5,
+      "luna_ms": 63578,
+      "input_tokens": 45746,
+      "output_tokens": 6424,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.042145,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 28991,
+        "independent_review": 22568,
+        "refine_custom_visual": 7360,
+        "final_plan_or_review": 4659
+      },
+      "preview_ms": 6215,
+      "tool_argument_bytes": 13907,
+      "system_chars": [
+        15043,
+        2832,
+        15043,
+        2832,
+        15043
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-release-wave-fraction_relationship",
+      "protocol_status": "FAILED",
+      "run_id": "cdc53ac1-f5ed-40f4-b647-8a5c72e8f671",
+      "harness_elapsed_ms": 148924,
+      "model_calls": 9,
+      "luna_ms": 117960,
+      "input_tokens": 90213,
+      "output_tokens": 12775,
+      "cached_input_tokens": 30463,
+      "estimated_token_cost_usd": 0.06972315,
+      "model_turn_phase_ms": {
+        "compute_math": 5388,
+        "create_custom_visual": 20000,
+        "independent_review": 57165,
+        "refine_custom_visual": 35407
+      },
+      "preview_ms": 15225,
+      "tool_argument_bytes": 18281,
+      "system_chars": [
+        15167,
+        15167,
+        15167,
+        2832,
+        15167,
+        15167,
+        2832,
+        15167,
+        2832
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-release-wave-reflection",
+      "protocol_status": "COMPLETED",
+      "run_id": "4d901aae-fbe1-4d23-9387-5bd3d46a7731",
+      "harness_elapsed_ms": 142102,
+      "model_calls": 6,
+      "luna_ms": 113977,
+      "input_tokens": 63811,
+      "output_tokens": 11780,
+      "cached_input_tokens": 12781,
+      "estimated_token_cost_usd": 0.06149405,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 38540,
+        "independent_review": 33666,
+        "refine_custom_visual": 37788,
+        "final_plan_or_review": 3983
+      },
+      "preview_ms": 4337,
+      "tool_argument_bytes": 21350,
+      "system_chars": [
+        14813,
+        2832,
+        14813,
+        14813,
+        2832,
+        14813
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-release-wave-sentence_structure",
+      "protocol_status": "FAILED",
+      "run_id": "435470ec-6a98-46ea-aec4-56bf8567e65a",
+      "harness_elapsed_ms": 156817,
+      "model_calls": 8,
+      "luna_ms": 132761,
+      "input_tokens": 72752,
+      "output_tokens": 13690,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.077446,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 25781,
+        "independent_review": 72595,
+        "refine_custom_visual": 34385
+      },
+      "preview_ms": 11871,
+      "tool_argument_bytes": 17669,
+      "system_chars": [
+        13860,
+        2832,
+        13860,
+        2832,
+        13860,
+        2832,
+        13860,
+        2832
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-release-wave-water_cycle",
+      "protocol_status": "FAILED",
+      "run_id": "a8f20138-032c-4d61-8fc2-d224eda3b3c8",
+      "harness_elapsed_ms": 126993,
+      "model_calls": 6,
+      "luna_ms": 108304,
+      "input_tokens": 71596,
+      "output_tokens": 11185,
+      "cached_input_tokens": 29278,
+      "estimated_token_cost_usd": 0.0561779,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 27332,
+        "independent_review": 43918,
+        "refine_custom_visual": 37054
+      },
+      "preview_ms": 4504,
+      "tool_argument_bytes": 19650,
+      "system_chars": [
+        14845,
+        2832,
+        14845,
+        14845,
+        14845,
+        2832
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-required-repairs-classification",
+      "protocol_status": "FAILED",
+      "run_id": "c910c326-112e-4580-a4db-cdc992e9259c",
+      "harness_elapsed_ms": 147104,
+      "model_calls": 7,
+      "luna_ms": 126933,
+      "input_tokens": 70410,
+      "output_tokens": 12690,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.073275,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 48228,
+        "independent_review": 28879,
+        "refine_custom_visual": 40122,
+        "final_plan_or_review": 9704
+      },
+      "preview_ms": 4469,
+      "tool_argument_bytes": 23941,
+      "system_chars": [
+        14139,
+        2603,
+        14139,
+        2603,
+        14139,
+        14139,
+        14139
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-required-repairs-fraction_relationship",
+      "protocol_status": "COMPLETED",
+      "run_id": "54776c3a-f135-4cb2-80e8-e7c859e887d0",
+      "harness_elapsed_ms": 72327,
+      "model_calls": 3,
+      "luna_ms": 40791,
+      "input_tokens": 24529,
+      "output_tokens": 4137,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0246755,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 26516,
+        "independent_review": 10400,
+        "final_plan_or_review": 3875
+      },
+      "preview_ms": 2553,
+      "tool_argument_bytes": 9329,
+      "system_chars": [
+        14263,
+        2603,
+        14263
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-required-repairs-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "cc56b355-063c-49f8-8c66-c30835ee5a3a",
+      "harness_elapsed_ms": 162006,
+      "model_calls": 7,
+      "luna_ms": 142922,
+      "input_tokens": 79349,
+      "output_tokens": 14369,
+      "cached_input_tokens": 12650,
+      "estimated_token_cost_usd": 0.077089,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 77936,
+        "independent_review": 29433,
+        "refine_custom_visual": 26432,
+        "final_plan_or_review": 9121
+      },
+      "preview_ms": 4953,
+      "tool_argument_bytes": 29911,
+      "system_chars": [
+        13909,
+        2603,
+        13909,
+        13909,
+        2603,
+        13909,
+        13909
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-required-repairs-sentence_structure",
+      "protocol_status": "FAILED",
+      "run_id": "f3c8d58a-ed9c-4988-87f0-ba10642c6847",
+      "harness_elapsed_ms": 202358,
+      "model_calls": 8,
+      "luna_ms": 175084,
+      "input_tokens": 76729,
+      "output_tokens": 17866,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0919625,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 55947,
+        "independent_review": 64706,
+        "refine_custom_visual": 46433,
+        "final_plan_or_review": 7998
+      },
+      "preview_ms": 8412,
+      "tool_argument_bytes": 35434,
+      "system_chars": [
+        12956,
+        2603,
+        12956,
+        2603,
+        12956,
+        2603,
+        12956,
+        12956
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-shared-budget-classification",
+      "protocol_status": "FAILED",
+      "run_id": "4cee86e3-a224-4175-a8db-d01417ea8798",
+      "harness_elapsed_ms": 173276,
+      "model_calls": 7,
+      "luna_ms": 122087,
+      "input_tokens": 54833,
+      "output_tokens": 13572,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0681325,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 41824,
+        "independent_review": 51298,
+        "refine_custom_visual": 28965
+      },
+      "preview_ms": 35310,
+      "tool_argument_bytes": 24251,
+      "system_chars": [
+        14202,
+        14202,
+        2603,
+        14202,
+        2603,
+        14202,
+        2603
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-shared-budget-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "ba970b15-f243-4768-9cc3-17de73aa69ab",
+      "harness_elapsed_ms": 149393,
+      "model_calls": 6,
+      "luna_ms": 131669,
+      "input_tokens": 57866,
+      "output_tokens": 13843,
+      "cached_input_tokens": 11438,
+      "estimated_token_cost_usd": 0.0653149,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 53818,
+        "independent_review": 39080,
+        "refine_custom_visual": 38771
+      },
+      "preview_ms": 4475,
+      "tool_argument_bytes": 27872,
+      "system_chars": [
+        13972,
+        13972,
+        2603,
+        13972,
+        13972,
+        2603
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-shared-budget-sentence_structure",
+      "protocol_status": "COMPLETED",
+      "run_id": "d1dde342-1408-4ad2-a220-9fdf76ca5629",
+      "harness_elapsed_ms": 106330,
+      "model_calls": 6,
+      "luna_ms": 80905,
+      "input_tokens": 46231,
+      "output_tokens": 8892,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0497915,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 39095,
+        "independent_review": 34545,
+        "refine_custom_visual": 2359,
+        "final_plan_or_review": 4906
+      },
+      "preview_ms": 5506,
+      "tool_argument_bytes": 20577,
+      "system_chars": [
+        13019,
+        13019,
+        2603,
+        13019,
+        2603,
+        13019
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-state-diagnostic-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "d66c1096-4e1f-416d-90de-1691bb0cbac3",
+      "harness_elapsed_ms": 123940,
+      "model_calls": 4,
+      "luna_ms": 70156,
+      "input_tokens": 53841,
+      "output_tokens": 6538,
+      "cached_input_tokens": 4478,
+      "estimated_token_cost_usd": 0.0445194,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 35118,
+        "refine_custom_visual": 28108,
+        "final_plan_or_review": 6930
+      },
+      "preview_ms": 39085,
+      "tool_argument_bytes": 14390,
+      "system_chars": [
+        13594,
+        13594,
+        13594,
+        13594
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-verbatim-acceptance-balance_state",
+      "protocol_status": "COMPLETED",
+      "run_id": "e57fcdac-98f9-4968-831c-e1086c1a21df",
+      "harness_elapsed_ms": 144829,
+      "model_calls": 5,
+      "luna_ms": 113006,
+      "input_tokens": 43448,
+      "output_tokens": 7296,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.043612,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 28330,
+        "independent_review": 33168,
+        "refine_custom_visual": 45239,
+        "final_plan_or_review": 6269
+      },
+      "preview_ms": 7035,
+      "tool_argument_bytes": 13138,
+      "system_chars": [
+        13909,
+        2384,
+        13909,
+        2384,
+        13909
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-verbatim-acceptance-classification",
+      "protocol_status": "FAILED",
+      "run_id": "857f871f-685f-4de0-942f-af4a4b5fd06f",
+      "harness_elapsed_ms": 165255,
+      "model_calls": 6,
+      "luna_ms": 120501,
+      "input_tokens": 57839,
+      "output_tokens": 12358,
+      "cached_input_tokens": 11346,
+      "estimated_token_cost_usd": 0.0608878,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 55375,
+        "independent_review": 37642,
+        "refine_custom_visual": 27484
+      },
+      "preview_ms": 31380,
+      "tool_argument_bytes": 28272,
+      "system_chars": [
+        14768,
+        14768,
+        2384,
+        14768,
+        14768,
+        2384
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-verbatim-acceptance-fraction_relationship",
+      "protocol_status": "FAILED",
+      "run_id": "902d66e0-a070-4a66-a748-fb1b1f897eb2",
+      "harness_elapsed_ms": 159191,
+      "model_calls": 8,
+      "luna_ms": 135175,
+      "input_tokens": 81410,
+      "output_tokens": 13312,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.080641,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 63359,
+        "independent_review": 57108,
+        "refine_custom_visual": 6198,
+        "final_plan_or_review": 8510
+      },
+      "preview_ms": 7890,
+      "tool_argument_bytes": 26063,
+      "system_chars": [
+        14263,
+        2384,
+        14263,
+        2384,
+        14263,
+        2384,
+        14263,
+        14263
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-verbatim-acceptance-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "9e5ed793-f75c-48fa-844b-0e45a96d421c",
+      "harness_elapsed_ms": 129798,
+      "model_calls": 6,
+      "luna_ms": 112206,
+      "input_tokens": 54614,
+      "output_tokens": 11760,
+      "cached_input_tokens": 10585,
+      "estimated_token_cost_usd": 0.05782375,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 53008,
+        "independent_review": 35708,
+        "refine_custom_visual": 23490
+      },
+      "preview_ms": 4356,
+      "tool_argument_bytes": 25785,
+      "system_chars": [
+        13909,
+        13909,
+        2384,
+        13909,
+        13909,
+        2384
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-verbatim-acceptance-sentence_structure",
+      "protocol_status": "FAILED",
+      "run_id": null,
+      "harness_elapsed_ms": 10849,
+      "model_calls": 0,
+      "luna_ms": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": null,
+      "model_turn_phase_ms": {},
+      "preview_ms": 0,
+      "tool_argument_bytes": 0,
+      "system_chars": [],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-verbatim-acceptance-water_cycle",
+      "protocol_status": "COMPLETED",
+      "run_id": "0858c958-0844-44e0-af07-d5c33ec84eee",
+      "harness_elapsed_ms": 151950,
+      "model_calls": 7,
+      "luna_ms": 119034,
+      "input_tokens": 73758,
+      "output_tokens": 13232,
+      "cached_input_tokens": 12364,
+      "estimated_token_cost_usd": 0.0710112,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 63101,
+        "independent_review": 37147,
+        "refine_custom_visual": 14341,
+        "final_plan_or_review": 4445
+      },
+      "preview_ms": 5345,
+      "tool_argument_bytes": 31859,
+      "system_chars": [
+        13941,
+        13941,
+        2384,
+        13941,
+        13941,
+        2384,
+        13941
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "desktop-verbatim-adapt-fraction_number_line_adapt",
+      "protocol_status": "COMPLETED",
+      "run_id": "326457d4-0c38-4c31-85b7-8028469c5e2b",
+      "harness_elapsed_ms": 135093,
+      "model_calls": 7,
+      "luna_ms": 97780,
+      "input_tokens": 64835,
+      "output_tokens": 8596,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0582055,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 31914,
+        "independent_review": 47195,
+        "refine_custom_visual": 13621,
+        "final_plan_or_review": 5050
+      },
+      "preview_ms": 8952,
+      "tool_argument_bytes": 12364,
+      "system_chars": [
+        13278,
+        2384,
+        13278,
+        2384,
+        13278,
+        2384,
+        13278
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "diagnostic-deadline-classification",
+      "protocol_status": "FAILED",
+      "run_id": "6157ef78-0e1e-49e2-81c9-27a00ab9f77e",
+      "harness_elapsed_ms": 110780,
+      "model_calls": 5,
+      "luna_ms": 83109,
+      "input_tokens": 70043,
+      "output_tokens": 10469,
+      "cached_input_tokens": 16020,
+      "estimated_token_cost_usd": 0.0592195,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 58882,
+        "refine_custom_visual": 18422,
+        "final_plan_or_review": 5805
+      },
+      "preview_ms": 12492,
+      "tool_argument_bytes": 32577,
+      "system_chars": [
+        13717,
+        13717,
+        13717,
+        13717,
+        13717
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "experiment-luna-high-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "6dd9c6a9-92c7-4e42-bb84-a34b096acbc9",
+      "harness_elapsed_ms": 197561,
+      "model_calls": 3,
+      "luna_ms": 182287,
+      "input_tokens": 49995,
+      "output_tokens": 18299,
+      "cached_input_tokens": 0,
+      "estimated_token_cost_usd": 0.0798945,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 160959,
+        "final_plan_or_review": 21328
+      },
+      "preview_ms": 2258,
+      "tool_argument_bytes": 35803,
+      "system_chars": [
+        13487,
+        13487,
+        13487
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "final-per-action-replay-balance_state",
+      "protocol_status": "FAILED",
+      "run_id": "a66db691-625a-4a7e-a7ec-e8363d78ec34",
+      "harness_elapsed_ms": 117608,
+      "model_calls": 4,
+      "luna_ms": 53533,
+      "input_tokens": 37721,
+      "output_tokens": 5532,
+      "cached_input_tokens": 9016,
+      "estimated_token_cost_usd": 0.0313993,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 33948,
+        "refine_custom_visual": 13900,
+        "final_plan_or_review": 5685
+      },
+      "preview_ms": 50029,
+      "tool_argument_bytes": 13979,
+      "system_chars": [
+        13487,
+        13487,
+        13487,
+        13487
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "final-per-action-replay-classification",
+      "protocol_status": "FAILED",
+      "run_id": "b760953b-05a3-4806-9721-4a830b4c68fc",
+      "harness_elapsed_ms": 88115,
+      "model_calls": 4,
+      "luna_ms": 59970,
+      "input_tokens": 62749,
+      "output_tokens": 6645,
+      "cached_input_tokens": 17162,
+      "estimated_token_cost_usd": 0.0435866,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 35710,
+        "refine_custom_visual": 16603,
+        "final_plan_or_review": 7657
+      },
+      "preview_ms": 11323,
+      "tool_argument_bytes": 15307,
+      "system_chars": [
+        13717,
+        13717,
+        13717,
+        13717
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "final-per-action-replay-fraction_relationship",
+      "protocol_status": "FAILED",
+      "run_id": "221a203f-c621-4b9b-9be4-d01b3eec1ffa",
+      "harness_elapsed_ms": 75798,
+      "model_calls": 4,
+      "luna_ms": 51148,
+      "input_tokens": 50915,
+      "output_tokens": 5173,
+      "cached_input_tokens": 4545,
+      "estimated_token_cost_usd": 0.03893125,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 32902,
+        "refine_custom_visual": 12642,
+        "final_plan_or_review": 5604
+      },
+      "preview_ms": 7670,
+      "tool_argument_bytes": 13479,
+      "system_chars": [
+        13841,
+        13841,
+        13841,
+        13841
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "final-per-action-replay-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "886ee4fd-158d-42f1-8d5b-341b86920650",
+      "harness_elapsed_ms": 68981,
+      "model_calls": 4,
+      "luna_ms": 53126,
+      "input_tokens": 53889,
+      "output_tokens": 6016,
+      "cached_input_tokens": 13261,
+      "estimated_token_cost_usd": 0.03902505,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 28880,
+        "refine_custom_visual": 19061,
+        "final_plan_or_review": 5185
+      },
+      "preview_ms": 3487,
+      "tool_argument_bytes": 13041,
+      "system_chars": [
+        13487,
+        13487,
+        13487,
+        13487
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "final-per-action-replay-sentence_structure",
+      "protocol_status": "FAILED",
+      "run_id": "22035e37-cd8b-4cc6-809e-3ea0a1de9d77",
+      "harness_elapsed_ms": 104638,
+      "model_calls": 4,
+      "luna_ms": 67636,
+      "input_tokens": 267594,
+      "output_tokens": 6592,
+      "cached_input_tokens": 4414,
+      "estimated_token_cost_usd": 0.1515867,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 26869,
+        "refine_custom_visual": 32099,
+        "final_plan_or_review": 8668
+      },
+      "preview_ms": 26390,
+      "tool_argument_bytes": 15543,
+      "system_chars": [
+        13244,
+        13244,
+        13244,
+        13244
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "final-per-action-replay-water_cycle",
+      "protocol_status": "COMPLETED",
+      "run_id": "7debbab4-c9b0-4d0b-bdf3-1a1eb9fcb7b8",
+      "harness_elapsed_ms": 55479,
+      "model_calls": 3,
+      "luna_ms": 28692,
+      "input_tokens": 45833,
+      "output_tokens": 3551,
+      "cached_input_tokens": 4476,
+      "estimated_token_cost_usd": 0.0315553,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 21107,
+        "refine_custom_visual": 2907,
+        "final_plan_or_review": 4678
+      },
+      "preview_ms": 5311,
+      "tool_argument_bytes": 10642,
+      "system_chars": [
+        13519,
+        13519,
+        13519
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "frozen-acceptance-balance_state",
+      "protocol_status": "FAILED",
+      "run_id": "585b3e91-598d-459f-bc1e-d3ccbffa3bd0",
+      "harness_elapsed_ms": 94364,
+      "model_calls": 4,
+      "luna_ms": 50088,
+      "input_tokens": 61073,
+      "output_tokens": 4720,
+      "cached_input_tokens": 4464,
+      "estimated_token_cost_usd": 0.0426877,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 29640,
+        "refine_custom_visual": 12870,
+        "final_plan_or_review": 7578
+      },
+      "preview_ms": 30845,
+      "tool_argument_bytes": 11345,
+      "system_chars": [
+        13487,
+        13487,
+        13487,
+        13487
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "frozen-acceptance-classification",
+      "protocol_status": "FAILED",
+      "run_id": "ec70a306-a666-4f30-b846-1691888045fe",
+      "harness_elapsed_ms": 123864,
+      "model_calls": 5,
+      "luna_ms": 90682,
+      "input_tokens": 69341,
+      "output_tokens": 10709,
+      "cached_input_tokens": 3421,
+      "estimated_token_cost_usd": 0.06525805,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 62832,
+        "refine_custom_visual": 19104,
+        "final_plan_or_review": 8746
+      },
+      "preview_ms": 18907,
+      "tool_argument_bytes": 32289,
+      "system_chars": [
+        13717,
+        13717,
+        13717,
+        13717,
+        13717
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "frozen-acceptance-fraction_relationship",
+      "protocol_status": "FAILED",
+      "run_id": "7aefe564-476d-4e06-9663-4a68f36c0d04",
+      "harness_elapsed_ms": 58671,
+      "model_calls": 3,
+      "luna_ms": 42624,
+      "input_tokens": 33643,
+      "output_tokens": 4163,
+      "cached_input_tokens": 4545,
+      "estimated_token_cost_usd": 0.02726525,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 29155,
+        "refine_custom_visual": 6869,
+        "final_plan_or_review": 6600
+      },
+      "preview_ms": 4043,
+      "tool_argument_bytes": 10238,
+      "system_chars": [
+        13841,
+        13841,
+        13841
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "frozen-acceptance-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "fb6e25f8-d508-4857-a3c0-e6de8e899029",
+      "harness_elapsed_ms": 100238,
+      "model_calls": 5,
+      "luna_ms": 81058,
+      "input_tokens": 63733,
+      "output_tokens": 9005,
+      "cached_input_tokens": 12039,
+      "estimated_token_cost_usd": 0.05346395,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 59615,
+        "refine_custom_visual": 15530,
+        "final_plan_or_review": 5913
+      },
+      "preview_ms": 3502,
+      "tool_argument_bytes": 26113,
+      "system_chars": [
+        13487,
+        13487,
+        13487,
+        13487,
+        13487
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "frozen-acceptance-sentence_structure",
+      "protocol_status": "COMPLETED",
+      "run_id": "898813da-7c3a-42ae-955e-8dfa3634db4c",
+      "harness_elapsed_ms": 87176,
+      "model_calls": 5,
+      "luna_ms": 54976,
+      "input_tokens": 56132,
+      "output_tokens": 6563,
+      "cached_input_tokens": 3163,
+      "estimated_token_cost_usd": 0.04633165,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 43946,
+        "refine_custom_visual": 6375,
+        "final_plan_or_review": 4655
+      },
+      "preview_ms": 6310,
+      "tool_argument_bytes": 22821,
+      "system_chars": [
+        12534,
+        12534,
+        12534,
+        12534,
+        12534
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "frozen-acceptance-water_cycle",
+      "protocol_status": "COMPLETED",
+      "run_id": "a32c76ce-d377-4a30-8e75-5fddf38481c3",
+      "harness_elapsed_ms": 82972,
+      "model_calls": 4,
+      "luna_ms": 50878,
+      "input_tokens": 52145,
+      "output_tokens": 5403,
+      "cached_input_tokens": 4476,
+      "estimated_token_cost_usd": 0.0402673,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 27560,
+        "refine_custom_visual": 16881,
+        "final_plan_or_review": 6437
+      },
+      "preview_ms": 5338,
+      "tool_argument_bytes": 12807,
+      "system_chars": [
+        13519,
+        13519,
+        13519,
+        13519
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "independent-verification-balance_state",
+      "protocol_status": "FAILED",
+      "run_id": "67b361c2-6ea4-48f4-9511-c9ab9e2c7417",
+      "harness_elapsed_ms": 86775,
+      "model_calls": 4,
+      "luna_ms": 67400,
+      "input_tokens": 56437,
+      "output_tokens": 5743,
+      "cached_input_tokens": 4464,
+      "estimated_token_cost_usd": 0.0434387,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 30063,
+        "refine_custom_visual": 30764,
+        "final_plan_or_review": 6573
+      },
+      "preview_ms": 7631,
+      "tool_argument_bytes": 13424,
+      "system_chars": [
+        13487,
+        13487,
+        13487,
+        13487
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "independent-verification-classification",
+      "protocol_status": "FAILED",
+      "run_id": "81989f88-4436-481e-825f-96780c217105",
+      "harness_elapsed_ms": 103850,
+      "model_calls": 3,
+      "luna_ms": 40851,
+      "input_tokens": 26149,
+      "output_tokens": 3982,
+      "cached_input_tokens": 8548,
+      "estimated_token_cost_usd": 0.0211739,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 28805,
+        "refine_custom_visual": 6334,
+        "final_plan_or_review": 5712
+      },
+      "preview_ms": 50036,
+      "tool_argument_bytes": 10923,
+      "system_chars": [
+        13717,
+        13717,
+        13717
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "independent-verification-fraction_relationship",
+      "protocol_status": "FAILED",
+      "run_id": "e82dc986-3668-4743-9ab4-54b055803cbb",
+      "harness_elapsed_ms": 60355,
+      "model_calls": 4,
+      "luna_ms": 40775,
+      "input_tokens": 47064,
+      "output_tokens": 4300,
+      "cached_input_tokens": 12112,
+      "estimated_token_cost_usd": 0.0309816,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 26252,
+        "refine_custom_visual": 7321,
+        "final_plan_or_review": 7202
+      },
+      "preview_ms": 3760,
+      "tool_argument_bytes": 11229,
+      "system_chars": [
+        13289,
+        13289,
+        13289,
+        13289
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "independent-verification-reflection",
+      "protocol_status": "FAILED",
+      "run_id": "ca926e9a-b9cc-4e19-93d0-5a74df1fb917",
+      "harness_elapsed_ms": 75936,
+      "model_calls": 4,
+      "luna_ms": 58480,
+      "input_tokens": 50436,
+      "output_tokens": 6297,
+      "cached_input_tokens": 12467,
+      "estimated_token_cost_usd": 0.03849885,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 32794,
+        "refine_custom_visual": 17518,
+        "final_plan_or_review": 8168
+      },
+      "preview_ms": 3383,
+      "tool_argument_bytes": 14881,
+      "system_chars": [
+        13487,
+        13487,
+        13487,
+        13487
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "independent-verification-sentence_structure",
+      "protocol_status": "COMPLETED",
+      "run_id": "9bd075d7-30a3-4218-8f9c-d462118c0bb0",
+      "harness_elapsed_ms": 129151,
+      "model_calls": 7,
+      "luna_ms": 98131,
+      "input_tokens": 66229,
+      "output_tokens": 9297,
+      "cached_input_tokens": 8610,
+      "estimated_token_cost_usd": 0.057131,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 52161,
+        "final_plan_or_review": 10721,
+        "independent_review": 31449,
+        "refine_custom_visual": 3800
+      },
+      "preview_ms": 7105,
+      "tool_argument_bytes": 19362,
+      "system_chars": [
+        13244,
+        13244,
+        13244,
+        1171,
+        13244,
+        13244,
+        1171
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "independent-verification-water_cycle",
+      "protocol_status": "FAILED",
+      "run_id": "0f97411e-9eff-4766-9d28-76fabe89a295",
+      "harness_elapsed_ms": 129836,
+      "model_calls": 7,
+      "luna_ms": 110678,
+      "input_tokens": 86887,
+      "output_tokens": 11666,
+      "cached_input_tokens": 4476,
+      "estimated_token_cost_usd": 0.0764273,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 54251,
+        "refine_custom_visual": 21522,
+        "final_plan_or_review": 11661,
+        "independent_review": 23244
+      },
+      "preview_ms": 5251,
+      "tool_argument_bytes": 24855,
+      "system_chars": [
+        13519,
+        13519,
+        13519,
+        13519,
+        1171,
+        13519,
+        13519
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "live-adapt-fraction_number_line_adapt",
+      "protocol_status": "FAILED",
+      "run_id": "2936f494-6747-413a-831b-aa2e2d65037f",
+      "harness_elapsed_ms": 76627,
+      "model_calls": 4,
+      "luna_ms": 52807,
+      "input_tokens": 60099,
+      "output_tokens": 5341,
+      "cached_input_tokens": 4182,
+      "estimated_token_cost_usd": 0.0441906,
+      "model_turn_phase_ms": {
+        "create_custom_visual": 30004,
+        "refine_custom_visual": 15853,
+        "final_plan_or_review": 6950
+      },
+      "preview_ms": 6303,
+      "tool_argument_bytes": 12113,
+      "system_chars": [
+        12000,
+        12000,
+        12000,
+        12000
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    },
+    {
+      "run": "qualified-reuse-fraction_relationship",
+      "protocol_status": "COMPLETED",
+      "run_id": "30ed768d-c9e4-42ed-b768-827e221d828b",
+      "harness_elapsed_ms": 31788,
+      "model_calls": 2,
+      "luna_ms": 7189,
+      "input_tokens": 17546,
+      "output_tokens": 373,
+      "cached_input_tokens": 8622,
+      "estimated_token_cost_usd": 0.0060121,
+      "model_turn_phase_ms": {
+        "instantiate_reusable_visual": 3990,
+        "final_plan_or_review": 3199
+      },
+      "preview_ms": 0,
+      "tool_argument_bytes": 523,
+      "system_chars": [
+        12985,
+        12985
+      ],
+      "visual_acceptance": "SEPARATE_HUMAN_REVIEW_REQUIRED"
+    }
+  ],
+  "observed_calls": 601,
+  "observed_token_cost_usd": 6.2021862,
+  "schema_version": "canvas-hardening-metrics-v1",
+  "additional_read_only_checks": [
+    {
+      "kind": "known_defect_independent_veto",
+      "source_run_id": "898813da-7c3a-42ae-955e-8dfa3634db4c",
+      "accepted": false,
+      "elapsed_ms": 11604,
+      "usage": {
+        "requests": 1,
+        "input_tokens": 6177,
+        "cached_input_tokens": 0,
+        "output_tokens": 742,
+        "total_tokens": 6919
+      },
+      "estimated_token_cost_usd": 0.0053145,
+      "source_generation": false
+    }
+  ],
+  "total_observed_token_cost_including_read_only_checks_usd": 6.2075007,
+  "final_desktop_wave": {
+    "label": "desktop-release-wave",
+    "protocol_completed": 2,
+    "cases": 6,
+    "canvas_source_fingerprints_identical": true,
+    "runtime_source_digests": {
+      "services/studio/agent/orchestrator.py": "9a47f1ffc250c7d850e2265c2395b074ab075caefdde7d914f04a71ebeed6058",
+      "services/studio/agent/intelligence.py": "f54678f87faedb7cecad127b539e6624bb1189154b454b88eca734c64226ceb7",
+      "services/studio/custom_visual_preview.py": "2fae04fce6ab065e79a154305fe4dc1692a952a27b94a4e89bb1c2c32c945259",
+      "scripts/preview_custom_visual.cjs": "052d1d7fae50ea9e4c26e7f566849e9043a63acddf100851368159b41c72358b",
+      "scripts/custom_visual_state_reads.cjs": "8643ef91b9bd3f9553c077c0eefa9329ac98381fb7e0f5636b213ac848a36952",
+      "package.json": "57ca5cc533d84f5fa01ea0511758c6afdcefc1ddbc8b6798dce425f1d630d97d",
+      "package-lock.json": "b0052869f8935996c40c72aa789aa88299e0da6a21e359bf3ce572d46b1a9713",
+      "services/tutor/runtime.py": "f02a32e228dc5bb4aae49c73631daece1d361b612d81163cbc2cf3c17f897fa7",
+      "services/studio/interactions.py": "db26dc0c0bafb1673e32fa8e29f7ab45ade60a684ea07c255050e4385e7f8347",
+      "workers/agentic_canvas_handlers.py": "a2a674f95e56ae3016676eb3994c779d081796180b0f4d5677bad778628e2c78",
+      "services/studio/full_power_canvas.py": "2450997c1c59ad6e922327ae030a1e95586e4f06d1943f00eb0d838e4693e3c6",
+      "apps/web/lib/studio/custom-visual-sandbox.ts": "23940bd97b76c0d74175e359f38231d0e71ac2910ea20a79b9a9c9f0a420f402",
+      "apps/web/lib/studio/agentic-canvas.tsx": "ef67c78ab21ff8257d2d1d8b3c1a6dcb7d644deae3f9c807166e85039570c307",
+      "runtime/canvas-agent/AGENT.md": "82b5346c26eefcc3eaa7271fdf3294f892fa73bd4038cfd7b8f3bbaf1786928f",
+      "runtime/canvas-agent/skills/accessibility.md": "8ce7d701e7791ee98147b81bb53722b26074de92c58857ef61822c1fa4043a5c",
+      "runtime/canvas-agent/skills/age-adaptive-visuals.md": "c2be1409edef06795fdf508c5e2d78eeb707824d0f6aa8231ef25aa93a656369",
+      "runtime/canvas-agent/skills/bilingual-layout.md": "5df0318f57649cc410788f9a615dcd18be1d2876e9ae5946944e48586e68eeb0",
+      "runtime/canvas-agent/skills/custom-visual-runtime.md": "bfd021d393ac9640a193dce746fbdcff71127e8760a055ebea9c290a9d945df4",
+      "runtime/canvas-agent/skills/diagrams-and-processes.md": "e4b6dc59034cb9bffb865f0572a0d2a7270b59970702acec93e629ffb7b8b398",
+      "runtime/canvas-agent/skills/full-power-routing.md": "aba9339dae148ee2b40374a4c4e109ec80dfe775703067824ef19fce8285930e",
+      "runtime/canvas-agent/skills/image-composition.md": "f63181ab08f597d6eb529df0d9ceec451b8dcdb60e48e2491d02fd331aa365a1",
+      "runtime/canvas-agent/skills/math-visualization.md": "1827e94af4c870ecf76e22cbdb3f4342bd77cc36ad01c75b3da13849668e66c8",
+      "runtime/canvas-agent/skills/spatial-interaction.md": "230162acbfa182df8e30eae1b7ae5599d3719d83ef907a797e7cb7ba5fd4e97f",
+      "runtime/canvas-agent/skills/text-learning.md": "8547ae6aded0be7826a851c82d4a0ffce18abcee8aafe460bb6be02023683eeb",
+      "runtime/canvas-agent/skills/tool-selection.md": "007690a66403ce9e35b2fe01c02c9eea8a44a93932db75afe5003b3975c1bdd5",
+      "runtime/canvas-agent/skills/visual-composition.md": "55de9867b03185d34bd8588dbacdd2a375ebea3aab89f9ca90f2c616c283ef20"
+    },
+    "qualification": "Separate actual browser and educational review; not six-case production acceptance. ASGI stream cancellation was fixed and verified separately afterward."
+  }
+}

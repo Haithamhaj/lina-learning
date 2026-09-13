@@ -7,6 +7,10 @@ from urllib.parse import quote
 from uuid import UUID
 
 import json
+import inspect
+
+from anyio import CancelScope
+from starlette.concurrency import iterate_in_threadpool, run_in_threadpool
 from collections.abc import Callable, Iterator
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
@@ -703,6 +707,48 @@ def get_daily_source_original(
     )
 
 
+class _CanvasTutorStreamingResponse(StreamingResponse):
+    """Close the owned sync generator at the ASGI boundary, never later in GC."""
+
+    def __init__(self, events, *, on_unstarted_close, **kwargs):
+        self._events = events
+        self._on_unstarted_close = on_unstarted_close
+        self._closed = False
+
+        async def body():
+            try:
+                async for frame in iterate_in_threadpool(events):
+                    yield frame
+            finally:
+                await self._close_events()
+
+        super().__init__(body(), **kwargs)
+
+    async def _close_events(self):
+        if self._closed:
+            return
+        self._closed = True
+
+        def close():
+            unstarted = inspect.getgeneratorstate(self._events) == inspect.GEN_CREATED
+            self._events.close()
+            if unstarted:
+                self._on_unstarted_close()
+
+        with CancelScope(shield=True):
+            await run_in_threadpool(close)
+
+    async def __call__(self, scope, receive, send):
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            # Cancellation can occur in send(), while body() is suspended at
+            # yield. Closing only on the next iteration misses that boundary.
+            await self._close_events()
+            with CancelScope(shield=True):
+                await self.body_iterator.aclose()
+
+
 @router.post("/studio/{runtime_id}/interactions/{interaction_id}/turn/stream")
 def stream_canvas_interaction_tutor_turn(
     runtime_id: UUID,
@@ -809,7 +855,10 @@ def stream_canvas_interaction_tutor_turn(
             service.abandon_admitted_turn(admission=admission, student_id=student_id, status="FAILED")
             raise
 
-    return StreamingResponse(
+    return _CanvasTutorStreamingResponse(
         events(), media_type="text/event-stream",
+        on_unstarted_close=lambda: service.abandon_admitted_turn(
+            admission=admission, student_id=student_id, status="CANCELLED"
+        ),
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
