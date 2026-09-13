@@ -79,8 +79,8 @@ export function DecimalNumberLineWorkspace({sceneId,sceneVersion,state,locale,on
     <div className="flex flex-wrap gap-2" role="group" aria-label={ar?'اختر الإجابة':'Choose answer'} dir="ltr">
       {(s.mode==='COMPARE'?['LT','EQ','GT']:s.endpoints).map(choice=><button key={choice} type="button" className={`${button} ${s.selection===choice?'ring-2 ring-blue-600 bg-blue-50':''}`} disabled={pending} aria-pressed={s.selection===choice} onClick={()=>void send('SELECT_ANSWER',{from_selection:s.selection,selection:choice})}>{typeof choice==='number'?formatDecimal(choice):choice==='LT'?'A < B':choice==='EQ'?'A = B':'A > B'}</button>)}
     </div>
-    <button type="button" className={button} disabled={pending||!complete} onClick={()=>void send('SUBMIT_CONFIGURATION',{source_ref:s.source_ref,positions:s.positions,selection:s.selection})}>{ar?'أرسل المحاولة إلى المعلّم':'Submit attempt to Tutor'}</button>
-    <p role="status" className="text-sm">{pending?(ar?'جارٍ الحفظ…':'Saving…'):s.last_validation?(s.last_validation.status==='VALID'?(ar?'المحاولة المرسلة صحيحة.':'Last submitted attempt is correct.'):(ar?'راجع المحاولة المرسلة، ثم أعد الإرسال.':'Review your submitted attempt, then submit again.')):(ar?'التحريك والاختيار لا يرسلان للمعلّم.':'Moving and choosing do not call the Tutor.')}</p>
+    <button type="button" className={button} disabled={pending||!complete} onClick={()=>void send('SUBMIT_CONFIGURATION',{source_ref:s.source_ref,positions:s.positions,selection:s.selection})}>{ar?'تحقق من إجابتي':'Check my answer'}</button>
+    <p role="status" className="text-sm">{pending?(ar?'جارٍ الحفظ…':'Saving…'):s.last_validation?(s.last_validation.status==='VALID'?(ar?'إجابتك صحيحة.':'Your answer is correct.'):(ar?'راجع إجابتك ثم حاول مرة أخرى.':'Review your answer, then try again.')):(ar?'ضع النقاط واختر الإجابة عندما تكون مستعدًا.':'Place the points and choose an answer when you are ready.')}</p>
     {error?<p role="alert" className="text-sm text-rose-800">{error}</p>:null}
   </section>;
 }

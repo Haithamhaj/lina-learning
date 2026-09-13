@@ -103,7 +103,7 @@ test("Agentic Canvas v2 preserves semantic presentation while rejecting hidden c
   assert.equal(parseAgenticCanvasScene({ ...scene, presentation: { ...scene.presentation, placements: [] } }), null);
 });
 
-test("Full-Power v3 admits only a declared custom sandbox package", () => {
+test("Full-Power v3 admits durable build references and rejects inline executable packages", () => {
   const scene = {
     version: "agentic-canvas-scene-v3",
     objective: "Compare two fractions.", subject_key: "MATH",
@@ -123,7 +123,16 @@ test("Full-Power v3 admits only a declared custom sandbox package", () => {
       }, parameters: { label: "1/2" },
     }],
   };
-  assert.equal(parseAgenticCanvasScene(scene)?.blocks[0].type, "CUSTOM_VISUAL");
+  // Durable Scenes contain owned Build references, never executable packages.
+  assert.equal(parseAgenticCanvasScene(scene), null);
+  const { package: inlinePackage, ...block } = scene.blocks[0];
+  const durableBlock = {
+    ...block,
+    custom_visual_build_id: "11111111-1111-4111-8111-111111111111",
+    manifest_digest: "a".repeat(64),
+  };
+  assert.equal(parseAgenticCanvasScene({ ...scene, blocks: [durableBlock] })?.blocks[0].type, "CUSTOM_VISUAL");
+  assert.equal(parseAgenticCanvasScene({ ...scene, blocks: [{ ...durableBlock, package: inlinePackage }] }), null);
   assert.equal(parseAgenticCanvasScene({ ...scene, blocks: [{ ...scene.blocks[0], package: { ...scene.blocks[0].package, source: "window.mount=()=>fetch('https://bad.example')" } }] }), null);
 });
 

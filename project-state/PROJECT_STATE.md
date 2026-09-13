@@ -2,7 +2,7 @@
 
 ## Current goal
 
-Close the independently accepted Tutor pedagogy patch in one authorized local commit. Implementation and structural review are complete (`ACCEPT_PATCH_FOR_COMMIT`); comparative teaching quality is NOT YET EVALUATED and longitudinal learning benefit is NOT ESTABLISHED. Push, merge, deployment and the next Canvas production-use phase remain separately gated.
+Finalize the approved Lina pilot repository baseline for origin/main: accepted Tutor pedagogy, the bounded aware-instant timezone fix, and partial UI copy/localization. Publication is authorized only after fresh verification of the committed HEAD. Deployment remains a separate task.
 
 ## Current reality
 
@@ -32,7 +32,7 @@ Broad unrestricted production CREATE reliability is not accepted. Authenticated 
 
 ## Next recommended action
 
-Retain the accepted pedagogy patch locally; any comparative teaching evaluation requires separate authorization. Comparative teaching evaluation must retain clear, manageable, child-appropriate explanations and useful application of correction when appropriate, without forced retries. Paid/live evaluation requires separate authorization; structural checks do not establish learning improvement.
+Use only the verified published origin/main baseline for a separately authorized deployment task. `ui/refine-01c`: PARTIALLY_PORTED_FOR_PILOT; layout/Canvas hide-reopen deferred. FE-02: PROTOTYPE_OR_HISTORICAL. Both branches remain preserved. Authenticated visual verification is not established. See `TASKS.md` for exact scope and fresh evidence. Any comparative teaching evaluation requires separate authorization. Comparative teaching evaluation must retain clear, manageable, child-appropriate explanations and useful application of correction when appropriate, without forced retries. Paid/live evaluation requires separate authorization; structural checks do not establish learning improvement.
 
 Begin a separately authorized controlled real-use / production-use phase only when the Product Owner requests it. It must reassess correctness/replay defects, authenticated Daily use, reliability and learning benefit without treating AI review as a correctness gate. Mobile was explicitly deferred and is not the current release gate; no model change is authorized.
 

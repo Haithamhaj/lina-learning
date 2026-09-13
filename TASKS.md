@@ -2,6 +2,16 @@
 
 An explicit current Product Owner instruction authorizes its requested working slice. Status labels provide operational context; roadmap presence alone does not authorize implementation.
 
+## Current repository finalization
+
+**REPO-FINALIZE-PILOT-01 — Approved pilot code finalized; publication requires fresh exact-HEAD checks.** Owner approved INCLUDE_PARTIAL_UI_REFINE. Copy-only ports: Daily app/source/voice components, decimal-number-line/place-value wording, `daily-presentation-copy.ts` and tests. Preserved composer structure, visible attachment action/preview sizes, voice help/reasons, direction, all loading/pending/saving indicators and `loadGeneratedAsset`. Full-Power Canvas remains authoritative. `ui/refine-01c`: PARTIALLY_PORTED_FOR_PILOT; layout/hide/reopen deferred. FE-02: PROTOTYPE_OR_HISTORICAL. Both branches preserved.
+
+**Test reconciliation:** `apps/web/lib/studio/agentic-canvas.test.ts` expected inline executable packages in durable v3 Scenes. Current parser/persisted-scene tests require Build ID/digest. Corrected only the stale test: accept references, reject inline packages. No Canvas production change. `npm test` runs typecheck/Python, not these frontend tests; its prior green result did not cover this stale expectation.
+
+**Pre-commit verification:** 107 frontend tests passed; full Python/PostgreSQL: 1432 passed, 12 explicit live/cloud checks skipped (85.69 s). Typecheck and production build with existing `CLERK_PUBLISHABLE_KEY` passed. Frontend uses Node `--no-experimental-strip-types -r sucrase/register --test` over Daily/Studio TS tests, decimal TSX, Process and toolbelt CJS tests, with temporary React preload and compiled Process fixtures (`PROCESS_CHECKPOINT_COMPILED`); no new repo runner/dependency. Backend uses the existing disposable test guard with `PGOPTIONS='-c timezone=UTC'`, mock provider, and `pytest -q -p no:cacheprovider --tb=long -rs`.
+
+**Closure:** Tutor pedagogy included; timezone closure validation compares aware instants and rejects missing/malformed/naive/different times. Owner authorizes separate fix/UI commits and main publication only after fresh exact-HEAD checks; deployment remains unauthorized. Authenticated Student visual verification unavailable in this isolated setup; no bypass or fake screenshots. Source/contract checks do not establish backend deployment readiness. Prior timezone fix unchanged. Earlier UI decision gate is superseded by this approval.
+
 ## Current review patch
 
 ### TUTOR-PEDAGOGY-REFINE-01 — Bounded Option D instruction refinement
