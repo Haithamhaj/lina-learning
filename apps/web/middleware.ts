@@ -1,10 +1,7 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 
 export default clerkMiddleware({
-  proxyUrl:
-    process.env.NEXT_PUBLIC_CLERK_PROXY_URL ||
-    process.env.CLERK_PROXY_URL ||
-    undefined,
+  proxyUrl: process.env.NEXT_PUBLIC_LINA_CLERK_PROXY_PATH || undefined,
 });
 
 export const config = {

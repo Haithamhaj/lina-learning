@@ -56,10 +56,16 @@ export function Providers({
     throw new Error("CLERK_PUBLISHABLE_KEY is required for the web app.");
   }
 
+  const configuredProxyUrl = process.env.NEXT_PUBLIC_LINA_CLERK_PROXY_PATH;
+  const proxyUrl =
+    configuredProxyUrl?.startsWith("/") && typeof window !== "undefined"
+      ? new URL(configuredProxyUrl, window.location.origin).toString()
+      : configuredProxyUrl || undefined;
+
   return (
     <ClerkProvider
       publishableKey={publishableKey}
-      proxyUrl={process.env.NEXT_PUBLIC_CLERK_PROXY_URL || undefined}
+      proxyUrl={proxyUrl}
       appearance={appearance}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"

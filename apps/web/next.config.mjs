@@ -7,19 +7,15 @@ const rawClerkProxyUrl =
   process.env.NEXT_PUBLIC_CLERK_PROXY_URL ??
   process.env.CLERK_PROXY_URL ??
   "";
-const deploymentDomain = (process.env.REPLIT_DOMAINS ?? "")
-  .split(",")
-  .map((domain) => domain.trim())
-  .find(Boolean);
 
-let clerkProxyUrl = rawClerkProxyUrl;
+// Clerk's Next.js package eagerly resolves its conventional proxy variables
+// while prerendering. Replit supplies a relative same-origin path, whose
+// browser-only resolution touches window and breaks SSR. Preserve that path
+// under Lina's public build variable, then prevent the SDK from auto-reading
+// the relative value; Providers passes an absolute same-origin URL in-browser.
 if (rawClerkProxyUrl.startsWith("/")) {
-  if (!deploymentDomain) {
-    throw new Error(
-      "A relative CLERK_PROXY_URL requires REPLIT_DOMAINS so it can be made safe for server rendering.",
-    );
-  }
-  clerkProxyUrl = new URL(rawClerkProxyUrl, `https://${deploymentDomain}`).toString();
+  delete process.env.NEXT_PUBLIC_CLERK_PROXY_URL;
+  delete process.env.CLERK_PROXY_URL;
 }
 
 if (process.env.APP_ENV === "production" && !clerkPublishableKey) {
@@ -35,11 +31,10 @@ const nextConfig = {
     // client reads the conventional public name; publishable keys are intended
     // to be embedded in browser bundles.
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: clerkPublishableKey,
-    // Replit may supply its managed Clerk proxy as a same-origin path. Clerk's
-    // client resolves relative proxy URLs through window.location, which is not
-    // available while Next prerenders. Give both SSR and the browser an absolute
-    // deployment URL instead.
-    NEXT_PUBLIC_CLERK_PROXY_URL: clerkProxyUrl,
+    // Replit supplies its managed Clerk proxy as a same-origin path in
+    // production. Keep it relative here so a development hostname can never be
+    // baked into the published client bundle.
+    NEXT_PUBLIC_LINA_CLERK_PROXY_PATH: rawClerkProxyUrl,
   },
   // Keep FastAPI private to the VM. Next's external rewrite forwards the
   // original request (including its body and headers) and streams the
@@ -50,7 +45,7 @@ const nextConfig = {
 
     return [
       {
-        source: "/api/:path*",
+        source: "/api/:path((?!__clerk(?:/|$)).*)",
         destination: `${apiOrigin}/api/:path*`,
       },
     ];
