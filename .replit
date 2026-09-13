@@ -1,4 +1,4 @@
-modules = ["python-3.12", "nodejs-20", "web", "postgresql-16"]
+modules = ["python-3.12", "nodejs-24", "web", "postgresql-16"]
 
 [nix]
 channel = "stable-25_05"
@@ -56,3 +56,14 @@ run = ["npm", "run", "start:production"]
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 180000
+
+[userenv]
+
+[userenv.production]
+API_INTERNAL_ORIGIN = "http://127.0.0.1:8000"
+APP_ENV = "production"
+MODEL_NAME = "gpt-5.6-luna"
+MODEL_PROVIDER = "openai"
+NEXT_PUBLIC_API_BASE_URL = "/api"
+NEXT_PUBLIC_APP_ENV = "production"
+STORAGE_PROVIDER = "replit"

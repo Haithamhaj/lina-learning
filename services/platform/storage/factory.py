@@ -51,7 +51,10 @@ def create_object_storage(settings: Settings | None = None) -> ObjectStorage:
             if settings.session_secret
             else None
         )
-        return ReplitObjectStorage(signing_secret=signing_secret)
+        return ReplitObjectStorage(
+            bucket_id=settings.replit_storage_bucket_id,
+            signing_secret=signing_secret,
+        )
     raise StorageProviderUnavailable(
         f"Unsupported storage provider: {settings.storage_provider}"
     )

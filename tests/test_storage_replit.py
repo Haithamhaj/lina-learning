@@ -206,7 +206,15 @@ def test_replit_factory_branch(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
     result = create_object_storage(
-        Settings(_env_file=None, storage_provider="replit", session_secret="secret")
+        Settings(
+            _env_file=None,
+            storage_provider="replit",
+            replit_storage_bucket_id="bucket-id",
+            session_secret="secret",
+        )
     )
 
-    assert result == (expected, {"signing_secret": "secret"})
+    assert result == (
+        expected,
+        {"bucket_id": "bucket-id", "signing_secret": "secret"},
+    )

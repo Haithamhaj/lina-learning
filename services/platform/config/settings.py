@@ -102,6 +102,7 @@ class Settings(BaseSettings):
     # that implements the S3 API, including an optional custom endpoint.
     storage_provider: StorageProvider = "local"
     storage_dir: Path = Path(".local/storage")
+    replit_storage_bucket_id: str | None = None
     s3_endpoint: str | None = None
     s3_bucket: str | None = None
     s3_region: str | None = None
@@ -180,6 +181,8 @@ class Settings(BaseSettings):
             ):
                 if value is None:
                     missing.append(name)
+        if self.storage_provider == "replit" and not self.replit_storage_bucket_id:
+            missing.append("REPLIT_STORAGE_BUCKET_ID")
 
         if self.model_provider != "mock" and self.model_api_key is None:
             missing.append("MODEL_API_KEY")
