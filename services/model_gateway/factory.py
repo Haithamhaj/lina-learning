@@ -270,3 +270,20 @@ def create_embedding_gateway(session: Session, *, local_provider: ModelProvider 
     if local_provider is None:
         raise ValueError("A local provider is required when MODEL_PROVIDER=mock.")
     return ModelGateway(session, routes={ModelTask.EMBEDDING: ModelRoute("local-demo", configured.embedding_model_name)}, providers={"local-demo": local_provider})
+
+
+def create_canvas_development_review_gateway(session, *, settings=None, local_provider=None):
+    """Explicit operator-triggered review, independent of Tutor and Evidence routes."""
+    configured = settings or get_settings()
+    if configured.model_provider == 'openai':
+        if configured.model_api_key is None:
+            raise ValueError('MODEL_API_KEY is required for development review')
+        provider = OpenAIResponsesProvider(api_key=configured.model_api_key.get_secret_value(),
+            base_url=configured.model_base_url, timeout_seconds=90)
+        provider_name = 'openai'
+    else:
+        if local_provider is None:
+            raise ValueError('An explicit local review provider is required')
+        provider, provider_name = local_provider, 'local-demo'
+    return ModelGateway(session, routes={ModelTask.CANVAS_DEVELOPMENT_REVIEW:
+        ModelRoute(provider_name, configured.model_name)}, providers={provider_name: provider})

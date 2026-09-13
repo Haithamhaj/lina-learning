@@ -161,6 +161,17 @@ def _request_body(route: ModelRoute, payload: dict[str, object]) -> dict[str, ob
                 "content": source_content,
             }
         ]
+    if "review_images" in payload:
+        from services.canvas_review.contracts import validate_images
+        images = payload["review_images"]
+        if source_input is not None or (payload.get("response_schema") or {}).get("name") != "canvas_development_review_v1":
+            raise ValueError("Review images require the development review schema")
+        validate_images(images)
+        if images:
+            body["input"] = [{"role": "user", "content": [
+                {"type": "input_text", "text": str(payload["input"])},
+                *[{"type": "input_image", "image_url": url, "detail": "high"} for url in images],
+            ]}]
     response_schema = payload.get("response_schema")
     if isinstance(response_schema, dict):
         name = response_schema.get("name")

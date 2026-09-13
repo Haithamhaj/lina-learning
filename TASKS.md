@@ -13,9 +13,19 @@ An explicit current Product Owner instruction authorizes its requested working s
 
 ## Active implementation
 
+### CANVAS-DEVELOPMENT-REVIEW-01 — Independent engineering evidence and AI reports
+
+**Status:** DONE — local engineering slice; reviewer accuracy is not accepted.
+**Authority:** Product Owner requested a separate retained development path and AI reports; explicit OpenAI evidence transmission approved 2026-09-13.
+**Scope:** Operator CLI, existing run index, bounded independent evidence captures, private screenshots/source, one-shot Model Gateway review, cited Arabic recommendations; no student intelligence writes or runtime hooks.
+**Verification:** 39 focused review/provider tests passed. Full integrated regression: 1426 passed, 12 skipped (68.95 s) on isolated PostgreSQL 55438. Additive migration verified on isolated databases; actual six-image OpenAI report saved with unchanged source-record counts. Repository truth/diff checks passed.
+**Limit:** First real report missed a known grid-scale defect. Review generation is proven; reviewer accuracy and educational effectiveness are not accepted. No dashboard, automatic collection, merge or deployment.
+**Reference:** `docs/proposals/CANVAS-DEVELOPMENT-REVIEW.md`.
+
+
 ### FULL-POWER-CANVAS-HARDENING — Production autonomy and measured quality
 
-**Status:** ACTIVE — desktop acceptance; mobile deferred by Product Owner 2026-09-13
+**Status:** DONE — engineering/build closure; production-use acceptance remains a separate phase
 **Authority:** Product Owner request 2026-09-12, continued 2026-09-13.
 **Baseline:** `ebac3fef92427ac203d241f7cd60eafdb1187c6c`.
 **Scope:** General production preview/interaction/replay and bounded same-Luna review;
@@ -25,7 +35,7 @@ diverse wide/narrow live acceptance without developer source repair.
 one integrated regression near closure; six diverse real-Luna cases with actual
 browser interactions and quality review; before/after timing/token/cost evidence.
 **Result:** 1420 integrated tests passed, 12 skipped. Desktop-only acceptance is ACTIVE after early independent review, canonical state diagnostics, capability-aware REUSE and reliable screenshot capture. True qualified REUSE and desktop ADAPT lineage/browser handoffs are verified; individual fraction, balance and Arabic sentence CREATE interactions work. Broad CREATE reliability remains unaccepted; the final captured Canvas configuration completed 2/6 protocols, with a human-detected semantic false acceptance in reflection. See `docs/FULL-POWER-CANVAS-HARDENING.md` and its portable metrics for measured evidence.
-**Closure:** Local engineering commit only; task is not DONE. No push, merge or deployment.
+**Closure:** Branch publication is authorized. No merge or deployment. Broad production CREATE reliability, authenticated Daily use and learning benefit remain separate production-use gates.
 
 
 ### FULL-POWER-CANVAS-01 — Full-Power Hybrid Canvas

@@ -79,6 +79,7 @@ def test_foundation_models_match_expected_tables() -> None:
             "studio_tutor_observations",
             "studio_canvas_specialist_runs",
             "studio_generated_assets",
+            "canvas_development_reviews",
         }
     assert User.__tablename__ == "users"
     assert Student.__tablename__ == "students"

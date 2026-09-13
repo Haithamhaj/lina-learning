@@ -2,9 +2,11 @@
 
 ## Current goal
 
-Production-harden Full-Power Canvas using GPT-5.6 Luna. Engineering changes are verified; unrestricted production acceptance remains unmet. Local commit only, no push/merge/deployment.
+Full-Power Canvas engineering/build closure and independent development-review evidence/reports are complete. Production-use acceptance remains unmet. Branch publication is authorized; merge and deployment are not.
 
 ## Current reality
+
+Independent Canvas development review is implemented locally: scoped operator capture, bounded private evidence pack and one-shot AI report in a separate database table, with no student-intelligence/runtime hook. A real six-image Luna report completed; it missed a known grid-scale defect. Local engineering verification is complete; reviewer accuracy remains unaccepted. See `docs/proposals/CANVAS-DEVELOPMENT-REVIEW.md`.
 
 Authoritative checkout: `.worktrees/full-power-canvas-01`, branch `codex/full-power-canvas-01`, accepted baseline `ebac3fef92427ac203d241f7cd60eafdb1187c6c`. The root checkout and unrelated work are preserved.
 
@@ -34,7 +36,7 @@ Luna's independent review improves veto/correction evidence but cannot guarantee
 
 ## Next recommended action
 
-Continue desktop-only acceptance at 640px and 960px Workspace widths. Product Owner deferred mobile on 2026-09-13; prior mobile failures remain historical evidence, not current acceptance blockers. Reassess remaining correctness/replay defects before any release decision. No model change is authorized.
+Begin a separately authorized production-use phase only when the Product Owner requests it. It must reassess correctness/replay defects, authenticated Daily use, reliability and learning benefit without treating AI review as a correctness gate. Product Owner deferred mobile on 2026-09-13; no model change is authorized.
 
 ## Critical references
 

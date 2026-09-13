@@ -54,6 +54,7 @@ class ModelTask(str, Enum):
     EMBEDDING = "embedding"
     PERSONAL_FACTS = "personal_facts"
     CANVAS_SPECIALIST = "canvas_specialist"
+    CANVAS_DEVELOPMENT_REVIEW = "canvas_development_review"
     SPEECH_TO_TEXT = "speech_to_text"
 
 
@@ -1908,3 +1909,32 @@ class StudioGeneratedAsset(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+class CanvasDevelopmentReview(Base):
+    """Internal engineering reports; never learner Evidence or Tutor context."""
+
+    __tablename__ = "canvas_development_reviews"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["run_id", "studio_runtime_id", "student_id", "learning_session_id"],
+            ["studio_canvas_specialist_runs.id", "studio_canvas_specialist_runs.studio_runtime_id",
+             "studio_canvas_specialist_runs.student_id", "studio_canvas_specialist_runs.learning_session_id"],
+            ondelete="CASCADE", name="fk_canvas_dev_review_owned_run"),
+        CheckConstraint("status IN ('CAPTURING','READY','RUNNING','COMPLETED','FAILED')", name="ck_canvas_dev_review_status"),
+        Index("ix_canvas_dev_review_run_created", "run_id", "created_at"),
+    )
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    run_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    studio_runtime_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    student_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    learning_session_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    requested_by: Mapped[str] = mapped_column(String(120), nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    evidence_manifest: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict)
+    report: Mapped[dict[str, object] | None] = mapped_column(JSONB)
+    ai_execution_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("ai_executions.id", ondelete="SET NULL"))
+    failure_code: Mapped[str | None] = mapped_column(String(80))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC), server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
