@@ -12,8 +12,21 @@ def test_reserved_vm_topology_has_one_public_web_process() -> None:
     assert children["next"].command[-1] == "start"
     assert "--reload" not in children["api"].command
     assert "--reload" not in children["worker"].command
+    assert children["api"].command[0] == ".venv-production/bin/python"
+    assert children["worker"].command[0] == ".venv-production/bin/python"
+    assert "uv" not in children["api"].command
+    assert "uv" not in children["worker"].command
     assert children["api"].command[children["api"].command.index("--port") + 1] == "8000"
     assert children["api"].command[children["api"].command.index("--host") + 1] == "127.0.0.1"
+
+
+def test_reserved_vm_python_can_be_overridden_for_validation(monkeypatch) -> None:
+    monkeypatch.setenv("LINA_PRODUCTION_PYTHON", "/tmp/lina-python")
+
+    children = {child.name: child for child in production_children()}
+
+    assert children["api"].command[0] == "/tmp/lina-python"
+    assert children["worker"].command[0] == "/tmp/lina-python"
 
 
 def test_startup_failure_is_propagated_without_restart() -> None:

@@ -51,12 +51,9 @@ def production_children() -> tuple[ChildSpec, ...]:
     requests to it.
     """
 
-    uv = (
-        "uv",
-        "run",
-        "--offline",
-        "--with-requirements",
-        "apps/api/requirements.txt",
+    production_python = os.environ.get(
+        "LINA_PRODUCTION_PYTHON",
+        ".venv-production/bin/python",
     )
     return (
         ChildSpec(
@@ -66,8 +63,7 @@ def production_children() -> tuple[ChildSpec, ...]:
         ChildSpec(
             name="api",
             command=(
-                *uv,
-                "python",
+                production_python,
                 "-m",
                 "uvicorn",
                 "apps.api.main:app",
@@ -80,8 +76,7 @@ def production_children() -> tuple[ChildSpec, ...]:
         ChildSpec(
             name="worker",
             command=(
-                *uv,
-                "python",
+                production_python,
                 "-m",
                 "workers.job_worker",
             ),
