@@ -148,6 +148,10 @@ def _support_existing_envelope(
                 {
                     "action": "SUPPORT_EXISTING",
                     "existing_fact_id": str(fact_id),
+                    "category": None,
+                    "fact_key": None,
+                    "value": None,
+                    "display_statement": None,
                     "supporting_assertions": [assertion.model_dump(mode="json") for assertion in assertions],
                 }
             ],
@@ -170,6 +174,7 @@ def _add_new_envelope(
             "candidates": [
                 {
                     "action": "ADD_NEW",
+                    "existing_fact_id": None,
                     "category": category,
                     "fact_key": fact_key,
                     "value": value,
