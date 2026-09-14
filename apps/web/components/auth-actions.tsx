@@ -29,7 +29,7 @@ export function AuthActions() {
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Link href="/student">
+      <Link href="/student/daily">
         <Button size="lg">Open learning space</Button>
       </Link>
       <button
