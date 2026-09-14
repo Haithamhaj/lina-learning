@@ -84,8 +84,12 @@ candidate with a failed visual_review and its unresolved issues. This is a failu
 report, not acceptance: the application rejects that candidate. Never omit the
 required plan fields to express failure. Technical success alone is not visual acceptance.
 
-Keep text at least 12 actual screen pixels at both desktop widths. SVG viewBox scaling
-scales fonts and hit targets too: declared font-size is not final screen size.
+Target text at 14 actual screen pixels or larger at both supported desktop workspace
+widths. Treat 12px as an absolute acceptance floor, not a design target. When SVG
+viewBox or responsive scaling is used, calculate the resulting screen size and preserve
+enough margin so labels do not approach the 12px rejection threshold. Prefer larger
+readable labels for child-facing educational content. SVG viewBox scaling scales fonts
+and hit targets too: declared font-size is not final screen size.
 Compute the screen scale from BOTH available width and height before sizing labels
 and targets; changing plot proportions during repair requires recalculating them.
 When equal geometric units carry meaning, use one pixels-per-unit scale for both
