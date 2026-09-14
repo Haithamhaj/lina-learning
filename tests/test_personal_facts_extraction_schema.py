@@ -10,6 +10,7 @@ import pytest
 from services.personal_facts.extraction import (
     PERSONAL_FACTS_SCHEMA_VERSION,
     PersonalFactsExtractionEnvelope,
+    extraction_request,
     validate_extraction_output,
 )
 
@@ -44,6 +45,26 @@ def test_provider_schema_uses_one_strict_complete_candidate_object() -> None:
     assert schema["type"] == "object"
     assert "oneOf" not in candidate
     _assert_strict_objects_are_complete(schema)
+
+
+def test_extraction_prompt_requires_canonical_fact_keys() -> None:
+    request = extraction_request(
+        [],
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4()),
+    )
+    instructions = str(request["instructions"])
+
+    assert "fact_key must always be lowercase ASCII" in instructions
+    assert "PREFERENCE -> preference:" in instructions
+    assert "FAVORITE -> favorite:" in instructions
+    assert "ACTIVITY -> activity:" in instructions
+    assert "PET -> pet:" in instructions
+    assert "RELATIONSHIP -> relationship:" in instructions
+    assert "SAFE_PERSONAL_CONTEXT -> context:" in instructions
+    assert "I like drawing" in instructions
+    assert "fact_key=preference:drawing" in instructions
+    assert "I have a cat named Mishmish" in instructions
+    assert "fact_key=pet:cat" in instructions
 
 
 @pytest.mark.parametrize(
