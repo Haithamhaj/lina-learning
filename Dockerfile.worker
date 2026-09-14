@@ -1,0 +1,24 @@
+# Container image for Lina Worker (Cloud Run Worker Pool)
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies for OCR / Docling / PyTorch
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python requirements (including CPU PyTorch for Docling)
+COPY apps/api/requirements.txt /app/apps/api/requirements.txt
+COPY apps/api/production-constraints.txt /app/apps/api/production-constraints.txt
+RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu -r apps/api/requirements.txt -c apps/api/production-constraints.txt
+
+# Copy application code
+COPY . /app
+
+ENV PYTHONUNBUFFERED=1
+
+CMD ["python", "-m", "workers.job_worker"]

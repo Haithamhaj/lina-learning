@@ -1,0 +1,50 @@
+from __future__ import annotations
+
+import sys
+
+from scripts.production_supervisor import ChildSpec, ProcessSupervisor, production_children
+
+
+def test_production_topology_has_only_public_next_and_private_api() -> None:
+    children = {child.name: child for child in production_children()}
+
+    assert children["next"].command == (
+        "node",
+        "apps/web/.next/standalone/apps/web/server.js",
+    )
+    assert children["api"].command[children["api"].command.index("--host") + 1] == "127.0.0.1"
+    assert children["api"].command[children["api"].command.index("--port") + 1] == "8000"
+    assert "--reload" not in children["api"].command
+    assert "--reload" not in children["worker"].command
+
+
+def test_production_topology_disables_worker_when_configured(monkeypatch) -> None:
+    monkeypatch.setenv("LINA_ENABLE_WORKER", "false")
+    children = {child.name: child for child in production_children()}
+
+    assert set(children) == {"next", "api"}
+    assert "worker" not in children
+
+
+
+def test_standalone_next_receives_the_existing_clerk_public_key(monkeypatch) -> None:
+    monkeypatch.setenv("CLERK_PUBLISHABLE_KEY", "pk_test_lina")
+
+    children = {child.name: child for child in production_children()}
+
+    assert children["next"].environment == {
+        "HOSTNAME": "0.0.0.0",
+        "PORT": "5000",
+        "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_lina",
+    }
+
+
+def test_supervisor_exits_and_terminates_peers_when_a_required_process_exits() -> None:
+    immediate_exit = ChildSpec("broken", (sys.executable, "-c", "raise SystemExit(23)"))
+    long_lived = ChildSpec("peer", (sys.executable, "-c", "import time; time.sleep(30)"))
+    supervisor = ProcessSupervisor(
+        children=(immediate_exit, long_lived),
+        shutdown_grace_seconds=1,
+    )
+
+    assert supervisor.run() == 23

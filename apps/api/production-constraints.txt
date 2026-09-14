@@ -1,0 +1,3 @@
+# Reserved VMs / Cloud Run have no GPU. Keep Docling's PyTorch dependency on CPU wheels.
+torch==2.5.1
+torchvision==0.20.1
