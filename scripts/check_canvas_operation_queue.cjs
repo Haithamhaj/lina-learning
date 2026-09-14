@@ -13,6 +13,10 @@ const {chromium} = require('playwright');
     for(const reject of [false,true]){
       await page.goto(`http://127.0.0.1:${server.address().port}/${reject?'?reject':''}`);
       const button=page.frameLocator('iframe').getByRole('button');await button.waitFor();
+      assert.equal(await page.locator('[data-build-loads]').innerText(),'1');
+      const frame=page.locator('iframe');
+      assert.equal(await frame.getAttribute('sandbox'),'allow-scripts');
+      assert.equal(await frame.getAttribute('referrerpolicy'),'no-referrer');
       // Actual rapid browser actions, while the host waits on the first save.
       await button.click();await button.click();await button.click();
       if(reject){await page.getByRole('alert').waitFor();await page.waitForTimeout(250);assert.equal(await page.locator('[data-calls]').innerText(),'1');assert.equal(await page.locator('[data-saved]').innerText(),'0');}

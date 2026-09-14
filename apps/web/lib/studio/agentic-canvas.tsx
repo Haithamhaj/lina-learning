@@ -1,6 +1,7 @@
 "use client";
 
 import { CUSTOM_CHANNEL, customSandboxDocument, customVisualViewportHeight } from "./custom-visual-sandbox";
+import type { StudioCustomVisualBuild } from "./controller";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
@@ -25,6 +26,7 @@ type Props = {
   onOperation: (operation: StudioOperation) => Promise<void>;
   onReload: () => void;
   loadGeneratedAsset?: (assetId: string) => Promise<Blob>;
+  loadCustomVisualBuild?: (sceneId: string, buildId: string) => Promise<StudioCustomVisualBuild>;
 };
 
 const actionClass = "rounded-xl border border-[#b7d0c9] bg-[#f0f7f4] px-3 py-2 text-sm font-semibold text-[#234d46] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700";
@@ -258,7 +260,7 @@ function GeneratedImage({ block, loadGeneratedAsset }: { block: Extract<AgenticC
 }
 
 
-function CustomVisualSandbox(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "CUSTOM_VISUAL" }> }) {
+function CustomVisualSandbox(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation" | "loadCustomVisualBuild"> & { block: Extract<AgenticCanvasBlock, { type: "CUSTOM_VISUAL" }> }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const container = useRef<HTMLElement>(null);
   const [frameHeight, setFrameHeight] = useState(384);
@@ -275,8 +277,20 @@ function CustomVisualSandbox(props: Pick<Props, "sceneId" | "sceneVersion" | "on
   const eventCount = useRef(0);
   const eventWindow = useRef(0);
   const initialState = useRef(Object.fromEntries(props.block.elements.map(item => [item.id, item.current_value])));
-  const [pkg, setPkg] = useState<any>(null);
-  useEffect(() => { let active = true; void fetch(`/api/v1/student/studio/scenes/${props.sceneId}/custom-visual-builds/${props.block.custom_visual_build_id}`).then((r) => r.ok ? r.json() : Promise.reject()).then((value) => { if (active) setPkg(value); }).catch(() => { if (active) setStatus("failed"); }); return () => { active = false; }; }, [props.sceneId, props.block.custom_visual_build_id]);
+  const [pkg, setPkg] = useState<StudioCustomVisualBuild | null>(null);
+  useEffect(() => {
+    let active = true;
+    setPkg(null);
+    setStatus("loading");
+    if (!props.loadCustomVisualBuild) {
+      setStatus("failed");
+      return () => { active = false; };
+    }
+    void props.loadCustomVisualBuild(props.sceneId, props.block.custom_visual_build_id)
+      .then((value) => { if (active) setPkg(value); })
+      .catch(() => { if (active) setStatus("failed"); });
+    return () => { active = false; };
+  }, [props.sceneId, props.block.custom_visual_build_id, props.loadCustomVisualBuild]);
   useEffect(() => {
     const timeout = window.setTimeout(() => setStatus((current) => current === "loading" ? "failed" : current), 4500);
     const receive = (event: MessageEvent<unknown>) => {
@@ -306,7 +320,7 @@ function CustomVisualSandbox(props: Pick<Props, "sceneId" | "sceneVersion" | "on
   </section>;
 }
 
-function DeclarativeBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation" | "loadGeneratedAsset"> & { block: AgenticCanvasBlock }) {
+function DeclarativeBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation" | "loadGeneratedAsset" | "loadCustomVisualBuild"> & { block: AgenticCanvasBlock }) {
   if (props.block.type === "SCENE_2D") return <Scene2DBlock {...props} block={props.block}/>;
   if (props.block.type === "MATH_BOARD") return <MathBoardBlock {...props} block={props.block}/>;
   if (props.block.type === "MATH_INPUT") return <MathInputBlock {...props} block={props.block}/>;

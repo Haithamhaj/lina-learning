@@ -24,6 +24,17 @@ export type StudioOperationResult = {
 
 export type StudioCompositionStatus = "IDLE" | "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "SUPERSEDED";
 
+export type StudioCustomVisualBuild = {
+  source: string;
+  manifest: {
+    interactions: Array<{
+      action: string;
+      semantic_id: string;
+      value_required: boolean;
+    }>;
+  };
+};
+
 type ControllerOptions = {
   apiBaseUrl: string;
   getToken: () => Promise<string | null>;
@@ -36,6 +47,7 @@ export type StudioController = {
   open: (learningSessionId: string) => Promise<RuntimeOpen>;
   snapshot: (runtimeId: string) => Promise<StudioSnapshotFrame>;
   compositionStatus: (runtimeId: string) => Promise<StudioCompositionStatus>;
+  customVisualBuild: (sceneId: string, buildId: string) => Promise<StudioCustomVisualBuild>;
   submit: (runtimeId: string, operation: StudioOperation) => Promise<StudioOperationResult>;
   connect: (runtimeId: string) => { close: () => void; done: Promise<void> };
   latestSequence: () => number;
@@ -103,6 +115,11 @@ export function createStudioController(options: ControllerOptions): StudioContro
       const payload = await response.json() as { status?: unknown };
       if (!isCompositionStatus(payload.status)) throw new StudioProtocolParseError("Invalid Studio composition status.");
       return payload.status;
+    },
+
+    async customVisualBuild(sceneId, buildId) {
+      const response = await request(`/v1/student/studio/scenes/${encodeURIComponent(sceneId)}/custom-visual-builds/${encodeURIComponent(buildId)}`);
+      return response.json() as Promise<StudioCustomVisualBuild>;
     },
 
     async submit(runtimeId, operation) {

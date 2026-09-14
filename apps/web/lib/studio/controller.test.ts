@@ -19,6 +19,36 @@ test("controller sends bearer token in headers and never appends it to URLs", as
   assert.equal((calls[0]?.init?.headers as Headers).get("Authorization"), "Bearer secret-token");
 });
 
+test("controller retrieves a Custom Visual build through the authenticated Studio boundary", async () => {
+  const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
+  const controller = createStudioController({
+    apiBaseUrl: "https://api.example.test/",
+    getToken: async () => "student-token",
+    fetch: async (url, init) => {
+      calls.push({ url: String(url), init });
+      return new Response(JSON.stringify({ source: "window.mount=() => {}", manifest: { interactions: [] } }), { status: 200 });
+    },
+  });
+
+  const build = await controller.customVisualBuild("scene/id", "build id");
+
+  assert.deepEqual(build, { source: "window.mount=() => {}", manifest: { interactions: [] } });
+  assert.equal(calls[0]?.url, "https://api.example.test/v1/student/studio/scenes/scene%2Fid/custom-visual-builds/build%20id");
+  assert.equal((calls[0]?.init?.headers as Headers).get("Authorization"), "Bearer student-token");
+});
+
+test("controller fails closed when a Custom Visual build is unauthorized or unavailable", async () => {
+  for (const status of [401, 403, 500]) {
+    const controller = createStudioController({
+      apiBaseUrl: "https://api.example.test",
+      getToken: async () => "student-token",
+      fetch: async () => new Response(null, { status }),
+    });
+
+    await assert.rejects(() => controller.customVisualBuild("scene-1", "build-1"), new RegExp(`\\(${status}\\)`));
+  }
+});
+
 test("a direct authoritative Snapshot advances the existing feed resume cursor", async () => {
   const calls: string[] = [];
   const controller = createStudioController({

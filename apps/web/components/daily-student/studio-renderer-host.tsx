@@ -17,6 +17,7 @@ import { readSentenceOrderingState } from "@/lib/studio/sentence-ordering";
 import { ProcessProductionWorkspace } from "@/components/studio/process-production-workspace";
 import { CanvasMathInputWorkspace, CanvasMathVisualizationWorkspace, CanvasSpatialWorkspace } from "@/components/studio/canvas-production-workspaces";
 import { AgenticCanvasWorkspace } from "@/lib/studio/agentic-canvas";
+import type { StudioCustomVisualBuild } from "@/lib/studio/controller";
 
 type Props = {
   snapshot: StudioSnapshotFrame;
@@ -24,6 +25,7 @@ type Props = {
   onOperation: (operation: StudioOperation) => Promise<void>;
   onReload: () => void;
   loadGeneratedAsset?: (assetId: string) => Promise<Blob>;
+  loadCustomVisualBuild?: (sceneId: string, buildId: string) => Promise<StudioCustomVisualBuild>;
 };
 
 function WorkspaceError({ onReload }: Pick<Props, "onReload">) {
@@ -37,7 +39,7 @@ function WorkspaceError({ onReload }: Pick<Props, "onReload">) {
 }
 
 /** Renders only an active, exact accepted Scene; absent Scene means no Workspace. */
-export function StudioRendererHost({ snapshot, operationPending, onOperation, onReload, loadGeneratedAsset }: Props) {
+export function StudioRendererHost({ snapshot, operationPending, onOperation, onReload, loadGeneratedAsset, loadCustomVisualBuild }: Props) {
   const scene = snapshot.active_scene_contract;
   if (scene === null) return null;
   const renderer = resolveApprovedStudioRenderer(scene);
@@ -62,7 +64,7 @@ export function StudioRendererHost({ snapshot, operationPending, onOperation, on
   if (renderer === "CANVAS_SPATIAL_MANIPULATION") return <CanvasSpatialWorkspace {...canvasProps}/>;
   if (renderer === "CANVAS_MATH_VISUALIZATION") return <CanvasMathVisualizationWorkspace {...canvasProps}/>;
   if (renderer === "CANVAS_MATH_INPUT") return <CanvasMathInputWorkspace {...canvasProps}/>;
-  if (renderer === "AGENTIC_CANVAS") return <AgenticCanvasWorkspace sceneId={scene.scene_id} sceneVersion={scene.scene_version} seed={state ?? {}} onOperation={onApprovedOperation} onReload={onReload} loadGeneratedAsset={loadGeneratedAsset} />;
+  if (renderer === "AGENTIC_CANVAS") return <AgenticCanvasWorkspace sceneId={scene.scene_id} sceneVersion={scene.scene_version} seed={state ?? {}} onOperation={onApprovedOperation} onReload={onReload} loadGeneratedAsset={loadGeneratedAsset} loadCustomVisualBuild={loadCustomVisualBuild} />;
 
   if (renderer === "MATH_DECIMAL_PLACE_VALUE") {
     return <DecimalPlaceValueWorkspace sceneId={scene.scene_id} sceneVersion={scene.scene_version} state={readPlaceValueSnapshot(snapshot)} locale={scene.locale} onOperation={onApprovedOperation} onReload={onReload} />;
