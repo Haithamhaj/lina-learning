@@ -5,12 +5,14 @@ from __future__ import annotations
 import logging
 import os
 import signal
+import socket
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import dataclass, field
 from types import FrameType
-from typing import Callable, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 
 _LOG = logging.getLogger("lina.production")
@@ -25,18 +27,25 @@ class ChildSpec:
 
 def production_children() -> tuple[ChildSpec, ...]:
     python = os.environ.get("LINA_PRODUCTION_PYTHON", ".venv-production/bin/python")
-    next_environment = {"HOSTNAME": "0.0.0.0", "PORT": "5000"}
+    port = os.environ.get("PORT", "5000")
+    next_environment = {"HOSTNAME": "0.0.0.0", "PORT": port}
     if clerk_publishable_key := os.environ.get("CLERK_PUBLISHABLE_KEY"):
         next_environment["NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"] = clerk_publishable_key
-    return (
+
+    children: list[ChildSpec] = [
+        ChildSpec("api", (python, "-u", "-m", "uvicorn", "apps.api.main:app", "--host", "127.0.0.1", "--port", "8000")),
         ChildSpec(
             "next",
             ("node", "apps/web/.next/standalone/apps/web/server.js"),
             next_environment,
         ),
-        ChildSpec("api", (python, "-m", "uvicorn", "apps.api.main:app", "--host", "127.0.0.1", "--port", "8000")),
-        ChildSpec("worker", (python, "-m", "workers.job_worker")),
-    )
+    ]
+
+    enable_worker = os.environ.get("LINA_ENABLE_WORKER", "true").lower() not in {"false", "0", "no", "off"}
+    if enable_worker:
+        children.append(ChildSpec("worker", (python, "-m", "workers.job_worker")))
+
+    return tuple(children)
 
 
 @dataclass
@@ -62,12 +71,42 @@ class ProcessSupervisor:
         previous = self._install_signal_handlers()
         try:
             for child in self.children:
+                if child.name == "next" and any(c.name == "api" for c in self.children):
+                    _LOG.info("Waiting for FastAPI (127.0.0.1:8000) before starting Next.js...")
+                    deadline = time.monotonic() + 60.0
+                    api_ready = False
+                    while time.monotonic() < deadline and not self._shutdown_requested:
+                        try:
+                            with socket.create_connection(("127.0.0.1", 8000), timeout=0.5):
+                                api_ready = True
+                                break
+                        except (OSError, ConnectionRefusedError):
+                            time.sleep(0.3)
+                    if api_ready:
+                        _LOG.info("FastAPI is ready and listening on 127.0.0.1:8000!")
+                    else:
+                        _LOG.warning("FastAPI startup timeout reached; proceeding with Next.js...")
+
                 _LOG.info("Starting %s: %s", child.name, " ".join(child.command))
                 environment = os.environ.copy()
                 environment.update(child.environment)
-                self._processes.append(
-                    self.popen(list(child.command), env=environment, start_new_session=True)
+                environment["PYTHONPATH"] = os.getcwd()
+                environment["PYTHONUNBUFFERED"] = "1"
+                process = self.popen(
+                    list(child.command),
+                    env=environment,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    start_new_session=True,
                 )
+                self._processes.append(process)
+                if process.stdout is not None:
+                    thread = threading.Thread(
+                        target=self._stream_logs,
+                        args=(child.name, process.stdout),
+                        daemon=True,
+                    )
+                    thread.start()
             while not self._shutdown_requested:
                 for child, process in zip(self.children, self._processes, strict=True):
                     if (code := process.poll()) is not None:
@@ -81,6 +120,18 @@ class ProcessSupervisor:
         finally:
             self._shutdown()
             self._restore_signal_handlers(previous)
+
+    @staticmethod
+    def _stream_logs(name: str, stream: Any) -> None:
+        try:
+            for line in iter(stream.readline, b""):
+                text = line.decode("utf-8", errors="replace").rstrip()
+                if text:
+                    _LOG.info("[%s] %s", name, text)
+        except Exception:
+            pass
+        finally:
+            stream.close()
 
     def request_shutdown(self, _signum: int, _frame: FrameType | None) -> None:
         self._shutdown_requested = True

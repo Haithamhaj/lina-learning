@@ -4,7 +4,6 @@ from services.platform.config import Settings, get_settings
 
 from .local import LocalObjectStorage
 from .models import ObjectStorage, StorageProviderUnavailable
-from .replit import ReplitObjectStorage
 from .s3 import S3ObjectStorage
 
 
@@ -44,14 +43,6 @@ def create_object_storage(settings: Settings | None = None) -> ObjectStorage:
                 else None
             ),
             multipart_threshold=settings.s3_multipart_threshold_bytes,
-        )
-    if settings.storage_provider == "replit":
-        return ReplitObjectStorage(
-            signing_secret=(
-                settings.session_secret.get_secret_value()
-                if settings.session_secret
-                else None
-            ),
         )
     raise StorageProviderUnavailable(
         f"Unsupported storage provider: {settings.storage_provider}"

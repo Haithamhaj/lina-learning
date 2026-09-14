@@ -8,7 +8,6 @@ from scripts.production_supervisor import ChildSpec, ProcessSupervisor, producti
 def test_production_topology_has_only_public_next_and_private_api() -> None:
     children = {child.name: child for child in production_children()}
 
-    assert set(children) == {"next", "api", "worker"}
     assert children["next"].command == (
         "node",
         "apps/web/.next/standalone/apps/web/server.js",
@@ -17,6 +16,15 @@ def test_production_topology_has_only_public_next_and_private_api() -> None:
     assert children["api"].command[children["api"].command.index("--port") + 1] == "8000"
     assert "--reload" not in children["api"].command
     assert "--reload" not in children["worker"].command
+
+
+def test_production_topology_disables_worker_when_configured(monkeypatch) -> None:
+    monkeypatch.setenv("LINA_ENABLE_WORKER", "false")
+    children = {child.name: child for child in production_children()}
+
+    assert set(children) == {"next", "api"}
+    assert "worker" not in children
+
 
 
 def test_standalone_next_receives_the_existing_clerk_public_key(monkeypatch) -> None:
