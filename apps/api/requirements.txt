@@ -10,5 +10,5 @@ PyJWT[crypto]==2.10.1
 pydantic-settings==2.14.0
 python-multipart==0.0.20
 sqlalchemy==2.0.36
-sympy==1.14.0
+sympy==1.13.1
 uvicorn[standard]==0.34.0

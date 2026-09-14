@@ -58,6 +58,10 @@ gcloud run deploy lina-app \
 If decoupled background processing is activated, deploy the standalone worker pool.
 
 ### Step A: Build worker container image
+The composing Worker image requires Node 20, the lockfile-pinned Canvas preview
+runtime (`playwright`, `sucrase`, and `typescript`), and the Chrome channel
+installed by that Playwright version.
+
 ```bash
 gcloud builds submit . \
   --config cloudbuild-worker.yaml \
