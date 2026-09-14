@@ -14,6 +14,7 @@ ENV CLERK_PUBLISHABLE_KEY=$CLERK_PUBLISHABLE_KEY
 
 # Build Next.js web application
 RUN npm --prefix apps/web run build
+RUN test -f /app/apps/web/.next/standalone/apps/web/server.js
 
 # Final runtime image with Python 3.11 + Node 20
 FROM python:3.11-slim
