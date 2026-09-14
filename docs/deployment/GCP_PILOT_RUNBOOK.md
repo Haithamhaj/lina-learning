@@ -43,11 +43,22 @@ gcloud run deploy lina-app \
   --cpu 1 \
   --memory 2Gi \
   --add-cloudsql-instances="$PROJECT_ID:$REGION:$DB_INSTANCE_NAME" \
+  --set-env-vars APP_ENV=production \
+  --set-env-vars STORAGE_PROVIDER=s3 \
+  --set-env-vars S3_BUCKET=lina-storage-project-lina-2016 \
+  --set-env-vars S3_REGION=auto \
+  --set-env-vars S3_ENDPOINT=https://storage.googleapis.com \
+  --set-env-vars AWS_REQUEST_CHECKSUM_CALCULATION=when_required \
+  --set-env-vars AWS_RESPONSE_CHECKSUM_VALIDATION=when_required \
+  --set-env-vars MODEL_PROVIDER=openai \
+  --set-env-vars MODEL_NAME=gpt-5.6-luna \
   --set-secrets DATABASE_URL=lina-database-url:latest \
   --set-secrets SESSION_SECRET=lina-session-secret:latest \
   --set-secrets CLERK_PUBLISHABLE_KEY=lina-clerk-publishable-key:latest \
   --set-secrets CLERK_SECRET_KEY=lina-clerk-secret-key:latest \
   --set-secrets MODEL_API_KEY=lina-model-api-key:latest \
+  --set-secrets S3_ACCESS_KEY_ID=lina-s3-access-key-id:latest \
+  --set-secrets S3_SECRET_ACCESS_KEY=lina-s3-secret-access-key:latest \
   --project="$PROJECT_ID"
 ```
 
@@ -55,7 +66,9 @@ gcloud run deploy lina-app \
 
 ## 3. Deploying `lina-worker`
 
-If decoupled background processing is activated, deploy the standalone worker pool.
+If decoupled background processing is activated, deploy the standalone Worker Pool.
+
+> **NOTE**: `lina-worker` is a Cloud Run **Worker Pool** (`gcloud beta run worker-pools`), not a standard HTTP Service.
 
 ### Step A: Build worker container image
 The composing Worker image requires Node 20, the lockfile-pinned Canvas preview
@@ -71,18 +84,29 @@ gcloud builds submit . \
 
 ### Step B: Deploy worker pool
 ```bash
-gcloud run deploy lina-worker \
+gcloud beta run worker-pools update lina-worker \
   --image "$REGION-docker.pkg.dev/$PROJECT_ID/lina/lina-worker:latest" \
   --region "$REGION" \
-  --ingress internal \
   --min-instances 0 \
   --max-instances 1 \
   --cpu 1 \
   --memory 2Gi \
   --add-cloudsql-instances="$PROJECT_ID:$REGION:$DB_INSTANCE_NAME" \
-  --set-secrets DATABASE_URL=lina-database-url:latest \
-  --set-secrets SESSION_SECRET=lina-session-secret:latest \
-  --set-secrets MODEL_API_KEY=lina-model-api-key:latest \
+  --update-env-vars APP_ENV=production \
+  --update-env-vars STORAGE_PROVIDER=s3 \
+  --update-env-vars S3_BUCKET=lina-storage-project-lina-2016 \
+  --update-env-vars S3_REGION=auto \
+  --update-env-vars S3_ENDPOINT=https://storage.googleapis.com \
+  --update-env-vars AWS_REQUEST_CHECKSUM_CALCULATION=when_required \
+  --update-env-vars AWS_RESPONSE_CHECKSUM_VALIDATION=when_required \
+  --update-env-vars MODEL_PROVIDER=openai \
+  --update-env-vars MODEL_NAME=gpt-5.6-luna \
+  --update-env-vars CANVAS_MODEL_NAME=gpt-5.6-terra \
+  --update-secrets DATABASE_URL=lina-database-url:latest \
+  --update-secrets SESSION_SECRET=lina-session-secret:latest \
+  --update-secrets MODEL_API_KEY=lina-model-api-key:latest \
+  --update-secrets S3_ACCESS_KEY_ID=lina-s3-access-key-id:latest \
+  --update-secrets S3_SECRET_ACCESS_KEY=lina-s3-secret-access-key:latest \
   --project="$PROJECT_ID"
 ```
 
@@ -313,7 +337,14 @@ gcloud run services update-traffic lina-app \
    ```bash
    gcloud storage buckets describe gs://lina-storage-project-lina-2016 --project="$PROJECT_ID" --format="yaml(name,location,uniformBucketLevelAccess)"
    ```
-2. Test upload/download permissions using a temporary test file:
+2. Verify HMAC keys for S3-interoperability:
+   ```bash
+   gcloud storage hmac list --project="$PROJECT_ID" --service-account="lina-storage-runtime@$PROJECT_ID.iam.gserviceaccount.com"
+   ```
+3. Test S3-compatible interoperability access:
+   - Ensure `S3_REGION=auto` and `S3_ENDPOINT=https://storage.googleapis.com`.
+   - Ensure `AWS_REQUEST_CHECKSUM_CALCULATION=when_required` and `AWS_RESPONSE_CHECKSUM_VALIDATION=when_required` are set to suppress botocore default `x-amz-sdk-checksum-algorithm: CRC32` headers (which cause `SignatureDoesNotMatch` with GCS XML API).
+4. Direct GCS upload/download permissions check:
    ```bash
    echo "storage verification $(date)" > /tmp/pilot-test.txt
    gcloud storage cp /tmp/pilot-test.txt gs://lina-storage-project-lina-2016/diagnostics/test.txt --project="$PROJECT_ID"
@@ -348,7 +379,7 @@ When pausing the pilot for extended periods (e.g., between testing rounds), ceas
 Ensure min-instances is 0 (it will automatically stop charging compute when no HTTP requests arrive):
 ```bash
 gcloud run services update lina-app --min-instances 0 --region "$REGION" --project="$PROJECT_ID"
-gcloud run services update lina-worker --min-instances 0 --max-instances 0 --region "$REGION" --project="$PROJECT_ID" 2>/dev/null || true
+gcloud beta run worker-pools update lina-worker --min-instances 0 --max-instances 0 --region "$REGION" --project="$PROJECT_ID" 2>/dev/null || true
 ```
 
 ### Step 2: Pause Cloud SQL Instance (Stops DB Compute Charges)

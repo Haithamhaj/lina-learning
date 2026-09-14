@@ -91,8 +91,12 @@
 - **Provider**: Google Cloud Storage (GCS) accessed via S3-compatible interoperability API.
 - **Bucket**: `gs://lina-storage-project-lina-2016` (Region: `europe-west1`).
 - **Adapter**: `S3ObjectStorage` via `services/platform/storage/s3.py`.
+- **Signing Region**: `auto` (required for GCS S3 interoperability; physical bucket region `europe-west1` must NOT be used as the signing region).
+- **Endpoint**: `https://storage.googleapis.com`.
+- **HMAC Credentials**: Service account `lina-storage-runtime@project-lina-2016.iam.gserviceaccount.com`. Access key ID stored in `lina-s3-access-key-id:latest` (Secret Manager version 2; version 1 contained invalid `null` literal and has been superseded).
 - **Private Access Behavior**: Uniform bucket-level access is enabled; public read is disabled; soft delete policy retention is 7 days. Objects are signed with presigned URLs for client viewing.
-- **Validation Status**: Bucket provisioned and credentials configured; live end-to-end asset upload validation is **NOT YET VERIFIED**.
+- **botocore Checksum Compatibility**: boto3 ≥ 1.35 automatically adds `x-amz-sdk-checksum-algorithm: CRC32` to all PutObject requests by default. GCS XML API does not support the AWS Flexible Checksum extension and returns `SignatureDoesNotMatch` when this header is present. Both runtimes are configured with `AWS_REQUEST_CHECKSUM_CALCULATION=when_required` and `AWS_RESPONSE_CHECKSUM_VALIDATION=when_required` to suppress automatic checksums. Application code (`s3.py`) is unchanged.
+- **Validation Status**: Cross-runtime storage proof **VERIFIED** on 2026-09-15. Worker PUT → GCS existence → App GET → checksum + metadata round-trip all passed. GCS bucket was empty before this fix; all prior builds were written to ephemeral worker local filesystem and are not recoverable from GCS.
 
 ## Authentication
 - **Provider**: Clerk Auth (`https://clerk.com`).
