@@ -31,6 +31,19 @@ def test_tutor_output_ceiling_reads_a_positive_environment_override(
     assert settings.tutor_max_output_tokens == 2400
 
 
+def test_canvas_model_name_is_optional_and_does_not_replace_general_model_routing() -> None:
+    fallback = Settings(_env_file=None, model_name="gpt-5.6-luna")
+    dedicated = Settings(
+        _env_file=None,
+        model_name="gpt-5.6-luna",
+        canvas_model_name="gpt-5.6-terra",
+    )
+
+    assert fallback.canvas_model_name is None
+    assert dedicated.canvas_model_name == "gpt-5.6-terra"
+    assert dedicated.model_name == "gpt-5.6-luna"
+
+
 def test_tutor_context_capacity_reads_a_positive_server_override(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

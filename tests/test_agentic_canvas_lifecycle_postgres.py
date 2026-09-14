@@ -20,6 +20,7 @@ from services.studio.agent.admission import (
     admit_agentic_canvas_brief,
 )
 from services.studio.agentic_canvas import AgenticCanvasSceneV2
+from services.studio.agent.orchestrator import CustomVisualCandidateMissingError
 from workers.agentic_canvas_handlers import register_agentic_canvas_handlers
 from workers.agentic_canvas_handlers import _classify_agent_failure
 from workers.job_worker import JobHandlerRegistry, run_once
@@ -56,7 +57,13 @@ def factory() -> sessionmaker[Session]:
 class _Settings:
     model_api_key = SecretStr("test-agentic-key")
     model_name = "test-agentic-model"
+    canvas_model_name = None
     model_base_url = None
+
+
+class _TerraSettings(_Settings):
+    model_name = "gpt-5.6-luna"
+    canvas_model_name = "gpt-5.6-terra"
 
 
 def _brief(*, objective: str = "Compare two decimals on a number line.") -> dict[str, object]:
@@ -154,15 +161,143 @@ def _admitted_message(
     return student, learning, message
 
 
-def _registry(factory: sessionmaker[Session], compose):
+def _registry(factory: sessionmaker[Session], compose, *, settings_factory=_Settings):
     registry = JobHandlerRegistry()
     register_agentic_canvas_handlers(
         registry,
         session_factory=factory,
         compose=compose,
-        settings_factory=_Settings,
+        settings_factory=settings_factory,
     )
     return registry
+
+
+def test_dedicated_canvas_model_is_used_for_composition_and_successful_execution(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, learning, message = _admitted_message(session)
+        runtime = session.scalar(
+            select(m.StudioRuntime).where(m.StudioRuntime.learning_session_id == learning.id)
+        )
+        assert runtime is not None
+        session.add(
+            m.StudioSnapshot(
+                studio_runtime_id=runtime.id,
+                student_id=student.id,
+                snapshot_schema_version="studio-snapshot-v1",
+                latest_event_sequence=0,
+                state_payload={},
+            )
+        )
+        run = admit_agentic_canvas_brief(
+            session,
+            student_id=student.id,
+            learning_session_id=learning.id,
+            source_message_id=message.id,
+        )
+        assert run is not None
+        run_id = run.id
+
+    async def compose(**kwargs):
+        from services.studio.agent.orchestrator import AgenticCanvasCompositionResult
+
+        assert kwargs["model"] == "gpt-5.6-terra"
+        return AgenticCanvasCompositionResult(
+            scene=_scene(),
+            selected_tools=(),
+            tool_call_count=0,
+            sdk_trace_id=kwargs["sdk_trace_id"],
+            model="gpt-5.6-terra",
+            usage={
+                "requests": 1,
+                "input_tokens": 10,
+                "cached_input_tokens": 0,
+                "output_tokens": 2,
+                "total_tokens": 12,
+            },
+        )
+
+    assert run_once(
+        factory,
+        _registry(factory, compose, settings_factory=_TerraSettings),
+        worker_id="agentic-terra-success",
+    ) == m.JobStatus.COMPLETED
+    with factory() as session:
+        completed = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert completed is not None and completed.status == "COMPLETED"
+        assert completed.agent_execution_metadata["model"] == "gpt-5.6-terra"
+        execution = session.get(m.AIExecution, completed.ai_execution_id)
+        assert execution is not None
+        assert execution.model == "gpt-5.6-terra"
+        assert execution.estimated_cost_usd is None
+
+
+def test_dedicated_canvas_model_is_recorded_for_failed_composition(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, learning, message = _admitted_message(session)
+        run = admit_agentic_canvas_brief(
+            session,
+            student_id=student.id,
+            learning_session_id=learning.id,
+            source_message_id=message.id,
+        )
+        assert run is not None
+        run_id = run.id
+
+    async def compose(**kwargs):
+        assert kwargs["model"] == "gpt-5.6-terra"
+        raise CustomVisualCandidateMissingError(tool_failures=[], model_turns=[])
+
+    assert run_once(
+        factory,
+        _registry(factory, compose, settings_factory=_TerraSettings),
+        worker_id="agentic-terra-failure",
+    ) == m.JobStatus.FAILED
+    with factory() as session:
+        failed = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert failed is not None and failed.failure_metadata["model"] == "gpt-5.6-terra"
+        execution = session.scalar(select(m.AIExecution).where(m.AIExecution.operation_id == run_id))
+        assert execution is not None
+        assert execution.model == "gpt-5.6-terra"
+        assert not execution.success
+
+
+def test_dedicated_canvas_model_is_required_in_agent_trace_validation(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, learning, message = _admitted_message(session)
+        run = admit_agentic_canvas_brief(
+            session,
+            student_id=student.id,
+            learning_session_id=learning.id,
+            source_message_id=message.id,
+        )
+        assert run is not None
+        run_id = run.id
+
+    async def compose(**kwargs):
+        from services.studio.agent.orchestrator import AgenticCanvasCompositionResult
+
+        return AgenticCanvasCompositionResult(
+            scene=_scene(),
+            selected_tools=(),
+            tool_call_count=0,
+            sdk_trace_id=kwargs["sdk_trace_id"],
+            model="gpt-5.6-luna",
+        )
+
+    assert run_once(
+        factory,
+        _registry(factory, compose, settings_factory=_TerraSettings),
+        worker_id="agentic-terra-trace",
+    ) == m.JobStatus.FAILED
+    with factory() as session:
+        failed = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert failed is not None and failed.failure_metadata == {"code": "AGENT_TRACE_INVALID"}
 
 
 def test_agentic_admission_is_digest_checked_and_idempotent(factory: sessionmaker[Session]) -> None:
@@ -376,6 +511,7 @@ def test_worker_immediately_settles_completed_agentic_scene_through_existing_stu
         )
 
         assert kwargs["sdk_trace_id"].startswith("trace_")
+        assert kwargs["model"] == "test-agentic-model"
         return AgenticCanvasCompositionResult(
             scene=_scene(),
             selected_tools=("code_interpreter", "create_math_board"),

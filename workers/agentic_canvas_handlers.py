@@ -78,6 +78,7 @@ def register_agentic_canvas_handlers(
         if settings.model_api_key is None:
             _fail(session_factory, execution.run_id, "MODEL_API_KEY_MISSING")
             raise NonRetryableJobError("MODEL_API_KEY_MISSING")
+        resolved_canvas_model = settings.canvas_model_name or settings.model_name
         started = perf_counter()
         try:
             # Phase A committed before the remote Agent call. No Runtime/Run
@@ -86,21 +87,21 @@ def register_agentic_canvas_handlers(
                 brief=execution.brief,
                 visual_learner_context=execution.visual_learner_context,
                 api_key=settings.model_api_key.get_secret_value(),
-                model=settings.model_name,
+                model=resolved_canvas_model,
                 base_url=settings.model_base_url,
                 sdk_trace_id=execution.sdk_trace_id,
                 reusable_visuals=execution.reusable_visuals,
             ))
         except Exception as error:
             code, retryable = _classify_agent_failure(error)
-            metadata = {"code": code, "provider_attempt": execution.provider_attempt, "latency_ms": round((perf_counter()-started)*1000), "model": settings.model_name}
+            metadata = {"code": code, "provider_attempt": execution.provider_attempt, "latency_ms": round((perf_counter()-started)*1000), "model": resolved_canvas_model}
             if isinstance(error, CustomVisualCandidateMissingError):
                 metadata["custom_visual_tool_failures"] = list(error.tool_failures)
                 metadata["custom_visual_model_turns"] = list(error.model_turns)
             if isinstance(error, CanvasCompositionModelBehaviorError):
                 metadata["model_behavior_tool_failures"] = list(error.tool_failures)
                 metadata["model_behavior_model_turns"] = list(error.model_turns)
-            _record_failed_composition_execution(session_factory, execution, settings.model_name, error, code, metadata["latency_ms"])
+            _record_failed_composition_execution(session_factory, execution, resolved_canvas_model, error, code, metadata["latency_ms"])
             if retryable and execution.provider_attempt < execution.provider_max_attempts:
                 _record_retryable_failure(session_factory, execution.run_id, metadata)
                 raise
@@ -109,7 +110,7 @@ def register_agentic_canvas_handlers(
             _fail(session_factory, execution.run_id, code, metadata=metadata)
             raise NonRetryableJobError(code) from error
         if isinstance(composition, AgenticCanvasCompositionResult):
-            if composition.sdk_trace_id != execution.sdk_trace_id or composition.model != settings.model_name:
+            if composition.sdk_trace_id != execution.sdk_trace_id or composition.model != resolved_canvas_model:
                 _fail(session_factory, execution.run_id, "AGENT_TRACE_INVALID")
                 raise NonRetryableJobError("AGENT_TRACE_INVALID")
             scene = composition.scene
@@ -178,7 +179,7 @@ def register_agentic_canvas_handlers(
                 ai_execution = AIExecution(
                     task="canvas_agent_orchestration",
                     provider="openai-agents-sdk",
-                    model=settings.model_name,
+                    model=resolved_canvas_model,
                     input_tokens=(
                         max(aggregate_input_tokens - (cached_input_tokens or 0), 0)
                         if aggregate_input_tokens is not None
@@ -188,7 +189,7 @@ def register_agentic_canvas_handlers(
                     cache_write_tokens=None,
                     output_tokens=int(usage.get("output_tokens", 0)) if usage else None,
                     latency_ms=latency_ms,
-                    estimated_cost_usd=estimate_openai_cost(settings.model_name, aggregate_input_tokens, int(usage.get("output_tokens", 0)) if usage else None, cached_input_tokens=cached_input_tokens or 0, cache_write_tokens=0),
+                    estimated_cost_usd=estimate_openai_cost(resolved_canvas_model, aggregate_input_tokens, int(usage.get("output_tokens", 0)) if usage else None, cached_input_tokens=cached_input_tokens or 0, cache_write_tokens=0),
                     success=True,
                     failure_code=None,
                     operation_id=run.id,

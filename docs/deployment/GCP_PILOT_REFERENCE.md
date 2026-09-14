@@ -65,6 +65,7 @@
 - `ALLOWED_ORIGINS`: `["https://lina-app-176199404149.europe-west1.run.app","https://lina-app-7m3xek3xsa-ew.a.run.app"]`
 - `MODEL_PROVIDER`: `openai`
 - `MODEL_NAME`: `gpt-5.6-luna`
+- `CANVAS_MODEL_NAME`: `gpt-5.6-terra` (Agentic Canvas only; falls back to `MODEL_NAME` when unset)
 
 ### Secret Environment Variable References (Values in Secret Manager)
 - `DATABASE_URL`: Mounted from `lina-database-url:latest`

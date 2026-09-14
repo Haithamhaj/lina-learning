@@ -116,6 +116,7 @@ class Settings(BaseSettings):
     # Gateway task; mock is the safe foundation default.
     model_provider: ModelProvider = "mock"
     model_name: str = "mock"
+    canvas_model_name: str | None = None
     model_base_url: str | None = None
     model_api_key: SecretStr | None = None
     tutor_max_output_tokens: int = Field(default=2000, gt=0)
