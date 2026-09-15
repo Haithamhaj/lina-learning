@@ -27,7 +27,10 @@ from services.platform.db.models import (
     LearnerIntelligenceCard,
     LearnerPattern,
     LearningEvidence,
+    LearningEvent,
+    LearningMessage,
     LearningSession,
+    PatternEvidence,
     Student,
     User,
 )
@@ -133,6 +136,153 @@ def _card(session: Session, student: Student, *, question: str, focus: CurrentFo
         focus=focus,
         budget=budget or CardBudget(),
     )
+
+
+def _student_lineage_evidence(
+    session: Session,
+    *,
+    learning_session: LearningSession,
+    run: IntelligenceProcessingRun,
+    concept: str,
+    content: str,
+    role: str = "student",
+) -> LearningEvidence:
+    message = LearningMessage(
+        session_id=learning_session.id,
+        role=role,
+        content=content,
+        payload={},
+    )
+    session.add(message)
+    session.flush()
+    event = LearningEvent(
+        processing_run_id=run.id,
+        session_id=learning_session.id,
+        candidate_event_id=None,
+        candidate_event_ids=[],
+        source_message_ids=[str(message.id)],
+        subject="MATH",
+        concept_ref=concept,
+        event_type="learning_attempt",
+        description="Prior Student learning interaction.",
+        source_message_id=message.id,
+    )
+    session.add(event)
+    session.flush()
+    evidence = LearningEvidence(
+        event_id=event.id,
+        concept_ref=concept,
+        dimensions={},
+        relationship="supports",
+        source_ref="fixture",
+    )
+    session.add(evidence)
+    session.flush()
+    return evidence
+
+
+def test_card_matches_arabic_question_against_current_state_student_evidence_lineage(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, learning_session, run = _seed(session)
+        evidence = _student_lineage_evidence(
+            session,
+            learning_session=learning_session,
+            run=run,
+            concept="long division",
+            content="أنا أحتاج مساعدة في القسمة المطولة ٨٤ ÷ ٤",
+        )
+        state = _state(student, run, concept="long division", detail="Long division needs one careful check.")
+        state.evidence_refs = [str(evidence.id)]
+        session.add(state)
+        card = _card(session, student, question="ورّيني القسمة المطولة 84 ÷ 4")
+        assert session.query(LearningEvidence).count() == 1
+
+    assert [entry.source_id for entry in card.entries] == [state.id]
+    assert state.evidence_refs == [str(evidence.id)]
+    assert card.debug.selected_source_ids == (state.id,)
+
+
+def test_card_does_not_use_arabic_lineage_as_subject_wide_fallback(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, learning_session, run = _seed(session)
+        evidence = _student_lineage_evidence(
+            session,
+            learning_session=learning_session,
+            run=run,
+            concept="long division",
+            content="أنا أحتاج مساعدة في القسمة المطولة",
+        )
+        state = _state(student, run, concept="long division", detail="Long division needs one careful check.")
+        state.evidence_refs = [str(evidence.id)]
+        session.add(state)
+        card = _card(session, student, question="اشرح لي جمع الكسور")
+
+    assert card.entries == ()
+
+
+def test_card_uses_only_student_messages_from_evidence_lineage(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, learning_session, run = _seed(session)
+        evidence = _student_lineage_evidence(
+            session,
+            learning_session=learning_session,
+            run=run,
+            concept="long division",
+            content="أنا أحتاج مساعدة في القسمة المطولة",
+            role="tutor",
+        )
+        state = _state(student, run, concept="long division", detail="Long division needs one careful check.")
+        state.evidence_refs = [str(evidence.id)]
+        session.add(state)
+        card = _card(session, student, question="ورّيني القسمة المطولة")
+
+    assert card.entries == ()
+
+
+def test_card_keeps_existing_english_concept_matching(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, _, run = _seed(session)
+        state = _state(student, run, concept="long division", detail="Long division needs one careful check.")
+        session.add(state)
+        card = _card(session, student, question="84 ÷ 4 long division")
+
+    assert [entry.source_id for entry in card.entries] == [state.id]
+
+
+def test_card_matches_arabic_question_against_pattern_student_evidence_lineage(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, learning_session, run = _seed(session)
+        evidence = _student_lineage_evidence(
+            session,
+            learning_session=learning_session,
+            run=run,
+            concept="long division",
+            content="أنا أحتاج مساعدة في القسمة المطولة",
+        )
+        pattern = _pattern(
+            student,
+            run,
+            key="support_need:long-division",
+            detail="Long division support history.",
+            scope={"scope_type": "concept", "concept_ref": "long division"},
+        )
+        session.add(pattern)
+        session.flush()
+        session.add(PatternEvidence(pattern_id=pattern.id, evidence_id=evidence.id, relationship="supports"))
+        card = _card(session, student, question="ورّيني القسمة المطولة ٨٤ ÷ ٤")
+
+    assert [entry.source_id for entry in card.entries] == [pattern.id]
+    assert card.debug.selected_source_ids == (pattern.id,)
 
 
 def test_card_includes_relevant_active_state_and_excludes_resolved_or_expired_state(
