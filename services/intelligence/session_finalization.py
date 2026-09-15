@@ -14,6 +14,7 @@ from services.intelligence.consolidation import EVIDENCE_RUBRIC_VERSION
 from services.intelligence.current_state import apply_processing_run_current_state
 from services.intelligence.decisions import apply_processing_run_decision_views
 from services.intelligence.patterns import apply_processing_run_patterns
+from services.intelligence.projections import enqueue_projection_refresh
 from services.intelligence.segment_reviews import (
     SEGMENT_LEARNING_REVIEW_PROMPT_VERSION,
     SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION,
@@ -194,6 +195,12 @@ def finalize_closed_session(
             session,
             processing_run_id=run.id,
             now=locked_session.closed_at,
+        )
+        enqueue_projection_refresh(
+            session,
+            student_id=locked_session.student_id,
+            states=states,
+            patterns=patterns,
         )
         session.flush()
 

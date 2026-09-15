@@ -848,6 +848,60 @@ class LearningExchangeEmbedding(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
+class CurrentLearningStateProjection(Base):
+    """Disposable semantic retrieval vector for one authoritative State row."""
+
+    __tablename__ = "current_learning_state_projections"
+    __table_args__ = (
+        UniqueConstraint(
+            "current_learning_state_id", "representation_version", "embedding_provider", "embedding_model", "dimensions",
+            name="uq_current_state_projection_route",
+        ),
+        Index("ix_current_state_projection_route", "embedding_provider", "embedding_model", "dimensions"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    current_learning_state_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("current_learning_states.id", ondelete="CASCADE"), nullable=False
+    )
+    embedding: Mapped[list[float]] = mapped_column(Vector(1536), nullable=False)
+    embedding_provider: Mapped[str] = mapped_column(String(128), nullable=False)
+    embedding_model: Mapped[str] = mapped_column(String(128), nullable=False)
+    dimensions: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1536, server_default="1536")
+    representation_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    representation_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    ai_execution_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("ai_executions.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class LearnerPatternProjection(Base):
+    """Disposable semantic retrieval vector for one authoritative Pattern row."""
+
+    __tablename__ = "learner_pattern_projections"
+    __table_args__ = (
+        UniqueConstraint(
+            "learner_pattern_id", "representation_version", "embedding_provider", "embedding_model", "dimensions",
+            name="uq_learner_pattern_projection_route",
+        ),
+        Index("ix_learner_pattern_projection_route", "embedding_provider", "embedding_model", "dimensions"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    learner_pattern_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("learner_patterns.id", ondelete="CASCADE"), nullable=False
+    )
+    embedding: Mapped[list[float]] = mapped_column(Vector(1536), nullable=False)
+    embedding_provider: Mapped[str] = mapped_column(String(128), nullable=False)
+    embedding_model: Mapped[str] = mapped_column(String(128), nullable=False)
+    dimensions: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1536, server_default="1536")
+    representation_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    representation_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    ai_execution_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("ai_executions.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
 class CandidateEvent(Base):
     __tablename__ = "candidate_events"
     __table_args__ = (Index("ix_candidate_events_session", "session_id"),)

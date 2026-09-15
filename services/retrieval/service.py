@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
+from services.intelligence.projections import EmbeddingRouteIdentity
 from services.platform.db.models import (
     ContentDocument,
     ContentIndexRun,
@@ -41,16 +42,19 @@ class QueryEmbedding:
 
     state: QueryEmbeddingState
     vector: list[float] | None = None
+    route_identity: EmbeddingRouteIdentity | None = None
 
     @classmethod
     def not_supplied(cls) -> "QueryEmbedding":
         return cls(QueryEmbeddingState.NOT_SUPPLIED)
 
     @classmethod
-    def available(cls, vector: list[float]) -> "QueryEmbedding":
+    def available(
+        cls, vector: list[float], route_identity: EmbeddingRouteIdentity | None = None
+    ) -> "QueryEmbedding":
         if len(vector) != 1536 or not all(isinstance(value, (float, int)) for value in vector):
             raise ValueError("Query embedding must contain exactly 1536 numeric dimensions.")
-        return cls(QueryEmbeddingState.AVAILABLE, [float(value) for value in vector])
+        return cls(QueryEmbeddingState.AVAILABLE, [float(value) for value in vector], route_identity)
 
     @classmethod
     def unavailable(cls) -> "QueryEmbedding":

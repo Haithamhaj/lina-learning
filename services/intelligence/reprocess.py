@@ -278,6 +278,7 @@ def activate_reprocess_scope(
         PatternPolicy,
         rebuild_authoritative_patterns,
     )
+    from services.intelligence.projections import enqueue_projection_refresh
 
     reprocess_run = session.get(IntelligenceReprocessRun, reprocess_run_id, with_for_update=True)
     if reprocess_run is None:
@@ -366,6 +367,12 @@ def activate_reprocess_scope(
         student_id=reprocess_run.student_id,
         now=activated_at,
         policy=PatternPolicy(version=str(versions["pattern_policy_version"])),
+    )
+    enqueue_projection_refresh(
+        session,
+        student_id=reprocess_run.student_id,
+        states=states,
+        patterns=patterns,
     )
     first_item = items_by_session[selected_session_ids[0]]
     assert first_item.evidence_processing_run_id is not None

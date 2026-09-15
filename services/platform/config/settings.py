@@ -142,6 +142,9 @@ class Settings(BaseSettings):
     student_source_max_pdf_pages: int = Field(default=25, gt=0)
     embedding_model_name: str = "text-embedding-3-small"
     embedding_dimensions: int = Field(default=1536, ge=1)
+    # Disabled until offline calibration establishes a conservative threshold.
+    li_semantic_projection_enabled: bool = False
+    li_semantic_min_cosine_similarity: float | None = Field(default=None, ge=-1, le=1)
 
     # Session lifecycle is deliberately centralized so production calibration
     # does not leak timing decisions into Student routes or workers.

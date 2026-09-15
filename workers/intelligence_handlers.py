@@ -13,6 +13,11 @@ from services.intelligence.consolidation import consolidate_closed_session
 from services.intelligence.current_state import apply_processing_run_current_state
 from services.intelligence.decisions import apply_processing_run_decision_views
 from services.intelligence.patterns import apply_processing_run_patterns
+from services.intelligence.projections import (
+    LEARNING_INTELLIGENCE_PROJECTION_REFRESH_JOB,
+    enqueue_projection_refresh,
+    refresh_projection_batch,
+)
 from services.intelligence.reprocess import (
     INTELLIGENCE_REPROCESS_JOB,
     activate_reprocess_scope,
@@ -24,7 +29,7 @@ from services.intelligence.segment_reviews import (
     review_completed_segment,
 )
 from services.intelligence.session_finalization import finalize_closed_session
-from services.model_gateway.factory import create_session_evidence_gateway
+from services.model_gateway.factory import create_embedding_gateway, create_session_evidence_gateway
 from services.model_gateway.gateway import ModelGateway
 from services.platform.config import Settings
 from services.platform.db.models import (
@@ -88,6 +93,12 @@ def register_intelligence_handlers(
                 decision_views = apply_processing_run_decision_views(
                     session,
                     processing_run_id=outcome.processing_run.id,
+                )
+                enqueue_projection_refresh(
+                    session,
+                    student_id=learning_session.student_id,
+                    states=states,
+                    patterns=patterns,
                 )
             except Exception:
                 session.commit()
@@ -297,3 +308,14 @@ def register_intelligence_handlers(
         }
 
     registry.register(INTELLIGENCE_REPROCESS_JOB, handle_reprocess)
+
+    def handle_projection_refresh(job: Job) -> dict[str, object]:
+        payload = job.payload if isinstance(job.payload, dict) else {}
+        with session_factory.begin() as session:
+            return refresh_projection_batch(
+                session,
+                payload=payload,
+                gateway=create_embedding_gateway(session),
+            )
+
+    registry.register(LEARNING_INTELLIGENCE_PROJECTION_REFRESH_JOB, handle_projection_refresh)

@@ -19,14 +19,18 @@ from services.intelligence.current_state import CURRENT_STATE_POLICY_VERSION
 from services.intelligence.patterns import PATTERN_POLICY_VERSION
 from services.platform.db.models import (
     CurrentLearningState,
+    CurrentLearningStateProjection,
     LearnerPattern,
-    LearningEvidence,
-    LearningEvent,
-    LearningMessage,
-    LearningSession,
-    PatternEvidence,
+    LearnerPatternProjection,
 )
-from services.retrieval.service import CurrentFocus
+from services.retrieval.service import CurrentFocus, QueryEmbedding, QueryEmbeddingState
+from services.intelligence.projections import (
+    PATTERN_PROJECTION_REPRESENTATION_VERSION,
+    STATE_PROJECTION_REPRESENTATION_VERSION,
+    EmbeddingRouteIdentity,
+    pattern_source_representation,
+    state_source_representation,
+)
 
 
 INTELLIGENCE_CARD_SCHEMA_VERSION = "learner-intelligence-card-v1"
@@ -117,6 +121,9 @@ def build_learner_intelligence_card(
     focus: CurrentFocus | None = None,
     budget: CardBudget = CardBudget(),
     now: datetime | None = None,
+    query_embedding: QueryEmbedding = QueryEmbedding.not_supplied(),
+    semantic_enabled: bool = False,
+    semantic_min_cosine_similarity: float | None = None,
 ) -> LearnerIntelligenceCardProjection:
     """Rank then bound the current question's relevant State/Pattern guidance."""
 
@@ -128,26 +135,33 @@ def build_learner_intelligence_card(
         session, student_id=student_id, subject=subject, now=effective_now
     )
     patterns = _active_patterns(session, student_id=student_id, subject=subject)
-    lineage_texts = _student_lineage_texts(
-        session,
-        student_id=student_id,
-        states=states,
-        patterns=patterns,
-    )
     candidates = _state_candidates(
         states=states,
-        lineage_texts=lineage_texts,
         question_terms=question_terms,
         focus_terms=focus_terms,
     )
     candidates.extend(
         _pattern_candidates(
-            patterns=patterns,
-            lineage_texts=lineage_texts,
-            question_terms=question_terms,
+        patterns=patterns,
+        question_terms=question_terms,
             focus_terms=focus_terms,
         )
     )
+    if semantic_enabled and semantic_min_cosine_similarity is not None:
+        semantic_candidates = _semantic_candidates(
+            session=session, states=states, patterns=patterns, query_embedding=query_embedding,
+            min_similarity=semantic_min_cosine_similarity,
+        )
+        candidates.extend(semantic_candidates[:12])
+
+    # One authoritative source may be found lexically and semantically. Keep
+    # the lexical explanation when both paths agree.
+    deduplicated: dict[UUID, _Candidate] = {}
+    for candidate in candidates:
+        existing = deduplicated.get(candidate.entry.source_id)
+        if existing is None or (candidate.question_match and not existing.question_match):
+            deduplicated[candidate.entry.source_id] = candidate
+    candidates = list(deduplicated.values())
 
     # CurrentFocus is useful only for known context-dependent continuations.
     # A substantive but unmatched question must not inherit stale intelligence.
@@ -183,10 +197,76 @@ def build_learner_intelligence_card(
     )
 
 
+def has_eligible_semantic_projection(
+    session: Session, *, student_id: UUID, subject: str, now: datetime, route_identity: EmbeddingRouteIdentity
+) -> bool:
+    """Cheap source-authority check before an LI-only turn requests one vector."""
+
+    states = _active_states(session, student_id=student_id, subject=subject, now=now)
+    if states and session.scalar(select(CurrentLearningStateProjection.id).where(
+        CurrentLearningStateProjection.current_learning_state_id.in_([state.id for state in states]),
+        CurrentLearningStateProjection.embedding_provider == route_identity.provider,
+        CurrentLearningStateProjection.embedding_model == route_identity.model,
+        CurrentLearningStateProjection.dimensions == route_identity.dimensions,
+        CurrentLearningStateProjection.representation_version == STATE_PROJECTION_REPRESENTATION_VERSION,
+    ).limit(1)) is not None:
+        return True
+    patterns = _active_patterns(session, student_id=student_id, subject=subject)
+    return bool(patterns and session.scalar(select(LearnerPatternProjection.id).where(
+        LearnerPatternProjection.learner_pattern_id.in_([pattern.id for pattern in patterns]),
+        LearnerPatternProjection.embedding_provider == route_identity.provider,
+        LearnerPatternProjection.embedding_model == route_identity.model,
+        LearnerPatternProjection.dimensions == route_identity.dimensions,
+        LearnerPatternProjection.representation_version == PATTERN_PROJECTION_REPRESENTATION_VERSION,
+    ).limit(1)) is not None)
+
+
+def _semantic_candidates(*, session: Session, states: list[CurrentLearningState], patterns: list[LearnerPattern], query_embedding: QueryEmbedding, min_similarity: float) -> list[_Candidate]:
+    if query_embedding.state is not QueryEmbeddingState.AVAILABLE or query_embedding.vector is None or query_embedding.route_identity is None:
+        return []
+    identity = query_embedding.route_identity
+    candidates: list[_Candidate] = []
+    state_by_id = {state.id: state for state in states}
+    if state_by_id:
+        distance = CurrentLearningStateProjection.embedding.cosine_distance(query_embedding.vector).label("distance")
+        rows = session.execute(select(CurrentLearningStateProjection.current_learning_state_id, distance).where(
+            CurrentLearningStateProjection.current_learning_state_id.in_(state_by_id),
+            CurrentLearningStateProjection.embedding_provider == identity.provider,
+            CurrentLearningStateProjection.embedding_model == identity.model,
+            CurrentLearningStateProjection.dimensions == identity.dimensions,
+            CurrentLearningStateProjection.representation_version == STATE_PROJECTION_REPRESENTATION_VERSION,
+        ).order_by(distance).limit(12)).all()
+        for source_id, value in rows:
+            state = state_by_id[source_id]
+            if state_source_representation(state).hash != session.scalar(select(CurrentLearningStateProjection.representation_hash).where(CurrentLearningStateProjection.current_learning_state_id == source_id, CurrentLearningStateProjection.embedding_provider == identity.provider, CurrentLearningStateProjection.embedding_model == identity.model, CurrentLearningStateProjection.dimensions == identity.dimensions, CurrentLearningStateProjection.representation_version == STATE_PROJECTION_REPRESENTATION_VERSION)):
+                continue
+            if 1.0 - float(value) < min_similarity:
+                continue
+            candidates.append(_Candidate(CardEntry("current_state", state.id, state.detail, state.concept_ref, "concept", 0, "semantic_similarity"), 0, 0, state.updated_at, True, False))
+    pattern_by_id = {pattern.id: pattern for pattern in patterns}
+    if pattern_by_id:
+        distance = LearnerPatternProjection.embedding.cosine_distance(query_embedding.vector).label("distance")
+        rows = session.execute(select(LearnerPatternProjection.learner_pattern_id, distance).where(
+            LearnerPatternProjection.learner_pattern_id.in_(pattern_by_id),
+            LearnerPatternProjection.embedding_provider == identity.provider,
+            LearnerPatternProjection.embedding_model == identity.model,
+            LearnerPatternProjection.dimensions == identity.dimensions,
+            LearnerPatternProjection.representation_version == PATTERN_PROJECTION_REPRESENTATION_VERSION,
+        ).order_by(distance).limit(12)).all()
+        for source_id, value in rows:
+            pattern = pattern_by_id[source_id]
+            if pattern_source_representation(pattern).hash != session.scalar(select(LearnerPatternProjection.representation_hash).where(LearnerPatternProjection.learner_pattern_id == source_id, LearnerPatternProjection.embedding_provider == identity.provider, LearnerPatternProjection.embedding_model == identity.model, LearnerPatternProjection.dimensions == identity.dimensions, LearnerPatternProjection.representation_version == PATTERN_PROJECTION_REPRESENTATION_VERSION)):
+                continue
+            if 1.0 - float(value) < min_similarity:
+                continue
+            scope = pattern.scope if isinstance(pattern.scope, dict) else {}
+            candidates.append(_Candidate(CardEntry("recent_pattern" if pattern.status == "ACTIVE" else "stable_pattern", pattern.id, pattern.detail, _scope_concept(scope), str(scope.get("scope_type") or "concept"), 1 if pattern.status == "ACTIVE" else 2, "semantic_similarity"), 1 if pattern.status == "ACTIVE" else 2, _SCOPE_PRIORITIES.get(str(scope.get("scope_type") or "concept"), 5), pattern.last_supported_at or pattern.first_detected_at, True, False))
+    return candidates
+
+
 def _state_candidates(
     *,
     states: list[CurrentLearningState],
-    lineage_texts: dict[tuple[str, UUID], str],
     question_terms: set[str],
     focus_terms: set[str],
 ) -> list[_Candidate]:
@@ -195,7 +275,7 @@ def _state_candidates(
         question_match, focus_match = _matches(
             concept_ref=state.concept_ref,
             text=state.detail,
-            lineage_text=lineage_texts.get(("state", state.id), ""),
+            lineage_text="",
             question_terms=question_terms,
             focus_terms=focus_terms,
         )
@@ -243,7 +323,6 @@ def _active_states(
 def _pattern_candidates(
     *,
     patterns: list[LearnerPattern],
-    lineage_texts: dict[tuple[str, UUID], str],
     question_terms: set[str],
     focus_terms: set[str],
 ) -> list[_Candidate]:
@@ -255,7 +334,7 @@ def _pattern_candidates(
         question_match, focus_match = _matches(
             concept_ref=concept_ref,
             text=f"{pattern.pattern_key} {pattern.detail} {scope.get('context_ref', '')}",
-            lineage_text=lineage_texts.get(("pattern", pattern.id), ""),
+            lineage_text="",
             question_terms=question_terms,
             focus_terms=focus_terms,
         )
@@ -300,81 +379,6 @@ def _active_patterns(
             continue
         patterns.append(pattern)
     return patterns
-
-
-def _student_lineage_texts(
-    session: Session,
-    *,
-    student_id: UUID,
-    states: list[CurrentLearningState],
-    patterns: list[LearnerPattern],
-) -> dict[tuple[str, UUID], str]:
-    """Read only prior Student text already linked to authoritative candidate rows."""
-
-    evidence_ids_by_owner = {
-        ("state", state.id): _uuid_refs(state.evidence_refs)
-        for state in states
-    }
-    pattern_ids = [pattern.id for pattern in patterns]
-    if pattern_ids:
-        for pattern_id, evidence_id in session.execute(
-            select(PatternEvidence.pattern_id, PatternEvidence.evidence_id).where(
-                PatternEvidence.pattern_id.in_(pattern_ids)
-            )
-        ):
-            evidence_ids_by_owner.setdefault(("pattern", pattern_id), set()).add(evidence_id)
-
-    evidence_ids = set().union(*evidence_ids_by_owner.values()) if evidence_ids_by_owner else set()
-    if not evidence_ids:
-        return {}
-    source_ids_by_evidence: dict[UUID, set[UUID]] = {}
-    for evidence_id, source_message_id, source_message_ids in session.execute(
-        select(
-            LearningEvidence.id,
-            LearningEvent.source_message_id,
-            LearningEvent.source_message_ids,
-        )
-        .join(LearningEvent, LearningEvidence.event_id == LearningEvent.id)
-        .where(LearningEvidence.id.in_(evidence_ids))
-    ):
-        source_ids = _uuid_refs(source_message_ids)
-        if source_message_id is not None:
-            source_ids.add(source_message_id)
-        source_ids_by_evidence[evidence_id] = source_ids
-
-    source_ids = set().union(*source_ids_by_evidence.values()) if source_ids_by_evidence else set()
-    if not source_ids:
-        return {}
-    student_text_by_id = dict(session.execute(
-        select(LearningMessage.id, LearningMessage.content)
-        .join(LearningSession, LearningMessage.session_id == LearningSession.id)
-        .where(
-            LearningMessage.id.in_(source_ids),
-            LearningMessage.role == "student",
-            LearningSession.student_id == student_id,
-        )
-    ).all())
-    return {
-        owner: " ".join(
-            student_text_by_id[source_id]
-            for evidence_id in owner_evidence_ids
-            for source_id in source_ids_by_evidence.get(evidence_id, set())
-            if source_id in student_text_by_id
-        )
-        for owner, owner_evidence_ids in evidence_ids_by_owner.items()
-    }
-
-
-def _uuid_refs(values: object) -> set[UUID]:
-    if not isinstance(values, list):
-        return set()
-    refs: set[UUID] = set()
-    for value in values:
-        try:
-            refs.add(UUID(str(value)))
-        except (TypeError, ValueError):
-            continue
-    return refs
 
 
 def _fit_budget(candidates: list[_Candidate], budget: CardBudget) -> list[CardEntry]:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime
 from enum import Enum
 import logging
 from uuid import UUID
@@ -12,13 +12,15 @@ from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
-from services.intelligence.card import CardBudget, build_learner_intelligence_card
+from services.intelligence.card import CardBudget, build_learner_intelligence_card, has_eligible_semantic_projection
 from services.intelligence.selection import RelevantIntelligence
 from services.intelligence.subjects import studio_subject_to_broad_subject
 from services.model_gateway.factory import create_embedding_gateway
+from services.intelligence.projections import EmbeddingRouteIdentity
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
 from services.personal_facts.memory_document import format_current_personal_memory_card
 from services.platform.core_profile import StudentCoreContext, student_core_context
+from services.platform.config import get_settings
 from services.platform.db.models import LearningExchangeEmbedding, LearningMessage, LearningSession, ModelTask, PersonalFact
 from services.retrieval.service import CurrentFocus, QueryEmbedding, RetrievedBlock, RetrievalService
 from services.studio.tutor_context import StudioTutorWorkspaceContext
@@ -200,6 +202,9 @@ class TutorContextBuilder:
             gateway = getattr(retrieval_service, "_embedding_gateway", None)
             self._embedding_gateway = gateway if isinstance(gateway, ModelGateway) else None
         self._budget = budget
+        settings = get_settings()
+        self._semantic_li_enabled = settings.li_semantic_projection_enabled
+        self._semantic_li_min_similarity = settings.li_semantic_min_cosine_similarity
 
     def build(
         self,
@@ -268,6 +273,35 @@ class TutorContextBuilder:
         card_schema_version = "withheld-unknown-subject"
         card_policy_version = "withheld-unknown-subject"
         if live_subject.broad_subject is not None:
+            if (
+                self._semantic_li_enabled
+                and self._semantic_li_min_similarity is not None
+                and shared_query.allows_generation
+                and self._embedding_gateway is not None
+            ):
+                try:
+                    route = self._embedding_gateway.route_for(ModelTask.EMBEDDING)
+                    if not has_eligible_semantic_projection(
+                        self._session,
+                        student_id=learning_session.student_id,
+                        subject=live_subject.broad_subject,
+                        now=datetime.now(UTC),
+                        route_identity=EmbeddingRouteIdentity(route.provider, route.model, 1536),
+                    ):
+                        raise LookupError("No eligible Learning Intelligence semantic projection.")
+                    result = self._embedding_gateway.execute(
+                        ModelTask.EMBEDDING,
+                        {"input": [question], "dimensions": 1536},
+                        lineage=AIExecutionLineage(operation="tutor_context_li_query_embedding", student_id=learning_session.student_id, learning_session_id=learning_session.id, source_message_id=current_turn.id if current_turn is not None else None),
+                    )
+                    vectors = result.output.get("embeddings")
+                    if not isinstance(vectors, list) or len(vectors) != 1:
+                        raise ValueError("LI query embedding result count is invalid.")
+                    shared_query = QueryEmbedding.available(vectors[0], EmbeddingRouteIdentity(route.provider, route.model, 1536))
+                except LookupError:
+                    pass
+                except Exception:
+                    shared_query = QueryEmbedding.unavailable()
             retrieval_kwargs: dict[str, object] = {
                 "student_id": learning_session.student_id,
                 "question": question,
@@ -286,6 +320,9 @@ class TutorContextBuilder:
                 question=question,
                 focus=effective_focus,
                 budget=self._card_budget(),
+                query_embedding=shared_query,
+                semantic_enabled=self._semantic_li_enabled,
+                semantic_min_cosine_similarity=self._semantic_li_min_similarity,
             )
             intelligence = tuple(
                 RelevantIntelligence(
@@ -497,7 +534,9 @@ class TutorContextBuilder:
             vectors = result.output.get("embeddings")
             if not isinstance(vectors, list) or len(vectors) != len(missing) + 1:
                 raise ValueError("Embedding batch result count is invalid.")
-            query = QueryEmbedding.available(vectors[0])
+            query = QueryEmbedding.available(
+                vectors[0], EmbeddingRouteIdentity(route.provider, route.model, 1536)
+            )
             message_rows = {
                 message.id: message
                 for message in self._session.execute(
