@@ -8,6 +8,7 @@ their identifiers stay attached to every runtime entry.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from dataclasses import replace
 from datetime import UTC, datetime
 import re
 from uuid import UUID
@@ -31,6 +32,7 @@ from services.intelligence.projections import (
     pattern_source_representation,
     state_source_representation,
 )
+from services.intelligence.concepts import active_registry
 
 
 INTELLIGENCE_CARD_SCHEMA_VERSION = "learner-intelligence-card-v1"
@@ -124,6 +126,7 @@ def build_learner_intelligence_card(
     query_embedding: QueryEmbedding = QueryEmbedding.not_supplied(),
     semantic_enabled: bool = False,
     semantic_min_cosine_similarity: float | None = None,
+    canonical_concept_key: str | None = None,
 ) -> LearnerIntelligenceCardProjection:
     """Rank then bound the current question's relevant State/Pattern guidance."""
 
@@ -147,6 +150,14 @@ def build_learner_intelligence_card(
             focus_terms=focus_terms,
         )
     )
+    if canonical_concept_key is not None:
+        registry = active_registry(session)
+        if registry is not None:
+            candidates = [
+                replace(candidate, question_match=True, focus_match=False, entry=replace(candidate.entry, selection_reason="canonical_concept"))
+                for candidate in candidates
+                if registry.resolve(subject=subject, concept_ref=candidate.entry.concept_ref).concept_key == canonical_concept_key
+            ]
     if semantic_enabled and semantic_min_cosine_similarity is not None:
         semantic_candidates = _semantic_candidates(
             session=session, states=states, patterns=patterns, query_embedding=query_embedding,

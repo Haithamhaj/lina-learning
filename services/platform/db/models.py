@@ -618,9 +618,50 @@ class LearningSegment(Base):
     )
     sequence: Mapped[int] = mapped_column(Integer, nullable=False)
     structured_state: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    # Model-produced conversation metadata only; Segment Review owns durable subject.
+    conversation_subject_hint: Mapped[str | None] = mapped_column(String(32))
+    primary_concept_ref: Mapped[str | None] = mapped_column(String(128))
+    primary_concept_key: Mapped[str | None] = mapped_column(String(160))
+    concept_registry_version: Mapped[str | None] = mapped_column(String(64))
+    concept_mapping_status: Mapped[str | None] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     closure_reason: Mapped[str | None] = mapped_column(String(32))
+
+
+class CanonicalConceptRegistryRecord(Base):
+    """Versioned application reference data, deliberately outside learner truth."""
+
+    __tablename__ = "canonical_concept_registries"
+    __table_args__ = (
+        UniqueConstraint("version", name="uq_canonical_concept_registry_version"),
+        Index(
+            "uq_canonical_concept_registry_one_active",
+            "is_active",
+            unique=True,
+            postgresql_where=text("is_active"),
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    version: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class LearningSegmentConceptLink(Base):
+    """RELATED canonical Concept references for one Segment; never learner intelligence."""
+
+    __tablename__ = "learning_segment_concept_links"
+    __table_args__ = (
+        UniqueConstraint("segment_id", "concept_key", name="uq_learning_segment_concept_link"),
+    )
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    segment_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), ForeignKey("learning_segments.id", ondelete="CASCADE"), nullable=False)
+    concept_key: Mapped[str] = mapped_column(String(160), nullable=False)
+    broad_subject: Mapped[str] = mapped_column(String(32), nullable=False)
+    registry_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
 class SegmentLearningReview(Base):

@@ -91,11 +91,12 @@ def _evidence(
     strategy_key: str | None = None,
     observed_outcome: str | None = None,
     signal: str = "fixture_signal",
+    subject: str = "MATH",
 ) -> LearningEvidence:
     occurred_at = created_at or datetime(2026, 8, 22, 12, tzinfo=UTC)
     learning_session = LearningSession(
         student_id=student.id,
-        subject="MATH",
+        subject=subject,
         status="CLOSED",
         closed_at=occurred_at,
     )
@@ -136,7 +137,7 @@ def _evidence(
         processing_run_id=run.id,
         session_id=learning_session.id,
         candidate_event_id=candidate.id,
-        subject="MATH",
+        subject=subject,
         concept_ref=concept,
         event_type=event_type,
         description="Validated source-grounded fixture event.",
@@ -663,6 +664,28 @@ def test_subject_scope_requires_two_qualifying_contexts(factory: sessionmaker[Se
                 ).count() == 0
 
         assert _scope_pattern(session, scope_type="subject").scope == {"scope_type": "subject", "subject": "MATH"}
+
+
+def test_subject_scope_promotion_preserves_science_source_subject(factory: sessionmaker[Session]) -> None:
+    """Acceptance D: production Pattern derivation must not silently promote SCIENCE as MATH."""
+
+    with factory.begin() as session:
+        student = _student(session)
+        for context, concepts in {
+            "science_cycles": ("evaporation", "condensation", "precipitation"),
+            "science_systems": ("collection", "runoff", "infiltration"),
+        }.items():
+            for index, concept in enumerate(concepts, start=1):
+                evidence = _evidence(
+                    session, student=student, concept=concept, dimensions=_support(),
+                    context_ref=context, task_ref=f"{context}:{concept}",
+                    created_at=datetime(2026, 7, index, 12, tzinfo=UTC), subject="SCIENCE",
+                )
+                apply_evidence_to_patterns(session, evidence_id=evidence.id)
+
+        promoted = _scope_pattern(session, scope_type="subject")
+        assert promoted.scope == {"scope_type": "subject", "subject": "SCIENCE"}
+        assert promoted.scope["subject"] != "MATH"
 
 
 def test_resolved_concept_support_recomputes_broad_scope_without_touching_other_concepts(

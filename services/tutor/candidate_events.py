@@ -395,12 +395,13 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
             "type": ["string", "null"],
             "enum": [*BROAD_SUBJECT_KEYS, None],
         },
+        "segment_concept_ref": {"type": ["string", "null"], "maxLength": 128},
         "workspace_intent": workspace_intent_output_schema(),
         "canvas_brief": canvas_brief_output_schema(),
         "canvas_visual_context_selection": visual_context_selection_output_schema(),
         "workspace_visual_order": visual_order_output_schema(),
     },
-    "required": ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject", "workspace_intent", "canvas_brief", "canvas_visual_context_selection", "workspace_visual_order"],
+    "required": ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject", "segment_concept_ref", "workspace_intent", "canvas_brief", "canvas_visual_context_selection", "workspace_visual_order"],
 }
 
 

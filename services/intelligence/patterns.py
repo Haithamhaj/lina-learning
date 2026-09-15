@@ -623,7 +623,7 @@ def _broaden_supported_scope(
         )
         broader = existing_context_by_ref.get(context_ref)
         if qualifies:
-            scope = {"scope_type": "context", "subject": "MATH", "context_ref": context_ref}
+            scope = {"scope_type": "context", "subject": item.event.subject, "context_ref": context_ref}
             broader = _upsert_pattern(
                 session,
                 item=item,
@@ -677,7 +677,7 @@ def _broaden_supported_scope(
     )
     subject = existing_subject[0] if existing_subject else None
     if subject_qualifies:
-        scope = {"scope_type": "subject", "subject": "MATH"}
+        scope = {"scope_type": "subject", "subject": item.event.subject}
         subject = _upsert_pattern(session, item=item, pattern_type=pattern_type, pattern_key=pattern_key, scope=scope, policy=policy)
     if subject is not None:
         for link, evidence, event, candidate, run, source_pattern in subject_rows:

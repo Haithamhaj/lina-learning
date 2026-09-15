@@ -13,6 +13,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from services.intelligence.card import CardBudget, build_learner_intelligence_card, has_eligible_semantic_projection
+from services.intelligence.concepts import active_registry, advisory_pattern_meaning
 from services.intelligence.selection import RelevantIntelligence
 from services.intelligence.subjects import studio_subject_to_broad_subject
 from services.model_gateway.factory import create_embedding_gateway
@@ -21,11 +22,11 @@ from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
 from services.personal_facts.memory_document import format_current_personal_memory_card
 from services.platform.core_profile import StudentCoreContext, student_core_context
 from services.platform.config import get_settings
-from services.platform.db.models import LearningExchangeEmbedding, LearningMessage, LearningSession, ModelTask, PersonalFact
+from services.platform.db.models import LearnerPattern, LearningExchangeEmbedding, LearningMessage, LearningSession, ModelTask, PersonalFact
 from services.retrieval.service import CurrentFocus, QueryEmbedding, RetrievedBlock, RetrievalService
 from services.studio.tutor_context import StudioTutorWorkspaceContext
 from services.tutor.exchanges import SEMANTIC_RECALL_MIN_COSINE_SIMILARITY, ConversationExchangeContext, complete_exchanges_for_segment, immediate_exchange_for_current_turn, persist_exchange_embedding, serialize_exchange
-from services.tutor.segments import latest_segment_for_session, latest_valid_structured_segment_state
+from services.tutor.segments import latest_prior_segment_for_concept, latest_segment_for_session, latest_valid_structured_segment_state
 
 
 logger = logging.getLogger(__name__)
@@ -157,6 +158,7 @@ class TutorContext:
     retrieval: tuple[RetrievedBlock, ...]
     intelligence: tuple[RelevantIntelligence, ...]
     debug: TutorContextDebug
+    prior_concept_context: str | None = None
     student_core_context: StudentCoreContext = StudentCoreContext(None, None, None)
     personal_memory: str | None = None
     visual_personalization_catalog: tuple[dict[str, str], ...] = ()
@@ -324,6 +326,14 @@ class TutorContextBuilder:
                 semantic_enabled=self._semantic_li_enabled,
                 semantic_min_cosine_similarity=self._semantic_li_min_similarity,
             )
+            ordinary_entries = card.entries
+            if segment is not None and segment.primary_concept_key:
+                registry = active_registry(self._session)
+                if registry is not None:
+                    ordinary_entries = tuple(
+                        entry for entry in card.entries
+                        if registry.resolve(subject=live_subject.broad_subject, concept_ref=entry.concept_ref).concept_key != segment.primary_concept_key
+                    )
             intelligence = tuple(
                 RelevantIntelligence(
                     source_kind=entry.source_kind,
@@ -332,12 +342,22 @@ class TutorContextBuilder:
                     concept_ref=entry.concept_ref,
                     priority=entry.priority,
                 )
-                for entry in card.entries
+                for entry in ordinary_entries
             )
             retrieval_status = "SELECTED"
             intelligence_card_status = "SELECTED"
             card_schema_version = card.schema_version
             card_policy_version = card.policy_version
+        concept_mapping_subject = live_subject.broad_subject
+        if concept_mapping_subject is None and segment is not None:
+            concept_mapping_subject = segment.conversation_subject_hint
+        prior_concept_context = self._prior_concept_context(
+            learning_session=learning_session,
+            segment=segment,
+            subject=concept_mapping_subject,
+            question=question,
+            focus=effective_focus,
+        )
         personal_memory, personal_memory_status = self._personal_memory(
             learning_session=learning_session,
         )
@@ -358,6 +378,7 @@ class TutorContextBuilder:
             session_messages=(),
             retrieval=retrieval,
             intelligence=intelligence,
+            prior_concept_context=prior_concept_context,
             student_core_context=core_context,
             personal_memory=personal_memory,
             visual_personalization_catalog=visual_personalization_catalog,
@@ -395,6 +416,37 @@ class TutorContextBuilder:
                 intelligence_card_status=intelligence_card_status,
             ),
         )
+
+    def _prior_concept_context(self, *, learning_session: LearningSession, segment: object, subject: str | None, question: str, focus: CurrentFocus | None) -> str | None:
+        if segment is None or subject is None or not getattr(segment, "primary_concept_key", None):
+            return None
+        registry = active_registry(self._session)
+        if (
+            registry is None
+            or registry.resolve(subject=subject, concept_ref=segment.primary_concept_key).concept_key
+            != segment.primary_concept_key
+        ):
+            return None
+        canonical_card = build_learner_intelligence_card(
+            self._session, student_id=learning_session.student_id, subject=subject, question=question,
+            focus=focus, budget=self._card_budget(), semantic_enabled=False,
+            canonical_concept_key=segment.primary_concept_key,
+        )
+        lines: list[str] = [f"Canonical Concept: {segment.primary_concept_key}"]
+        prior = latest_prior_segment_for_concept(self._session, learning_session=learning_session, current_segment=segment)
+        state = latest_valid_structured_segment_state(self._session, segment=prior)
+        if state is not None:
+            lines.append(f"Prior Segment orientation: {state.model_dump_json()}")
+        for entry in canonical_card.entries:
+            if entry.source_kind == "current_state":
+                lines.append(f"Historical State ({entry.concept_ref}): {entry.text}")
+                continue
+            pattern = self._session.get(LearnerPattern, entry.source_id)
+            if pattern is not None:
+                meaning = advisory_pattern_meaning(self._session, pattern=pattern, concept_key=segment.primary_concept_key)
+                if meaning is not None:
+                    lines.append(meaning)
+        return "\n".join(lines) if len(lines) > 1 else None
 
     def _personal_memory(
         self,

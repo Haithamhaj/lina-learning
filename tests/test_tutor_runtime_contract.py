@@ -23,7 +23,7 @@ def test_tutor_turn_v11_requires_nullable_visual_order_without_rewriting_other_m
     """SAFE-02 keeps one strict output contract for visible text and hidden decisions."""
 
     assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v11"
-    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject", "workspace_intent", "canvas_brief", "canvas_visual_context_selection", "workspace_visual_order"]
+    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject", "segment_concept_ref", "workspace_intent", "canvas_brief", "canvas_visual_context_selection", "workspace_visual_order"]
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["provisional_broad_subject"] == {
         "type": ["string", "null"],
         "enum": [
@@ -96,6 +96,46 @@ def test_candidate_contract_exposes_bounded_misconception_evidence_for_source_gr
             {"type": "null"},
         ],
     }
+
+
+def test_prior_concept_history_is_explicitly_conditional_in_actual_model_input() -> None:
+    """Catches canonical history silently becoming unconditional Tutor guidance."""
+
+    payload = build_tutor_model_payload(
+        question="Continue.",
+        intelligence=["ordinary unrelated note"],
+        conditional_prior_concept_context="Canonical Concept: math.long_division\nHistorical TeachingMethod: VISUAL_REPRESENTATION",
+    )
+
+    assert "Conditional prior Concept context" in payload["input"]
+    assert "only if your segment_relation is CONTINUE" in payload["input"]
+    assert "Ignore it completely if segment_relation is NEW_SEGMENT or UNCERTAIN" in payload["input"]
+    assert "VISUAL_REPRESENTATION" in payload["input"]
+
+
+def test_strategy_and_misconception_meaning_reach_the_actual_primary_payload_only_conditionally() -> None:
+    """Catches semantic history being flattened or mixed into unconditional intelligence."""
+
+    payload = build_tutor_model_payload(
+        question="Continue fractions.",
+        intelligence=["ordinary unrelated note"],
+        conditional_prior_concept_context=(
+            "Canonical Concept: math.equivalent_fractions\n"
+            "Historical TeachingMethod: VISUAL_REPRESENTATION\n"
+            "Validated historical outcome: enabled_independent_success\n"
+            "Historical misconception: numerator and denominator changes are independent\n"
+            "Authority: advisory; current Student behavior wins."
+        ),
+    )
+
+    actual_input = str(payload["input"])
+    conditional = actual_input.split("Conditional prior Concept context", 1)[1]
+    ordinary = actual_input.split("Conditional prior Concept context", 1)[0]
+    assert "math.equivalent_fractions" in conditional
+    assert "VISUAL_REPRESENTATION" in conditional
+    assert "enabled_independent_success" in conditional
+    assert "numerator and denominator changes are independent" in conditional
+    assert "VISUAL_REPRESENTATION" not in ordinary
 
 
 def test_candidate_contract_requires_nullable_misconception_evidence_for_strict_structured_outputs() -> None:

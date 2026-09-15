@@ -23,6 +23,7 @@ from services.intelligence.subjects import (
     BROAD_SUBJECT_KEYS,
     is_supported_broad_subject,
 )
+from services.intelligence.concepts import persist_related_concepts
 from services.model_gateway.gateway import AIExecutionLineage, ModelGateway
 from services.platform.config import Settings, get_settings
 from services.platform.db.models import (
@@ -397,6 +398,12 @@ def review_completed_segment(
     review.ai_execution_id = result.execution_id
     review.completed_at = datetime.now(UTC)
     review.failure_detail = None
+    persist_related_concepts(
+        session,
+        segment=segment,
+        subject=envelope.primary_broad_subject,
+        concept_refs=[finding.concept_ref for finding in envelope.findings],
+    )
     session.flush()
     return SegmentReviewOutcome(review=review, finding_count=len(envelope.findings), model_called=True)
 

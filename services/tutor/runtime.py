@@ -54,6 +54,7 @@ from services.platform.safety import ParentBoundaryResolution, SafetyAction, Saf
 from services.retrieval.service import RetrievalService
 from services.student_sources.safety import StudentSourceSafetyService
 from services.intelligence.subjects import BROAD_SUBJECT_KEYS, is_supported_broad_subject
+from services.intelligence.concepts import persist_primary_concept
 from services.tutor.capacity import (
     TutorContextCapacityExceeded,
     TutorContextCapacityLineage,
@@ -194,6 +195,7 @@ class LocalTutorProvider:
                 "prior_method_relation": None,
                 "candidate_metadata": None,
                 "provisional_broad_subject": None,
+                "segment_concept_ref": None,
                 "workspace_intent": None,
                 "canvas_brief": None,
                 "canvas_visual_context_selection": None,
@@ -245,6 +247,7 @@ def build_tutor_model_payload(
     question: str,
     sources: list[dict[str, object]] | None = None,
     intelligence: list[str] | None = None,
+    conditional_prior_concept_context: str | None = None,
     student_core_context: dict[str, object] | None = None,
     personal_memory: str | None = None,
     safety_directive: str | None = None,
@@ -266,6 +269,12 @@ def build_tutor_model_payload(
         f"Curriculum source ({source['ref']}):\n{source['text']}" for source in (sources or [])
     ) or "No matching curriculum excerpt was retrieved."
     intelligence_context = "\n".join(intelligence or []) or "No relevant compact learning note was selected."
+    conditional_concept_context = (
+        "\n\nConditional prior Concept context (historical/advisory):\n"
+        f"{conditional_prior_concept_context}\n"
+        "Use this only if your segment_relation is CONTINUE. Ignore it completely if segment_relation is NEW_SEGMENT or UNCERTAIN. Current Student behavior always overrides historical personalization."
+        if conditional_prior_concept_context else ""
+    )
     supplied_core_context = student_core_context or {}
     student_core_context = {
         field: supplied_core_context[field]
@@ -308,6 +317,7 @@ def build_tutor_model_payload(
     decision_context += "\n\nPriorMethodRelation definitions:\n" + "\n".join(f"- {item.identifier}: {item.description}" for item in PRIOR_METHOD_RELATION_DEFINITIONS)
     decision_context += "\n\n" + PRIOR_METHOD_RELATION_CALIBRATION_GUIDANCE
     decision_context += "\n\nControlled Broad Subject keys for optional provisional_broad_subject:\n" + ", ".join(BROAD_SUBJECT_KEYS)
+    decision_context += "\nsegment_concept_ref is an optional raw primary conversational topic for this Segment. It creates no Evidence or learner truth."
     decision_context += "\n\nChoose each semantic decision from the current conversation. All four decision fields may be null for a casual or non-instructional turn. A non-null TeachingMethod needs a non-null mode and strategy. A relation is only about the immediate previous persisted Tutor method. A different topic is not DID_NOT_HELP: use NOT_RELEVANT or null unless the Student actually judges that immediate prior representation. DID_NOT_HELP must not accompany the same method. Use EXPLICIT_REPEAT_REQUEST only when the selected method equals the immediate prior method; a request to return to an older, non-immediate representation is NOT_RELEVANT or null. The relation itself is never Candidate Evidence."
     prior_method_context = (
         f"\nPrevious Tutor TeachingMethod: {prior_method.teaching_method_id.value} "
@@ -390,7 +400,7 @@ def build_tutor_model_payload(
             f"Current Turn:\nStudent question:\n{question}{current_turn_source_context}\n\nImmediate Exchange:\n{immediate_exchange_context}\n\n"
             f"Recent raw complete Exchanges:\n{recent_exchange_context}\n\n"
             f"Relevant older complete Exchanges from current Segment:\n{semantic_recall_context}\n\n"
-            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{studio_workspace_context}{visual_catalog_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}{segment_context}{segment_state_context}{parent_boundary_context}"
+            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{conditional_concept_context}{studio_workspace_context}{visual_catalog_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}{segment_context}{segment_state_context}{parent_boundary_context}"
         ),
         "max_output_tokens": get_settings().tutor_max_output_tokens,
         "question": question,
@@ -966,6 +976,13 @@ class TutorRuntime:
         provisional_broad_subject = _validated_provisional_broad_subject(
             result.output.get("provisional_broad_subject")
         )
+        persist_primary_concept(
+            self._session,
+            segment=resolved_segment.segment,
+            subject=context.subject or provisional_broad_subject,
+            concept_ref=result.output.get("segment_concept_ref"),
+            conversation_subject_hint=provisional_broad_subject,
+        )
         workspace_audit = self._workspace_audit(context=context, raw_intent=result.output.get("workspace_intent"))
         visual_audit = self._visual_order_audit(
             learning_session=learning_session,
@@ -1480,6 +1497,7 @@ def _payload_from_context(
         question=context.question,
         sources=[{"ref": block.source_ref, "text": block.text} for block in context.retrieval],
         intelligence=[item.text for item in context.intelligence],
+        conditional_prior_concept_context=context.prior_concept_context,
         student_core_context=context.student_core_context.as_model_input(),
         personal_memory=context.personal_memory,
         safety_directive=safety.tutor_directive,

@@ -172,3 +172,23 @@ def latest_valid_structured_segment_state(
         )
     except StructuredSegmentStateError:
         return None
+
+
+def latest_prior_segment_for_concept(
+    session: Session, *, learning_session: LearningSession, current_segment: LearningSegment
+) -> LearningSegment | None:
+    """Return one earlier same-Student Segment with the same current primary identity."""
+    if not current_segment.primary_concept_key:
+        return None
+    statement = (
+        select(LearningSegment)
+        .join(LearningSession, LearningSegment.session_id == LearningSession.id)
+        .where(
+            LearningSession.student_id == learning_session.student_id,
+            LearningSegment.id != current_segment.id,
+            LearningSegment.primary_concept_key == current_segment.primary_concept_key,
+        )
+        .order_by(LearningSegment.created_at.desc(), LearningSegment.sequence.desc(), LearningSegment.id.desc())
+        .limit(1)
+    )
+    return session.scalars(statement).first()
