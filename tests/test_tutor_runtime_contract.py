@@ -32,6 +32,10 @@ def test_tutor_turn_v11_requires_nullable_visual_order_without_rewriting_other_m
             "OTHER", None,
         ],
     }
+    concept_ref = TUTOR_OUTPUT_JSON_SCHEMA["properties"]["segment_concept_ref"]
+    assert concept_ref["type"] == ["string", "null"]
+    assert "must emit" in concept_ref["description"].casefold()
+    assert "long division" in concept_ref["description"].casefold()
     workspace_intent = TUTOR_OUTPUT_JSON_SCHEMA["properties"]["workspace_intent"]
     assert workspace_intent["anyOf"][0]["additionalProperties"] is False
     assert workspace_intent["anyOf"][0]["properties"]["version"]["enum"] == ["workspace-intent-v1"]
@@ -158,6 +162,19 @@ def test_one_luna_call_receives_full_definitions_without_preselected_semantic_ax
     assert "eligible_teaching_methods" not in payload
     assert "Effective Parent Boundary settings" in str(payload["input"])
     assert "Parent Boundary semantic decision" in str(payload["input"])
+
+
+def test_primary_tutor_contract_requires_a_concise_topic_for_clear_educational_turns() -> None:
+    """Catches a nullable structured field being treated as optional for obvious topics."""
+
+    payload = build_tutor_model_payload(question="خلينا نرجع للقسمة المطولة، ذكرني كيف نبدأ.")
+    instructions = str(payload["input"]).casefold()
+
+    assert "must emit" in instructions
+    assert "clearly identifiable educational topic" in instructions
+    assert "long division" in instructions
+    assert "water cycle" in instructions
+    assert "genuinely ambiguous" in instructions
 
 
 def test_primary_tutor_contract_instructs_workspace_intent_and_local_provider_returns_null() -> None:

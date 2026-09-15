@@ -395,7 +395,18 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
             "type": ["string", "null"],
             "enum": [*BROAD_SUBJECT_KEYS, None],
         },
-        "segment_concept_ref": {"type": ["string", "null"], "maxLength": 128},
+        "segment_concept_ref": {
+            "type": ["string", "null"],
+            "maxLength": 128,
+            "description": (
+                "Concise stable identity of the educational topic currently discussed. "
+                "For a clearly identifiable educational topic, must emit a topic label such as "
+                "long division or water cycle; do not emit a Canonical Concept key, full question, "
+                "finding, misconception, outcome, or incidental arithmetic instance. Use null only "
+                "for genuinely ambiguous or non-educational conversation, or when a CONTINUE turn "
+                "does not need a new topic identity."
+            ),
+        },
         "workspace_intent": workspace_intent_output_schema(),
         "canvas_brief": canvas_brief_output_schema(),
         "canvas_visual_context_selection": visual_context_selection_output_schema(),

@@ -147,6 +147,7 @@ def persist_primary_concept(
     subject: str | None,
     concept_ref: object,
     conversation_subject_hint: str | None = None,
+    preserve_existing: bool = False,
 ) -> None:
     """Persist optional conversational identity; unresolved identity remains safe."""
     if (
@@ -155,6 +156,8 @@ def persist_primary_concept(
         and is_supported_broad_subject(conversation_subject_hint)
     ):
         segment.conversation_subject_hint = conversation_subject_hint
+    if preserve_existing and segment.primary_concept_key is not None:
+        return
     if not isinstance(concept_ref, str) or not concept_ref.strip():
         return
     segment.primary_concept_ref = concept_ref.strip()[:128]

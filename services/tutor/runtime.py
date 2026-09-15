@@ -317,7 +317,7 @@ def build_tutor_model_payload(
     decision_context += "\n\nPriorMethodRelation definitions:\n" + "\n".join(f"- {item.identifier}: {item.description}" for item in PRIOR_METHOD_RELATION_DEFINITIONS)
     decision_context += "\n\n" + PRIOR_METHOD_RELATION_CALIBRATION_GUIDANCE
     decision_context += "\n\nControlled Broad Subject keys for optional provisional_broad_subject:\n" + ", ".join(BROAD_SUBJECT_KEYS)
-    decision_context += "\nsegment_concept_ref is an optional raw primary conversational topic for this Segment. It creates no Evidence or learner truth."
+    decision_context += "\nsegment_concept_ref is the concise stable identity of the educational topic currently discussed, not a Canonical Concept key, full Student question, arithmetic instance unless that is truly the topic, learner finding, misconception, or outcome. For a clearly identifiable educational topic, you must emit a concise topic label such as long division, equivalent fractions, water cycle, or bee honey production. Use null only for genuinely ambiguous or non-educational conversation, or when a CONTINUE turn does not need a new topic identity. It creates no Evidence or learner truth."
     decision_context += "\n\nChoose each semantic decision from the current conversation. All four decision fields may be null for a casual or non-instructional turn. A non-null TeachingMethod needs a non-null mode and strategy. A relation is only about the immediate previous persisted Tutor method. A different topic is not DID_NOT_HELP: use NOT_RELEVANT or null unless the Student actually judges that immediate prior representation. DID_NOT_HELP must not accompany the same method. Use EXPLICIT_REPEAT_REQUEST only when the selected method equals the immediate prior method; a request to return to an older, non-immediate representation is NOT_RELEVANT or null. The relation itself is never Candidate Evidence."
     prior_method_context = (
         f"\nPrevious Tutor TeachingMethod: {prior_method.teaching_method_id.value} "
@@ -982,6 +982,10 @@ class TutorRuntime:
             subject=context.subject or provisional_broad_subject,
             concept_ref=result.output.get("segment_concept_ref"),
             conversation_subject_hint=provisional_broad_subject,
+            preserve_existing=(
+                resolved_segment.relation == SegmentRelation.CONTINUE.value
+                and resolved_segment.segment.primary_concept_key is not None
+            ),
         )
         workspace_audit = self._workspace_audit(context=context, raw_intent=result.output.get("workspace_intent"))
         visual_audit = self._visual_order_audit(

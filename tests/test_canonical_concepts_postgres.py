@@ -89,6 +89,34 @@ def test_primary_identity_maps_aliases_and_unmapped_fails_open(factory: sessionm
         assert session.scalars(select(LearningSegmentConceptLink).where(LearningSegmentConceptLink.segment_id == unknown.id)).all() == []
 
 
+def test_continue_preserves_an_established_primary_concept_when_the_model_changes_topic(
+    factory: sessionmaker[Session],
+) -> None:
+    """Catches a CONTINUE turn silently replacing an existing Segment identity."""
+
+    with factory.begin() as session:
+        _registry(session)
+        learning_session = _student_session(session)
+        segment = _segment(session, learning_session, 1)
+        persist_primary_concept(
+            session,
+            segment=segment,
+            subject="MATH",
+            concept_ref="long division",
+            conversation_subject_hint="MATH",
+        )
+        persist_primary_concept(
+            session,
+            segment=segment,
+            subject="MATH",
+            concept_ref="equivalent fractions",
+            preserve_existing=True,
+        )
+
+        assert segment.primary_concept_key == "math.long_division"
+        assert segment.primary_concept_ref == "long division"
+
+
 def test_related_links_deduplicate_and_prior_selection_is_student_scoped(factory: sessionmaker[Session]) -> None:
     """Catches duplicate links or prior continuity crossing Segment/Student boundaries."""
     with factory.begin() as session:
