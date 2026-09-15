@@ -23,6 +23,7 @@ from services.platform.db.models import (
 from services.platform.jobs import enqueue_job
 from services.intelligence.current_state import CURRENT_STATE_POLICY_VERSION
 from services.intelligence.patterns import PATTERN_POLICY_VERSION
+from services.platform.config import get_settings
 
 
 STATE_PROJECTION_REPRESENTATION_VERSION = "li-state-projection-v1"
@@ -134,11 +135,20 @@ def enqueue_projection_refresh(
     ]
     if not state_items and not pattern_items:
         return
-    digest = sha256(repr((sorted(state_items, key=lambda item: item["id"]), sorted(pattern_items, key=lambda item: item["id"]))).encode()).hexdigest()
+    route_identity = configured_embedding_route_identity()
+    digest = projection_refresh_generation_key(
+        sources=tuple((item["id"], item["hash"]) for item in (*state_items, *pattern_items)),
+        route_identity=route_identity,
+    )
     enqueue_job(
         session,
         job_type=LEARNING_INTELLIGENCE_PROJECTION_REFRESH_JOB,
-        payload={"student_id": str(student_id), "states": state_items, "patterns": pattern_items},
+        payload={
+            "student_id": str(student_id),
+            "states": state_items,
+            "patterns": pattern_items,
+            "route_identity": _route_payload(route_identity),
+        },
         idempotency_key=f"li-projection-refresh:{student_id}:{digest}",
     )
 
@@ -170,6 +180,11 @@ def refresh_projection_batch(session: Session, *, payload: dict[str, object], ga
     student_id = UUID(str(payload["student_id"]))
     route = gateway.route_for(ModelTask.EMBEDDING)
     identity = EmbeddingRouteIdentity(route.provider, route.model, 1536)
+    expected_identity = _route_from_payload(payload.get("route_identity"))
+    if expected_identity is None:
+        raise ValueError("Projection refresh route identity is required.")
+    if expected_identity != identity:
+        return {"refreshed": 0, "obsolete": _requested_count(payload)}
     sources: list[tuple[str, object, CanonicalRepresentation]] = []
     for source in _requested_states(session, student_id=student_id, values=payload.get("states")):
         sources.append(("state", source, state_source_representation(source)))
@@ -189,7 +204,7 @@ def refresh_projection_batch(session: Session, *, payload: dict[str, object], ga
         if not isinstance(vector, list) or len(vector) != identity.dimensions:
             raise ValueError("Projection embedding dimensions are invalid.")
         _upsert_projection(
-            session,
+            session=session,
             kind=kind,
             source=source,
             representation=representation,
@@ -228,6 +243,38 @@ def _requested_hashes(values: object) -> dict[UUID, str]:
         except ValueError:
             continue
     return result
+
+
+def configured_embedding_route_identity() -> EmbeddingRouteIdentity:
+    """Mirror the configured ModelTask.EMBEDDING route without making a request."""
+
+    settings = get_settings()
+    provider = "openai" if settings.model_provider == "openai" else "local-demo"
+    return EmbeddingRouteIdentity(provider, settings.embedding_model_name, settings.embedding_dimensions)
+
+
+def projection_refresh_generation_key(*, sources: tuple[tuple[str, str], ...], route_identity: EmbeddingRouteIdentity) -> str:
+    """Stable job generation identity for source representation plus embedding route."""
+
+    material = (tuple(sorted(sources)), route_identity.provider, route_identity.model, route_identity.dimensions)
+    return sha256(repr(material).encode()).hexdigest()
+
+
+def _route_payload(identity: EmbeddingRouteIdentity) -> dict[str, object]:
+    return {"provider": identity.provider, "model": identity.model, "dimensions": identity.dimensions}
+
+
+def _route_from_payload(value: object) -> EmbeddingRouteIdentity | None:
+    if not isinstance(value, dict):
+        return None
+    provider, model, dimensions = value.get("provider"), value.get("model"), value.get("dimensions")
+    if not isinstance(provider, str) or not isinstance(model, str) or not isinstance(dimensions, int):
+        return None
+    return EmbeddingRouteIdentity(provider, model, dimensions)
+
+
+def _requested_count(payload: dict[str, object]) -> int:
+    return len(_requested_hashes(payload.get("states"))) + len(_requested_hashes(payload.get("patterns")))
 
 
 def _upsert_projection(*, session: Session, kind: str, source: object, representation: CanonicalRepresentation, identity: EmbeddingRouteIdentity, embedding: list[float], ai_execution_id: UUID | None) -> None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 from services.intelligence.projections import (
     EmbeddingRouteIdentity,
     cosine_similarity,
+    projection_refresh_generation_key,
     state_representation,
 )
 
@@ -37,3 +38,16 @@ def test_calibration_similarity_rejects_incompatible_vectors() -> None:
         [1.0, 0.0, 0.0], [1.0, 0.0, 0.0], left_route=route,
         right_route=EmbeddingRouteIdentity("other", "text-embedding-3-small", 3),
     ) is None
+
+
+def test_projection_refresh_generation_key_changes_when_embedding_route_changes() -> None:
+    """Catches a route change being deduplicated into an old projection job."""
+
+    sources = (("state-id", "representation-hash"),)
+    assert projection_refresh_generation_key(
+        sources=sources,
+        route_identity=EmbeddingRouteIdentity("fixture", "text-embedding-3-small", 1536),
+    ) != projection_refresh_generation_key(
+        sources=sources,
+        route_identity=EmbeddingRouteIdentity("fixture", "another-model", 1536),
+    )

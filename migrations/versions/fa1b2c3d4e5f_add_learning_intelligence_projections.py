@@ -1,7 +1,7 @@
 """Add retrieval-only Learning Intelligence semantic projections.
 
 Revision ID: fa1b2c3d4e5f
-Revises: c51e8fa3b923
+Revises: a6d9e2f4b7c1
 """
 
 from alembic import op
@@ -10,7 +10,7 @@ from pgvector.sqlalchemy import Vector
 
 
 revision = "fa1b2c3d4e5f"
-down_revision = "c51e8fa3b923"
+down_revision = "a6d9e2f4b7c1"
 branch_labels = None
 depends_on = None
 

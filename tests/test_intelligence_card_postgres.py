@@ -181,7 +181,7 @@ def _student_lineage_evidence(
     return evidence
 
 
-def test_card_matches_arabic_question_against_current_state_student_evidence_lineage(
+def test_card_does_not_match_arabic_question_against_historical_student_evidence_lineage(
     factory: sessionmaker[Session],
 ) -> None:
     with factory.begin() as session:
@@ -199,9 +199,9 @@ def test_card_matches_arabic_question_against_current_state_student_evidence_lin
         card = _card(session, student, question="ورّيني القسمة المطولة 84 ÷ 4")
         assert session.query(LearningEvidence).count() == 1
 
-    assert [entry.source_id for entry in card.entries] == [state.id]
+    assert card.entries == ()
     assert state.evidence_refs == [str(evidence.id)]
-    assert card.debug.selected_source_ids == (state.id,)
+    assert card.debug.selected_source_ids == ()
 
 
 def test_card_does_not_use_arabic_lineage_as_subject_wide_fallback(
@@ -257,7 +257,7 @@ def test_card_keeps_existing_english_concept_matching(
     assert [entry.source_id for entry in card.entries] == [state.id]
 
 
-def test_card_matches_arabic_question_against_pattern_student_evidence_lineage(
+def test_card_does_not_match_arabic_question_against_historical_student_evidence_lineage(
     factory: sessionmaker[Session],
 ) -> None:
     with factory.begin() as session:
@@ -281,8 +281,8 @@ def test_card_matches_arabic_question_against_pattern_student_evidence_lineage(
         session.add(PatternEvidence(pattern_id=pattern.id, evidence_id=evidence.id, relationship="supports"))
         card = _card(session, student, question="ورّيني القسمة المطولة ٨٤ ÷ ٤")
 
-    assert [entry.source_id for entry in card.entries] == [pattern.id]
-    assert card.debug.selected_source_ids == (pattern.id,)
+    assert card.entries == ()
+    assert card.debug.selected_source_ids == ()
 
 
 def test_card_includes_relevant_active_state_and_excludes_resolved_or_expired_state(

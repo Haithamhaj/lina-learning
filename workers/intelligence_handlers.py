@@ -32,6 +32,7 @@ from services.intelligence.session_finalization import finalize_closed_session
 from services.model_gateway.factory import create_embedding_gateway, create_session_evidence_gateway
 from services.model_gateway.gateway import ModelGateway
 from services.platform.config import Settings
+from services.platform.jobs import NonRetryableJobError
 from services.platform.db.models import (
     IntelligenceReprocessRun,
     Job,
@@ -312,10 +313,12 @@ def register_intelligence_handlers(
     def handle_projection_refresh(job: Job) -> dict[str, object]:
         payload = job.payload if isinstance(job.payload, dict) else {}
         with session_factory.begin() as session:
-            return refresh_projection_batch(
-                session,
-                payload=payload,
-                gateway=create_embedding_gateway(session),
-            )
+            try:
+                gateway = create_embedding_gateway(session)
+            except ValueError as error:
+                # A mock runtime without an embedding provider is a deployment
+                # configuration boundary, not a transient provider outage.
+                raise NonRetryableJobError(str(error)) from error
+            return refresh_projection_batch(session, payload=payload, gateway=gateway)
 
     registry.register(LEARNING_INTELLIGENCE_PROJECTION_REFRESH_JOB, handle_projection_refresh)

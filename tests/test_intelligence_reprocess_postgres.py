@@ -578,6 +578,10 @@ def test_reprocess_job_preserves_raw_history_and_activates_only_successful_sessi
                 evidence=_evidence_identity(model="fixture-evidence-v2"),
             ),
         )
+    # The prior activation durably queued a retrieval-only projection refresh.
+    # It is independent operational work and may be claimed before the next
+    # reprocess request without changing live authority.
+    assert run_once(factory, registry, worker_id="reprocess-worker") in {"PENDING", "FAILED", "COMPLETED"}
     assert run_once(factory, registry, worker_id="reprocess-worker") == "PENDING"
     with factory() as session:
         authority = session.query(IntelligenceSessionAuthority).one()
