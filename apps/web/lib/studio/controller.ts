@@ -1,11 +1,11 @@
 import {
   parseStudioFrame,
-  StudioFrame,
-  StudioOperation,
   StudioProtocolParseError,
-  StudioSnapshotFrame,
-} from "./contracts";
-import { StudioSseParser } from "./sse";
+  type StudioFrame,
+  type StudioOperation,
+  type StudioSnapshotFrame,
+} from "./contracts.ts";
+import { StudioSseParser } from "./sse.ts";
 
 type RuntimeOpen = {
   runtime_id: string;
@@ -22,7 +22,23 @@ export type StudioOperationResult = {
   student_interaction_status: string | null;
 };
 
-export type StudioCompositionStatus = "IDLE" | "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "SUPERSEDED";
+export type StudioCompositionStatus = {
+  version: "canvas-composition-view-v1";
+  observed_at: string;
+  runtime_id: string;
+  run_id: string | null;
+  run_created_at: string | null;
+  source_message_id: string | null;
+  run_status: "IDLE" | "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED" | "SUPERSEDED" | "REJECTED";
+  job_status: string | null;
+  objective: string | null;
+  scene_id: string | null;
+  scene_ready: boolean;
+  active_scene_id: string | null;
+  active_scene_version: number | null;
+  deadline_at: string | null;
+  failure_code: string | null;
+};
 
 export type StudioCustomVisualBuild = {
   source: string;
@@ -63,6 +79,14 @@ function protocolError(response: Response): Error {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function nullableString(value: unknown): value is string | null {
+  return typeof value === "string" || value === null;
+}
+
+function nullableNonNegativeInteger(value: unknown): value is number | null {
+  return value === null || (typeof value === "number" && Number.isInteger(value) && value >= 0);
 }
 
 /**
@@ -112,9 +136,9 @@ export function createStudioController(options: ControllerOptions): StudioContro
 
     async compositionStatus(runtimeId) {
       const response = await request(`/v1/student/studio/${encodeURIComponent(runtimeId)}/composition-status`);
-      const payload = await response.json() as { status?: unknown };
-      if (!isCompositionStatus(payload.status)) throw new StudioProtocolParseError("Invalid Studio composition status.");
-      return payload.status;
+      const payload = await response.json() as unknown;
+      if (!isCompositionStatus(payload)) throw new StudioProtocolParseError("Invalid Studio composition status.");
+      return payload;
     },
 
     async customVisualBuild(sceneId, buildId) {
@@ -177,5 +201,20 @@ export function createStudioController(options: ControllerOptions): StudioContro
 }
 
 function isCompositionStatus(value: unknown): value is StudioCompositionStatus {
-  return value === "IDLE" || value === "PENDING" || value === "RUNNING" || value === "COMPLETED" || value === "FAILED" || value === "SUPERSEDED";
+  if (!isRecord(value)) return false;
+  return value.version === "canvas-composition-view-v1"
+    && typeof value.observed_at === "string"
+    && typeof value.runtime_id === "string"
+    && nullableString(value.run_id)
+    && nullableString(value.run_created_at)
+    && nullableString(value.source_message_id)
+    && (value.run_status === "IDLE" || value.run_status === "PENDING" || value.run_status === "RUNNING" || value.run_status === "COMPLETED" || value.run_status === "FAILED" || value.run_status === "CANCELLED" || value.run_status === "SUPERSEDED" || value.run_status === "REJECTED")
+    && nullableString(value.job_status)
+    && nullableString(value.objective)
+    && nullableString(value.scene_id)
+    && typeof value.scene_ready === "boolean"
+    && nullableString(value.active_scene_id)
+    && nullableNonNegativeInteger(value.active_scene_version)
+    && nullableString(value.deadline_at)
+    && nullableString(value.failure_code);
 }

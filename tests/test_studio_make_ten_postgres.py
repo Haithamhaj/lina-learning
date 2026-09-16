@@ -704,7 +704,7 @@ def test_make_ten_submission_continues_with_original_truth_after_later_record_on
             assert len(current_groups["ones-group"]["item_ids"]) == 6
             assert current_groups == selected_groups
             yield StreamDelta("You made a full ten.")
-            yield StreamComplete(ModelResult(output={"text": "You made a full ten.", "workspace_intent": None}))
+            yield StreamComplete(ModelResult(output={"text": "You made a full ten.", "workspace_intent": None, "canvas_brief": None, "canvas_change_intent": None}))
 
     with postgres_session_factory.begin() as session:
         student = _student(session, "make-ten-api")

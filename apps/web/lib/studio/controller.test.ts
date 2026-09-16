@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createStudioController } from "./controller";
+import { createStudioController } from "./controller.ts";
 
 test("controller sends bearer token in headers and never appends it to URLs", async () => {
   const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
@@ -35,6 +35,36 @@ test("controller retrieves a Custom Visual build through the authenticated Studi
   assert.deepEqual(build, { source: "window.mount=() => {}", manifest: { interactions: [] } });
   assert.equal(calls[0]?.url, "https://api.example.test/v1/student/studio/scenes/scene%2Fid/custom-visual-builds/build%20id");
   assert.equal((calls[0]?.init?.headers as Headers).get("Authorization"), "Bearer student-token");
+});
+
+test("controller retains composition identity rather than reducing it to a status flag", async () => {
+  const controller = createStudioController({
+    apiBaseUrl: "https://api.example.test",
+    getToken: async () => "student-token",
+    fetch: async () => new Response(JSON.stringify({
+      version: "canvas-composition-view-v1",
+      observed_at: "2026-09-16T00:00:00Z",
+      runtime_id: "runtime-1",
+      run_id: "run-1",
+      run_created_at: "2026-09-16T00:00:00Z",
+      source_message_id: "message-1",
+      run_status: "PENDING",
+      job_status: "PENDING",
+      objective: "Compare decimals.",
+      scene_id: null,
+      scene_ready: false,
+      active_scene_id: null,
+      active_scene_version: null,
+      deadline_at: null,
+      failure_code: null,
+    }), { status: 200 }),
+  });
+
+  const view = await controller.compositionStatus("runtime-1");
+
+  assert.equal(view.run_status, "PENDING");
+  assert.equal(view.run_id, "run-1");
+  assert.equal(view.objective, "Compare decimals.");
 });
 
 test("controller fails closed when a Custom Visual build is unauthorized or unavailable", async () => {

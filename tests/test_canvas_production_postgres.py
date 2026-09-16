@@ -160,7 +160,7 @@ def test_specialist_scene_event_snapshot_reload_and_same_tutor_continuation(fact
         def execute(self, route, payload):
             self.calls += 1
             assert payload["studio_interaction_context"]["source"]["event"]["activity_key"] == stored["active_activity_key"]
-            return ModelResult(output={"text": f"Tutor continuation for {pattern}", "workspace_intent": None})
+            return ModelResult(output={"text": f"Tutor continuation for {pattern}", "workspace_intent": None, "canvas_brief": None, "canvas_change_intent": None})
 
     tutor = Tutor()
     continuation = StudioInteractionTutorService(bind=factory.kw["bind"], gateway_factory=lambda session: ModelGateway(session, routes={m.ModelTask.TUTOR: ModelRoute("fixture", "primary-tutor-fixture")}, providers={"fixture": tutor}))

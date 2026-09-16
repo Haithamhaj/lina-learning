@@ -114,7 +114,7 @@ class _RecordingStudioTutorProvider:
         assert route.model == "fixture-tutor"
         self.payloads.append(payload)
         return ModelResult(
-            output={"text": "Let us examine that step.", "workspace_intent": None},
+            output={"text": "Let us examine that step.", "workspace_intent": None, "canvas_brief": None, "canvas_change_intent": None},
             input_tokens=7,
             output_tokens=5,
         )
@@ -1117,7 +1117,7 @@ def test_owned_canvas_interaction_executes_once_with_exact_gateway_lineage(
     )
 
     assert len(provider.payloads) == 1
-    assert provider.payloads[0]["response_schema"]["name"] == "tutor_turn_v11"  # type: ignore[index]
+    assert provider.payloads[0]["response_schema"]["name"] == "tutor_turn_v12"  # type: ignore[index]
     assert "question" not in provider.payloads[0]
     source = result.context.as_model_payload()["source"]
     assert source["turn_origin"] == "CANVAS_INTERACTION"
@@ -1412,8 +1412,6 @@ def test_canvas_tutor_turn_admits_its_own_canvas_brief_as_a_causal_replacement(
 ) -> None:
     """Catches dropping a same-Primary-Tutor Canvas update after a semantic action."""
 
-    from services.studio.interactions import StudioInteractionTutorAdmission
-
     student_id, session_id, runtime_id, scene_id, interaction_id, engine = _triggering_interaction(
         postgres_session_factory
     )
@@ -1436,7 +1434,7 @@ def test_canvas_tutor_turn_admits_its_own_canvas_brief_as_a_causal_replacement(
             )
         )
 
-    class UpdatingTutor(_RecordingStudioTutorProvider):
+    class UpdatingTutor(_StreamingStudioTutorProvider):
         def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
             result = super().execute(route, payload)
             result.output["canvas_brief"] = {
@@ -1454,30 +1452,41 @@ def test_canvas_tutor_turn_admits_its_own_canvas_brief_as_a_causal_replacement(
                 "locale": "en",
                 "direction": "ltr",
             }
+            result.output["canvas_change_intent"] = "REPLACE_SCENE"
             return result
 
     service = _studio_tutor_service(engine=engine, provider=UpdatingTutor())
-    result = service.execute(
+    admission = service.admit(
         student_id=student_id,
         learning_session_id=session_id,
         runtime_id=runtime_id,
         interaction_id=interaction_id,
     )
-    admission = StudioInteractionTutorAdmission(
-        context=result.context,
-        observation_id=None,
-        workspace_context=None,
-    )
+    terminal = None
+    for event in service.stream_admitted(admission=admission, student_id=student_id):
+        if isinstance(event, StreamComplete):
+            terminal = event.result
+    assert terminal is not None
+    expected_scene_version = admission.workspace_context.current_scene_version
+    assert expected_scene_version is not None
     turn = service.persist_canvas_turn(
         admission=admission,
-        result=result.result,
+        result=terminal,
         student_id=student_id,
     )
 
     with postgres_session_factory() as session:
         message = session.get(LearningMessage, turn.message_id)
         assert message is not None
-        assert message.payload["tutor_turn_schema_version"] == "tutor_turn_v11"
+        assert message.payload["tutor_turn_schema_version"] == "tutor_turn_v12"
+        assert message.payload["canvas_change_intent"] == "REPLACE_SCENE"
+        assert message.payload["canvas_decision_base"] == {
+            "version": "canvas-decision-base-v1",
+            "expected_run_id": None,
+            "expected_run_status": None,
+            "expected_scene_id": str(scene_id),
+            "expected_scene_version": expected_scene_version,
+        }
         assert message.payload["agentic_canvas"]["status"] == "ADMITTED"
         replacement = session.scalar(
             select(StudioCanvasSpecialistRun).where(
@@ -1486,6 +1495,36 @@ def test_canvas_tutor_turn_admits_its_own_canvas_brief_as_a_causal_replacement(
         )
         assert replacement is not None
         assert replacement.base_scene_id == scene_id
+        assert replacement.base_scene_version == expected_scene_version
+
+
+def test_canvas_interaction_rejects_a_v12_brief_without_change_intent(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """D: a v12 Canvas result cannot silently become an unadmitted brief."""
+
+    from services.studio.interactions import StudioInteractionTutorAdmission, StudioInteractionTutorOutputError
+
+    student_id, session_id, runtime_id, _scene_id, interaction_id, engine = _triggering_interaction(
+        postgres_session_factory
+    )
+
+    class MissingIntentTutor(_RecordingStudioTutorProvider):
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            result = super().execute(route, payload)
+            result.output["canvas_brief"] = {
+                "version": "canvas-brief-v1", "subject_key": "MATH", "objective": "A changed visual.",
+                "student_request": "Change the visual.", "requested_representation": "A number line.",
+                "facts": [], "relations": [], "quantities": [], "desired_student_action": "Compare.",
+                "must_not_imply": [], "source_references": [], "locale": "en", "direction": "ltr",
+            }
+            return result
+
+    service = _studio_tutor_service(engine=engine, provider=MissingIntentTutor())
+    result = service.execute(student_id=student_id, learning_session_id=session_id, runtime_id=runtime_id, interaction_id=interaction_id)
+    admission = StudioInteractionTutorAdmission(context=result.context, observation_id=None, workspace_context=None)
+    with pytest.raises(StudioInteractionTutorOutputError, match="canvas_change_intent"):
+        service.persist_canvas_turn(admission=admission, result=result.result, student_id=student_id)
 
 
 def test_canvas_terminal_waits_on_learning_session_before_locking_runtime(

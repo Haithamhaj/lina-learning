@@ -158,6 +158,8 @@ class Capture:
                 output={
                     "text": answer,
                     "workspace_intent": None,
+                    "canvas_brief": None,
+                    "canvas_change_intent": None,
                     "suggested_actions": [],
                     "guided_check": None,
                     "teaching_mode": None,

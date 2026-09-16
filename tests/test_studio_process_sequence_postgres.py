@@ -705,7 +705,7 @@ def test_process_sequence_submission_uses_original_source_after_later_record_onl
             yield StreamDelta("You put the filtration steps in a useful order.")
             yield StreamComplete(
                 ModelResult(
-                    output={"text": "You put the filtration steps in a useful order.", "workspace_intent": None}
+                    output={"text": "You put the filtration steps in a useful order.", "workspace_intent": None, "canvas_brief": None, "canvas_change_intent": None}
                 )
             )
 

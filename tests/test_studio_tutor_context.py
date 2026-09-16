@@ -89,6 +89,29 @@ def test_tutor_model_payload_includes_typed_studio_workspace_context() -> None:
     assert '"through_sequence": 0' in str(payload["input"])
 
 
+def test_tutor_workspace_context_exposes_server_owned_pending_canvas_lifecycle() -> None:
+    """A03: status questions see durable lifecycle truth before a Scene exists."""
+
+    from services.studio.tutor_context import StudioTutorWorkspaceContext
+
+    context = StudioTutorWorkspaceContext(
+        runtime_id=uuid4(), snapshot_schema_version="studio-snapshot-v1", through_sequence=0,
+        snapshot_sequence=0, current_scene_id=None, current_scene_version=None,
+        active_subject_key=None, active_activity_key=None, state_payload={}, unseen_events=(), observation_id=None,
+        canvas_composition={
+            "version": "canvas-composition-view-v1",
+            "run_id": "run-pending",
+            "run_status": "PENDING",
+            "objective": "Compare two decimals.",
+            "scene_ready": False,
+            "active_scene_id": None,
+        },
+    )
+
+    payload = context.as_model_payload()
+    assert payload["canvas_composition"]["run_status"] == "PENDING"
+
+
 def test_workspace_context_carries_exact_active_scene_capability_without_registry_dump() -> None:
     """Runtime-02 uses Scene-persisted versions rather than a latest capability guess."""
 

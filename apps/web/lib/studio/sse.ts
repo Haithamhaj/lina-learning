@@ -1,4 +1,4 @@
-import { parseStudioFrame, StudioFrame, StudioProtocolParseError } from "./contracts";
+import { parseStudioFrame, StudioProtocolParseError, type StudioFrame } from "./contracts.ts";
 
 export type ParsedStudioSseFrame = { id: number | null; frame: StudioFrame };
 

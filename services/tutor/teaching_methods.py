@@ -38,7 +38,7 @@ _REGISTRY = {
         TeachingMethod.CONCRETE_EXAMPLE, "Use a familiar concrete example before abstraction."
     ),
     TeachingMethod.VISUAL_REPRESENTATION: TeachingMethodDefinition(
-        TeachingMethod.VISUAL_REPRESENTATION, "Use a simple visual or mental representation."
+        TeachingMethod.VISUAL_REPRESENTATION, "Use a visual or mental representation to expose structure. A mental image alone does not fulfill an explicit request for an external visible representation."
     ),
     TeachingMethod.WORKED_EXAMPLE: TeachingMethodDefinition(
         TeachingMethod.WORKED_EXAMPLE, "Work through one short example clearly."

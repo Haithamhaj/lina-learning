@@ -14,16 +14,19 @@ from starlette.concurrency import iterate_in_threadpool, run_in_threadpool
 from collections.abc import Callable, Iterator
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.platform.auth import AuthenticatedPrincipal, UserRole, require_role
 from apps.api.routes.studio import get_studio_subject_registry
-from services.platform.db.models import LearningMessage, LearningSession, StudentSourceAsset
+from services.platform.db.models import LearningMessage, LearningSession, StudentSourceAsset, StudioRuntime
 from services.platform.db.session import get_session
 from services.platform.student_identity import resolve_student_for_authenticated_identity
 from services.studio.tutor_context import acknowledge_studio_tutor_observation
+from services.studio.composition_status import load_canvas_composition_view
 from services.studio.interactions import (
     StudioInteractionAccessDenied,
     StudioInteractionSourceError,
@@ -539,7 +542,20 @@ def _stream_student_tutor_turn(
                     "guided_check": final_turn.guided_check.model_dump(mode="json") if final_turn.guided_check is not None else None,
                 }
                 if include_canvas_composition:
-                    terminal_payload["canvas_composition"] = "PENDING" if final_turn.workspace_visual_status == "ADMITTED" else None
+                    runtime = stream_session.execute(
+                        select(StudioRuntime).where(
+                            StudioRuntime.student_id == student_id,
+                            StudioRuntime.learning_session_id == session_id,
+                        )
+                    ).scalar_one_or_none()
+                    view = None if runtime is None else load_canvas_composition_view(
+                        stream_session,
+                        student_id=student_id,
+                        runtime_id=runtime.id,
+                    )
+                    terminal_payload["canvas_composition"] = (
+                        None if view is None else jsonable_encoder(view.as_api_payload())
+                    )
                 yield f"event: turn\ndata: {json.dumps(terminal_payload)}\n\n"
                 if final_turn.studio_observation_id is not None:
                     acknowledge_studio_tutor_observation(

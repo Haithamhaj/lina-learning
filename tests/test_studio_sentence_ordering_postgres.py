@@ -725,7 +725,7 @@ def test_sentence_submission_keeps_source_truth_after_later_record_only_reorder(
             assert current_state["token_ids"] == changed_token_ids
             assert current_state == selected_state
             yield StreamDelta("You put the words in sentence order.")
-            yield StreamComplete(ModelResult(output={"text": "You put the words in sentence order.", "workspace_intent": None}))
+            yield StreamComplete(ModelResult(output={"text": "You put the words in sentence order.", "workspace_intent": None, "canvas_brief": None, "canvas_change_intent": None}))
 
     with postgres_session_factory.begin() as session:
         student = _student(session, "english-api")

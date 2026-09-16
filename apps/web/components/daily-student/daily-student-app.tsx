@@ -14,8 +14,18 @@ import { Button } from "@/components/ui/button";
 import {
   createStudioController,
   type StudioController,
+  type StudioCompositionStatus,
 } from "@/lib/studio/controller";
 import type { StudioOperation, StudioSnapshotFrame } from "@/lib/studio/contracts";
+import {
+  canvasElapsedSeconds,
+  canvasPresentationState,
+  canvasWaitingMotionClass,
+  isCompositionInFlight,
+  isDailyComposerDisabled,
+  shouldRefreshCompositionSnapshot,
+  shouldReplaceCompositionView,
+} from "@/lib/studio/composition-recovery";
 import { publicConfig } from "@/lib/public-config";
 import { dailySessionRequest, dailySessionUrl } from "@/lib/daily-session-reference";
 import {
@@ -43,7 +53,7 @@ type ChatMessage = {
   source_asset?: StudentSourceAsset | null;
 };
 type DailySession = { learning_session_id: string; status: string; messages: ChatMessage[] };
-type TutorTurn = { text: string; suggested_actions: SuggestedAction[]; guided_check?: GuidedCheck | null; canvas_composition?: "PENDING" | null };
+type TutorTurn = { text: string; suggested_actions: SuggestedAction[]; guided_check?: GuidedCheck | null; canvas_composition?: StudioCompositionStatus | null };
 type StudioConnection = { close: () => void; done: Promise<void> };
 
 function studentEndpoint(path: string): string {
@@ -74,6 +84,23 @@ function ChatBubble({ message, pending, getToken, copy }: { message: ChatMessage
   );
 }
 
+function CanvasWaitingState({ copy, elapsedSeconds }: { copy: DailyPresentationCopy["canvas"]; elapsedSeconds: number }) {
+  return (
+    <div className="grid min-h-72 place-items-center rounded-[1.5rem] border border-amber-100 bg-[radial-gradient(circle_at_top,#fff8dd_0%,#fffdf7_58%,#ffffff_100%)] px-6 py-10 text-center">
+      <div>
+        <div aria-hidden="true" className="relative mx-auto h-20 w-28">
+          <span className={`absolute left-2 top-7 grid size-10 place-items-center rounded-2xl bg-[#e8f6f1] text-xl text-[#2e766a] ${canvasWaitingMotionClass}`}>✎</span>
+          <span className={`absolute right-3 top-2 size-3 rounded-full bg-[#7d70df] ${canvasWaitingMotionClass}`} />
+          <span className={`absolute right-0 top-9 size-2.5 rounded-full bg-[#e2a84b] ${canvasWaitingMotionClass}`} />
+          <span className={`absolute right-6 top-14 size-2 rounded-full bg-[#57a89b] ${canvasWaitingMotionClass}`} />
+        </div>
+        <p className="mt-3 font-display text-xl text-slate-900" role="status">{copy.preparing(elapsedSeconds)}</p>
+        <p className="mt-2 text-sm text-slate-600">{copy.elapsed(elapsedSeconds)}</p>
+      </div>
+    </div>
+  );
+}
+
 /**
  * The greenfield Daily surface owns only presentation and provisional state.
  * Tutor and Studio durability remain on their existing server authorities.
@@ -85,7 +112,9 @@ export function DailyStudentApp() {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [chatSending, setChatSending] = useState(false);
   const [operationPending, setOperationPending] = useState(false);
-  const [canvasCompositionPending, setCanvasCompositionPending] = useState(false);
+  const [canvasComposition, setCanvasComposition] = useState<StudioCompositionStatus | null>(null);
+  const [canvasStatusNotice, setCanvasStatusNotice] = useState<"failed" | "unavailable" | null>(null);
+  const [canvasElapsed, setCanvasElapsed] = useState(0);
   const [studioConnection, setStudioConnection] = useState<"connecting" | "connected" | "reconnecting" | "error">("connecting");
   const [error, setError] = useState("");
   const [draft, setDraft] = useState("");
@@ -95,6 +124,7 @@ export function DailyStudentApp() {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [sessionEnded, setSessionEnded] = useState(false);
   const [surfaceDirection, setSurfaceDirection] = useState<"ltr" | "rtl">("ltr");
+  const canvasCopy = dailyPresentationCopy(surfaceDirection).canvas;
   const controllerRef = useRef<StudioController | null>(null);
   const runtimeIdRef = useRef<string | null>(null);
   const appliedSnapshotSequenceRef = useRef(-1);
@@ -102,13 +132,25 @@ export function DailyStudentApp() {
   const workspaceHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const composerRef = useRef<HTMLInputElement | null>(null);
   const priorWorkspaceVisible = useRef<boolean | null>(null);
+  const compositionRequestRef = useRef(0);
+  const canvasCompositionRef = useRef<StudioCompositionStatus | null>(null);
+
+  const applyComposition = (next: StudioCompositionStatus): boolean => {
+    if (!shouldReplaceCompositionView(canvasCompositionRef.current, next)) return false;
+    canvasCompositionRef.current = next;
+    setCanvasComposition(next);
+    return true;
+  };
 
   const applySnapshot = (next: StudioSnapshotFrame): boolean => {
     const required = Math.max(requiredSnapshotSequenceRef.current, appliedSnapshotSequenceRef.current);
     if (next.latest_event_sequence < required) return false;
     appliedSnapshotSequenceRef.current = next.latest_event_sequence;
     setSnapshot(next);
-    if (next.active_scene_contract !== null) setCanvasCompositionPending(false);
+    if (next.active_scene_contract !== null && canvasCompositionRef.current?.scene_ready) {
+      canvasCompositionRef.current = null;
+      setCanvasComposition(null);
+    }
     return true;
   };
 
@@ -136,6 +178,9 @@ export function DailyStudentApp() {
       setError("");
       setSessionEnded(false);
       setSnapshot(null);
+      setCanvasComposition(null);
+      canvasCompositionRef.current = null;
+      setCanvasStatusNotice(null);
       runtimeIdRef.current = null;
       appliedSnapshotSequenceRef.current = -1;
       requiredSnapshotSequenceRef.current = 0;
@@ -171,6 +216,16 @@ export function DailyStudentApp() {
           const next = await controller.snapshot(runtimeId);
           if (!cancelled) applySnapshot(next);
         };
+        const refreshComposition = async () => {
+          const controller = controllerRef.current;
+          const runtimeId = runtimeIdRef.current;
+          if (!controller || !runtimeId) return;
+          const view = await controller.compositionStatus(runtimeId);
+          if (cancelled) return;
+          if (!applyComposition(view)) return;
+          setCanvasStatusNotice(null);
+          if (shouldRefreshCompositionSnapshot(view)) await refreshSnapshot();
+        };
         const connect = () => {
           if (cancelled || !runtimeIdRef.current || !controllerRef.current) return;
           setStudioConnection(retryCount === 0 ? "connected" : "reconnecting");
@@ -182,6 +237,11 @@ export function DailyStudentApp() {
             reconnectTimer = window.setTimeout(async () => {
               try {
                 await refreshSnapshot();
+                try {
+                  await refreshComposition();
+                } catch {
+                  if (!cancelled) setCanvasStatusNotice("unavailable");
+                }
                 connect();
               } catch (reason) {
                 if (!cancelled) {
@@ -221,6 +281,11 @@ export function DailyStudentApp() {
         const runtime = await controller.open(daily.learning_session_id);
         runtimeIdRef.current = runtime.runtime_id;
         await refreshSnapshot();
+        try {
+          await refreshComposition();
+        } catch {
+          if (!cancelled) setCanvasStatusNotice("unavailable");
+        }
         if (cancelled) return;
         setState("ready");
         connect();
@@ -242,18 +307,48 @@ export function DailyStudentApp() {
   }, [getToken, isLoaded, loadAttempt]);
 
   useEffect(() => {
-    if (!canvasCompositionPending) return;
+    if (canvasComposition?.run_status === "FAILED" || canvasComposition?.run_status === "REJECTED" || canvasComposition?.run_status === "CANCELLED") {
+      setCanvasStatusNotice("failed");
+    }
+  }, [canvasComposition?.run_status]);
+
+  useEffect(() => {
+    if (!isCompositionInFlight(canvasComposition)) {
+      setCanvasElapsed(0);
+      return;
+    }
+    const runCreatedAt = canvasComposition?.run_created_at ?? null;
+    const updateElapsed = () => setCanvasElapsed(canvasElapsedSeconds(runCreatedAt));
+    updateElapsed();
+    const timer = window.setInterval(updateElapsed, 1_000);
+    return () => window.clearInterval(timer);
+  }, [canvasComposition?.run_created_at, canvasComposition?.run_status]);
+
+  useEffect(() => {
+    if (!isCompositionInFlight(canvasComposition)) return;
     const timer = window.setInterval(() => {
       const controller = controllerRef.current;
       const runtimeId = runtimeIdRef.current;
       if (!controller || !runtimeId) return;
-      void controller.compositionStatus(runtimeId).then((status) => {
-        if (status === "COMPLETED") void reloadSnapshot();
-        if (status === "IDLE" || status === "COMPLETED" || status === "FAILED" || status === "SUPERSEDED") setCanvasCompositionPending(false);
-      }).catch(() => undefined);
+      const request = ++compositionRequestRef.current;
+      void controller.compositionStatus(runtimeId).then((view) => {
+        if (request !== compositionRequestRef.current || runtimeId !== runtimeIdRef.current) return;
+        if (!applyComposition(view)) return;
+        setCanvasStatusNotice(null);
+        if (shouldRefreshCompositionSnapshot(view)) {
+          void controller.snapshot(runtimeId).then((next) => {
+            if (runtimeId !== runtimeIdRef.current) return;
+            applySnapshot(next);
+            if (canvasCompositionRef.current?.run_id === view.run_id) {
+              canvasCompositionRef.current = null;
+              setCanvasComposition(null);
+            }
+          }).catch(() => { setCanvasStatusNotice("unavailable"); });
+        }
+      }).catch(() => { setCanvasStatusNotice("unavailable"); });
     }, 2_000);
     return () => window.clearInterval(timer);
-  }, [canvasCompositionPending]);
+  }, [canvasComposition]);
 
   const isArabic = surfaceDirection === "rtl";
   const presentationCopy = dailyPresentationCopy(surfaceDirection);
@@ -291,12 +386,14 @@ export function DailyStudentApp() {
     reconnect: "Reconnect",
   };
   const workspaceVisible = snapshot?.active_scene_contract !== null && snapshot !== null;
+  const canvasPresentation = canvasPresentationState(canvasComposition, workspaceVisible);
+  const showCanvasPanel = canvasPresentation.showWorkspace || canvasStatusNotice !== null;
+  const composerDisabled = isDailyComposerDisabled({ tutorResponding: chatSending, voiceBusy });
   useEffect(() => {
     const previous = priorWorkspaceVisible.current;
     priorWorkspaceVisible.current = workspaceVisible;
     if (previous === null || previous === workspaceVisible) return;
-    const target = workspaceVisible ? workspaceHeadingRef.current : composerRef.current;
-    window.requestAnimationFrame(() => target?.focus());
+    if (!workspaceVisible) window.requestAnimationFrame(() => composerRef.current?.focus());
   }, [workspaceVisible]);
 
   const updateTutor = (id: string, update: (message: ChatMessage) => ChatMessage) => {
@@ -400,7 +497,7 @@ export function DailyStudentApp() {
           if (type === "turn") {
             const turn = payload as TutorTurn;
             terminalReceived = true;
-            if (turn.canvas_composition === "PENDING") setCanvasCompositionPending(true);
+            if (turn.canvas_composition) applyComposition(turn.canvas_composition);
             updateTutor(provisionalTutorId, (message) => ({
               ...message,
               content: turn.text,
@@ -545,7 +642,7 @@ export function DailyStudentApp() {
           <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#5d7d78]">{copy.daily}</p><h1 className="mt-1 font-display text-3xl tracking-tight">{copy.heading}</h1></div>
           <p className="text-sm text-slate-600" role="status">Studio {studioConnection === "connected" ? "connected" : studioConnection === "reconnecting" ? "reconnecting" : studioConnection}</p>
         </header>
-        <div className={`grid items-start gap-5 ${workspaceVisible || canvasCompositionPending ? "xl:grid-cols-[minmax(0,0.92fr)_minmax(420px,1.08fr)]" : ""}`}>
+        <div className={`grid items-start gap-5 ${showCanvasPanel ? "xl:grid-cols-[minmax(0,0.92fr)_minmax(420px,1.08fr)]" : ""}`}>
           <section aria-label={copy.chat} className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5">
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4"><div><h2 className="font-display text-2xl">{copy.chat}</h2><p className="mt-1 text-sm leading-6 text-slate-600">{copy.chatDescription}</p></div><span aria-hidden="true" className="grid size-10 place-items-center rounded-2xl bg-[#e8f6f1] text-[#2e766a]">✦</span></div>
             <div className="mt-4 min-h-[26rem] max-h-[calc(100vh-19rem)] overflow-y-auto rounded-[1.5rem] bg-[#fafbfe] p-3 sm:p-4" aria-live="polite">
@@ -553,14 +650,14 @@ export function DailyStudentApp() {
             </div>
             <form className="mt-4 grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-3 sm:grid-cols-[auto_1fr_auto] sm:items-center" onSubmit={submit}>
               <label className="sr-only" htmlFor="daily-learning-message">{copy.messageLabel}</label>
-              <DailySourceInput file={selectedSource} activeSource={activeSource} disabled={chatSending || voiceBusy} onFile={setSelectedSource} onDismissActive={() => setActiveSource(null)} onError={setError} copy={presentationCopy.source} />
+              <DailySourceInput file={selectedSource} activeSource={activeSource} disabled={composerDisabled} onFile={setSelectedSource} onDismissActive={() => setActiveSource(null)} onError={setError} copy={presentationCopy.source} />
               {selectedSource && !draft.trim() ? <p className="order-1 text-xs text-slate-600 sm:col-span-3">Sending without a question will ask: “Help me with this.”</p> : null}
               <DailyVoiceInput apiBaseUrl={publicConfig.apiBaseUrl} learningSessionId={learningSession?.learning_session_id ?? null} draft={draft} chatSending={chatSending} getToken={getToken} onActiveChange={setVoiceBusy} onTranscript={(transcript) => { setDraft(transcript); window.requestAnimationFrame(() => composerRef.current?.focus()); }} copy={presentationCopy.voice} />
-              <input ref={composerRef} id="daily-learning-message" dir="auto" value={draft} onChange={(event) => setDraft(event.target.value)} disabled={voiceBusy || chatSending} maxLength={4000} placeholder={copy.placeholder} className="order-2 h-12 min-w-0 rounded-2xl bg-slate-50 px-4 text-sm outline-none ring-[#7d70df] transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60" />
-              <Button className="order-3 min-h-12" type="submit" disabled={(!draft.trim() && !selectedSource) || chatSending || voiceBusy}>{chatSending ? copy.thinking : copy.send}</Button>
+              <input ref={composerRef} id="daily-learning-message" dir="auto" value={draft} onChange={(event) => setDraft(event.target.value)} disabled={composerDisabled} maxLength={4000} placeholder={copy.placeholder} className="order-2 h-12 min-w-0 rounded-2xl bg-slate-50 px-4 text-sm outline-none ring-[#7d70df] transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60" />
+              <Button className="order-3 min-h-12" type="submit" disabled={(!draft.trim() && !selectedSource) || composerDisabled}>{chatSending ? copy.thinking : copy.send}</Button>
             </form>
           </section>
-          {workspaceVisible || canvasCompositionPending ? <aside aria-label="Adaptive Learning Workspace" className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a6b42]">Adaptive Learning Workspace</p><h2 ref={workspaceHeadingRef} tabIndex={-1} className="mt-1 font-display text-2xl outline-none">{workspaceVisible ? "Work with the current scene" : "Preparing a visual explanation"}</h2></div>{operationPending ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900" role="status">Saving…</span> : null}</div>{canvasCompositionPending ? <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" role="status">Tutor is preparing the visual explanation. You can keep chatting while it arrives.</p> : null}{workspaceVisible && snapshot ? <StudioRendererHost snapshot={snapshot} operationPending={operationPending} onOperation={submitOperation} onReload={() => { void reloadSnapshot(); }} loadGeneratedAsset={loadGeneratedAsset} loadCustomVisualBuild={loadCustomVisualBuild} /> : null}</aside> : null}
+          {showCanvasPanel ? <aside aria-label={canvasCopy.workspaceLabel} className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a6b42]">{canvasCopy.workspaceLabel}</p><h2 ref={workspaceHeadingRef} tabIndex={-1} className="mt-1 font-display text-2xl outline-none">{canvasStatusNotice === "failed" ? canvasCopy.failureHeading : canvasStatusNotice === "unavailable" && canvasComposition === null ? canvasCopy.statusHeading : canvasPresentation.showUpdating ? canvasCopy.updatingHeading : workspaceVisible ? canvasCopy.currentSceneHeading : canvasCopy.preparingHeading}</h2></div>{operationPending ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900" role="status">{canvasCopy.saving}</span> : null}</div>{canvasPresentation.showUpdating ? <div className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" role="status"><p>{canvasCopy.preparing(canvasElapsed)}</p><p className="mt-1 text-xs text-amber-800">{canvasCopy.elapsed(canvasElapsed)}</p></div> : null}{canvasStatusNotice === "failed" ? <p className="mb-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-900" role="alert">{canvasCopy.failed}</p> : null}{canvasStatusNotice === "unavailable" ? <p className="mb-4 rounded-2xl bg-slate-100 px-4 py-3 text-sm leading-6 text-slate-700" role="status">{canvasCopy.statusUnavailable}</p> : null}{canvasPresentation.showWaiting ? <CanvasWaitingState copy={canvasCopy} elapsedSeconds={canvasElapsed} /> : null}{workspaceVisible && snapshot ? <StudioRendererHost snapshot={snapshot} operationPending={operationPending} onOperation={submitOperation} onReload={() => { void reloadSnapshot(); }} loadGeneratedAsset={loadGeneratedAsset} loadCustomVisualBuild={loadCustomVisualBuild} /> : null}</aside> : null}
         </div>
         {error ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert"><span>{error}</span><Button type="button" variant="secondary" onClick={() => setLoadAttempt((value) => value + 1)}>{copy.reconnect}</Button></div> : null}
       </div>

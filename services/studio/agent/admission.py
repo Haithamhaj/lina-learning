@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from uuid import UUID
@@ -17,6 +18,7 @@ from services.platform.db.models import (
     StudioCanvasSpecialistRun,
     StudioRuntime,
     StudioScene,
+    StudioSnapshot,
 )
 from services.platform.jobs import enqueue_job
 from services.studio.canvas_brief import CanvasBriefContractError, parse_canvas_brief
@@ -28,10 +30,127 @@ AGENTIC_CANVAS_CAPABILITY_IDENTITY = "agentic-canvas-v1"
 # enough for one such provider turn to settle.
 AGENTIC_CANVAS_DEADLINE = timedelta(minutes=5)
 AGENTIC_CANVAS_SCENE_SCHEMA_VERSION = "agentic-canvas-scene-v3"
+_CANVAS_CHANGE_INTENTS = frozenset({"CREATE", "REPLACE_PENDING", "REPLACE_SCENE", "RETRY"})
+CANVAS_DECISION_BASE_VERSION = "canvas-decision-base-v1"
+_FAILED_RUN_STATUSES = frozenset({"FAILED", "REJECTED", "CANCELLED"})
 
 
 def _canonical_digest(value: dict[str, object]) -> str:
     return sha256(json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+
+
+def capture_canvas_decision_base(studio_context: object | None) -> dict[str, object] | None:
+    """Freeze the minimal server-owned Canvas truth selected before inference."""
+
+    if studio_context is None:
+        return None
+    composition = getattr(studio_context, "canvas_composition", None)
+    composition = composition if isinstance(composition, Mapping) else {}
+    run_id = composition.get("run_id")
+    run_status = composition.get("run_status")
+    scene_id = getattr(studio_context, "current_scene_id", None)
+    return {
+        "version": CANVAS_DECISION_BASE_VERSION,
+        "expected_run_id": str(run_id) if run_id is not None else None,
+        "expected_run_status": run_status if isinstance(run_status, str) else None,
+        "expected_scene_id": str(scene_id) if scene_id is not None else None,
+        "expected_scene_version": getattr(studio_context, "current_scene_version", None),
+    }
+
+
+def _uuid_or_none(value: object) -> UUID | None:
+    if value is None:
+        return None
+    try:
+        return UUID(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _reject_stale_base(message: LearningMessage) -> None:
+    payload = dict(message.payload) if isinstance(message.payload, dict) else {}
+    audit = dict(payload.get("agentic_canvas")) if isinstance(payload.get("agentic_canvas"), dict) else {}
+    audit["status"] = "REJECTED"
+    audit["reason_code"] = "STALE_BASE"
+    payload["agentic_canvas"] = audit
+    message.payload = payload
+
+
+def _decision_base_is_current(
+    session: Session,
+    *,
+    runtime: StudioRuntime,
+    intent: str,
+    base: object,
+) -> bool:
+    if not isinstance(base, dict) or base.get("version") != CANVAS_DECISION_BASE_VERSION:
+        return False
+    expected_run_id = _uuid_or_none(base.get("expected_run_id"))
+    expected_run_status = base.get("expected_run_status")
+    expected_scene_id = _uuid_or_none(base.get("expected_scene_id"))
+    expected_scene_version = base.get("expected_scene_version")
+    if base.get("expected_run_id") is not None and expected_run_id is None:
+        return False
+    if base.get("expected_scene_id") is not None and expected_scene_id is None:
+        return False
+    if expected_run_status is not None and not isinstance(expected_run_status, str):
+        return False
+    if expected_scene_version is not None and not isinstance(expected_scene_version, int):
+        return False
+
+    current_runs = session.execute(
+        select(StudioCanvasSpecialistRun)
+        .where(
+            StudioCanvasSpecialistRun.studio_runtime_id == runtime.id,
+            StudioCanvasSpecialistRun.student_id == runtime.student_id,
+        )
+        .order_by(StudioCanvasSpecialistRun.created_at.desc())
+        .limit(2)
+        .with_for_update()
+    ).scalars().all()
+    if len(current_runs) > 1 and current_runs[0].created_at == current_runs[1].created_at:
+        # A timestamp tie has no chronological meaning. Reject safely instead
+        # of treating UUID ordering as lifecycle authority.
+        return False
+    current_run = current_runs[0] if current_runs else None
+    snapshot = session.execute(
+        select(StudioSnapshot)
+        .where(
+            StudioSnapshot.studio_runtime_id == runtime.id,
+            StudioSnapshot.student_id == runtime.student_id,
+        )
+        .with_for_update()
+    ).scalar_one_or_none()
+    current_run_id = None if current_run is None else current_run.id
+    current_run_status = None if current_run is None else current_run.status
+    current_scene_id = None if snapshot is None else snapshot.current_scene_id
+    current_scene_version = None if snapshot is None else snapshot.current_scene_version
+
+    if current_run_id != expected_run_id:
+        return False
+    if current_scene_id != expected_scene_id or current_scene_version != expected_scene_version:
+        return False
+    if intent == "CREATE":
+        return expected_run_id is None and expected_run_status is None and expected_scene_id is None
+    if intent == "REPLACE_PENDING":
+        return (
+            expected_run_id is not None
+            and expected_run_status in {"PENDING", "RUNNING"}
+            and current_run_status in {"PENDING", "RUNNING"}
+        )
+    if intent == "REPLACE_SCENE":
+        return (
+            expected_scene_id is not None
+            and expected_scene_version is not None
+            and current_run_status == expected_run_status
+        )
+    if intent == "RETRY":
+        return (
+            expected_run_id is not None
+            and expected_run_status in _FAILED_RUN_STATUSES
+            and current_run_status == expected_run_status
+        )
+    return False
 
 
 def latest_admitted_agentic_message(
@@ -85,6 +204,25 @@ def admit_agentic_canvas_brief(session: Session, *, student_id: UUID, learning_s
     audit = message.payload.get("agentic_canvas") if isinstance(message.payload, dict) else None
     if not isinstance(audit, dict) or audit.get("status") != "ADMITTED":
         return None
+    # v12 makes the intended lifecycle transition explicit.  The admission
+    # boundary enforces it too, so a caller cannot turn a status/Scene step
+    # into composition merely by calling this service.  Older persisted Tutor
+    # turns remain readable and replayable under their historical contract.
+    if (
+        message.payload.get("tutor_turn_schema_version") == "tutor_turn_v12"
+        and message.payload.get("canvas_change_intent") not in _CANVAS_CHANGE_INTENTS
+    ):
+        return None
+    if message.payload.get("tutor_turn_schema_version") == "tutor_turn_v12":
+        intent = message.payload.get("canvas_change_intent")
+        if not isinstance(intent, str) or not _decision_base_is_current(
+            session,
+            runtime=runtime,
+            intent=intent,
+            base=message.payload.get("canvas_decision_base"),
+        ):
+            _reject_stale_base(message)
+            return None
     declared_digest, raw_brief = audit.get("brief_digest"), audit.get("brief")
     if not isinstance(declared_digest, str) or len(declared_digest) != 64:
         return None
@@ -134,7 +272,7 @@ def admit_agentic_canvas_brief(session: Session, *, student_id: UUID, learning_s
     job = enqueue_job(session, job_type=AGENTIC_CANVAS_COMPOSE_JOB, payload={"run_kind": AGENTIC_CANVAS_CAPABILITY_IDENTITY, "source_message_id": str(message.id), "brief_digest": digest}, idempotency_key=f"agentic-canvas:{message.id}:{digest}", max_attempts=2)
     try:
         with session.begin_nested():
-            run = StudioCanvasSpecialistRun(studio_runtime_id=runtime.id, student_id=student_id, learning_session_id=learning_session_id, source_message_id=message.id, scene_id=None, base_scene_id=None if active is None else active.id, base_scene_version=0 if active is None else active.scene_version, subject_key=brief.subject_key, capability_profile_version=AGENTIC_CANVAS_CAPABILITY_IDENTITY, status="PENDING", job_id=job.id, output_schema_version=AGENTIC_CANVAS_SCENE_SCHEMA_VERSION, deadline_at=clock + AGENTIC_CANVAS_DEADLINE, order_digest=digest)
+            run = StudioCanvasSpecialistRun(studio_runtime_id=runtime.id, student_id=student_id, learning_session_id=learning_session_id, source_message_id=message.id, scene_id=None, base_scene_id=None if active is None else active.id, base_scene_version=0 if active is None else active.scene_version, subject_key=brief.subject_key, capability_profile_version=AGENTIC_CANVAS_CAPABILITY_IDENTITY, status="PENDING", job_id=job.id, output_schema_version=AGENTIC_CANVAS_SCENE_SCHEMA_VERSION, deadline_at=clock + AGENTIC_CANVAS_DEADLINE, order_digest=digest, created_at=clock)
             session.add(run)
             session.flush()
             return run

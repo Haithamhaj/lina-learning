@@ -19,6 +19,7 @@ from services.platform.db.models import (
     AIExecution,
     LearningMessage,
     LearningSession,
+    StudioCanvasSpecialistRun,
     StudioScene,
     StudioStudentInteraction,
     StudioTutorObservation,
@@ -134,6 +135,57 @@ def test_snapshot_without_an_active_scene_exposes_a_null_scene_contract(
 
         assert snapshot.status_code == 200
         assert snapshot.json()["active_scene_contract"] is None
+    finally:
+        _clear_overrides()
+
+
+def test_composition_status_exposes_the_owned_run_not_a_legacy_visual_flag(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Catches a status response that cannot identify the current Canvas request."""
+
+    student_id, learning_session_id = _student_session(
+        postgres_session_factory,
+        subject="studio-composition-status",
+    )
+    client = _client(postgres_session_factory, subject="studio-composition-status")
+    try:
+        opened = client.post(f"/api/v1/student/studio/session/{learning_session_id}/open")
+        assert opened.status_code == 200
+        runtime_id = UUID(opened.json()["runtime_id"])
+        with postgres_session_factory.begin() as session:
+            message = LearningMessage(
+                session_id=learning_session_id,
+                role="tutor",
+                content="I will prepare a visual.",
+                payload={"agentic_canvas": {"status": "ADMITTED", "brief": {"objective": "Compare decimals."}}},
+            )
+            session.add(message)
+            session.flush()
+            session.add(
+                StudioCanvasSpecialistRun(
+                    studio_runtime_id=runtime_id,
+                    student_id=student_id,
+                    learning_session_id=learning_session_id,
+                    source_message_id=message.id,
+                    scene_id=None,
+                    base_scene_id=None,
+                    base_scene_version=0,
+                    subject_key="MATH",
+                    capability_profile_version="agentic-canvas-v1",
+                    status="PENDING",
+                    output_schema_version="agentic-canvas-scene-v3",
+                )
+            )
+
+        response = client.get(f"/api/v1/student/studio/{runtime_id}/composition-status")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["run_status"] == "PENDING"
+        assert body["objective"] == "Compare decimals."
+        assert body["scene_ready"] is False
+        assert body["runtime_id"] == str(runtime_id)
     finally:
         _clear_overrides()
 
@@ -721,7 +773,7 @@ def test_canvas_tutor_stream_claims_once_and_persists_no_fake_student_message(
             assert "question" not in payload
             self.calls += 1
             yield StreamDelta("Canvas ")
-            yield StreamComplete(ModelResult(output={"text": "Tutor reply", "workspace_intent": None}))
+            yield StreamComplete(ModelResult(output={"text": "Tutor reply", "workspace_intent": None, "canvas_brief": None, "canvas_change_intent": None}))
 
     student_id, learning_session_id = _student_session(postgres_session_factory, subject="studio-canvas-stream")
     registry = _studio_test_registry()
@@ -800,7 +852,7 @@ def test_canvas_terminal_disconnect_cancels_running_interaction_but_preserves_tu
         def stream(self, route: ModelRoute, payload: dict[str, object]):  # type: ignore[no-untyped-def]
             del route, payload
             yield StreamDelta("Tutor ")
-            yield StreamComplete(ModelResult(output={"text": "Persisted Canvas Tutor reply", "workspace_intent": None}))
+            yield StreamComplete(ModelResult(output={"text": "Persisted Canvas Tutor reply", "workspace_intent": None, "canvas_brief": None, "canvas_change_intent": None}))
 
     student_id, learning_session_id = _student_session(postgres_session_factory, subject="studio-disconnect")
     registry = _studio_test_registry()

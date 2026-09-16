@@ -3,6 +3,19 @@ export type DailyDirection = "ltr" | "rtl";
 export type DailyPresentationCopy = {
   student: string;
   linaThinking: string;
+  canvas: {
+    workspaceLabel: string;
+    currentSceneHeading: string;
+    preparingHeading: string;
+    updatingHeading: string;
+    failureHeading: string;
+    statusHeading: string;
+    saving: string;
+    preparing: (elapsedSeconds: number) => string;
+    elapsed: (elapsedSeconds: number) => string;
+    failed: string;
+    statusUnavailable: string;
+  };
   voice: {
     record: string;
     stop: string;
@@ -32,6 +45,23 @@ export function dailyPresentationCopy(direction: DailyDirection): DailyPresentat
     return {
       student: "أنتِ",
       linaThinking: "لينا تفكّر…",
+      canvas: {
+        workspaceLabel: "مساحة Canvas التعليمية",
+        currentSceneHeading: "تفاعلي مع المشهد الحالي",
+        preparingHeading: "جارٍ تجهيز شرح بصري",
+        updatingHeading: "جارٍ تجهيز تحديث بصري",
+        failureHeading: "لم يكتمل الرسم",
+        statusHeading: "حالة الرسم",
+        saving: "جارٍ الحفظ…",
+        preparing: (elapsedSeconds) => elapsedSeconds < 10
+          ? "أجهّز لك الرسم…"
+          : elapsedSeconds < 30
+            ? "أبني التمثيل البصري خطوة بخطوة…"
+            : "الرسم ما زال قيد التجهيز. يمكنكِ متابعة الشرح معي إلى أن يظهر.",
+        elapsed: (elapsedSeconds) => `جارٍ العمل منذ ${elapsedSeconds} ثانية`,
+        failed: "لم يكتمل التمثيل البصري هذه المرة. يمكنكِ متابعة المحادثة أو طلب شرح مختلف.",
+        statusUnavailable: "تعذر تحديث حالة الرسم الآن.",
+      },
       voice: {
         record: "سجّلي رسالة صوتية",
         stop: "أوقفي التسجيل وحوّليه إلى نص",
@@ -60,6 +90,23 @@ export function dailyPresentationCopy(direction: DailyDirection): DailyPresentat
   return {
     student: "You",
     linaThinking: "Lina is thinking…",
+    canvas: {
+      workspaceLabel: "Learning Canvas",
+      currentSceneHeading: "Work with the current scene",
+      preparingHeading: "Preparing a visual explanation",
+      updatingHeading: "Preparing a visual update",
+      failureHeading: "The visual did not complete",
+      statusHeading: "Visual status",
+      saving: "Saving…",
+      preparing: (elapsedSeconds) => elapsedSeconds < 10
+        ? "I’m preparing the visual for you…"
+        : elapsedSeconds < 30
+          ? "I’m building the visual step by step…"
+          : "The visual is still being prepared. You can keep learning with me while it appears.",
+      elapsed: (elapsedSeconds) => `Working for ${elapsedSeconds} seconds`,
+      failed: "The visual could not be completed this time. You can keep chatting or request a different explanation.",
+      statusUnavailable: "The visual status could not be refreshed just now.",
+    },
     voice: {
       record: "Record a message",
       stop: "Stop recording and transcribe",

@@ -5,6 +5,7 @@ This router deliberately has no Tutor, renderer, or curriculum authority.
 
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -14,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.platform.auth import AuthenticatedPrincipal, UserRole, require_role
-from services.platform.db.models import StudioCanvasSpecialistRun, StudioScene
+from services.platform.db.models import StudioScene
 from services.platform.db.session import get_session
 from services.platform.storage import ObjectStorage, StorageError, create_object_storage
 from services.platform.student_identity import (
@@ -23,6 +24,7 @@ from services.platform.student_identity import (
 from services.studio.feed import StudioEventFeed
 from services.studio.generated_assets import owned_generated_asset, read_generated_asset
 from services.studio.custom_visual_builds import resolve_custom_visual_build, CustomVisualBuildResolutionError
+from services.studio.composition_status import load_canvas_composition_view
 from services.studio.protocol import (
     StudioCursorConflict,
     StudioOperationConflict,
@@ -55,7 +57,21 @@ class StudioOperationResponse(BaseModel):
 
 
 class StudioCompositionStatusResponse(BaseModel):
-    status: str
+    version: str
+    observed_at: datetime
+    runtime_id: UUID
+    run_id: UUID | None
+    run_created_at: datetime | None
+    source_message_id: UUID | None
+    run_status: str
+    job_status: str | None
+    objective: str | None
+    scene_id: UUID | None
+    scene_ready: bool
+    active_scene_id: UUID | None
+    active_scene_version: int | None
+    deadline_at: datetime | None
+    failure_code: str | None
 
 
 def _student_id(session: Session, principal: AuthenticatedPrincipal) -> UUID:
@@ -139,22 +155,13 @@ def get_studio_composition_status(
     principal: AuthenticatedPrincipal = Depends(require_role(UserRole.STUDENT)),
     session: Session = Depends(get_session),
 ) -> StudioCompositionStatusResponse:
-    """Expose only the current run lifecycle needed to settle Daily's transient waiting UI."""
+    """Expose the current owned Canvas lifecycle without mutating it."""
 
     student_id = _student_id(session, principal)
-    try:
-        StudioProtocolService(session).runtime(student_id=student_id, runtime_id=runtime_id)
-    except StudioResourceNotFound as error:
-        raise _not_found(error) from None
-    run = session.scalar(
-        select(StudioCanvasSpecialistRun)
-        .where(
-            StudioCanvasSpecialistRun.studio_runtime_id == runtime_id,
-            StudioCanvasSpecialistRun.student_id == student_id,
-        )
-        .order_by(StudioCanvasSpecialistRun.created_at.desc(), StudioCanvasSpecialistRun.id.desc())
-    )
-    return StudioCompositionStatusResponse(status="IDLE" if run is None else run.status)
+    view = load_canvas_composition_view(session, student_id=student_id, runtime_id=runtime_id)
+    if view is None:
+        raise _not_found(StudioResourceNotFound("Studio resource not found."))
+    return StudioCompositionStatusResponse(**view.as_api_payload())
 
 
 @router.get("/{runtime_id}/assets/{asset_id}")

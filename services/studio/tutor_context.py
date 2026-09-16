@@ -28,6 +28,7 @@ from services.studio.custom_visual_builds import (
     CustomVisualBuildResolutionError,
     CustomVisualBuildResolver,
 )
+from services.studio.composition_status import load_canvas_composition_view
 from services.studio.service import TUTOR_OBSERVATION_FAILURE_CODES, StudioStateService
 from services.studio.subjects import (
     agentic_canvas,
@@ -118,6 +119,7 @@ class StudioTutorWorkspaceContext:
     current_scene_capability: StudioTutorSceneCapability | None = None
 
     visual_scene: Mapping[str, object] | None = None
+    canvas_composition: Mapping[str, object] | None = None
 
     def as_model_payload(self) -> dict[str, object]:
         projected = self.active_activity_key in (
@@ -144,6 +146,8 @@ class StudioTutorWorkspaceContext:
         }
         if self.visual_scene is not None:
             result["snapshot"]["visual_scene"] = dict(self.visual_scene)
+        if self.canvas_composition is not None:
+            result["canvas_composition"] = dict(self.canvas_composition)
         return result
 
 
@@ -291,11 +295,32 @@ def select_studio_tutor_context(
                     observation_id=observation_id,
                     current_scene_capability=scene_capability,
                     visual_scene=_selected_visual(selection_session, runtime, snapshot, scene_capability),
+                    canvas_composition=_canvas_composition(selection_session, runtime),
                 ),
                 previous_watermark=previous_watermark,
             )
     finally:
         selection_session.close()
+
+
+def _canvas_composition(session: Session, runtime: StudioRuntime) -> Mapping[str, object] | None:
+    """Expose only Tutor-useful server lifecycle truth, never Worker details."""
+
+    view = load_canvas_composition_view(
+        session,
+        student_id=runtime.student_id,
+        runtime_id=runtime.id,
+    )
+    if view is None or view.run_id is None:
+        return None
+    return {
+        "version": view.version,
+        "run_id": str(view.run_id),
+        "run_status": view.run_status,
+        "objective": view.objective,
+        "scene_ready": view.scene_ready,
+        "active_scene_id": None if view.active_scene_id is None else str(view.active_scene_id),
+    }
 
 
 def _selected_visual(session, runtime, snapshot, capability):

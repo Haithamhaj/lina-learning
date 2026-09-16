@@ -48,6 +48,7 @@ from services.studio.subjects.registry import SubjectCapabilityError, SubjectCap
 from services.studio.workspace_intent import WorkspaceIntentContractError, parse_workspace_intent
 from services.studio.router import ActiveSceneCapability, WorkspaceAuthorityContext, WorkspaceDecisionStatus, WorkspaceExecutionDecision, route_workspace_intent
 from services.studio.canvas_brief import audit_canvas_brief
+from services.studio.agent.admission import capture_canvas_decision_base
 from services.tutor.candidate_events import TUTOR_OUTPUT_RESPONSE_SCHEMA, TUTOR_TURN_SCHEMA_VERSION
 from services.tutor.candidate_events import (
     PersistedGuidedLearningCheck,
@@ -59,6 +60,7 @@ from services.tutor.candidate_events import (
 
 MAX_INTERACTION_TUTOR_CONTEXT_BYTES = 32_768
 STUDIO_INTERACTION_TUTOR_OPERATION = "studio_interaction_tutor_turn"
+_CANVAS_CHANGE_INTENTS = frozenset({"CREATE", "REPLACE_PENDING", "REPLACE_SCENE", "RETRY"})
 
 
 class StudioInteractionError(ValueError):
@@ -432,6 +434,22 @@ class StudioInteractionTutorService:
                         or parent_boundary.get("action") != "REDIRECT_TO_PARENT"
                     ),
                 )
+                canvas_change_intent = self._canvas_change_intent(
+                    result.output.get("canvas_change_intent") if override_text is None else None
+                )
+                if canvas_audit.get("status") == "ADMITTED" and canvas_change_intent is None:
+                    raise StudioInteractionTutorOutputError(
+                        "Tutor turn v12 cannot admit a Canvas brief without canvas_change_intent."
+                    )
+                if canvas_change_intent is not None and canvas_audit.get("status") != "ADMITTED":
+                    raise StudioInteractionTutorOutputError(
+                        "Tutor turn v12 canvas_change_intent requires an admitted Canvas brief."
+                    )
+                canvas_decision_base = (
+                    capture_canvas_decision_base(admission.workspace_context)
+                    if canvas_change_intent is not None
+                    else None
+                )
                 message = LearningMessage(
                     session_id=context.learning_session_id,
                     role="tutor",
@@ -449,6 +467,8 @@ class StudioInteractionTutorService:
                             result.output.get("workspace_intent"), admission.workspace_context
                         ),
                         "agentic_canvas": canvas_audit,
+                        "canvas_change_intent": canvas_change_intent,
+                        "canvas_decision_base": canvas_decision_base,
                         "parent_boundary": None if parent_boundary is None else dict(parent_boundary),
                         "candidate_metadata_status": "not_applicable_canvas_interaction",
                     },
@@ -457,7 +477,7 @@ class StudioInteractionTutorService:
                 persistence_session.add(message)
                 learning_session.last_activity_at = datetime.now(UTC)
                 persistence_session.flush()
-                if canvas_audit.get("status") == "ADMITTED":
+                if canvas_audit.get("status") == "ADMITTED" and canvas_change_intent is not None:
                     from services.studio.agent.admission import admit_agentic_canvas_brief
 
                     admit_agentic_canvas_brief(
@@ -934,9 +954,10 @@ class StudioInteractionTutorService:
                 "Respond naturally to the persisted semantic action and current Workspace state. "
                 "Complete any explanation requested by the semantic action or Scene prompt in this response; "
                 "do not announce an explanation and defer it. "
-                "When the semantic action makes a Canvas change instructionally useful, or the active Scene "
-                "says the Student action should reveal or emphasize a new relationship, emit the updated "
-                "canvas_brief in this same Primary Tutor result as well as responding in Chat. "
+                "For a supported STEP/reveal or status/current-Scene continuation, emit canvas_brief=null and "
+                "canvas_change_intent=null. When the semantic action genuinely needs a changed visual, emit an "
+                "updated canvas_brief and its matching canvas_change_intent (CREATE, REPLACE_PENDING, "
+                "REPLACE_SCENE, or RETRY) in this same Primary Tutor result as well as responding in Chat. "
                 "Do not invent a Student question, explanation, reasoning, or source message. "
                 "When the active Scene is Full-Power Canvas, use canvas_brief for any visual change and keep legacy workspace_intent null. "
                 f"The result is internal and not yet a delivered Tutor turn.{workspace_input}"
@@ -960,11 +981,23 @@ class StudioInteractionTutorService:
     @staticmethod
     def _validate_tutor_output(result: ModelResult) -> None:
         if "workspace_intent" not in result.output:
-            raise StudioInteractionTutorOutputError("Tutor turn v9 output is missing required workspace_intent.")
+            raise StudioInteractionTutorOutputError("Tutor turn v12 output is missing required workspace_intent.")
+        if "canvas_brief" not in result.output or "canvas_change_intent" not in result.output:
+            raise StudioInteractionTutorOutputError("Tutor turn v12 output is missing required Canvas lifecycle fields.")
+        if result.output["canvas_change_intent"] not in {None, *_CANVAS_CHANGE_INTENTS}:
+            raise StudioInteractionTutorOutputError("Tutor turn v12 output has an invalid canvas_change_intent.")
         try:
             parse_workspace_intent(result.output["workspace_intent"])
         except WorkspaceIntentContractError as error:
-            raise StudioInteractionTutorOutputError("Tutor workspace intent violates the current v9 contract.") from error
+            raise StudioInteractionTutorOutputError("Tutor workspace intent violates the current v12 contract.") from error
+
+    @staticmethod
+    def _canvas_change_intent(value: object) -> str | None:
+        if value is None:
+            return None
+        if value in _CANVAS_CHANGE_INTENTS:
+            return value
+        raise StudioInteractionTutorOutputError("Tutor turn v12 output has an invalid canvas_change_intent.")
 
     def _verify_execution_provenance(
         self,

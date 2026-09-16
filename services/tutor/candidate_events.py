@@ -23,7 +23,7 @@ from services.studio.visual_order import visual_order_output_schema
 
 CANDIDATE_EVENT_SCHEMA_VERSION = "candidate-event-v1"
 MISCONCEPTION_EVIDENCE_SCHEMA_VERSION = "misconception-evidence-v1"
-TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v11"
+TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v12"
 TUTOR_TURN_SCHEMA_VERSIONS_WITH_PROVISIONAL_BROAD_SUBJECT = frozenset({
     "tutor_turn_v8",
     "tutor_turn_v9",
@@ -410,9 +410,10 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
         "workspace_intent": workspace_intent_output_schema(),
         "canvas_brief": canvas_brief_output_schema(),
         "canvas_visual_context_selection": visual_context_selection_output_schema(),
+        "canvas_change_intent": {"type": ["string", "null"], "enum": ["CREATE", "REPLACE_PENDING", "REPLACE_SCENE", "RETRY", None]},
         "workspace_visual_order": visual_order_output_schema(),
     },
-    "required": ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject", "segment_concept_ref", "workspace_intent", "canvas_brief", "canvas_visual_context_selection", "workspace_visual_order"],
+    "required": ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject", "segment_concept_ref", "workspace_intent", "canvas_brief", "canvas_visual_context_selection", "canvas_change_intent", "workspace_visual_order"],
 }
 
 

@@ -689,7 +689,7 @@ def test_relation_explanation_uses_one_runtime03_tutor_turn_with_exact_source(fa
                 assert source == {"action": "REQUEST_EXPLANATION", "target_id": "collect-to-filter", "target_kind": "relation", "from": "collect", "to": "filter", "meaning": "then"}
             else:
                 assert source == {"action": "REQUEST_EXPLANATION", "target_id": "collect", "target_kind": "object", "label": "Collect", "detail": "Collect water."}
-            output = {"text": "Collect comes before filter in this process.", "workspace_intent": None, "suggested_actions": [], "guided_check": None,
+            output = {"text": "Collect comes before filter in this process.", "workspace_intent": None, "canvas_brief": None, "canvas_change_intent": None, "suggested_actions": [], "guided_check": None,
                 "teaching_mode": None, "teaching_strategy": None, "teaching_method_id": None, "prior_method_relation": None,
                 "candidate_metadata": None, "provisional_broad_subject": None, "segment_relation": None, "structured_segment_state": None}
             yield StreamDelta(output["text"])

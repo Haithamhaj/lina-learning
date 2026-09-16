@@ -214,6 +214,8 @@ class _ImmediateSuccessfulTutorProvider:
         *,
         workspace_intent: object | None = None,
         workspace_visual_order: object | None = None,
+        canvas_brief: object | None = None,
+        canvas_change_intent: str | None = None,
         text: str = "Keep the denominator and add the numerators.",
     ) -> None:
         self.called = Event()
@@ -221,6 +223,8 @@ class _ImmediateSuccessfulTutorProvider:
         self.payloads: list[dict[str, object]] = []
         self.workspace_intent = workspace_intent
         self.workspace_visual_order = workspace_visual_order
+        self.canvas_brief = canvas_brief
+        self.canvas_change_intent = canvas_change_intent
         self.text = text
 
     def stream(self, route: ModelRoute, payload: dict[str, object]):
@@ -244,6 +248,8 @@ class _ImmediateSuccessfulTutorProvider:
                 "segment_relation": None,
                 "structured_segment_state": None,
                 "workspace_intent": self.workspace_intent,
+                "canvas_brief": self.canvas_brief,
+                "canvas_change_intent": self.canvas_change_intent,
                 "workspace_visual_order": self.workspace_visual_order,
             },
             input_tokens=4,
@@ -1056,13 +1062,31 @@ def test_daily_turn_exposes_an_admitted_canvas_composition_as_pending_without_bl
     """Daily tells its client that the independent Canvas composition is pending."""
 
     class _AdmittedCanvasRuntime:
+        def __init__(self, session: Session) -> None:
+            self.session = session
+
         def admit_turn(self, **_: object):
             return SimpleNamespace(id=uuid4())
 
         def stream_turn(self, *, learning_session: LearningSession, question: str, **_: object):
-            del learning_session, question
+            del question
+            runtime = self.session.query(StudioRuntime).filter_by(learning_session_id=learning_session.id).one()
+            tutor_message = LearningMessage(
+                session_id=learning_session.id,
+                role="tutor",
+                content="I will prepare the water-cycle visual.",
+                payload={"agentic_canvas": {"status": "ADMITTED", "brief": {"objective": "Show the water cycle."}}},
+            )
+            self.session.add(tutor_message)
+            self.session.flush()
+            self.session.add(StudioCanvasSpecialistRun(
+                studio_runtime_id=runtime.id, student_id=runtime.student_id,
+                learning_session_id=learning_session.id, source_message_id=tutor_message.id,
+                scene_id=None, base_scene_id=None, base_scene_version=0, subject_key="SCIENCE",
+                capability_profile_version="agentic-canvas-v1", status="PENDING",
+                output_schema_version="agentic-canvas-scene-v3",
+            ))
             turn = TutorTurn("Start with the first stage.", [], [], [], None, None, {})
-            object.__setattr__(turn, "workspace_visual_status", "ADMITTED")
             yield turn
 
     with postgres_session_factory.begin() as session:
@@ -1070,11 +1094,12 @@ def test_daily_turn_exposes_an_admitted_canvas_composition_as_pending_without_bl
         learning_session = LearningSession(student_id=student.id, subject="SCIENCE", status="OPEN")
         session.add(learning_session)
         session.flush()
+        StudioStateService(session).get_or_create_runtime(student_id=student.id, learning_session_id=learning_session.id)
         session_id = learning_session.id
 
     from apps.api.routes import student as student_routes
 
-    monkeypatch.setattr(student_routes, "create_tutor_runtime", lambda _: _AdmittedCanvasRuntime())
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _AdmittedCanvasRuntime)
     client = _client(postgres_session_factory, subject="daily-canvas-pending")
     try:
         response = client.post(
@@ -1086,7 +1111,72 @@ def test_daily_turn_exposes_an_admitted_canvas_composition_as_pending_without_bl
 
     assert response.status_code == 200
     terminal = response.text.split("event: turn\ndata: ", 1)[1].split("\n\n", 1)[0]
-    assert json.loads(terminal)["canvas_composition"] == "PENDING"
+    composition = json.loads(terminal)["canvas_composition"]
+    assert composition["version"] == "canvas-composition-view-v1"
+    assert composition["run_status"] == "PENDING"
+    assert composition["objective"] == "Show the water cycle."
+
+
+def test_chat_canvas_create_persists_the_server_owned_empty_decision_base(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A03: normal Chat freezes Canvas truth before inference and admits against it."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "chat-canvas-decision-base")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        StudioStateService(session).get_or_create_runtime(
+            student_id=student.id,
+            learning_session_id=learning_session.id,
+        )
+        session_id = learning_session.id
+
+    provider = _ImmediateSuccessfulTutorProvider(
+        canvas_brief={
+            "version": "canvas-brief-v1",
+            "subject_key": "MATH",
+            "objective": "Compare two decimals visually.",
+            "student_request": "Show me the comparison.",
+            "requested_representation": "A number line.",
+            "facts": ["Compare 0.6 and 0.45."],
+            "relations": [],
+            "quantities": [],
+            "desired_student_action": "Place both decimals.",
+            "must_not_imply": [],
+            "source_references": [],
+            "locale": "en",
+            "direction": "ltr",
+        },
+        canvas_change_intent="CREATE",
+        text="I’ll prepare the number line.",
+    )
+    from apps.api.routes import student as student_routes
+
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    client = _client(postgres_session_factory, subject="chat-canvas-decision-base")
+    try:
+        response = client.post(
+            f"/api/v1/student/daily/session/{session_id}/turn/stream",
+            json={"content": "Show me 0.6 and 0.45 on a number line."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    with postgres_session_factory() as session:
+        message = session.query(LearningMessage).filter_by(role="tutor").one()
+        assert message.payload["canvas_decision_base"] == {
+            "version": "canvas-decision-base-v1",
+            "expected_run_id": None,
+            "expected_run_status": None,
+            "expected_scene_id": None,
+            "expected_scene_version": None,
+        }
+        run = session.query(StudioCanvasSpecialistRun).one()
+        assert run.source_message_id == message.id
 
 
 def test_daily_workspace_composition_status_is_authoritative_and_idle_without_a_run(
@@ -1107,7 +1197,9 @@ def test_daily_workspace_composition_status_is_authoritative_and_idle_without_a_
         _clear_overrides()
 
     assert response.status_code == 200
-    assert response.json() == {"status": "IDLE"}
+    assert response.json()["version"] == "canvas-composition-view-v1"
+    assert response.json()["run_status"] == "IDLE"
+    assert response.json()["run_id"] is None
 
 
 def test_daily_turn_rejects_before_admission_without_persisting_or_leaving_a_retry_duplicate(

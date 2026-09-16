@@ -2,11 +2,13 @@
 
 ## Current goal
 
-Finalize the approved Lina pilot repository baseline for origin/main: accepted Tutor pedagogy, the bounded aware-instant timezone fix, and partial UI copy/localization. Publication is authorized only after fresh verification of the committed HEAD. Deployment remains a separate task.
+Tutor/Canvas A+B local repair is complete and approved as a local evaluation candidate on `codex/tutor-canvas-ab-01`. The baseline remains `b909e2d8c0878453604d5213cb349dd71651d8db`; a package-only local commit is authorized, while push, merge, deployment, production data access, and paid/live model evaluation remain unauthorized.
 
 ## Current reality
 
-TUTOR-PEDAGOGY-REFINE-01 changes only the approved shared teaching block and one duplicate pedagogical sentence, with existing contract-test updates and an unchanged authoring-reference copy. Independent review reran 151 tests and inspected the 153 passing PostgreSQL results from implementation; it did not rerun those PostgreSQL tests. The existing instruction-provenance limitation is non-blocking; later evaluation must associate execution/message IDs, code version and actual instruction hash in the existing evaluation record. Request measurements show no additional context removal. See TASKS.md for exact scope, reference mapping, commands and evidence limits.
+The A/B branch now has the versioned Canvas composition view, reload/reconnect recovery, durable `run_created_at` ordering, localized Daily waiting/update/failure states, and a server-owned v12 decision base for Chat and Studio-interaction Canvas changes. Admission revalidates the exact Run and Scene identity/version under the existing Runtime lock and rejects stale CREATE/REPLACE/RETRY decisions as `STALE_BASE` without enqueueing or superseding newer work. Historical v11 records retain their prior reader/admission behavior.
+
+Local verification on 2026-09-16 produced `1483 passed, 4 failed, 12 skipped`; the four failures are the same baseline-known failures in DB inventory, migration-head preflight, scheduled Grade, and Personal Facts reconciliation. TypeScript typecheck, 21 focused frontend tests, the synthetic-Clerk production build, repository-truth check, and diff check pass. These results establish deterministic contract/behavior closure only; they do not establish real-Luna teaching quality.
 
 Lina remains a modular monolith. Primary Tutor owns teaching; the implemented Full-Power Hybrid Canvas composes typed, REUSE, ADAPT and CREATE representations and returns bounded Semantic Manifest/Studio state to the same Tutor. Immutable Build/ObjectStorage references remain authoritative; generated custom code runs only in the approved sandbox.
 
@@ -21,6 +23,8 @@ Canvas Development Review is an internal on-demand path: it lists experiences, c
 - The current Canvas authoring budget is at most four total attempts: at most two CREATE attempts and at most three source-only refinements, with a shared 16-turn composition ceiling and one final-plan-only repair. Exhaustion does not reopen authoring.
 - Parameters-only changes are REUSE; new capability requires ADAPT lineage. Promotion remains selective and owner-scoped.
 - Immutable Build/ObjectStorage source and digest verification remain authoritative; Scenes hold bounded references/state.
+- Canvas change intent remains model-semantic, while Run/Scene identity and stale-decision authority remain server-owned internal metadata.
+- Daily uses the Studio feed as the primary Snapshot path; two-second composition polling supports recovery/wait state, and the elapsed display is derived from server `run_created_at` without percentages or ETA.
 
 ## Protected areas
 
@@ -28,9 +32,13 @@ Primary Tutor authority; child safety and Parent Boundaries; owner/privacy isola
 
 ## Active risks
 
-Broad unrestricted production CREATE reliability is not accepted. Authenticated Daily use, deployment, traffic reliability and real learner learning benefit are not established by disposable-owner proofs. Runtime CREATE latency/cost remain material considerations. Existing promoted Versions are not retroactively certified by AI review or later checks.
+Broad unrestricted production CREATE reliability is not accepted. Deployment, traffic reliability and real learner learning benefit are not established by disposable tests or a synthetic-key build. Runtime CREATE latency/cost remain material considerations. AB-V02 real-Luna pedagogy evaluation is still blocked and not run. Existing promoted Versions are not retroactively certified by AI review or later checks.
 
 ## Next recommended action
+
+Preserve the A/B branch and worktree for the separately authorized AB-V02 real-Luna evaluation and authenticated browser acceptance. No local deterministic result establishes teaching quality or production readiness.
+
+## Prior baseline next action
 
 Use only the verified published origin/main baseline for a separately authorized deployment task. `ui/refine-01c`: PARTIALLY_PORTED_FOR_PILOT; layout/Canvas hide-reopen deferred. FE-02: PROTOTYPE_OR_HISTORICAL. Both branches remain preserved. Authenticated visual verification is not established. See `TASKS.md` for exact scope and fresh evidence. Any comparative teaching evaluation requires separate authorization. Comparative teaching evaluation must retain clear, manageable, child-appropriate explanations and useful application of correction when appropriate, without forced retries. Paid/live evaluation requires separate authorization; structural checks do not establish learning improvement.
 
@@ -44,3 +52,4 @@ Begin a separately authorized controlled real-use / production-use phase only wh
 - `docs/proposals/CANVAS-DEVELOPMENT-REVIEW.md`
 - `docs/PROJECT_REFERENCE.md`
 - `TASKS.md`
+- `docs/TUTOR_CANVAS_AB_EVALUATION_CASES.md`

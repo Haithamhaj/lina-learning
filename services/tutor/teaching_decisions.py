@@ -36,15 +36,15 @@ class TeachingDecisionDefinition:
 
 
 TEACHING_MODE_DEFINITIONS = (
-    TeachingDecisionDefinition("LEARN", "Normal concept learning or explanation."),
+    TeachingDecisionDefinition("LEARN", "Normal concept learning: choose the next useful move, which may be explanation, modeling, practice, comparison, or exploration; it is not explanation-first."),
     TeachingDecisionDefinition("HOMEWORK", "Working with an assigned, class, or homework task."),
     TeachingDecisionDefinition("EXPLORE", "Open curiosity or learning outside the immediate school path."),
     TeachingDecisionDefinition("REVIEW", "Revisiting previously learned material or checking retention."),
-    TeachingDecisionDefinition("QUIZ", "Student-requested testing or checking interaction."),
+    TeachingDecisionDefinition("QUIZ", "A Student-requested testing or checking interaction; ordinary practice is not automatically a quiz."),
 )
 
 TEACHING_STRATEGY_DEFINITIONS = (
-    TeachingDecisionDefinition("EXPLAIN_WITH_EXAMPLE", "Provide an initial concise explanation or example, then interact."),
+    TeachingDecisionDefinition("EXPLAIN_WITH_EXAMPLE", "Use a concise explanation or example when it is the useful next move, then invite meaningful Student participation when appropriate."),
     TeachingDecisionDefinition("HINT_FIRST", "Preserve a meaningful Student attempt before giving stronger teaching."),
     TeachingDecisionDefinition("EXPLAIN_THEN_CHECK", "Teach an unclear idea, then check application or understanding."),
     TeachingDecisionDefinition("INDEPENDENT_CHECK", "Let Lina solve, explain, apply, or demonstrate with minimal support."),
@@ -63,7 +63,7 @@ PRIOR_METHOD_RELATION_CALIBRATION_GUIDANCE = (
     "PriorMethodRelation calibration: CONTINUATION applies when the immediate prior method remains relevant and the Student has not clearly evaluated it as helping, failing, or needing repetition. "
     "Examples: \"وبعدين؟\" → CONTINUATION; \"طيب الخطوة الجاية؟\" → CONTINUATION; \"what next?\" → CONTINUATION; \"2 من 4\" → CONTINUATION when it directly answers the immediately prior Tutor question. "
     "Do not infer DID_NOT_HELP from a short follow-up, direct answer, continued work, wrong answer, or need for more teaching. "
-    "DID_NOT_HELP requires a clear Student signal that the immediate prior representation did not help, did not clarify, remains confusing, or should change. "
+    "DID_NOT_HELP requires a clear Student signal that the immediate prior representation did not help, did not clarify, remains confusing, or should change; a missing, delayed, or unavailable visual UI is not a judgment of method effectiveness. "
     "HELPED requires the Student to clearly say the immediate prior representation helped or clarified. Examples: \"آه هلا فهمت\" → HELPED; \"That makes sense now.\" → HELPED. Do not infer HELPED merely from a correct answer. "
     "EXPLICIT_REPEAT_REQUEST requires an explicit request to repeat or use the same immediate prior representation. "
     "NOT_RELEVANT applies when that method is genuinely unrelated to a new learning topic or goal, not an ordinary continuation. "

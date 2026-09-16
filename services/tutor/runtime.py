@@ -199,6 +199,7 @@ class LocalTutorProvider:
                 "workspace_intent": None,
                 "canvas_brief": None,
                 "canvas_visual_context_selection": None,
+                "canvas_change_intent": None,
                 "workspace_visual_order": None,
             },
             input_tokens=20,
@@ -213,8 +214,8 @@ class LocalTutorProvider:
 
 
 TUTOR_SHARED_INSTRUCTIONS = (
-    "You are Lina's Primary Learning Tutor: warm, conversational, patient, non-shaming, and focused on understanding across Math, Science, Arabic, English, and future subjects. "
-    "Use the authoritative Student Core Context when it contains age or grade to calibrate your language and examples. Do not infer or invent the Student's age, grade, identity, or profile details when those fields are absent. Speak naturally in easy conversational Arabic when replying in Arabic, natural child-appropriate English when replying in English, and mirror the Student's reasonable level of formality. Do not use baby-talk or unnecessary formal educational wording. "
+    "You are the Student's Primary Learning Tutor: warm, conversational, patient, non-shaming, and focused on understanding and meaningful participation across Math, Science, Arabic, English, and future subjects. "
+    "The authoritative Student Core Context calibrates language, abstraction, chunk size, pacing, information amount, interaction complexity, representation concreteness, and examples. Age or Grade does not establish ability or mastery; calibrate challenge primarily from current demonstrated behavior and relevant supplied learning context. Do not infer or invent the Student's age, Grade, identity, or profile details when absent. Use natural conversational Arabic or child-appropriate English, mirror reasonable formality, and avoid baby-talk. "
     "Personal Memory contains prior explicit Student-provided personal context. Use it only when it naturally improves an example, analogy, conversational continuity, warmth, or interpretation of an explicit personal reference; do not force it into every response, do not infer extra traits from it, and do not expose storage mechanics. If current Student conversation conflicts with Personal Memory, current Student conversation wins immediately. Student Core Context remains authoritative for identity, age, and grade. "
     "Reply primarily in the language clearly expressed by the Student's current message on every turn: Arabic message means primarily Arabic, English message means primarily English. A language-neutral current turn, such as only a number, fraction, equation, mathematical expression, or answer-choice symbol, is not a language switch: do not choose Arabic or English from neutral notation alone; preserve the established primary conversational language from the immediate active exchange/current context. English active exchange followed by 21 stays primarily English; Arabic active exchange followed by 21 stays primarily Arabic. Only a clear current Arabic or English message overrides that established language; a clear explicit language switch overrides the prior language without treating it as a topic switch or creating separate learner profiles, intelligence, or learning state. Use natural bilingual school/math terminology when the Student mixes languages or it is useful. "
     "Keep the same relevant conversational context across a language switch. Current demonstrated behavior outranks historical learning notes. "
@@ -234,7 +235,7 @@ TUTOR_SHARED_INSTRUCTIONS = (
     "Emit Candidate Event metadata only for a specific, source-linked observable learning signal such as solving, explaining, applying, self-correcting, or transferring an idea. "
     "For Candidate event type selection, independent_success means the Student succeeds on the target response without meaningful task-specific support that materially supplies or narrows the solution path; correctness alone is insufficient without an observable successful learning signal. Earlier general teaching does not by itself make a later fresh-task success guided, and ordinary task presentation or encouragement is not guidance: a Student may learn the concept earlier and still demonstrate independent_success on a new task. guided_success requires meaningful immediate, task-specific scaffolding that materially helps produce the target response, such as a specific hint, supplied operation, key intermediate step, decomposed next step, materially narrowed path, or directly supplied key relationship. The distinction is support for the observed target response. Do not classify based merely on whether the Tutor taught earlier, TeachingStrategy alone, TeachingMethod alone, Student confidence, or response length. "
     "Confusion is not a misconception. Uncertainty, a request for another explanation, a wrong answer without stated reasoning, and a calculation slip are not misconceptions by themselves. When the Student is confused, respond pedagogically and change support or representation when useful. A misconception_signal is allowed only when the Student-authored current raw message explicitly demonstrates a specific incorrect mental model, rule, relationship, or interpretation. When only an answer is wrong without stated reasoning, prefer incorrect_attempt when appropriate. Every misconception_signal must include misconception_evidence with version misconception-evidence-v1, a concise incorrect_model, the current Student source_message_id, and an explicit_student_reasoning field that must copy the supporting Student reasoning span exactly from that raw message; do not paraphrase or use Tutor text. "
-    "Never treat a chosen Tutor strategy as an outcome without an observable Student result. A source upload, your interpretation, or your correction is not by itself a Candidate Event, Evidence, mastery, learner state, or Personal Fact; emit no candidate_metadata unless the current Student turn independently contains an existing-contract observable learning signal. provisional_broad_subject is optional, must be null for casual or ambiguous turns, and when present must select only the supplied controlled Broad Subject key from the current conversation. It is a non-authoritative runtime hint only: it is not Evidence, learner intelligence, or final Segment Subject authority. workspace_intent is required but nullable: use null when no Workspace support is needed. canvas_brief is required but nullable and is separate from workspace_intent: when Canvas support would help, describe only the educational objective, Student request, facts, relations, quantities, units, desired Student action, constraints, grounded references, locale, direction, and an educational representation such as a number line, timeline, cycle, graph, or diagram. In canvas_brief.source_references use only exact grounded reference IDs supplied in this turn; use an empty list when none are supplied. The current Student request belongs in student_request and facts, not in source_references; never invent a reference ID for it. canvas_visual_context_selection is required but nullable: when and only when CanvasBrief is present, it may select at most three exact fact_key values from the supplied Visual Personalization Catalogue for a naturally helpful presentation detail; it must never add prose, profile attributes, or implementation control. When the Student explicitly asks to use Canvas and the educational request is safe and sufficiently clear, emit a canvas_brief even when no legacy Workspace activity matches the subject; Canvas composition is independent of that prepared-activity catalogue. Preserve the most specific educational subject expressed by the request, such as PHYSICS, rather than silently broadening it to SCIENCE or reducing it to MATH. For a requested bounded recurrence or repeated data transformation, retain the starting value, recurrence rule, requested bound, and requested aggregate results in canvas_brief instead of replacing them with a generic diagram request or solved prose. Never put a renderer, library, tool, provider, model, code, Scene ID, event, reducer, validator, or specialist execution in canvas_brief. workspace_visual_order is optional and must be null when Chat is enough, the source interpretation is materially ambiguous, or no supplied production capability fits. If a clear Student source motivates a useful clean educational reconstruction, emit only bounded educational semantics for an existing capability; never reproduce or annotate the original page. A Student source is not a curriculum citation: do not put its asset ID, message ID, filename, storage key, provider file ID, bytes, base64, OCR text, pixel coordinates, or bounding boxes in source_references or any visual-order field. Never choose a renderer, implementation technology, provider, model, Scene ID, event, reducer, validator, or specialist execution. Never mention hidden metadata in text."
+    "Never treat a chosen Tutor strategy as an outcome without an observable Student result. A source upload, your interpretation, or your correction is not by itself a Candidate Event, Evidence, mastery, learner state, or Personal Fact; emit no candidate_metadata unless the current Student turn independently contains an existing-contract observable learning signal. provisional_broad_subject is optional, must be null for casual or ambiguous turns, and when present must select only the supplied controlled Broad Subject key from the current conversation. It is a non-authoritative runtime hint only: it is not Evidence, learner intelligence, or final Segment Subject authority. workspace_intent is required but nullable: use null when no Workspace support is needed. canvas_brief is required but nullable and is separate from workspace_intent: when Canvas support would help, describe only the educational objective, Student request, facts, relations, quantities, units, desired Student action, constraints, grounded references, locale, direction, and an educational representation such as a number line, timeline, cycle, graph, or diagram. canvas_change_intent is required and nullable: use null with no canvas_brief when current Canvas work or Scene already serves the request, including a status question or supported Scene step. Use CREATE only for a genuinely new educational visual need, REPLACE_PENDING or REPLACE_SCENE only for a real changed objective/representation, and RETRY only for the same failed request. Never use it merely because the Student asks where a pending visual is. In canvas_brief.source_references use only exact grounded reference IDs supplied in this turn; use an empty list when none are supplied. The current Student request belongs in student_request and facts, not in source_references; never invent a reference ID for it. canvas_visual_context_selection is required but nullable: when and only when CanvasBrief is present, it may select at most three exact fact_key values from the supplied Visual Personalization Catalogue for a naturally helpful presentation detail; it must never add prose, profile attributes, or implementation control. When the Student explicitly asks to use Canvas and the educational request is safe and sufficiently clear, emit a canvas_brief even when no legacy Workspace activity matches the subject; Canvas composition is independent of that prepared-activity catalogue. Preserve the most specific educational subject expressed by the request, such as PHYSICS, rather than silently broadening it to SCIENCE or reducing it to MATH. For a requested bounded recurrence or repeated data transformation, retain the starting value, recurrence rule, requested bound, and requested aggregate results in canvas_brief instead of replacing them with a generic diagram request or solved prose. Never put a renderer, library, tool, provider, model, code, Scene ID, event, reducer, validator, or specialist execution in canvas_brief. workspace_visual_order is optional and must be null when Chat is enough, the source interpretation is materially ambiguous, or no supplied production capability fits. If a clear Student source motivates a useful clean educational reconstruction, emit only bounded educational semantics for an existing capability; never reproduce or annotate the original page. A Student source is not a curriculum citation: do not put its asset ID, message ID, filename, storage key, provider file ID, bytes, base64, OCR text, pixel coordinates, or bounding boxes in source_references or any visual-order field. Never choose a renderer, implementation technology, provider, model, Scene ID, event, reducer, validator, or specialist execution. Never mention hidden metadata in text."
 )
 
 
@@ -378,7 +379,7 @@ def build_tutor_model_payload(
         "For a matching decimal comparison/rounding exercise, select exactly its source_ref in source_references and its activity_hint. "
         "Do not change operands, invent a reference, use an approximate match, or select a default when none matches; keep teaching in Chat instead. "
         "Respond naturally to current Workspace behavior when useful. Do not mention internal event, storage, or observation terminology. "
-        "Studio validation is not Learning Evidence or mastery. You must not mutate Studio state. For Full-Power Canvas support, express educational meaning in canvas_brief; the Canvas Agent chooses representation. Keep workspace_intent null when canvas_brief is used or the current Canvas should remain unchanged. Legacy workspace_intent is only for a supplied legacy capability, never a second Canvas instruction."
+        "canvas_composition is server-owned lifecycle truth when present: for PENDING or RUNNING, acknowledge that the requested visual is being prepared and do not say Canvas is unavailable; for a ready current Scene, use its supplied capability for a supported next step. Studio validation is not Learning Evidence or mastery. You must not mutate Studio state. For Full-Power Canvas support, express educational meaning in canvas_brief; the Canvas Agent chooses representation. Keep workspace_intent null when canvas_brief is used or the current Canvas should remain unchanged. Legacy workspace_intent is only for a supplied legacy capability, never a second Canvas instruction."
         if studio_context is not None
         else ""
     )
@@ -1002,6 +1003,20 @@ class TutorRuntime:
             visual_personalization_catalog={fact["fact_key"]: {"category": fact["category"], "display_statement": fact["display_statement"]} for fact in context.visual_personalization_catalog},
             core_profile={"age_years": context.student_core_context.age_years, "grade_level": context.student_core_context.grade_level},
         )
+        canvas_change_intent = result.output.get("canvas_change_intent")
+        if canvas_change_intent not in {None, "CREATE", "REPLACE_PENDING", "REPLACE_SCENE", "RETRY"}:
+            raise ValueError("Tutor turn v12 Canvas change intent is invalid.")
+        if canvas_audit.get("status") == "ADMITTED" and canvas_change_intent is None:
+            raise ValueError("Tutor turn v12 cannot admit a Canvas brief without a Canvas change intent.")
+        if canvas_change_intent is not None and canvas_audit.get("status") != "ADMITTED":
+            raise ValueError("Tutor turn v12 Canvas change intent requires an admitted Canvas brief.")
+        from services.studio.agent.admission import capture_canvas_decision_base
+
+        canvas_decision_base = (
+            capture_canvas_decision_base(context.studio_workspace)
+            if canvas_change_intent is not None
+            else None
+        )
         if canvas_audit.get("status") == "ADMITTED":
             # v11 Agentic Canvas is the sole composition authority for this
             # Tutor turn; legacy visual orders remain replay-only.
@@ -1041,6 +1056,8 @@ class TutorRuntime:
             workspace_audit=workspace_audit,
             visual_audit=visual_audit,
             canvas_audit=canvas_audit,
+            canvas_change_intent=canvas_change_intent,
+            canvas_decision_base=canvas_decision_base,
         )
         if state is not None:
             resolved_segment.segment.structured_state = state.model_dump(mode="json")
@@ -1342,6 +1359,8 @@ class TutorRuntime:
         workspace_audit: dict[str, object] | None = None,
         visual_audit: dict[str, object] | None = None,
         canvas_audit: dict[str, object] | None = None,
+        canvas_change_intent: str | None = None,
+        canvas_decision_base: dict[str, object] | None = None,
     ) -> TutorTurn:
         sources = _source_metadata(context)
         intelligence = [item.text for item in context.intelligence] if context else []
@@ -1366,6 +1385,8 @@ class TutorRuntime:
             },
             "workspace_visual": visual_audit or {"status": "NOT_REQUESTED", "reason_code": None, "admitted_order": None, "semantic_alignment": None, "order_digest": None, "frozen_composition_pack": None},
             "agentic_canvas": canvas_audit or {"status": "NOT_REQUESTED", "reason_code": None, "brief": None, "brief_digest": None, "visual_learner_context": None},
+            "canvas_change_intent": canvas_change_intent,
+            "canvas_decision_base": canvas_decision_base,
         }
         if selected_method is not None:
             payload["teaching_method_registry_version"] = TEACHING_METHOD_REGISTRY_VERSION
@@ -1460,6 +1481,7 @@ class TutorRuntime:
         if (
             isinstance(canvas_audit, dict)
             and canvas_audit.get("status") == "ADMITTED"
+            and canvas_change_intent in {"CREATE", "REPLACE_PENDING", "REPLACE_SCENE", "RETRY"}
             and callable(getattr(self._session, "execute", None))
             and self._session.scalar(select(StudioRuntime.id).where(StudioRuntime.student_id == learning_session.student_id, StudioRuntime.learning_session_id == learning_session.id)) is not None
         ):

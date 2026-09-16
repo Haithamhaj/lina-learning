@@ -161,6 +161,76 @@ def _admitted_message(
     return student, learning, message
 
 
+def _set_v12_canvas_change(
+    message: m.LearningMessage,
+    *,
+    intent: str,
+    expected_run: m.StudioCanvasSpecialistRun | None = None,
+    expected_scene_id: object | None = None,
+    expected_scene_version: int | None = None,
+) -> None:
+    payload = dict(message.payload)
+    payload["tutor_turn_schema_version"] = "tutor_turn_v12"
+    payload["canvas_change_intent"] = intent
+    payload["canvas_decision_base"] = {
+        "version": "canvas-decision-base-v1",
+        "expected_run_id": None if expected_run is None else str(expected_run.id),
+        "expected_run_status": None if expected_run is None else expected_run.status,
+        "expected_scene_id": None if expected_scene_id is None else str(expected_scene_id),
+        "expected_scene_version": expected_scene_version,
+    }
+    message.payload = payload
+
+
+def _install_active_scene(
+    session: Session,
+    *,
+    student: m.Student,
+    learning: m.LearningSession,
+) -> tuple[m.StudioScene, m.StudioSnapshot]:
+    runtime = session.scalar(
+        select(m.StudioRuntime).where(m.StudioRuntime.learning_session_id == learning.id)
+    )
+    assert runtime is not None
+    scene = m.StudioScene(
+        studio_runtime_id=runtime.id,
+        student_id=student.id,
+        learning_session_id=learning.id,
+        subject_key="MATH",
+        subject_profile_version="fixture-v1",
+        concept_keys=["decimals"],
+        activity_key="fixture-scene",
+        artifact_type="interactive-workspace",
+        renderer_key="native-react-svg",
+        renderer_version="1",
+        activity_contract_version="activity-v1",
+        payload_schema_version="scene-v1",
+        scene_version=1,
+        status="ACTIVE",
+        seed_payload={"label": "Current scene"},
+        accessibility_payload={"summary": "Current scene"},
+        locale="en",
+        direction="ltr",
+        source_asset_refs=[],
+    )
+    session.add(scene)
+    session.flush()
+    snapshot = m.StudioSnapshot(
+        studio_runtime_id=runtime.id,
+        student_id=student.id,
+        snapshot_schema_version="studio-snapshot-v1",
+        latest_event_sequence=0,
+        current_scene_id=scene.id,
+        current_scene_version=scene.scene_version,
+        active_subject_key="MATH",
+        active_activity_key="fixture-scene",
+        state_payload={},
+    )
+    session.add(snapshot)
+    session.flush()
+    return scene, snapshot
+
+
 def _registry(factory: sessionmaker[Session], compose, *, settings_factory=_Settings):
     registry = JobHandlerRegistry()
     register_agentic_canvas_handlers(
@@ -170,6 +240,268 @@ def _registry(factory: sessionmaker[Session], compose, *, settings_factory=_Sett
         settings_factory=settings_factory,
     )
     return registry
+
+
+def test_v12_status_or_scene_step_cannot_admit_a_new_canvas_run(
+    factory: sessionmaker[Session],
+) -> None:
+    """A03: lifecycle intent is enforced at the durable admission boundary."""
+
+    with factory.begin() as session:
+        student, learning, message = _admitted_message(session)
+        payload = dict(message.payload)
+        payload["tutor_turn_schema_version"] = "tutor_turn_v12"
+        payload["canvas_change_intent"] = None
+        message.payload = payload
+
+        assert admit_agentic_canvas_brief(
+            session,
+            student_id=student.id,
+            learning_session_id=learning.id,
+            source_message_id=message.id,
+        ) is None
+        assert session.scalar(select(func.count(m.StudioCanvasSpecialistRun.id))) == 0
+
+        payload["canvas_change_intent"] = "CREATE"
+        payload["canvas_decision_base"] = {
+            "version": "canvas-decision-base-v1",
+            "expected_run_id": None,
+            "expected_run_status": None,
+            "expected_scene_id": None,
+            "expected_scene_version": None,
+        }
+        message.payload = payload
+        assert admit_agentic_canvas_brief(
+            session,
+            student_id=student.id,
+            learning_session_id=learning.id,
+            source_message_id=message.id,
+        ) is not None
+
+
+def test_stale_replace_pending_is_rejected_when_expected_run_completes(
+    factory: sessionmaker[Session],
+) -> None:
+    """A: a late REPLACE_PENDING cannot replace a run that settled during inference."""
+
+    with factory.begin() as session:
+        student, learning, original_message = _admitted_message(session)
+        original = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=original_message.id
+        )
+        assert original is not None
+        _, _, late_message = _admitted_message(
+            session, student=student, learning=learning, objective="A late replacement."
+        )
+        _set_v12_canvas_change(late_message, intent="REPLACE_PENDING", expected_run=original)
+        original.status = "COMPLETED"
+        original.completed_at = datetime.now(UTC)
+
+        assert admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=late_message.id
+        ) is None
+        assert late_message.payload["agentic_canvas"]["reason_code"] == "STALE_BASE"
+        assert original.status == "COMPLETED"
+        assert session.scalar(select(func.count(m.StudioCanvasSpecialistRun.id))) == 1
+
+
+def test_stale_expected_run_cannot_supersede_a_newer_run(
+    factory: sessionmaker[Session],
+) -> None:
+    """B: an old Tutor decision cannot supersede a successor admitted after selection."""
+
+    with factory.begin() as session:
+        student, learning, original_message = _admitted_message(session)
+        original = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=original_message.id
+        )
+        assert original is not None
+        _, _, stale_message = _admitted_message(
+            session, student=student, learning=learning, objective="Stale change."
+        )
+        _set_v12_canvas_change(stale_message, intent="REPLACE_PENDING", expected_run=original)
+        _, _, successor_message = _admitted_message(
+            session, student=student, learning=learning, objective="Newest change."
+        )
+        successor = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=successor_message.id
+        )
+        assert successor is not None
+
+        assert admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=stale_message.id
+        ) is None
+        assert stale_message.payload["agentic_canvas"]["reason_code"] == "STALE_BASE"
+        assert successor.status == "PENDING"
+        assert session.scalar(select(func.count(m.StudioCanvasSpecialistRun.id))) == 2
+
+
+def test_stale_replace_scene_is_rejected_after_scene_version_advances(
+    factory: sessionmaker[Session],
+) -> None:
+    """C: REPLACE_SCENE is bound to the exact Scene identity and version observed."""
+
+    with factory.begin() as session:
+        student, learning, message = _admitted_message(session)
+        scene, snapshot = _install_active_scene(session, student=student, learning=learning)
+        _set_v12_canvas_change(
+            message,
+            intent="REPLACE_SCENE",
+            expected_scene_id=scene.id,
+            expected_scene_version=1,
+        )
+        scene.scene_version = 2
+        snapshot.current_scene_version = 2
+
+        assert admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=message.id
+        ) is None
+        assert message.payload["agentic_canvas"]["reason_code"] == "STALE_BASE"
+        assert session.scalar(select(func.count(m.StudioCanvasSpecialistRun.id))) == 0
+
+
+def test_stale_retry_is_rejected_after_a_successor_appears(
+    factory: sessionmaker[Session],
+) -> None:
+    """D: RETRY stays bound to the failed run and cannot cross a newer successor."""
+
+    with factory.begin() as session:
+        student, learning, failed_message = _admitted_message(session)
+        failed = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=failed_message.id
+        )
+        assert failed is not None
+        failed.status = "FAILED"
+        _, _, retry_message = _admitted_message(
+            session, student=student, learning=learning, objective="Retry the failed visual."
+        )
+        _set_v12_canvas_change(retry_message, intent="RETRY", expected_run=failed)
+        _, _, successor_message = _admitted_message(
+            session, student=student, learning=learning, objective="A newer visual."
+        )
+        successor = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=successor_message.id
+        )
+        assert successor is not None
+
+        assert admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=retry_message.id
+        ) is None
+        assert retry_message.payload["agentic_canvas"]["reason_code"] == "STALE_BASE"
+        assert successor.status == "PENDING"
+
+
+def test_stale_create_is_rejected_when_canvas_appears_before_admission(
+    factory: sessionmaker[Session],
+) -> None:
+    """E: CREATE is valid only for the same empty Canvas state seen before inference."""
+
+    with factory.begin() as session:
+        student, learning, stale_create = _admitted_message(session)
+        _set_v12_canvas_change(stale_create, intent="CREATE")
+        _, _, newer_message = _admitted_message(
+            session, student=student, learning=learning, objective="A newer visual appeared."
+        )
+        newer = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=newer_message.id
+        )
+        assert newer is not None
+
+        assert admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=stale_create.id
+        ) is None
+        assert stale_create.payload["agentic_canvas"]["reason_code"] == "STALE_BASE"
+        assert newer.status == "PENDING"
+        assert session.scalar(select(func.count(m.StudioCanvasSpecialistRun.id))) == 1
+
+
+def test_v12_create_admits_against_an_unchanged_empty_canvas_base(
+    factory: sessionmaker[Session],
+) -> None:
+    """F: a current empty base still permits one genuine CREATE."""
+
+    with factory.begin() as session:
+        student, learning, message = _admitted_message(session)
+        _set_v12_canvas_change(message, intent="CREATE")
+
+        run = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=message.id
+        )
+
+        assert run is not None and run.status == "PENDING"
+
+
+def test_v12_replace_pending_admits_against_the_same_inflight_run(
+    factory: sessionmaker[Session],
+) -> None:
+    """F: the exact current in-flight run remains replaceable."""
+
+    with factory.begin() as session:
+        student, learning, original_message = _admitted_message(session)
+        original = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=original_message.id
+        )
+        assert original is not None
+        _, _, replacement_message = _admitted_message(
+            session, student=student, learning=learning, objective="A genuine changed visual."
+        )
+        _set_v12_canvas_change(replacement_message, intent="REPLACE_PENDING", expected_run=original)
+
+        replacement = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=replacement_message.id
+        )
+
+        assert replacement is not None and replacement.status == "PENDING"
+        assert original.status == "SUPERSEDED"
+
+
+def test_v12_replace_scene_admits_with_exact_scene_lineage(
+    factory: sessionmaker[Session],
+) -> None:
+    """F: unchanged Scene identity/version is preserved as replacement lineage."""
+
+    with factory.begin() as session:
+        student, learning, message = _admitted_message(session)
+        scene, _snapshot = _install_active_scene(session, student=student, learning=learning)
+        _set_v12_canvas_change(
+            message,
+            intent="REPLACE_SCENE",
+            expected_scene_id=scene.id,
+            expected_scene_version=scene.scene_version,
+        )
+
+        replacement = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=message.id
+        )
+
+        assert replacement is not None
+        assert replacement.base_scene_id == scene.id
+        assert replacement.base_scene_version == scene.scene_version
+
+
+def test_v12_retry_admits_against_the_same_failed_run_without_a_successor(
+    factory: sessionmaker[Session],
+) -> None:
+    """F: RETRY remains available for the exact current terminal failed run."""
+
+    with factory.begin() as session:
+        student, learning, failed_message = _admitted_message(session)
+        failed = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=failed_message.id
+        )
+        assert failed is not None
+        failed.status = "FAILED"
+        _, _, retry_message = _admitted_message(
+            session, student=student, learning=learning, objective="Retry the same visual."
+        )
+        _set_v12_canvas_change(retry_message, intent="RETRY", expected_run=failed)
+
+        retry = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=retry_message.id
+        )
+
+        assert retry is not None and retry.status == "PENDING"
+        assert failed.status == "FAILED"
 
 
 def test_dedicated_canvas_model_is_used_for_composition_and_successful_execution(

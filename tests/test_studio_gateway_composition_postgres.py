@@ -197,7 +197,7 @@ def test_canvas_factory_retains_real_provider_routing_without_live_calls(applica
     def real_transport_stub(self, route, payload):
         assert route.provider == "openai"
         yield StreamDelta("Real transport fixture.")
-        yield StreamComplete(ModelResult(output={"text": "Real transport fixture.", "workspace_intent": None}))
+        yield StreamComplete(ModelResult(output={"text": "Real transport fixture.", "workspace_intent": None, "canvas_brief": None, "canvas_change_intent": None}))
     def never_local(*args, **kwargs):
         raise AssertionError("Real configuration fell back to the local provider")
     monkeypatch.setattr(OpenAIResponsesProvider, "stream", real_transport_stub)
