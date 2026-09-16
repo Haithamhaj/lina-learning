@@ -16,7 +16,8 @@ def test_primary_tutor_loads_only_its_accepted_visual_guidance():
     payload = build_tutor_model_payload(question="Explain a process.")
     instructions = payload["instructions"]
 
-    assert "VISUAL_GUIDANCE_V1" in instructions
+    assert instructions.count("VISUAL_GUIDANCE_V2") == 1
+    assert "VISUAL_GUIDANCE_V1" not in instructions
     assert "CANVAS_SPECIALIST_VISUAL_LEARNING_COMPOSER_V1" not in instructions
     assert "SPECIALIST_CAPABILITY_PACK_V1" not in instructions
     assert DEVELOPMENT_SKILL.read_text() not in instructions

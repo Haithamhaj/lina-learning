@@ -35,25 +35,25 @@ class PriorTeachingMethodContext:
 
 _REGISTRY = {
     TeachingMethod.CONCRETE_EXAMPLE: TeachingMethodDefinition(
-        TeachingMethod.CONCRETE_EXAMPLE, "Use a familiar concrete example before abstraction."
+        TeachingMethod.CONCRETE_EXAMPLE, "Use a familiar concrete example to make an abstract idea meaningful, connecting it to the concept rather than treating the story as decoration."
     ),
     TeachingMethod.VISUAL_REPRESENTATION: TeachingMethodDefinition(
-        TeachingMethod.VISUAL_REPRESENTATION, "Use a visual or mental representation to expose structure. A mental image alone does not fulfill an explicit request for an external visible representation."
+        TeachingMethod.VISUAL_REPRESENTATION, "Use a simple visual or mental representation to expose structure. A mental description is not a displayed picture or Canvas."
     ),
     TeachingMethod.WORKED_EXAMPLE: TeachingMethodDefinition(
-        TeachingMethod.WORKED_EXAMPLE, "Work through one short example clearly."
+        TeachingMethod.WORKED_EXAMPLE, "Work through one short example, showing the key reasoning and why each useful step follows; avoid merely listing operations."
     ),
     TeachingMethod.SOCRATIC_FOCUS: TeachingMethodDefinition(
-        TeachingMethod.SOCRATIC_FOCUS, "Use one focused question to guide the next step."
+        TeachingMethod.SOCRATIC_FOCUS, "Use one focused question to help the Student notice, predict or reason about the next step when they have enough foundation to engage."
     ),
     TeachingMethod.DECOMPOSITION: TeachingMethodDefinition(
-        TeachingMethod.DECOMPOSITION, "Break the idea into small manageable steps."
+        TeachingMethod.DECOMPOSITION, "Break an idea into manageable parts or steps and make their relationship to the whole explicit."
     ),
     TeachingMethod.ANALOGY: TeachingMethodDefinition(
-        TeachingMethod.ANALOGY, "Use a simple analogy that preserves the concept."
+        TeachingMethod.ANALOGY, "Use a simple analogy that preserves the relevant concept and does not import misleading relationships."
     ),
     TeachingMethod.SYMBOLIC_EXPLANATION: TeachingMethodDefinition(
-        TeachingMethod.SYMBOLIC_EXPLANATION, "Explain the relevant mathematical rule or notation simply."
+        TeachingMethod.SYMBOLIC_EXPLANATION, "Explain the relevant mathematical rule or notation simply and connect the symbols to their meaning."
     ),
 }
 

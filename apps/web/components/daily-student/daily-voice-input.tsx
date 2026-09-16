@@ -39,7 +39,7 @@ export function DailyVoiceInput({
 
   useEffect(() => () => recorderRef.current?.dispose(), []);
 
-  const availability = voiceControlAvailability({ state: voiceState, draft, chatSending });
+  const availability = voiceControlAvailability({ state: voiceState, draft, chatSending, copy });
   const start = () => {
     if (!learningSessionId || !availability.canStart) return;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
@@ -66,6 +66,7 @@ export function DailyVoiceInput({
       onElapsedChange: setRecordingElapsed,
       onTranscript,
       onError: setVoiceError,
+      messages: copy,
     });
     recorderRef.current = recorder;
     void recorder.start();
@@ -78,6 +79,6 @@ export function DailyVoiceInput({
         <Button type="button" variant="secondary" className="min-h-12 px-3 focus-visible:ring-2 focus-visible:ring-[#7d70df]" aria-label={copy.cancel} onClick={() => recorderRef.current?.cancel()}>{copy.cancel}</Button>
       </> : <Button type="button" variant="secondary" className="min-h-12 min-w-12 px-3 focus-visible:ring-2 focus-visible:ring-[#7d70df]" aria-label={availability.canStart ? copy.record : availability.reason} title={availability.canStart ? copy.record : availability.reason} disabled={!availability.canStart || !learningSessionId} onClick={start}><span aria-hidden="true">{voiceState === "TRANSCRIBING" ? "…" : "🎙"}</span><span className="sr-only">{voiceState === "REQUESTING_PERMISSION" ? copy.requestingPermission : voiceState === "TRANSCRIBING" ? copy.transcribing : availability.reason}</span></Button>}
     </div>
-    <p className="order-4 text-xs text-slate-600 sm:col-span-3" role="status" aria-live="polite">{voiceState === "REQUESTING_PERMISSION" ? copy.requestingPermission : voiceState === "RECORDING" ? copy.recording(formatRecordingElapsed(recordingElapsed)) : voiceState === "TRANSCRIBING" ? copy.transcribing : voiceError || "Type a message or record one, then review it before sending."}</p>
+    <p className="order-4 text-xs text-slate-600 sm:col-span-3" role="status" aria-live="polite">{voiceState === "REQUESTING_PERMISSION" ? copy.requestingPermission : voiceState === "RECORDING" ? copy.recording(formatRecordingElapsed(recordingElapsed)) : voiceState === "TRANSCRIBING" ? copy.transcribing : voiceError || copy.idleHint}</p>
   </>;
 }

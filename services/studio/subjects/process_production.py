@@ -168,7 +168,7 @@ def make_profile():
         False, False, True, "PRODUCTION")
     from dataclasses import replace
     return replace(make_process_sequence_profile(), profile_version=PROFILE_VERSION, concept_namespace="lina.process",
-        tutor_guidance_fragment="visual-guidance-v1", activities=(activity,), renderers=(renderer,), validators=(),
+        tutor_guidance_fragment="visual-guidance-v2", activities=(activity,), renderers=(renderer,), validators=(),
         payload_validators=(PayloadValidatorContract("process-visual-production-seed", SEED_VERSION, validate_seed),
                             PayloadValidatorContract("process-visual-production-target", ACTION_VERSION, validate_action)),
         reducers=(ReducerContract("process-visual-production-reducer", "v1", reduce_process),))

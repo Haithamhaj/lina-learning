@@ -295,7 +295,7 @@ def make_profile():
         make_process_sequence_profile(),
         profile_version=PROFILE_VERSION,
         concept_namespace="lina.process",
-        tutor_guidance_fragment="visual-guidance-v1",
+        tutor_guidance_fragment="visual-guidance-v2",
         activities=(activity,),
         renderers=(renderer,),
         validators=(),

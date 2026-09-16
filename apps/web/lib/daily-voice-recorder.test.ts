@@ -7,6 +7,7 @@ import {
   preferredRecordingMimeType,
   transcribeDailyRecording,
   voiceControlAvailability,
+  type VoiceRecorderMessages,
   type VoiceRecorderState,
 } from "./daily-voice-recorder.ts";
 
@@ -59,7 +60,7 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-function recorderHarness(options: { permission?: Promise<FakeStream>; transcript?: Promise<string>; createFailure?: Error } = {}) {
+function recorderHarness(options: { permission?: Promise<FakeStream>; transcript?: Promise<string>; createFailure?: Error; messages?: VoiceRecorderMessages } = {}) {
   const stream = new FakeStream();
   const mediaRecorder = new FakeMediaRecorder();
   const states: VoiceRecorderState[] = [];
@@ -97,6 +98,7 @@ function recorderHarness(options: { permission?: Promise<FakeStream>; transcript
     onElapsedChange: (seconds) => elapsed.push(seconds),
     onTranscript: (transcript) => transcripts.push(transcript),
     onError: (message) => errors.push(message),
+    messages: options.messages,
   });
   return {
     voice,
@@ -164,6 +166,25 @@ test("permission denial is recoverable and creates no transcription", async () =
   assert.equal(harness.transcriptionBlobs.length, 0);
   assert.equal(harness.states.at(-1), "IDLE");
   assert.match(harness.errors.at(-1) ?? "", /permission/i);
+});
+
+test("recorder failures use caller-owned localized copy", async () => {
+  const harness = recorderHarness({
+    permission: Promise.reject(new DOMException("Denied", "NotAllowedError")),
+    messages: {
+      unsupported: "غير مدعوم",
+      recordingStopped: "توقف التسجيل",
+      permissionDenied: "رُفض إذن الميكروفون.",
+      openFailed: "تعذر فتح الميكروفون.",
+      noSpeechCaptured: "لم يُلتقط صوت.",
+      noSpeechHeard: "لم نسمع كلامًا.",
+      transcriptionFailed: "تعذر تحويل التسجيل.",
+    },
+  });
+
+  await harness.voice.start();
+
+  assert.equal(harness.errors.at(-1), "رُفض إذن الميكروفون.");
 });
 
 test("dispose during permission request stops a late stream and never records", async () => {

@@ -28,6 +28,7 @@ from services.platform.db.models import (
     ContentProcessingRun,
     ContentSemanticProcessingRun,
     LearningMessage,
+    LearningSegment,
     LearningEvidence,
     LearningEvent,
     LearnerIntelligenceCard,
@@ -215,6 +216,7 @@ class _ImmediateSuccessfulTutorProvider:
         workspace_intent: object | None = None,
         workspace_visual_order: object | None = None,
         canvas_brief: object | None = None,
+        canvas_visual_context_selection: object | None = None,
         canvas_change_intent: str | None = None,
         text: str = "Keep the denominator and add the numerators.",
     ) -> None:
@@ -224,6 +226,7 @@ class _ImmediateSuccessfulTutorProvider:
         self.workspace_intent = workspace_intent
         self.workspace_visual_order = workspace_visual_order
         self.canvas_brief = canvas_brief
+        self.canvas_visual_context_selection = canvas_visual_context_selection
         self.canvas_change_intent = canvas_change_intent
         self.text = text
 
@@ -249,6 +252,7 @@ class _ImmediateSuccessfulTutorProvider:
                 "structured_segment_state": None,
                 "workspace_intent": self.workspace_intent,
                 "canvas_brief": self.canvas_brief,
+                "canvas_visual_context_selection": self.canvas_visual_context_selection,
                 "canvas_change_intent": self.canvas_change_intent,
                 "workspace_visual_order": self.workspace_visual_order,
             },
@@ -724,6 +728,95 @@ def test_daily_source_uses_one_primary_tutor_call_with_exact_source_lineage(
         assert session.query(LearningEvidence).count() == 0
         assert session.query(LearningEvent).count() == 0
         assert session.query(LearnerIntelligenceCard).count() == 0
+
+
+def test_daily_canvas_rejection_preserves_provider_ledger_without_delivering_its_promise_or_partial_domain_writes(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Provider success and delivered Tutor success remain separate durable facts."""
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "daily-canvas-rejection-ledger")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        StudioStateService(session).get_or_create_runtime(
+            student_id=student.id,
+            learning_session_id=learning_session.id,
+        )
+        session_id = learning_session.id
+        untouched_counts = {
+            model: session.query(model).count()
+            for model in (
+                StudioCanvasSpecialistRun,
+                Job,
+                LearningSegment,
+                CandidateEvent,
+                LearningEvent,
+                LearningEvidence,
+                LearnerIntelligenceCard,
+            )
+        }
+
+    rejected_promise = "Your new visual is ready now."
+    provider = _ImmediateSuccessfulTutorProvider(
+        text=rejected_promise,
+        canvas_brief={
+            "version": "canvas-brief-v1",
+            "subject_key": "MATH",
+            "objective": "Show three equal groups of four blocks.",
+            "student_request": "Use blocks instead of the current number line.",
+            "requested_representation": "equal groups",
+            "facts": ["There are three groups.", "Each group has four blocks."],
+            "relations": [],
+            "quantities": [],
+            "desired_student_action": "Count all blocks.",
+            "must_not_imply": [],
+            "source_references": [],
+            "locale": "en",
+            "direction": "ltr",
+        },
+        canvas_visual_context_selection={
+            "version": "canvas-visual-context-selection-v1",
+            "personal_fact_keys": ["activity:another_student"],
+        },
+        canvas_change_intent="CREATE",
+    )
+    from apps.api.routes import student as student_routes
+
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    client = _client(
+        postgres_session_factory,
+        subject="daily-canvas-rejection-ledger",
+        raise_server_exceptions=False,
+    )
+    try:
+        response = client.post(
+            f"/api/v1/student/daily/session/{session_id}/turn/stream",
+            json={"content": "Change the visual to blocks."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert provider.call_count == 1
+    assert "event: error" in response.text
+    assert "event: delta" not in response.text
+    assert "event: turn" not in response.text
+    assert rejected_promise not in response.text
+    with postgres_session_factory() as session:
+        messages = session.query(LearningMessage).filter_by(session_id=session_id).all()
+        assert [(message.role, message.content) for message in messages] == [
+            ("student", "Change the visual to blocks."),
+        ]
+        execution = session.query(AIExecution).filter_by(learning_session_id=session_id, task="tutor").one()
+        assert execution.success is True
+        assert execution.provider == "fixture-stream"
+        assert execution.model == "fixture-success-model"
+        assert execution.source_message_id == messages[0].id
+        for model, count_before in untouched_counts.items():
+            assert session.query(model).count() == count_before
 
 
 def test_source_grounded_process_order_keeps_raw_source_outside_canvas_semantics(

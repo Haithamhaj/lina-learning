@@ -193,12 +193,12 @@ def test_guidance_is_loaded_only_for_primary_tutor():
     skill = (root / "skills/lina-educational-visuals/SKILL.md").read_text()
     assert "development-only" in skill
     for f in [
-        "runtime/tutor/visual-guidance-v1.md",
+        "runtime/tutor/visual-guidance-v2.md",
         "runtime/canvas-specialist/visual-capability-pack-v1.md",
     ]:
         assert "LINA_EDUCATIONAL_VISUALS_GUIDE.md" in (root / f).read_text()
     payload = build_tutor_model_payload(question="hello")
-    assert "VISUAL_GUIDANCE_V1" in payload["instructions"]
+    assert "VISUAL_GUIDANCE_V2" in payload["instructions"]
     assert "SPECIALIST_DISABLED" not in payload["instructions"]
 
 

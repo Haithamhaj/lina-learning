@@ -1,0 +1,119 @@
+{
+  "text": "Yes. Let’s switch from the number line to equal groups using blocks. I’m preparing 3 groups with 4 blocks in each group.\n\nGroup 1: 4 blocks\nGroup 2: 4 blocks\nGroup 3: 4 blocks\n\nThat means:\n3 × 4 = 4 + 4 + 4 = 12\n\nLook at the groups when they’re ready, then tell me how many blocks are in all 3 groups.",
+  "suggested_actions": [
+    {
+      "label": "Show me one group first",
+      "kind": "NAVIGATION"
+    },
+    {
+      "label": "Explain why we add 4 three times",
+      "kind": "NAVIGATION"
+    }
+  ],
+  "candidate_metadata": null,
+  "workspace_intent": null,
+  "workspace_visual_order": null,
+  "canvas_brief": {
+    "version": "canvas-brief-v1",
+    "subject_key": "MATH",
+    "objective": "Show 3 × 4 as 3 equal groups containing 4 objects each.",
+    "student_request": "Switch from the number line to equal groups so Lina can build 3 groups of 4.",
+    "requested_representation": "Three visibly separate groups of four blocks, with the total connected to 4 + 4 + 4 = 12 and 3 × 4 = 12.",
+    "facts": [
+      "There are 3 equal groups.",
+      "Each group has 4 blocks.",
+      "The total is 12 blocks.",
+      "3 × 4 means 4 + 4 + 4."
+    ],
+    "relations": [
+      {
+        "id": "r1",
+        "source_id": "group_1",
+        "target_id": "four_blocks_1",
+        "meaning": "group 1 contains 4 blocks"
+      },
+      {
+        "id": "r2",
+        "source_id": "group_2",
+        "target_id": "four_blocks_2",
+        "meaning": "group 2 contains 4 blocks"
+      },
+      {
+        "id": "r3",
+        "source_id": "group_3",
+        "target_id": "four_blocks_3",
+        "meaning": "group 3 contains 4 blocks"
+      },
+      {
+        "id": "r4",
+        "source_id": "three_groups",
+        "target_id": "total_12",
+        "meaning": "combining the 3 equal groups gives 12 blocks"
+      }
+    ],
+    "quantities": [
+      {
+        "id": "q1",
+        "value": "3",
+        "unit": "groups"
+      },
+      {
+        "id": "q2",
+        "value": "4",
+        "unit": "blocks per group"
+      },
+      {
+        "id": "q3",
+        "value": "12",
+        "unit": "blocks total"
+      }
+    ],
+    "desired_student_action": "Build or identify 3 groups of 4 blocks and state the total.",
+    "must_not_imply": [
+      "The groups are unequal.",
+      "3 × 4 means 3 + 4.",
+      "The number line is still the main representation."
+    ],
+    "source_references": [],
+    "locale": "en",
+    "direction": "ltr"
+  },
+  "canvas_visual_context_selection": {
+    "version": "canvas-visual-context-selection-v1",
+    "personal_fact_keys": [
+      "activity.building_blocks"
+    ]
+  },
+  "canvas_change_intent": "REPLACE_PENDING",
+  "teaching_mode": "LEARN",
+  "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+  "teaching_method_id": "CONCRETE_EXAMPLE",
+  "prior_method_relation": "DID_NOT_HELP",
+  "segment_relation": "CONTINUE",
+  "structured_segment_state": {
+    "schema_version": "structured-segment-state-v1",
+    "active_goal": "Understand 3 × 4 as 3 equal groups of 4",
+    "unresolved_point": "See why 3 × 4 means 4 + 4 + 4",
+    "active_references": [
+      "3 groups",
+      "4 blocks in each group"
+    ],
+    "established_facts": [
+      "The number line was not helping Lina see 3 × 4",
+      "The new representation will use equal groups"
+    ],
+    "source_message_ids": [
+      "d794b758-e07f-45f5-9286-ad25424a113e",
+      "e9252d92-3178-5e25-a1ee-0eb5cc80f0ce",
+      "c35b29a0-b552-5c47-94a1-e9e04a3ee9de"
+    ]
+  },
+  "parent_boundary": {
+    "schema_version": "parent-boundary-v1",
+    "category": null,
+    "applies": false,
+    "model_action": "ALLOW",
+    "redirect": null
+  },
+  "provisional_broad_subject": "MATH"
+}

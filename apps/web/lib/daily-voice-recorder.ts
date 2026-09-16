@@ -12,6 +12,40 @@ type RecorderLike = {
   stop: () => void;
 };
 
+export type VoiceRecorderMessages = {
+  unsupported: string;
+  recordingStopped: string;
+  permissionDenied: string;
+  openFailed: string;
+  noSpeechCaptured: string;
+  noSpeechHeard: string;
+  transcriptionFailed: string;
+};
+
+type VoiceAvailabilityCopy = {
+  record: string;
+  sendOrClear: string;
+  waitForTutor: string;
+  alreadyActive: string;
+};
+
+const defaultMessages: VoiceRecorderMessages = {
+  unsupported: "Voice recording is not supported in this browser.",
+  recordingStopped: "Voice recording stopped unexpectedly. Please try again.",
+  permissionDenied: "Microphone permission was denied. You can keep typing or allow microphone access and try again.",
+  openFailed: "The microphone could not be opened. You can keep typing and try again.",
+  noSpeechCaptured: "No speech was captured. Please record again.",
+  noSpeechHeard: "We could not hear any speech. Please record again.",
+  transcriptionFailed: "The recording could not be transcribed. Please try again.",
+};
+
+const defaultAvailabilityCopy: VoiceAvailabilityCopy = {
+  record: "Record a message",
+  sendOrClear: "Send or clear your typed message before recording.",
+  waitForTutor: "Wait for Tutor before recording.",
+  alreadyActive: "Voice input is already active.",
+};
+
 type VoiceRecorderDependencies = {
   requestStream: () => Promise<StreamLike>;
   createRecorder: (stream: StreamLike, mimeType: string) => RecorderLike;
@@ -24,6 +58,7 @@ type VoiceRecorderDependencies = {
   onElapsedChange: (seconds: number) => void;
   onTranscript: (transcript: string) => void;
   onError: (message: string) => void;
+  messages?: VoiceRecorderMessages;
 };
 
 export function preferredRecordingMimeType(isSupported: (mimeType: string) => boolean): string | null {
@@ -46,15 +81,17 @@ export function voiceControlAvailability({
   state,
   draft,
   chatSending,
+  copy = defaultAvailabilityCopy,
 }: {
   state: VoiceRecorderState;
   draft: string;
   chatSending: boolean;
+  copy?: VoiceAvailabilityCopy;
 }): { canStart: boolean; reason: string } {
-  if (draft.trim()) return { canStart: false, reason: "Send or clear your typed message before recording." };
-  if (chatSending) return { canStart: false, reason: "Wait for Tutor before recording." };
-  if (state !== "IDLE") return { canStart: false, reason: "Voice input is already active." };
-  return { canStart: true, reason: "Record a message" };
+  if (draft.trim()) return { canStart: false, reason: copy.sendOrClear };
+  if (chatSending) return { canStart: false, reason: copy.waitForTutor };
+  if (state !== "IDLE") return { canStart: false, reason: copy.alreadyActive };
+  return { canStart: true, reason: copy.record };
 }
 
 function stopTracks(stream: StreamLike | null) {
@@ -73,6 +110,10 @@ export class DailyVoiceRecorder {
   private disposed = false;
   private requestVersion = 0;
   private stopPromise: Promise<void> | null = null;
+
+  private get messages(): VoiceRecorderMessages {
+    return this.dependencies.messages ?? defaultMessages;
+  }
 
   constructor(dependencies: VoiceRecorderDependencies) {
     this.dependencies = dependencies;
@@ -96,7 +137,7 @@ export class DailyVoiceRecorder {
       if (!mimeType) {
         stopTracks(stream);
         this.setState("IDLE");
-        this.dependencies.onError("Voice recording is not supported in this browser.");
+        this.dependencies.onError(this.messages.unsupported);
         return;
       }
       this.stream = stream;
@@ -107,7 +148,7 @@ export class DailyVoiceRecorder {
       recorder.ondataavailable = (event) => {
         if (!this.cancelled && event.data.size > 0) this.chunks.push(event.data);
       };
-      recorder.onerror = () => this.failRecording("Voice recording stopped unexpectedly. Please try again.");
+      recorder.onerror = () => this.failRecording(this.messages.recordingStopped);
       recorder.start();
       this.startedAt = (this.dependencies.now ?? Date.now)();
       this.timer = (this.dependencies.setInterval ?? window.setInterval)(() => {
@@ -124,9 +165,7 @@ export class DailyVoiceRecorder {
       this.chunks = [];
       this.setState("IDLE");
       const denied = error instanceof DOMException && error.name === "NotAllowedError";
-      this.dependencies.onError(denied
-        ? "Microphone permission was denied. You can keep typing or allow microphone access and try again."
-        : "The microphone could not be opened. You can keep typing and try again.");
+      this.dependencies.onError(denied ? this.messages.permissionDenied : this.messages.openFailed);
     }
   }
 
@@ -185,18 +224,18 @@ export class DailyVoiceRecorder {
     const audio = new Blob(chunks, { type: contentType });
     if (audio.size === 0) {
       this.setState("IDLE");
-      this.dependencies.onError("No speech was captured. Please record again.");
+      this.dependencies.onError(this.messages.noSpeechCaptured);
       return;
     }
     try {
       const transcript = (await this.dependencies.transcribe(audio)).trim();
       if (!transcript) {
-        this.dependencies.onError("We could not hear any speech. Please record again.");
+        this.dependencies.onError(this.messages.noSpeechHeard);
       } else {
         this.dependencies.onTranscript(transcript);
       }
     } catch {
-      this.dependencies.onError("The recording could not be transcribed. Please try again.");
+      this.dependencies.onError(this.messages.transcriptionFailed);
     } finally {
       if (!this.disposed) this.setState("IDLE");
     }

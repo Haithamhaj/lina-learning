@@ -59,7 +59,7 @@ from services.tutor.student_sessions import (
     owned_open_daily_session,
     owned_open_math_session,
 )
-from services.tutor.runtime import LocalTutorProvider, TutorModelStreamFailure, TutorTextDelta, TutorTurn, create_tutor_runtime
+from services.tutor.runtime import LocalTutorProvider, TutorCanvasAdmissionRejected, TutorModelStreamFailure, TutorTextDelta, TutorTurn, create_tutor_runtime
 from services.tutor.parent_boundaries import parse_parent_boundary_decision
 from services.tutor.capacity import TutorContextCapacityExceeded
 from services.tutor.context import LiveSubjectContext, legacy_math_live_subject, unknown_live_subject
@@ -574,6 +574,12 @@ def _stream_student_tutor_turn(
         except (TutorModelStreamFailure, TutorContextCapacityExceeded):
             stream_session.commit()
             raise
+        except TutorCanvasAdmissionRejected:
+            # The provider execution completed and is durable, but no Tutor
+            # turn or Canvas admission succeeded. Keep those facts separate.
+            stream_session.commit()
+            committed = True
+            yield f"event: error\ndata: {json.dumps({'code': 'TUTOR_TURN_REJECTED'})}\n\n"
         except Exception:
             stream_session.rollback()
             raise

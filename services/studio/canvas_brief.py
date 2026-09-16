@@ -14,6 +14,10 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 CANVAS_BRIEF_VERSION = "canvas-brief-v1"
 VISUAL_CONTEXT_SELECTION_VERSION = "canvas-visual-context-selection-v1"
 VISUAL_LEARNER_CONTEXT_VERSION = "visual-learner-context-v1"
+PERSONAL_FACT_IDENTITY_MAX_LENGTH = 128
+_PERSONAL_FACT_IDENTITY = re.compile(
+    rf"^[a-z][a-z0-9_-]*(?:[.:][a-z][a-z0-9_-]*)*$"
+)
 _IMPLEMENTATION_CONTROL = re.compile(
     r"\b(?:jsxgraph|konva|mathlive|renderer|component|provider|javascript|typescript|jsx|css|svg)\b",
     re.IGNORECASE,
@@ -34,7 +38,11 @@ class CanvasVisualContextSelectionV1(BaseModel):
     @field_validator("personal_fact_keys")
     @classmethod
     def unique_fact_keys(cls, value: list[str]) -> list[str]:
-        if len(value) != len(set(value)) or any(not re.fullmatch(r"[a-z][a-z0-9_-]{0,63}", key) for key in value):
+        if len(value) != len(set(value)) or any(
+            len(key) > PERSONAL_FACT_IDENTITY_MAX_LENGTH
+            or _PERSONAL_FACT_IDENTITY.fullmatch(key) is None
+            for key in value
+        ):
             raise ValueError("Visual context selection must contain unique exact fact keys")
         return value
 
@@ -47,7 +55,7 @@ class VisualLearnerCoreProfileV1(BaseModel):
 
 class VisualLearnerFactV1(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    fact_key: str = Field(min_length=1, max_length=64, pattern=r"^[a-z][a-z0-9_-]*$")
+    fact_key: str = Field(min_length=1, max_length=PERSONAL_FACT_IDENTITY_MAX_LENGTH, pattern=_PERSONAL_FACT_IDENTITY.pattern)
     category: Literal["PREFERENCE", "FAVORITE", "ACTIVITY", "PET"]
     display_statement: str = Field(min_length=1, max_length=300)
 

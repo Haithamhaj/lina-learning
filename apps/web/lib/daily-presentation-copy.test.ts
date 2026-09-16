@@ -9,7 +9,12 @@ test("Arabic Daily chrome uses Arabic student, voice, and source labels", () => 
   assert.equal(copy.student, "أنتِ");
   assert.equal(copy.linaThinking, "لينا تفكّر…");
   assert.equal(copy.voice.record, "سجّلي رسالة صوتية");
+  assert.equal(copy.voice.idleHint, "اكتبي رسالة أو سجّليها، ثم راجعيها قبل الإرسال.");
   assert.equal(copy.source.add, "أضيفي صورة أو ملفًا");
+  assert.equal(copy.app.connection.connected, "مساحة Canvas متصلة");
+  assert.equal(copy.app.connection.reconnecting, "جارٍ إعادة الاتصال بمساحة Canvas…");
+  assert.equal(copy.app.sourceWithoutQuestion, "سيُرسل الملف مع طلب المساعدة العام.");
+  assert.equal(copy.app.errors.tutorRejected, "لم أستطع إكمال هذا الرد بأمان. جرّبي مرة أخرى أو تابعي بالسؤال نفسه.");
 });
 
 test("English Daily chrome retains English learner-facing labels", () => {
@@ -18,6 +23,8 @@ test("English Daily chrome retains English learner-facing labels", () => {
   assert.equal(copy.student, "You");
   assert.equal(copy.voice.record, "Record a message");
   assert.equal(copy.source.add, "Add photo or file");
+  assert.equal(copy.app.connection.connected, "Canvas connected");
+  assert.equal(copy.app.errors.connection, "Canvas connection was interrupted. Reconnecting automatically…");
 });
 
 test("Arabic Canvas waiting copy advances through truthful elapsed stages", () => {

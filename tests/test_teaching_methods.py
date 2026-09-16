@@ -30,3 +30,15 @@ def test_registry_supplies_all_active_compact_definitions_without_selection_auth
 
     assert [definition.method_id for definition in definitions] == list(ACTIVE_TEACHING_METHODS)
     assert all(definition.description for definition in definitions)
+
+
+def test_method_descriptions_preserve_registered_meaning_and_explain_use() -> None:
+    """R13: registry-v1 keys stay stable while definitions become teaching-useful."""
+
+    descriptions = {definition.method_id.value: definition.description for definition in teaching_method_definitions()}
+
+    assert "connecting it to the concept" in descriptions["CONCRETE_EXAMPLE"]
+    assert "not a displayed picture or Canvas" in descriptions["VISUAL_REPRESENTATION"]
+    assert "why each useful step follows" in descriptions["WORKED_EXAMPLE"]
+    assert "relationship to the whole explicit" in descriptions["DECOMPOSITION"]
+    assert "misleading relationships" in descriptions["ANALOGY"]

@@ -37,17 +37,17 @@ class TeachingDecisionDefinition:
 
 TEACHING_MODE_DEFINITIONS = (
     TeachingDecisionDefinition("LEARN", "Normal concept learning: choose the next useful move, which may be explanation, modeling, practice, comparison, or exploration; it is not explanation-first."),
-    TeachingDecisionDefinition("HOMEWORK", "Working with an assigned, class, or homework task."),
-    TeachingDecisionDefinition("EXPLORE", "Open curiosity or learning outside the immediate school path."),
-    TeachingDecisionDefinition("REVIEW", "Revisiting previously learned material or checking retention."),
+    TeachingDecisionDefinition("HOMEWORK", "Working on an assigned, class or homework task. Preserve a meaningful attempt while providing teaching when needed; the task is not automatically a quiz."),
+    TeachingDecisionDefinition("EXPLORE", "Following curiosity or exploring beyond the immediate school task. Keep the Student's question central without turning every exploration into a lesson or test."),
+    TeachingDecisionDefinition("REVIEW", "Revisiting previously encountered learning. Use recall, explanation or application as useful; do not invent a review schedule or assume retention."),
     TeachingDecisionDefinition("QUIZ", "A Student-requested testing or checking interaction; ordinary practice is not automatically a quiz."),
 )
 
 TEACHING_STRATEGY_DEFINITIONS = (
-    TeachingDecisionDefinition("EXPLAIN_WITH_EXAMPLE", "Use a concise explanation or example when it is the useful next move, then invite meaningful Student participation when appropriate."),
-    TeachingDecisionDefinition("HINT_FIRST", "Preserve a meaningful Student attempt before giving stronger teaching."),
-    TeachingDecisionDefinition("EXPLAIN_THEN_CHECK", "Teach an unclear idea, then check application or understanding."),
-    TeachingDecisionDefinition("INDEPENDENT_CHECK", "Let Lina solve, explain, apply, or demonstrate with minimal support."),
+    TeachingDecisionDefinition("EXPLAIN_WITH_EXAMPLE", "Make the idea understandable through a concise explanation linked to a relevant example. Select this when that is the useful move, not as a universal entry into learning."),
+    TeachingDecisionDefinition("HINT_FIRST", "Support an in-progress Student attempt with a targeted hint when useful progress is possible; give stronger teaching when hints do not restore thinking."),
+    TeachingDecisionDefinition("EXPLAIN_THEN_CHECK", "Teach an unclear idea and provide a directly related opportunity to apply or explain it when useful. The check concerns the taught idea, not a generic follow-up question."),
+    TeachingDecisionDefinition("INDEPENDENT_CHECK", "Give the Student a meaningful opportunity to solve, explain or apply with minimal task-specific support. It can occur during learning or practice and is not a mastery claim."),
 )
 
 PRIOR_METHOD_RELATION_DEFINITIONS = (
@@ -67,7 +67,8 @@ PRIOR_METHOD_RELATION_CALIBRATION_GUIDANCE = (
     "HELPED requires the Student to clearly say the immediate prior representation helped or clarified. Examples: \"آه هلا فهمت\" → HELPED; \"That makes sense now.\" → HELPED. Do not infer HELPED merely from a correct answer. "
     "EXPLICIT_REPEAT_REQUEST requires an explicit request to repeat or use the same immediate prior representation. "
     "NOT_RELEVANT applies when that method is genuinely unrelated to a new learning topic or goal, not an ordinary continuation. "
-    "Use null when no valid immediate prior persisted TeachingMethod exists or no meaningful relation can safely be asserted."
+    "Use null when no valid immediate prior persisted TeachingMethod exists or no meaningful relation can safely be asserted. "
+    "A complaint that a visual has not appeared is delivery feedback, not by itself a judgment that an experienced TeachingMethod did not help. A status request or unclear text is not an explicit request to repeat a method. For a purely operational reply without a meaningful teaching move, use null teaching fields and null PriorMethodRelation; conversation continuity is decided separately."
 )
 
 

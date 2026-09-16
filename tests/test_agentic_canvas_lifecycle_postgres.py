@@ -1,10 +1,12 @@
 """Durable lifecycle tests for the additive Tutor-led Agentic Canvas path."""
 from __future__ import annotations
 
+from copy import deepcopy
 import json
 import os
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -13,14 +15,19 @@ from agents.exceptions import ModelBehaviorError
 from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
+from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
 from services.platform.db import models as m
 from services.platform.db.connection import normalize_database_url
+from services.platform.safety import SafetyAction, SafetyDecision
 from services.studio.agent.admission import (
     AGENTIC_CANVAS_CAPABILITY_IDENTITY,
     admit_agentic_canvas_brief,
 )
 from services.studio.agentic_canvas import AgenticCanvasSceneV2
 from services.studio.agent.orchestrator import CustomVisualCandidateMissingError
+from services.tutor.context import TutorContextBuilder
+from services.retrieval.service import RetrievalService
+from services.tutor.runtime import TutorRuntime
 from workers.agentic_canvas_handlers import register_agentic_canvas_handlers
 from workers.agentic_canvas_handlers import _classify_agent_failure
 from workers.job_worker import JobHandlerRegistry, run_once
@@ -64,6 +71,23 @@ class _Settings:
 class _TerraSettings(_Settings):
     model_name = "gpt-5.6-luna"
     canvas_model_name = "gpt-5.6-terra"
+
+
+class _AllowPolicy:
+    def evaluate(self, **_: object) -> SafetyDecision:
+        return SafetyDecision(SafetyAction.ALLOW, None, "BASELINE", 1, "TEST", "normal", None)
+
+
+class _RawReplayProvider:
+    def __init__(self, output: dict[str, object]) -> None:
+        self.output = output
+        self.calls = 0
+
+    def stream(self, route: ModelRoute, payload: dict[str, object]):
+        del route, payload
+        self.calls += 1
+        yield StreamDelta(str(self.output["text"]))
+        yield StreamComplete(ModelResult(output=deepcopy(self.output), input_tokens=101, output_tokens=202))
 
 
 def _brief(*, objective: str = "Compare two decimals on a number line.") -> dict[str, object]:
@@ -453,6 +477,135 @@ def test_v12_replace_pending_admits_against_the_same_inflight_run(
 
         assert replacement is not None and replacement.status == "PENDING"
         assert original.status == "SUPERSEDED"
+
+
+def test_original_v02_raw_output_replays_unchanged_with_historical_fact_identity_and_one_causal_replacement(
+    factory: sessionmaker[Session],
+) -> None:
+    """The saved failed Luna output succeeds through the local fixture path without rewriting its key."""
+
+    fixture_path = Path(__file__).parent / "fixtures" / "tutor_canvas_ab_v02_meaningful_representation_change.json"
+    raw_output = json.loads(fixture_path.read_text(encoding="utf-8"))
+    original_output = deepcopy(raw_output)
+
+    with factory.begin() as session:
+        student, learning, original_message = _admitted_message(session)
+        original_run = admit_agentic_canvas_brief(
+            session,
+            student_id=student.id,
+            learning_session_id=learning.id,
+            source_message_id=original_message.id,
+        )
+        assert original_run is not None and original_run.status == "PENDING"
+        scene, _snapshot = _install_active_scene(session, student=student, learning=learning)
+
+        now = datetime.now(UTC)
+        session.add(m.PersonalFact(
+            student_id=student.id,
+            category="ACTIVITY",
+            fact_key="activity.building_blocks",
+            value="LIKES",
+            display_statement="Enjoys building with blocks.",
+            support_count=1,
+            first_observed_at=now,
+            last_observed_at=now,
+        ))
+        other_user = m.User(identity_provider="agentic-lifecycle", external_subject=uuid4().hex)
+        session.add(other_user)
+        session.flush()
+        other_student = m.Student(user_id=other_user.id, display_name="Other learner")
+        session.add(other_student)
+        session.flush()
+        session.add(m.PersonalFact(
+            student_id=other_student.id,
+            category="ACTIVITY",
+            fact_key="activity:private_other_student",
+            value="LIKES",
+            display_statement="Other learner fact.",
+            support_count=1,
+            first_observed_at=now,
+            last_observed_at=now,
+        ))
+        session.flush()
+        student_id = student.id
+        learning_id = learning.id
+        original_run_id = original_run.id
+        scene_id = scene.id
+        scene_version = scene.scene_version
+
+    with factory.begin() as session:
+        student = session.get(m.Student, student_id)
+        learning = session.get(m.LearningSession, learning_id)
+        original_run = session.get(m.StudioCanvasSpecialistRun, original_run_id)
+        scene = session.get(m.StudioScene, scene_id)
+        assert student is not None and learning is not None
+        assert original_run is not None and scene is not None
+        provider = _RawReplayProvider(raw_output)
+        runtime = TutorRuntime(
+            session,
+            context_builder=TutorContextBuilder(session, retrieval_service=RetrievalService(session)),
+            safety_policy=_AllowPolicy(),
+            gateway=ModelGateway(
+                session,
+                routes={m.ModelTask.TUTOR: ModelRoute("fixture-replay", "fixture-raw-luna-output")},
+                providers={"fixture-replay": provider},
+            ),
+        )
+
+        events = list(runtime.stream_turn(
+            learning_session=learning,
+            question="Switch from the number line to equal groups using blocks.",
+        ))
+        session.flush()
+
+        assert provider.calls == 1
+        assert raw_output == original_output
+        assert events[-1].text == raw_output["text"]
+        tutor_messages = list(session.scalars(
+            select(m.LearningMessage)
+            .where(m.LearningMessage.session_id == learning.id, m.LearningMessage.role == "tutor")
+            .order_by(m.LearningMessage.created_at, m.LearningMessage.id)
+        ))
+        replay_message = tutor_messages[-1]
+        assert replay_message.payload["agentic_canvas"]["status"] == "ADMITTED", json.dumps({
+            "audit": replay_message.payload["agentic_canvas"],
+            "base": replay_message.payload["canvas_decision_base"],
+            "original": {"id": str(original_run.id), "status": original_run.status},
+            "scene": {"id": str(scene.id), "version": scene.scene_version},
+        }, ensure_ascii=False)
+        assert replay_message.payload["agentic_canvas"]["visual_learner_context"]["selected_personal_facts"] == [{
+            "fact_key": "activity.building_blocks",
+            "category": "ACTIVITY",
+            "display_statement": "Enjoys building with blocks.",
+        }]
+        assert replay_message.payload["canvas_change_intent"] == "REPLACE_PENDING"
+        assert replay_message.payload["canvas_decision_base"] == {
+            "version": "canvas-decision-base-v1",
+            "expected_run_id": str(original_run.id),
+            "expected_run_status": "PENDING",
+            "expected_scene_id": str(scene.id),
+            "expected_scene_version": scene.scene_version,
+        }
+
+        runs = list(session.scalars(
+            select(m.StudioCanvasSpecialistRun)
+            .where(m.StudioCanvasSpecialistRun.learning_session_id == learning.id)
+            .order_by(m.StudioCanvasSpecialistRun.created_at, m.StudioCanvasSpecialistRun.id)
+        ))
+        replacement = next(run for run in runs if run.source_message_id == replay_message.id)
+        assert len(runs) == 2
+        assert original_run.status == "SUPERSEDED"
+        assert replacement.status == "PENDING"
+        assert replacement.base_scene_id == scene.id
+        assert replacement.base_scene_version == scene.scene_version
+        assert session.scalar(select(func.count(m.Job.id)).where(m.Job.job_type == "studio.agentic_canvas.compose.v1")) == 2
+
+        replay_execution = session.get(m.AIExecution, replay_message.ai_execution_id)
+        assert replay_execution is not None
+        assert replay_execution.success is True
+        assert replay_execution.provider == "fixture-replay"
+        assert replay_execution.model == "fixture-raw-luna-output"
+        assert replay_execution.source_message_id is not None
 
 
 def test_v12_replace_scene_admits_with_exact_scene_lineage(

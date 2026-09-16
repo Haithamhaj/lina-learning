@@ -157,3 +157,9 @@ Always run `git diff --check` before closure and report any unrun gate exactly.
 - active risks;
 - next recommended action;
 - critical references.
+
+## Active repair tracking and language
+
+Use [Tutor / Canvas Repair Tracker](docs/TUTOR_CANVAS_REPAIR_TRACKER.md) for the current repair statuses and R01-R15 completion evidence. Update the affected rows after verified work; DONE requires the stated evidence, not a summary claim. Keep PROJECT_STATE.md short and link to this register.
+
+Write Codex prompts, execution instructions and handoffs in English; keep user-facing discussion Arabic unless requested otherwise. Complete the approved pedagogy/definition/visual-guidance repairs before resuming the separately deferred One Call/multi-call study. Do not treat the tracker as authorization for paid calls or release operations.

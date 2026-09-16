@@ -118,7 +118,8 @@ class Capture:
 
     def stream(self, route, payload):
         self.calls.append(payload)
-        assert "VISUAL_GUIDANCE_V1" in payload["instructions"]
+        assert payload["instructions"].count("VISUAL_GUIDANCE_V2") == 1
+        assert "VISUAL_GUIDANCE_V1" not in payload["instructions"]
         encoded = payload["input"]
         assert (
             "image_url" not in encoded

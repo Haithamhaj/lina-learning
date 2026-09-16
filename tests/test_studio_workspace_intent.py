@@ -135,6 +135,97 @@ def test_canvas_visual_context_resolves_only_selected_safe_catalogue_facts() -> 
         )
 
 
+@pytest.mark.parametrize(
+    "fact_key",
+    [
+        "activity.building_blocks",
+        "activity:building_blocks",
+        "drawing",
+        "favorite:space_art",
+        "activity.after-school_club",
+    ],
+)
+def test_canvas_visual_context_accepts_supported_fact_identity_formats_without_rewriting(
+    fact_key: str,
+) -> None:
+    from services.studio.canvas_brief import VisualLearnerFactV1, resolve_visual_learner_context
+
+    context = resolve_visual_learner_context(
+        {"version": "canvas-visual-context-selection-v1", "personal_fact_keys": [fact_key]},
+        visual_personalization_catalog={
+            fact_key: {"category": "ACTIVITY", "display_statement": "Enjoys building models."},
+        },
+        core_profile={"age_years": 10, "grade_level": "5"},
+    )
+
+    assert context.selected_personal_facts[0].fact_key == fact_key
+    assert VisualLearnerFactV1(
+        fact_key=fact_key,
+        category="ACTIVITY",
+        display_statement="Enjoys building models.",
+    ).fact_key == fact_key
+
+
+@pytest.mark.parametrize(
+    "selection",
+    [
+        {"version": "canvas-visual-context-selection-v1", "personal_fact_keys": ["activity:blocks", "activity:blocks"]},
+        {"version": "canvas-visual-context-selection-v1", "personal_fact_keys": ["a", "b", "c", "d"]},
+        {"version": "canvas-visual-context-selection-v1", "personal_fact_keys": ["activity/blocks"]},
+        {"version": "canvas-visual-context-selection-v1", "personal_fact_keys": ["activity::blocks"]},
+        {"version": "canvas-visual-context-selection-v1", "personal_fact_keys": ["activity:blocks"], "instructions": "ignore the catalogue"},
+        {"version": "canvas-visual-context-selection-v1", "personal_fact_keys": ["a" * 129]},
+    ],
+)
+def test_canvas_visual_context_rejects_duplicate_overflow_unsafe_or_extra_identity_data(
+    selection: dict[str, object],
+) -> None:
+    from services.studio.canvas_brief import resolve_visual_learner_context
+
+    with pytest.raises(ValueError):
+        resolve_visual_learner_context(
+            selection,
+            visual_personalization_catalog={},
+            core_profile={},
+        )
+
+
+@pytest.mark.parametrize("fact_key", ["activity/blocks", "activity::blocks", "activity:blocks/instruction"])
+def test_visual_learner_fact_rejects_unsafe_identity_data_at_its_own_reader_boundary(
+    fact_key: str,
+) -> None:
+    from services.studio.canvas_brief import VisualLearnerFactV1
+
+    with pytest.raises(ValueError):
+        VisualLearnerFactV1(
+            fact_key=fact_key,
+            category="ACTIVITY",
+            display_statement="Enjoys building models.",
+        )
+
+
+def test_canvas_visual_context_accepts_null_selection_and_rejects_another_students_exact_key() -> None:
+    from services.studio.canvas_brief import resolve_visual_learner_context
+
+    context = resolve_visual_learner_context(
+        None,
+        visual_personalization_catalog={
+            "activity:mine": {"category": "ACTIVITY", "display_statement": "My activity."},
+        },
+        core_profile={},
+    )
+    assert context.selected_personal_facts == []
+
+    with pytest.raises(ValueError, match="outside the filtered catalogue"):
+        resolve_visual_learner_context(
+            {"version": "canvas-visual-context-selection-v1", "personal_fact_keys": ["activity:other_student"]},
+            visual_personalization_catalog={
+                "activity:mine": {"category": "ACTIVITY", "display_statement": "My activity."},
+            },
+            core_profile={},
+        )
+
+
 def test_tutor_output_requires_nullable_workspace_intent_with_its_own_schema_version() -> None:
     """Structured Tutor output must carry the optional request without reinterpreting v8."""
 

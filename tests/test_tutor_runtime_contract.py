@@ -198,15 +198,39 @@ def test_tutor_v12_requires_nullable_canvas_brief_and_keeps_workspace_intent() -
     assert {"workspace_intent", "canvas_brief"}.issubset(TUTOR_OUTPUT_JSON_SCHEMA["required"])
     canvas_brief = TUTOR_OUTPUT_JSON_SCHEMA["properties"]["canvas_brief"]
     assert canvas_brief["anyOf"][0]["properties"]["version"]["const"] == "canvas-brief-v1"
+    change_intent = TUTOR_OUTPUT_JSON_SCHEMA["properties"]["canvas_change_intent"]
+    assert change_intent["enum"] == ["CREATE", "REPLACE_PENDING", "REPLACE_SCENE", "RETRY", None]
+    assert "not learner evidence" in change_intent["description"].casefold()
 
 
 def test_primary_tutor_honors_an_explicit_safe_canvas_request_across_subjects() -> None:
     instructions = TUTOR_SHARED_INSTRUCTIONS.casefold()
 
-    assert "student explicitly asks to use canvas" in instructions
-    assert "even when no legacy workspace activity matches the subject" in instructions
-    assert "preserve the most specific educational subject" in instructions
-    assert "retain the starting value, recurrence rule, requested bound" in instructions
+    assert "clear request for a picture, diagram, drawing or a process shown visually" in instructions
+    assert "catalogue is not the full-power capability ceiling" in instructions
+    assert "preserve specific subject meaning" in instructions
+    assert "requested starting values, recurrence rule, bounds and aggregate results" in instructions
+
+
+def test_assembled_tutor_guidance_has_the_approved_pedagogy_and_one_visual_owner() -> None:
+    """R03-R10/R14: both Tutor origins consume complete, non-duplicated guidance."""
+
+    instructions = TUTOR_SHARED_INSTRUCTIONS.casefold()
+
+    for required_concept in (
+        "when practice is wanted, provide a meaningful attempt",
+        "curiosity, prediction, comparison, choice, a small challenge, discovery or playful interaction",
+        "a reusable strategy, not the same answer again",
+        "simple math notation appropriate to the supplied context and current task",
+        "zero is valid",
+        "canvas_brief, canvas_change_intent, canvas_visual_context_selection and workspace_visual_order to null",
+        "canvas is a normal teaching surface",
+        "do not replace that request with ascii or an invitation to imagine",
+        "with no catalogue, use null",
+    ):
+        assert required_concept in instructions
+
+    assert instructions.count("visual request, current-work and visual-field rules are defined in the loaded visual guidance") == 1
 
 
 def test_tutor_payload_preserves_complete_within_budget_visual_personalization_catalog() -> None:
@@ -281,27 +305,26 @@ def test_tutor_instructions_require_calibrated_child_interaction_without_changin
     for required_concept in (
         "authoritative student core context",
         "do not infer or invent the student's age",
-        "match support to current demonstrated need",
-        "allow a useful attempt when the student can make progress",
-        "chunk unfamiliar work; keep familiar work coherent",
-        "concise worked example",
-        "give the least help that restores thinking; fade it as independence appears",
+        "match support to current need",
+        "allow an attempt when progress is possible",
+        "chunk unfamiliar work, keep familiar work coherent",
+        "show concise worked reasoning when useful",
+        "give enough help to restore thinking and fade it as independence appears",
         "teach when hints no longer help",
         "cue self-correction when within reach",
-        "specific correction or teaching the student can use",
-        "explicitly connecting relevant objects, visual elements, words, and symbols",
-        "keep explanation tied to the element discussed",
-        "check with a useful application when needed",
-        "never create checks merely to generate evidence",
-        "recall before showing the answer, with feedback or re-teaching",
-        "impose no review schedule",
+        "provide actionable correction",
+        "connect relevant objects, visuals, words and symbols",
+        "check application when useful",
+        "do not infer mastery or create checks to collect evidence",
+        "low-pressure recall with feedback",
+        "without imposing a review schedule",
         "zero to three emojis",
         "no markdown markers",
         "do not use latex",
         "suggested_actions",
         "label and kind",
-        "normally provide two to four useful actions",
-        "self-report or action selection alone does not establish understanding",
+        "offer useful actions when they reduce friction or support agency; zero is valid",
+        "check application when useful, not merely self-report",
         "do not infer mastery",
         "source-linked observable learning signal",
         "confusion is not a misconception",
@@ -317,11 +340,11 @@ def test_primary_tutor_instructions_require_source_grounding_and_honest_ambiguit
     assert "do not invent" in instructions
     assert "unclear or unreadable" in instructions
     assert "ask one short clarifying question" in instructions
-    assert "set workspace_visual_order to null" in instructions
+    assert "canvas_visual_context_selection and workspace_visual_order to null" in instructions
     assert "do not infer missing work" in instructions
     assert "student's written answer" in instructions
     assert "adding a score" in instructions
-    assert "student source is not a curriculum citation" in instructions
+    assert "student attachment is not a curriculum citation" in instructions
     assert "do not conditionally solve one possible reading as the answer" in instructions
     assert "end with one short request for the missing symbol or a clearer source" in instructions
     assert "approximately 10-year-old" not in instructions
@@ -342,12 +365,12 @@ def test_canvas_representation_serves_the_existing_teaching_decision_framework()
         "worked_example benefits from canvas when several dependent steps",
         "decomposition benefits from canvas when stages, groups, parts, relations, or sequence",
         "socratic_focus normally starts in chat",
-        "when learning stalls, change to a meaningfully different teachingmethod or representation",
+        "make a substantive change in method or representation",
         "did_not_help requires a different teachingmethod",
         "explicit_repeat_request may reuse the same immediate teachingmethod",
         "helped means build on the useful representation",
         "short tutor framing, canvas structure, and a tutor follow-up",
-        "an explicit request to show, draw, or use the workspace is a strong preference signal",
+        "clear request for a picture, diagram, drawing or a process shown visually should be honoured",
         "no accurate production capability fits",
         "custom_compose_potentially_eligible is true",
         "eligible_custom_composition_patterns",
@@ -396,12 +419,12 @@ def test_tutor_guidance_avoids_low_information_drills_after_repeated_independent
 
     for required_concept in (
         "after independently reasoned success",
-        "instead of repeating near-identical practice",
-        "vary, progress, offer choice, or stop",
-        "ask for reasoning, comparison, or transfer when foundation and purpose justify it, not after every correct answer",
+        "do not repeat the same example or representation without a purpose",
+        "vary, progress, offer choice or stop",
+        "ask deeper reasoning or transfer questions when foundations and purpose justify them",
         "do not infer mastery",
         "without fixed hint or success counts",
-        "fragile, supported, uncertain, contradictory, or recently repaired",
+        "understanding remains fragile or supported",
     ):
         assert required_concept in instructions
 
