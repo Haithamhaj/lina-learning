@@ -652,3 +652,39 @@ def test_tutor_gateway_uses_openai_route_from_settings() -> None:
     assert execution.cached_input_tokens == 4
     assert execution.cache_write_tokens == 2
     assert execution.output_tokens == 6
+
+
+def test_openai_responses_provider_enforces_total_stream_deadline_despite_active_sse(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Internal provider events must not keep one Tutor request alive indefinitely."""
+    from services.model_gateway import openai_provider as provider_module
+
+    ticks = iter((0.0, 10.0, 95.0))
+    monkeypatch.setattr(provider_module, "perf_counter", lambda: next(ticks), raising=False)
+
+    class FakeResponse:
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def __iter__(self):
+            return iter([
+                b'data: {"type":"response.in_progress"}\n\n',
+                b'data: {"type":"response.in_progress"}\n\n',
+            ])
+
+    def send(request: object, *, timeout: float) -> FakeResponse:
+        del request, timeout
+        return FakeResponse()
+
+    provider = OpenAIResponsesProvider(
+        api_key="test-key",
+        request_sender=send,
+        stream_total_timeout_seconds=90.0,
+    )
+    with pytest.raises(TimeoutError, match="total stream deadline"):
+        list(provider.stream(
+            ModelRoute(provider="openai", model="gpt-5.6-luna"),
+            {"instructions": "Teach calmly.", "input": "Help with fractions."},
+        ))

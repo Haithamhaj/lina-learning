@@ -443,7 +443,7 @@ export function DailyStudentApp() {
           const type = entry.match(/^event: (.+)$/m)?.[1];
           const raw = entry.match(/^data: (.+)$/m)?.[1];
           if (!type || !raw) continue;
-          const payload = JSON.parse(raw) as { text?: string };
+          const payload = JSON.parse(raw) as { text?: string; code?: string };
           if (type === "delta" && payload.text) {
             updateTutor(provisionalTutorId, (message) => ({ ...message, content: `${message.content}${payload.text}` }));
           }
@@ -458,7 +458,11 @@ export function DailyStudentApp() {
               guided_check: turn.guided_check ?? null,
             }));
           }
-          if (type === "error") streamFailureMessage = copy.errors.tutorRejected;
+          if (type === "error") {
+            streamFailureMessage = payload.code === "TUTOR_TURN_REJECTED"
+              ? copy.errors.tutorRejected
+              : copy.errors.tutorIncomplete;
+          }
         }
       }
     } catch (reason) {

@@ -8,6 +8,7 @@ import base64
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from typing import Any
+from time import perf_counter
 from urllib.request import Request, urlopen
 
 from services.model_gateway.gateway import (
@@ -33,11 +34,15 @@ class OpenAIResponsesProvider:
         api_key: str,
         base_url: str | None = None,
         timeout_seconds: float = 30.0,
+        stream_total_timeout_seconds: float = 90.0,
         request_sender: Callable[[Request, float], Any] = urlopen,
     ) -> None:
+        if timeout_seconds <= 0 or stream_total_timeout_seconds <= 0:
+            raise ValueError("OpenAI response timeouts must be positive.")
         self._api_key = api_key
         self._responses_url = f"{(base_url or 'https://api.openai.com').rstrip('/')}/v1/responses"
         self._timeout_seconds = timeout_seconds
+        self._stream_total_timeout_seconds = stream_total_timeout_seconds
         self._request_sender = request_sender
 
     def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
@@ -72,6 +77,7 @@ class OpenAIResponsesProvider:
             method="POST",
         )
         parts: list[str] = []
+        stream_started_at = perf_counter()
         text_extractor = _StructuredTutorTextExtractor() if _has_response_schema(payload) else None
         parent_boundary_extractor = (
             _StructuredObjectFieldExtractor("parent_boundary")
@@ -80,6 +86,8 @@ class OpenAIResponsesProvider:
         )
         with self._request_sender(request, timeout=self._timeout_seconds) as response:
             for raw_line in response:
+                if perf_counter() - stream_started_at >= self._stream_total_timeout_seconds:
+                    raise TimeoutError("OpenAI Responses API total stream deadline exceeded.")
                 line = raw_line.decode().strip() if isinstance(raw_line, bytes) else str(raw_line).strip()
                 if not line.startswith("data: "):
                     continue

@@ -1382,6 +1382,9 @@ def test_daily_admitted_provider_failure_retains_the_durable_student_message(
 
     assert failed.status_code == 200
     assert "event: turn" not in failed.text
+    assert "event: delta" not in failed.text
+    assert "event: error" in failed.text
+    assert "TUTOR_MODEL_FAILED" in failed.text
     assert failed.headers["X-Lina-Student-Message-ID"]
     with postgres_session_factory() as session:
         message = session.query(LearningMessage).filter_by(session_id=learning_session_id, role="student").one()

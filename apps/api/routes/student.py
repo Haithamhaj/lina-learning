@@ -571,7 +571,14 @@ def _stream_student_tutor_turn(
             if not committed:
                 stream_session.commit()
             raise
-        except (TutorModelStreamFailure, TutorContextCapacityExceeded):
+        except TutorModelStreamFailure:
+            # Streaming headers are already committed. Return a bounded terminal
+            # SSE failure so the browser can settle the admitted Student turn
+            # instead of waiting for a proxy/Cloud Run timeout.
+            stream_session.commit()
+            committed = True
+            yield f"event: error\ndata: {json.dumps({'code': 'TUTOR_MODEL_FAILED'})}\n\n"
+        except TutorContextCapacityExceeded:
             stream_session.commit()
             raise
         except TutorCanvasAdmissionRejected:

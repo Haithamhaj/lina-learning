@@ -19,4 +19,4 @@ def test_next_proxy_timeout_allows_buffered_tutor_turns_beyond_default_30_second
         text=True,
     )
     experimental = json.loads(completed.stdout)
-    assert experimental.get("proxyTimeout") == 120_000
+    assert experimental.get("proxyTimeout") == 180_000
