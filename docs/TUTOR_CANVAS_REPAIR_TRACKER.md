@@ -163,7 +163,7 @@ Before this documentation-only tracker update, the same working copy had tracked
 
 For each status update, record the exact code commit plus applicable diff/artifact hash, command/result or source comparison, and which acceptance limit remains. Preserve the four known baseline failures explicitly; do not report an entirely green full suite while they remain.
 
-Immediate next action: preserve the independently accepted uncommitted E24/E28 repair tree in a reviewed branch commit if the Product Owner authorizes it. After preservation, the next logical local repair slice is teaching-flow integrity: CONV-MOMENTUM-01 + STRATEGY-FIDELITY-01 + PED-ADAPT-01. Controlled real-Luna/live E2E, PERF/UX-BUFFER, CALLS-01, AUTH-01 and IMG-V2-01 remain separate; commit/push/merge/deploy require explicit Product Owner direction.
+Immediate next action: Product Owner authorized preservation, main fast-forward, App + Worker deployment, and controlled real-Luna/live testing of the E24/E28 repair tree. During the first live pass, record new defects rather than changing product code unless a blocker prevents testing. Teaching-flow repairs, PERF/UX-BUFFER, CALLS-01, AUTH-01 and IMG-V2-01 remain separate until live evidence is reviewed.
 
 AB-B source implementation and V01 local test compatibility are accepted in E10-E12. Keep V02/E2E/UX-BUFFER separate and unresolved until their own evidence/decision exists.
 
