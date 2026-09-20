@@ -13,7 +13,10 @@ from services.model_gateway.gateway import (
 )
 from services.model_gateway.openai_provider import _normalize_output
 from services.platform.db.models import ModelTask
-from services.tutor.candidate_events import TUTOR_OUTPUT_RESPONSE_SCHEMA
+from services.tutor.candidate_events import (
+    TUTOR_OUTPUT_RESPONSE_SCHEMA,
+    TUTOR_OUTPUT_VISUAL_DELEGATED_RESPONSE_SCHEMA,
+)
 
 
 class _RecordingSession:
@@ -65,6 +68,30 @@ def test_structured_tutor_normalization_preserves_all_luna_semantic_decisions() 
     assert output["prior_method_relation"] == "CONTINUATION"
     assert output["segment_relation"] == "CONTINUE"
     assert output["structured_segment_state"] is None
+
+
+def test_structured_v13_tutor_normalization_omits_delegated_visual_selection() -> None:
+    output = _normalize_output(
+        '{"text":"Use a fraction bar.","suggested_actions":[],"candidate_metadata":null,'
+        '"workspace_intent":null,"canvas_brief":null,"canvas_change_intent":null,'
+        '"workspace_visual_order":null}',
+        {"response_schema": TUTOR_OUTPUT_VISUAL_DELEGATED_RESPONSE_SCHEMA},
+    )
+
+    assert output["canvas_brief"] is None
+    assert output["canvas_change_intent"] is None
+    assert "canvas_visual_context_selection" not in output
+
+
+def test_structured_v13_rejects_a_luna_visual_selection() -> None:
+    with pytest.raises(ValueError, match="delegated visual selection"):
+        _normalize_output(
+            '{"text":"Use a fraction bar.","suggested_actions":[],"candidate_metadata":null,'
+            '"workspace_intent":null,"canvas_brief":null,'
+            '"canvas_visual_context_selection":null,"canvas_change_intent":null,'
+            '"workspace_visual_order":null}',
+            {"response_schema": TUTOR_OUTPUT_VISUAL_DELEGATED_RESPONSE_SCHEMA},
+        )
 
 
 def test_structured_v10_tutor_normalization_preserves_workspace_intent() -> None:

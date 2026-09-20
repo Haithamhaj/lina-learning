@@ -38,6 +38,7 @@ from services.platform.db.models import (
     LearningSession,
     ModelTask,
     SegmentLearningReview,
+    SegmentRubricDecisionShadow,
     Student,
     User,
 )
@@ -134,6 +135,48 @@ def _gateway(session: Session, provider: _Provider) -> ModelGateway:
     return ModelGateway(
         session,
         routes={ModelTask.SEGMENT_EVIDENCE: ModelRoute("fixture", "segment-fixture")},
+        providers={"fixture": provider},
+    )
+
+
+class _RubricProvider:
+    def __init__(self, *, fails: bool = False) -> None:
+        self.fails = fails
+        self.calls = 0
+
+    def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+        del route
+        self.calls += 1
+        if self.fails:
+            raise TimeoutError("synthetic shadow failure")
+        answers: dict[str, object] = {}
+        preferred = {
+            "understanding": "demonstrated",
+            "independence": "independent",
+            "reasoning_demonstration": "coherent",
+            "transfer": "demonstrated",
+            "self_correction": "self_initiated",
+            "retention": "retained",
+            "strategy_effectiveness": "helped",
+            "persistence": "not_observed",
+            "confidence_calibration": "not_observed",
+            "relationship": "supports",
+        }
+        for question_id, question in payload["questions"].items():
+            dimension = question_id.split("__", 1)[1]
+            options = list(question["criteria"])
+            choice = preferred[dimension]
+            answers[question_id] = {
+                "choice": choice,
+                "probabilities": {option: 0.95 if option == choice else 0.01 for option in options},
+            }
+        return ModelResult(output={"answers": answers}, input_tokens=150, output_tokens=0)
+
+
+def _rubric_gateway(session: Session, provider: _RubricProvider) -> ModelGateway:
+    return ModelGateway(
+        session,
+        routes={ModelTask.SEGMENT_RUBRIC_DECISION: ModelRoute("fixture", "jev-fixture")},
         providers={"fixture": provider},
     )
 
@@ -1412,3 +1455,110 @@ def test_segment_review_strict_schema_requires_every_object_property() -> None:
 
     assert ModelTask.SEGMENT_EVIDENCE.value == "segment_evidence"
     check(SEGMENT_REVIEW_RESPONSE_SCHEMA["schema"])
+
+
+def test_jev_segment_rubric_shadow_applies_explicit_authority_overrides(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        _, learning_session, segment = _lineage(session)
+        student = _message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            role="student",
+            content="One half equals two fourths because both are the same amount.",
+        )
+        rubric = _RubricProvider()
+        outcome = review_completed_segment(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            gateway=_gateway(session, _Provider(_output(_finding(student)))),
+            settings=Settings(
+                _env_file=None,
+                openrouter_api_key="test-only",
+                jev_segment_rubric_mode="shadow",
+            ),
+            rubric_decision_gateway=_rubric_gateway(session, rubric),
+        )
+
+        shadow = session.query(SegmentRubricDecisionShadow).one()
+        assert outcome.review.status == "COMPLETED"
+        assert shadow.status == "COMPLETED"
+        dimensions = shadow.output["findings"][0]["dimensions"]
+        assert dimensions["transfer"] == "not_tested"
+        assert dimensions["self_correction"] == "not_observed"
+        assert dimensions["retention"] == "not_tested"
+        assert dimensions["strategy_effectiveness"] == "not_evaluable"
+        assert rubric.calls == 1
+
+
+def test_jev_segment_rubric_shadow_failure_never_changes_luna_review(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        _, learning_session, segment = _lineage(session)
+        student = _message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            role="student",
+            content="One half equals two fourths because both are the same amount.",
+        )
+        outcome = review_completed_segment(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            gateway=_gateway(session, _Provider(_output(_finding(student)))),
+            settings=Settings(
+                _env_file=None,
+                openrouter_api_key="test-only",
+                jev_segment_rubric_mode="shadow",
+            ),
+            rubric_decision_gateway=_rubric_gateway(session, _RubricProvider(fails=True)),
+        )
+
+        shadow = session.query(SegmentRubricDecisionShadow).one()
+        assert outcome.review.status == "COMPLETED"
+        assert outcome.finding_count == 1
+        assert shadow.status == "FAILED"
+        assert shadow.output is None
+
+
+def test_jev_shadow_persistence_failure_rolls_back_only_the_shadow(
+    factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fail_shadow(*args: object, **kwargs: object) -> None:
+        del args, kwargs
+        raise RuntimeError("synthetic shadow persistence failure")
+
+    monkeypatch.setattr(
+        "services.intelligence.segment_rubric_shadow.run_segment_rubric_shadow",
+        fail_shadow,
+    )
+    with factory.begin() as session:
+        _, learning_session, segment = _lineage(session)
+        student = _message(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            role="student",
+            content="One half equals two fourths because both are the same amount.",
+        )
+        outcome = review_completed_segment(
+            session,
+            learning_session=learning_session,
+            segment=segment,
+            gateway=_gateway(session, _Provider(_output(_finding(student)))),
+            settings=Settings(
+                _env_file=None,
+                openrouter_api_key="test-only",
+                jev_segment_rubric_mode="shadow",
+            ),
+            rubric_decision_gateway=_rubric_gateway(session, _RubricProvider()),
+        )
+
+        assert outcome.review.status == "COMPLETED"
+        assert outcome.finding_count == 1
+        assert session.query(SegmentRubricDecisionShadow).count() == 0

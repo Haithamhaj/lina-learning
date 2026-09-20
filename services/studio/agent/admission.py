@@ -22,6 +22,9 @@ from services.platform.db.models import (
 )
 from services.platform.jobs import enqueue_job
 from services.studio.canvas_brief import CanvasBriefContractError, parse_canvas_brief
+from services.tutor.candidate_events import (
+    TUTOR_TURN_SCHEMA_VERSIONS_WITH_CANVAS_CHANGE_INTENT,
+)
 
 AGENTIC_CANVAS_COMPOSE_JOB = "studio.agentic_canvas.compose.v1"
 AGENTIC_CANVAS_CAPABILITY_IDENTITY = "agentic-canvas-v1"
@@ -204,12 +207,13 @@ def admit_agentic_canvas_brief(session: Session, *, student_id: UUID, learning_s
     audit = message.payload.get("agentic_canvas") if isinstance(message.payload, dict) else None
     if not isinstance(audit, dict) or audit.get("status") != "ADMITTED":
         return None
-    # v12 makes the intended lifecycle transition explicit.  The admission
+    # v12+ makes the intended lifecycle transition explicit.  The admission
     # boundary enforces it too, so a caller cannot turn a status/Scene step
     # into composition merely by calling this service.  Older persisted Tutor
     # turns remain readable and replayable under their historical contract.
     if (
-        message.payload.get("tutor_turn_schema_version") == "tutor_turn_v12"
+        message.payload.get("tutor_turn_schema_version")
+        in TUTOR_TURN_SCHEMA_VERSIONS_WITH_CANVAS_CHANGE_INTENT
         and message.payload.get("canvas_change_intent") not in _CANVAS_CHANGE_INTENTS
     ):
         return None
@@ -231,7 +235,10 @@ def admit_agentic_canvas_brief(session: Session, *, student_id: UUID, learning_s
     existing = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.source_message_id == message.id, StudioCanvasSpecialistRun.order_digest == digest, StudioCanvasSpecialistRun.capability_profile_version == AGENTIC_CANVAS_CAPABILITY_IDENTITY)).scalar_one_or_none()
     if existing is not None:
         return existing
-    if message.payload.get("tutor_turn_schema_version") == "tutor_turn_v12":
+    if (
+        message.payload.get("tutor_turn_schema_version")
+        in TUTOR_TURN_SCHEMA_VERSIONS_WITH_CANVAS_CHANGE_INTENT
+    ):
         intent = message.payload.get("canvas_change_intent")
         if not isinstance(intent, str) or not _decision_base_is_current(
             session,

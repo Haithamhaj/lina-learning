@@ -223,6 +223,7 @@ def stage_closed_session_finalization(
     learning_session: LearningSession,
     review_gateway: ModelGateway | None = None,
     review_settings: Settings | None = None,
+    rubric_decision_gateway: ModelGateway | None = None,
 ) -> StagedSessionFinalizationOutcome:
     """Materialize a fresh reviewed-Segment generation without live authority.
 
@@ -258,6 +259,7 @@ def stage_closed_session_finalization(
             required_segments=required_segments,
             review_gateway=review_gateway,
             review_settings=review_settings,
+            rubric_decision_gateway=rubric_decision_gateway,
         )
         validated_reviews = _validated_required_reviews(
             session,
@@ -326,6 +328,7 @@ def _refresh_unavailable_reviews(
     required_segments: list[LearningSegment],
     review_gateway: ModelGateway | None,
     review_settings: Settings | None,
+    rubric_decision_gateway: ModelGateway | None,
 ) -> None:
     """Reuse valid current Reviews; rerun only Segments without one.
 
@@ -358,6 +361,7 @@ def _refresh_unavailable_reviews(
             segment=segment,
             gateway=review_gateway,
             settings=review_settings,
+            rubric_decision_gateway=rubric_decision_gateway,
         )
 
 

@@ -186,6 +186,7 @@ def process_intelligence_reprocess_session(
     session_id: UUID,
     gateway: object,
     segment_evidence_gateway: ModelGateway | None = None,
+    segment_rubric_gateway: ModelGateway | None = None,
     segment_review_settings: Settings | None = None,
 ) -> dict[str, object]:
     """Stage one closed session's Evidence interpretation for scope-level activation."""
@@ -224,6 +225,7 @@ def process_intelligence_reprocess_session(
             learning_session=learning_session,
             review_gateway=segment_evidence_gateway,
             review_settings=segment_review_settings,
+            rubric_decision_gateway=segment_rubric_gateway,
         )
     elif learning_session.intelligence_pipeline == LEGACY_SESSION_EVIDENCE_PIPELINE:
         evidence_versions = versions["evidence"] if isinstance(versions.get("evidence"), dict) else {}

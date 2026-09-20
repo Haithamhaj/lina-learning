@@ -203,6 +203,7 @@ def _runtime(
     immediate_exchange: ConversationExchangeContext | None = None,
     source_decision: SafetyDecision | None = None,
     context_subject: str | None = "MATH",
+    settings: object | None = None,
 ) -> tuple[TutorRuntime, _ContextBuilder, _Provider, _Session]:
     session = _Session()
     context = _ContextBuilder(immediate_exchange, subject=context_subject)
@@ -225,6 +226,7 @@ def _runtime(
         safety_policy=_Policy(decision),
         gateway=gateway,
         source_safety=source_safety,
+        settings=settings,
     ), context, provider, session
 
 
@@ -254,6 +256,37 @@ def test_arbitrary_literal_message_persists_luna_semantic_decision_without_runti
     assert turn.sources == [{"source_ref": "book#page=12", "page_number": 12, "block_type": "EXERCISE"}]
     assert context.calls == 1
     assert provider.calls == 1
+
+
+def test_active_visual_delegation_uses_and_persists_tutor_turn_v13() -> None:
+    runtime, _, provider, session = _runtime(
+        _decision(),
+        settings=SimpleNamespace(
+            tutor_context_capacity=1_000_000,
+            jev_visual_personalization_mode="active",
+        ),
+    )
+
+    events = list(
+        runtime.stream_turn(
+            learning_session=SimpleNamespace(
+                id=uuid4(),
+                student_id=uuid4(),
+                subject="MATH",
+                last_activity_at=None,
+            ),
+            question="Explain equivalent fractions.",
+        )
+    )
+
+    assert isinstance(events[-1], TutorTurn)
+    assert provider.payloads[0]["response_schema"]["name"] == "tutor_turn_v13"
+    tutor_message = next(
+        row
+        for row in session.rows
+        if isinstance(row, LearningMessage) and row.role == "tutor"
+    )
+    assert tutor_message.payload["tutor_turn_schema_version"] == "tutor_turn_v13"
 
 
 def test_runtime_forwards_explicit_unknown_daily_scope_without_a_second_model_call() -> None:

@@ -12,10 +12,47 @@ from services.model_gateway.gateway import (
     StaticModelProvider,
 )
 from services.model_gateway.openai_provider import OpenAIResponsesProvider
+from services.model_gateway.openrouter_decisions_provider import OpenRouterDecisionsProvider
 from services.intelligence.segment_reviews import SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION
 from services.model_gateway.openai_embedding_provider import OpenAIEmbeddingProvider
 from services.platform.config import Settings, get_settings
 from services.platform.db.models import ModelTask
+
+
+_JEV_TASKS = frozenset(
+    {
+        ModelTask.CANVAS_VISUAL_PERSONALIZATION,
+        ModelTask.CANVAS_REUSE_SELECTION,
+        ModelTask.SEGMENT_RUBRIC_DECISION,
+    }
+)
+
+
+def create_jev_decision_gateway(
+    session: Session,
+    *,
+    task: ModelTask,
+    settings: Settings | None = None,
+    provider: ModelProvider | None = None,
+) -> ModelGateway:
+    """Create one optional bounded-decision route behind the normal ledger."""
+
+    if task not in _JEV_TASKS:
+        raise ValueError(f"{task.value!r} is not a Jev bounded-decision task.")
+    configured = settings or get_settings()
+    selected = provider
+    if selected is None:
+        if configured.openrouter_api_key is None:
+            raise ValueError("OPENROUTER_API_KEY is required for an enabled Jev route.")
+        selected = OpenRouterDecisionsProvider(
+            api_key=configured.openrouter_api_key.get_secret_value(),
+            timeout_seconds=configured.jev_timeout_seconds,
+        )
+    return ModelGateway(
+        session,
+        routes={task: ModelRoute("openrouter-decisions", configured.jev_model_name)},
+        providers={"openrouter-decisions": selected},
+    )
 
 
 def create_tutor_gateway(

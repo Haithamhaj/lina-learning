@@ -15,6 +15,7 @@ from agents.tracing import gen_trace_id
 from agents.exceptions import ModelBehaviorError
 
 from services.platform.config.settings import Settings
+from services.model_gateway.factory import create_jev_decision_gateway
 from services.platform.db.models import (
     AIExecution,
     Job,
@@ -26,6 +27,7 @@ from services.platform.db.models import (
     VisualArtifact,
     VisualArtifactBuild,
     VisualArtifactVersion,
+    ModelTask,
 )
 from services.platform.jobs import NonRetryableJobError
 from services.platform.storage import ObjectStorage
@@ -56,6 +58,12 @@ from services.studio.generated_assets import (
     resolve_generated_image_handles,
 )
 from services.studio.process_production_acceptance import accept_completed_canvas_run
+from services.studio.exact_reuse_decision import (
+    ExactReuseAction,
+    decide_exact_reuse_action,
+    load_exact_reuse_actions,
+    materialize_exact_reuse_scene,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -67,6 +75,7 @@ def register_agentic_canvas_handlers(
     compose=compose_canvas_scene_with_trace,
     settings_factory=Settings,
     storage: ObjectStorage | None = None,
+    decision_gateway_factory=create_jev_decision_gateway,
 ) -> None:
     def handle(job: Job) -> dict[str, object]:
         preflight_started = perf_counter()
@@ -75,15 +84,60 @@ def register_agentic_canvas_handlers(
         if execution is None:
             return {"run_status": "SKIPPED"}
         settings = settings_factory()
-        if settings.model_api_key is None:
+        resolved_canvas_model = settings.canvas_model_name or settings.model_name
+        reuse_mode = getattr(settings, "jev_canvas_reuse_mode", "off")
+        reuse_decision = None
+        exact_reuse_scene = None
+        if reuse_mode in {"shadow", "active"} and execution.exact_reuse_actions:
+            with session_factory() as decision_session:
+                gateway = decision_gateway_factory(
+                    decision_session,
+                    task=ModelTask.CANVAS_REUSE_SELECTION,
+                    settings=settings,
+                )
+                reuse_decision = decide_exact_reuse_action(
+                    gateway,
+                    brief=execution.brief,
+                    actions=execution.exact_reuse_actions,
+                    min_probability=getattr(settings, "jev_canvas_reuse_min_probability", 0.90),
+                    min_margin=getattr(settings, "jev_canvas_reuse_min_margin", 0.20),
+                    policy_version=getattr(settings, "jev_canvas_reuse_policy_version", "jev-canvas-exact-reuse-v1"),
+                    run_id=execution.run_id,
+                    student_id=execution.student_id,
+                    learning_session_id=execution.session_id,
+                    source_message_id=execution.message_id,
+                )
+                decision_session.commit()
+            if reuse_mode == "active" and reuse_decision.selected_action_id is not None:
+                selected_action = next(
+                    (item for item in execution.exact_reuse_actions if item.action_id == reuse_decision.selected_action_id),
+                    None,
+                )
+                if selected_action is not None:
+                    try:
+                        with session_factory() as validation_session:
+                            run = validation_session.get(StudioCanvasSpecialistRun, execution.run_id)
+                            if run is None:
+                                raise ValueError("AGENTIC_CANVAS_RUN_MISSING")
+                            exact_reuse_scene = materialize_exact_reuse_scene(
+                                validation_session,
+                                action=selected_action,
+                                brief=execution.brief,
+                                run_id=execution.run_id,
+                                student_id=execution.student_id,
+                                runtime_id=run.studio_runtime_id,
+                                storage=storage,
+                            )
+                    except Exception:
+                        exact_reuse_scene = None
+        if exact_reuse_scene is None and settings.model_api_key is None:
             _fail(session_factory, execution.run_id, "MODEL_API_KEY_MISSING")
             raise NonRetryableJobError("MODEL_API_KEY_MISSING")
-        resolved_canvas_model = settings.canvas_model_name or settings.model_name
         started = perf_counter()
         try:
             # Phase A committed before the remote Agent call. No Runtime/Run
             # lock or transaction remains open while the provider is running.
-            composition = asyncio.run(compose(
+            composition = exact_reuse_scene if exact_reuse_scene is not None else asyncio.run(compose(
                 brief=execution.brief,
                 visual_learner_context=execution.visual_learner_context,
                 api_key=settings.model_api_key.get_secret_value(),
@@ -121,6 +175,17 @@ def register_agentic_canvas_handlers(
             scene = composition
             generated_images = ()
             agent_trace = {"selected_tools": [], "tool_call_count": 0}
+        if reuse_decision is not None:
+            agent_trace["jev_exact_reuse"] = {
+                "mode": reuse_mode,
+                **reuse_decision.audit_payload(),
+                "bypassed_canvas_agent": exact_reuse_scene is not None,
+            }
+            if exact_reuse_scene is not None and reuse_decision.selected_action_id is not None:
+                selected = next(item for item in execution.exact_reuse_actions if item.action_id == reuse_decision.selected_action_id)
+                agent_trace["reusable_selections"] = [
+                    {"version_id": str(selected.version_id), "mode": "REUSE", "parameters": dict(selected.parameters)}
+                ]
         try:
             scene = AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(scene)
         except Exception as error:
@@ -176,7 +241,7 @@ def register_agentic_canvas_handlers(
                 usage = composition.usage if isinstance(composition, AgenticCanvasCompositionResult) else {}
                 cached_input_tokens = int(usage.get("cached_input_tokens", 0)) if usage else None
                 aggregate_input_tokens = int(usage.get("input_tokens", 0)) if usage else None
-                ai_execution = AIExecution(
+                ai_execution = None if exact_reuse_scene is not None else AIExecution(
                     task="canvas_agent_orchestration",
                     provider="openai-agents-sdk",
                     model=resolved_canvas_model,
@@ -200,8 +265,9 @@ def register_agentic_canvas_handlers(
                     source_message_id=execution.message_id,
                     source_candidate_event_ids=[],
                 )
-                session.add(ai_execution)
-                session.flush()
+                if ai_execution is not None:
+                    session.add(ai_execution)
+                    session.flush()
                 proposal = scene.model_dump(mode="json")
                 proposal_digest = _canonical_digest(proposal)
                 if isinstance(composition, AgenticCanvasCompositionResult):
@@ -212,7 +278,9 @@ def register_agentic_canvas_handlers(
                     }
                     agent_trace.update({"latency_ms": latency_ms, "proposal_digest": proposal_digest, "preflight_ms": preflight_ms, "persistence_ms": round((perf_counter()-persistence_started)*1000), "estimated_token_cost_usd": ai_execution.estimated_cost_usd})
                     run.agent_execution_metadata = agent_trace
-                run.proposal_payload, run.proposal_digest, run.ai_execution_id, run.status, run.completed_at, run.failure_metadata = proposal, proposal_digest, ai_execution.id, "COMPLETED", datetime.now(UTC), None
+                if exact_reuse_scene is not None:
+                    run.agent_execution_metadata = agent_trace
+                run.proposal_payload, run.proposal_digest, run.ai_execution_id, run.status, run.completed_at, run.failure_metadata = proposal, proposal_digest, (reuse_decision.ai_execution_id if exact_reuse_scene is not None and reuse_decision is not None else ai_execution.id), "COMPLETED", datetime.now(UTC), None
                 has_snapshot = session.execute(
                     select(StudioSnapshot.id).where(
                         StudioSnapshot.studio_runtime_id == run.studio_runtime_id
@@ -316,7 +384,7 @@ def _adopt_hosted_images(
 
 
 class _AgenticExecutionEnvelope:
-    def __init__(self, *, run_id, student_id, session_id, message_id, parent_execution_id, brief, visual_learner_context, provider_attempt: int, provider_max_attempts: int, sdk_trace_id: str, reusable_visuals: dict[str, dict[str, object]]) -> None:
+    def __init__(self, *, run_id, student_id, session_id, message_id, parent_execution_id, brief, visual_learner_context, provider_attempt: int, provider_max_attempts: int, sdk_trace_id: str, reusable_visuals: dict[str, dict[str, object]], exact_reuse_actions: list[ExactReuseAction]) -> None:
         self.run_id = run_id
         self.student_id = student_id
         self.session_id = session_id
@@ -328,6 +396,7 @@ class _AgenticExecutionEnvelope:
         self.provider_max_attempts = provider_max_attempts
         self.sdk_trace_id = sdk_trace_id
         self.reusable_visuals = reusable_visuals
+        self.exact_reuse_actions = exact_reuse_actions
 
 
 def _reusable_visuals_for_agent(session: Session, *, student_id) -> dict[str, dict[str, object]]:
@@ -417,7 +486,7 @@ def _preflight(factory: sessionmaker[Session], job: Job) -> _AgenticExecutionEnv
                     else:
                         run.status, run.started_at = "RUNNING", run.started_at or datetime.now(UTC)
                         run.sdk_trace_id = run.sdk_trace_id or gen_trace_id()
-                        envelope = _AgenticExecutionEnvelope(run_id=run.id, student_id=run.student_id, session_id=run.learning_session_id, message_id=message.id, parent_execution_id=message.ai_execution_id, brief=brief, visual_learner_context=visual_learner_context, provider_attempt=claimed.attempt_count, provider_max_attempts=claimed.max_attempts, sdk_trace_id=run.sdk_trace_id, reusable_visuals=_reusable_visuals_for_agent(session, student_id=run.student_id))
+                        envelope = _AgenticExecutionEnvelope(run_id=run.id, student_id=run.student_id, session_id=run.learning_session_id, message_id=message.id, parent_execution_id=message.ai_execution_id, brief=brief, visual_learner_context=visual_learner_context, provider_attempt=claimed.attempt_count, provider_max_attempts=claimed.max_attempts, sdk_trace_id=run.sdk_trace_id, reusable_visuals=_reusable_visuals_for_agent(session, student_id=run.student_id), exact_reuse_actions=load_exact_reuse_actions(session, student_id=run.student_id))
     # Raising inside ``factory.begin()`` rolls back the terminal Run state.
     # Commit that authoritative state first, then fail the queue Job.
     if terminal_error is not None:

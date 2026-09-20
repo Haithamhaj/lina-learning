@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from services.model_gateway.factory import create_tutor_gateway
+from services.model_gateway.factory import create_jev_decision_gateway, create_tutor_gateway
 from services.model_gateway.openai_moderation_provider import OpenAIMultimodalModerationProvider
 from services.model_gateway.gateway import (
     AIExecutionLineage,
@@ -49,6 +49,8 @@ from services.platform.db.models import CandidateEvent, LearningMessage, Learnin
 from services.studio.visual_order import VisualOrderAdmissionError, admit_visual_order
 from services.studio.canvas_specialist import admit_committed_visual_order
 from services.studio.canvas_brief import audit_canvas_brief
+from services.studio.canvas_brief import parse_canvas_brief
+from services.studio.visual_personalization_decision import select_visual_personalization_facts
 from services.platform.safety import ParentBoundaryResolution, SafetyAction, SafetyPolicyService
 from services.retrieval.service import RetrievalService
 from services.student_sources.safety import StudentSourceSafetyService
@@ -75,12 +77,12 @@ from services.tutor.candidate_events import (
     PersistedGuidedLearningCheck,
     SuggestedAction,
     SuggestedActionKind,
-    TUTOR_OUTPUT_RESPONSE_SCHEMA,
-    TUTOR_TURN_SCHEMA_VERSION,
     normalize_guided_learning_check,
     normalize_suggested_actions,
     parse_candidate_event_metadata,
     persisted_guided_learning_check,
+    tutor_output_response_schema,
+    tutor_turn_schema_version,
 )
 from services.tutor.parent_boundaries import (
     ParentBoundaryDecision,
@@ -189,24 +191,30 @@ class LocalTutorProvider:
             text = "Development Tutor: your saved Workspace submission was received."
         else:
             text = f"Let’s work on this step by step. {payload['question']}"
+        output: dict[str, object] = {
+            "text": text,
+            "suggested_actions": [],
+            "guided_check": None,
+            "teaching_mode": None,
+            "teaching_strategy": None,
+            "teaching_method_id": None,
+            "prior_method_relation": None,
+            "candidate_metadata": None,
+            "provisional_broad_subject": None,
+            "segment_concept_ref": None,
+            "workspace_intent": None,
+            "canvas_brief": None,
+            "canvas_change_intent": None,
+            "workspace_visual_order": None,
+        }
+        response_schema = payload.get("response_schema")
+        response_schema_name = (
+            response_schema.get("name") if isinstance(response_schema, dict) else None
+        )
+        if response_schema_name != "tutor_turn_v13":
+            output["canvas_visual_context_selection"] = None
         return ModelResult(
-            output={
-                "text": text,
-                "suggested_actions": [],
-                "guided_check": None,
-                "teaching_mode": None,
-                "teaching_strategy": None,
-                "teaching_method_id": None,
-                "prior_method_relation": None,
-                "candidate_metadata": None,
-                "provisional_broad_subject": None,
-                "segment_concept_ref": None,
-                "workspace_intent": None,
-                "canvas_brief": None,
-                "canvas_visual_context_selection": None,
-                "canvas_change_intent": None,
-                "workspace_visual_order": None,
-            },
+            output=output,
             input_tokens=20,
             output_tokens=18,
             estimated_cost_usd=0.0,
@@ -249,6 +257,26 @@ TUTOR_SHARED_INSTRUCTIONS = (
 TUTOR_SHARED_INSTRUCTIONS += "\n\n" + (Path(__file__).resolve().parents[2] / "runtime/tutor/visual-guidance-v2.md").read_text(encoding="utf-8")
 
 
+def _tutor_instructions(*, visual_personalization_delegated: bool) -> str:
+    if not visual_personalization_delegated:
+        return TUTOR_SHARED_INSTRUCTIONS
+    instructions = TUTOR_SHARED_INSTRUCTIONS.replace(
+        "canvas_brief, canvas_change_intent, canvas_visual_context_selection and workspace_visual_order",
+        "canvas_brief, canvas_change_intent and workspace_visual_order",
+    ).replace(
+        "Set canvas_brief, canvas_change_intent and canvas_visual_context_selection to null",
+        "Set canvas_brief and canvas_change_intent to null",
+    )
+    instructions = "\n".join(
+        line
+        for line in instructions.splitlines()
+        if not line.startswith("canvas_visual_context_selection is nullable")
+    )
+    if "canvas_visual_context_selection" in instructions:
+        raise RuntimeError("Delegated Tutor instructions retain visual selection responsibility.")
+    return instructions
+
+
 def build_tutor_model_payload(
     *,
     question: str,
@@ -269,6 +297,7 @@ def build_tutor_model_payload(
     studio_context: StudioTutorWorkspaceContext | None = None,
     workspace_subject_key: str | None = None,
     visual_personalization_catalog: list[dict[str, str]] | None = None,
+    visual_personalization_delegated: bool = False,
 ) -> dict[str, object]:
     """Build bounded model input from the project-owned Tutor context only."""
 
@@ -389,7 +418,7 @@ def build_tutor_model_payload(
         if studio_context is not None
         else ""
     )
-    visual_catalog = visual_personalization_catalog or []
+    visual_catalog = [] if visual_personalization_delegated else (visual_personalization_catalog or [])
     visual_catalog_context = (
         "\n\nVisual Personalization Catalogue (optional read-only presentation input; "
         "select no more than three exact fact_key values only when naturally relevant):\n"
@@ -397,10 +426,17 @@ def build_tutor_model_payload(
         "Do not infer facts, age, Grade, identity, or learning state from this catalogue. "
         "Core Profile remains the only age/Grade authority."
         if visual_catalog
-        else "\n\nNo Visual Personalization Catalogue is available; set canvas_visual_context_selection to null."
+        else (
+            "\n\nVisual Personalization selection is delegated to a bounded server decision after this call; "
+            "the Tutor does not select personal facts."
+            if visual_personalization_delegated
+            else "\n\nNo Visual Personalization Catalogue is available; set canvas_visual_context_selection to null."
+        )
     )
     return {
-        "instructions": TUTOR_SHARED_INSTRUCTIONS,
+        "instructions": _tutor_instructions(
+            visual_personalization_delegated=visual_personalization_delegated
+        ),
         "input": (
             f"Student Core Context (Parent/System-authoritative identity only; never learning evidence):\n{core_context_text}\n\n"
             f"{personal_memory_context}"
@@ -417,7 +453,9 @@ def build_tutor_model_payload(
         "personal_memory": personal_memory,
         "visual_personalization_catalog": visual_catalog,
         "active_teaching_methods": [method.value for method in ACTIVE_TEACHING_METHODS],
-        "response_schema": TUTOR_OUTPUT_RESPONSE_SCHEMA,
+        "response_schema": tutor_output_response_schema(
+            visual_personalization_delegated=visual_personalization_delegated
+        ),
         "candidate_source_message_id": str(candidate_source_message_id) if candidate_source_message_id is not None else None,
     }
 
@@ -433,12 +471,16 @@ class TutorRuntime:
         safety_policy: SafetyPolicyService,
         gateway: ModelGateway,
         source_safety: StudentSourceSafetyService | None = None,
+        visual_decision_gateway: ModelGateway | None = None,
+        settings: object | None = None,
     ) -> None:
         self._session = session
         self._context_builder = context_builder
         self._safety_policy = safety_policy
         self._gateway = gateway
         self._source_safety = source_safety
+        self._visual_decision_gateway = visual_decision_gateway
+        self._settings = settings
 
     def admit_turn(
         self,
@@ -613,9 +655,10 @@ class TutorRuntime:
         )
         effective_parent_boundaries = self._effective_parent_boundaries(student_id=learning_session.student_id)
         try:
+            configured = self._settings or get_settings()
             guarded = apply_context_capacity_guardrail(
                 context,
-                capacity_limit=get_settings().tutor_context_capacity,
+                capacity_limit=configured.tutor_context_capacity,
                 payload_builder=lambda selected: _payload_from_context(
                     selected,
                     safety=safety,
@@ -624,6 +667,9 @@ class TutorRuntime:
                     suggested_action_source=turn_input.guided_check_source or turn_input.suggested_action_source,
                     latest_segment_state=latest_segment_state,
                     effective_parent_boundaries=effective_parent_boundaries,
+                    visual_personalization_delegated=(
+                        getattr(configured, "jev_visual_personalization_mode", "off") == "active"
+                    ),
                 ),
             )
         except TutorContextCapacityExceeded as error:
@@ -905,21 +951,76 @@ class TutorRuntime:
             response_origin="model_text",
         )
         if parent_resolution.action is not SafetyAction.REDIRECT_TO_PARENT:
+            configured = self._settings or get_settings()
+            visual_catalog = [dict(fact) for fact in context.visual_personalization_catalog]
+            visual_mode = getattr(configured, "jev_visual_personalization_mode", "off")
+            visual_selection = (
+                None
+                if visual_mode == "active"
+                else result.output.get("canvas_visual_context_selection")
+            )
+            visual_decision_audit: dict[str, object] | None = None
+            preliminary = audit_canvas_brief(
+                result.output.get("canvas_brief"),
+                allowed_source_references={str(source["source_ref"]) for source in _source_metadata(context)},
+                safety_allows=True,
+                visual_context_selection=None,
+                visual_personalization_catalog={
+                    fact["fact_key"]: {
+                        "category": fact["category"],
+                        "display_statement": fact["display_statement"],
+                    }
+                    for fact in visual_catalog
+                },
+                core_profile={
+                    "age_years": context.student_core_context.age_years,
+                    "grade_level": context.student_core_context.grade_level,
+                },
+            )
+            if (
+                preliminary.get("status") == "ADMITTED"
+                and self._visual_decision_gateway is not None
+                and visual_mode in {"shadow", "active"}
+            ):
+                brief = parse_canvas_brief(preliminary["brief"])
+                if brief is not None:
+                    visual_decision = select_visual_personalization_facts(
+                        self._visual_decision_gateway,
+                        brief=brief,
+                        candidates=visual_catalog,
+                        min_probability=configured.jev_visual_personalization_min_probability,
+                        policy_version=configured.jev_visual_personalization_policy_version,
+                        student_id=learning_session.student_id,
+                        learning_session_id=learning_session.id,
+                        source_message_id=student_message.id,
+                    )
+                    visual_decision_audit = {
+                        "mode": visual_mode,
+                        **visual_decision.audit_payload(),
+                    }
+                    if visual_mode == "shadow":
+                        visual_decision_audit["luna_selected_fact_keys"] = _visual_selection_keys(
+                            visual_selection
+                        )
+                    if visual_mode == "active":
+                        visual_selection = visual_decision.selection_payload()
             canvas_audit = audit_canvas_brief(
                 result.output.get("canvas_brief"),
                 allowed_source_references={str(source["source_ref"]) for source in _source_metadata(context)},
                 safety_allows=True,
-                visual_context_selection=result.output.get("canvas_visual_context_selection"),
+                visual_context_selection=visual_selection,
                 visual_personalization_catalog={fact["fact_key"]: {"category": fact["category"], "display_statement": fact["display_statement"]} for fact in context.visual_personalization_catalog},
                 core_profile={"age_years": context.student_core_context.age_years, "grade_level": context.student_core_context.grade_level},
             )
+            if visual_decision_audit is not None:
+                canvas_audit["visual_personalization_decision"] = visual_decision_audit
             canvas_change_intent = result.output.get("canvas_change_intent")
             if canvas_change_intent not in {None, "CREATE", "REPLACE_PENDING", "REPLACE_SCENE", "RETRY"}:
-                raise TutorCanvasAdmissionRejected("Tutor turn v12 Canvas change intent is invalid.")
+                raise TutorCanvasAdmissionRejected("Tutor Canvas change intent is invalid.")
             if canvas_audit.get("status") == "ADMITTED" and canvas_change_intent is None:
-                raise TutorCanvasAdmissionRejected("Tutor turn v12 cannot admit a Canvas brief without a Canvas change intent.")
+                raise TutorCanvasAdmissionRejected("Tutor cannot admit a Canvas brief without a Canvas change intent.")
             if canvas_change_intent is not None and canvas_audit.get("status") != "ADMITTED":
-                raise TutorCanvasAdmissionRejected("Tutor turn v12 Canvas change intent requires an admitted Canvas brief.")
+                raise TutorCanvasAdmissionRejected("Tutor Canvas change intent requires an admitted Canvas brief.")
         else:
             canvas_audit = {
                 "status": "NOT_REQUESTED",
@@ -1383,7 +1484,16 @@ class TutorRuntime:
             "candidate_metadata_status": candidate_metadata_status,
             "suggested_actions": [action.model_dump() for action in suggested_actions],
             "guided_check": guided_check.model_dump(mode="json") if guided_check is not None else None,
-            "tutor_turn_schema_version": TUTOR_TURN_SCHEMA_VERSION,
+            "tutor_turn_schema_version": tutor_turn_schema_version(
+                visual_personalization_delegated=(
+                    getattr(
+                        self._settings or get_settings(),
+                        "jev_visual_personalization_mode",
+                        "off",
+                    )
+                    == "active"
+                )
+            ),
             "provisional_broad_subject": provisional_broad_subject,
             "workspace": workspace_audit or {
                 "intent_status": "NOT_REQUESTED",
@@ -1525,6 +1635,7 @@ def _payload_from_context(
     suggested_action_source: LearningMessage | None = None,
     latest_segment_state: StructuredSegmentState | None = None,
     effective_parent_boundaries: dict[str, str] | None = None,
+    visual_personalization_delegated: bool = False,
 ) -> dict[str, object]:
     return build_tutor_model_payload(
         question=context.question,
@@ -1545,7 +1656,14 @@ def _payload_from_context(
         studio_context=context.studio_workspace,
         workspace_subject_key=context.subject,
         visual_personalization_catalog=list(context.visual_personalization_catalog),
+        visual_personalization_delegated=visual_personalization_delegated,
     )
+
+
+def _visual_selection_keys(value: object) -> list[str]:
+    if not isinstance(value, dict) or not isinstance(value.get("personal_fact_keys"), list):
+        return []
+    return [key for key in value["personal_fact_keys"] if isinstance(key, str)]
 
 
 def _format_lineage_message(message: dict[str, object]) -> str:
@@ -1777,6 +1895,15 @@ def create_tutor_runtime(session: Session) -> TutorRuntime:
             ),
             policy=safety_policy,
         )
+    visual_decision_gateway = (
+        create_jev_decision_gateway(
+            session,
+            task=ModelTask.CANVAS_VISUAL_PERSONALIZATION,
+            settings=settings,
+        )
+        if settings.jev_visual_personalization_mode != "off"
+        else None
+    )
     return TutorRuntime(
         session,
         context_builder=TutorContextBuilder(session, retrieval_service=retrieval),
@@ -1787,6 +1914,8 @@ def create_tutor_runtime(session: Session) -> TutorRuntime:
             settings=settings,
         ),
         source_safety=source_safety,
+        visual_decision_gateway=visual_decision_gateway,
+        settings=settings,
     )
 
 

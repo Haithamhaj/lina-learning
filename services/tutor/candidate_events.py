@@ -24,11 +24,17 @@ from services.studio.visual_order import visual_order_output_schema
 CANDIDATE_EVENT_SCHEMA_VERSION = "candidate-event-v1"
 MISCONCEPTION_EVIDENCE_SCHEMA_VERSION = "misconception-evidence-v1"
 TUTOR_TURN_SCHEMA_VERSION = "tutor_turn_v12"
+TUTOR_TURN_VISUAL_DELEGATED_SCHEMA_VERSION = "tutor_turn_v13"
 TUTOR_TURN_SCHEMA_VERSIONS_WITH_PROVISIONAL_BROAD_SUBJECT = frozenset({
     "tutor_turn_v8",
     "tutor_turn_v9",
     "tutor_turn_v10",
     TUTOR_TURN_SCHEMA_VERSION,
+    TUTOR_TURN_VISUAL_DELEGATED_SCHEMA_VERSION,
+})
+TUTOR_TURN_SCHEMA_VERSIONS_WITH_CANVAS_CHANGE_INTENT = frozenset({
+    TUTOR_TURN_SCHEMA_VERSION,
+    TUTOR_TURN_VISUAL_DELEGATED_SCHEMA_VERSION,
 })
 MAX_SUGGESTED_ACTIONS = 4
 MAX_GUIDED_CHECK_CHOICES = 4
@@ -429,3 +435,41 @@ TUTOR_OUTPUT_RESPONSE_SCHEMA = {
     "name": TUTOR_TURN_SCHEMA_VERSION,
     "schema": TUTOR_OUTPUT_JSON_SCHEMA,
 }
+
+
+TUTOR_OUTPUT_VISUAL_DELEGATED_JSON_SCHEMA: dict[str, Any] = {
+    **TUTOR_OUTPUT_JSON_SCHEMA,
+    "properties": {
+        key: value
+        for key, value in TUTOR_OUTPUT_JSON_SCHEMA["properties"].items()
+        if key != "canvas_visual_context_selection"
+    },
+    "required": [
+        key
+        for key in TUTOR_OUTPUT_JSON_SCHEMA["required"]
+        if key != "canvas_visual_context_selection"
+    ],
+}
+
+TUTOR_OUTPUT_VISUAL_DELEGATED_RESPONSE_SCHEMA = {
+    "name": TUTOR_TURN_VISUAL_DELEGATED_SCHEMA_VERSION,
+    "schema": TUTOR_OUTPUT_VISUAL_DELEGATED_JSON_SCHEMA,
+}
+
+
+def tutor_output_response_schema(*, visual_personalization_delegated: bool) -> dict[str, object]:
+    """Select the strict Tutor contract without reinterpreting historical versions."""
+
+    return (
+        TUTOR_OUTPUT_VISUAL_DELEGATED_RESPONSE_SCHEMA
+        if visual_personalization_delegated
+        else TUTOR_OUTPUT_RESPONSE_SCHEMA
+    )
+
+
+def tutor_turn_schema_version(*, visual_personalization_delegated: bool) -> str:
+    return str(
+        tutor_output_response_schema(
+            visual_personalization_delegated=visual_personalization_delegated
+        )["name"]
+    )

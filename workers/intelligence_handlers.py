@@ -29,7 +29,7 @@ from services.intelligence.segment_reviews import (
     review_completed_segment,
 )
 from services.intelligence.session_finalization import finalize_closed_session
-from services.model_gateway.factory import create_embedding_gateway, create_session_evidence_gateway
+from services.model_gateway.factory import create_embedding_gateway, create_jev_decision_gateway, create_session_evidence_gateway
 from services.model_gateway.gateway import ModelGateway
 from services.platform.config import Settings
 from services.platform.jobs import NonRetryableJobError
@@ -38,6 +38,7 @@ from services.platform.db.models import (
     Job,
     LearningSegment,
     LearningSession,
+    ModelTask,
 )
 from services.tutor.segment_lifecycle import (
     SEGMENT_LEARNING_REVIEW_JOB,
@@ -62,6 +63,7 @@ def register_intelligence_handlers(
     evidence_gateway_factory: Callable[[Session], ModelGateway] = create_session_evidence_gateway,
     segment_evidence_gateway_factory: Callable[[Session], ModelGateway] | None = None,
     segment_review_settings: Settings | None = None,
+    segment_rubric_gateway_factory: Callable[[Session], ModelGateway] | None = None,
 ) -> None:
     """Register only the approved closed-session evidence job for TASK-021."""
 
@@ -196,12 +198,27 @@ def register_intelligence_handlers(
             ):
                 raise SegmentReviewLineageError("SegmentReviewLineageError")
             try:
+                configured = segment_review_settings or Settings()
+                rubric_gateway = (
+                    segment_rubric_gateway_factory(session)
+                    if segment_rubric_gateway_factory is not None
+                    else (
+                        create_jev_decision_gateway(
+                            session,
+                            task=ModelTask.SEGMENT_RUBRIC_DECISION,
+                            settings=configured,
+                        )
+                        if configured.jev_segment_rubric_mode == "shadow"
+                        else None
+                    )
+                )
                 outcome = review_completed_segment(
                     session,
                     learning_session=learning_session,
                     segment=segment,
                     gateway=segment_evidence_gateway_factory(session),
-                    settings=segment_review_settings,
+                    settings=configured,
+                    rubric_decision_gateway=rubric_gateway,
                 )
                 enqueue_session_intelligence_finalization_if_ready(
                     session,
@@ -237,6 +254,7 @@ def register_intelligence_handlers(
             from datetime import UTC, datetime
             reprocess_run.started_at = reprocess_run.started_at or datetime.now(UTC)
             session_ids = reprocess_run.scope.get("session_ids", []) if isinstance(reprocess_run.scope, dict) else []
+        configured = segment_review_settings or Settings()
         results: list[dict[str, object]] = []
         failures: list[dict[str, str]] = []
         for raw_session_id in session_ids:
@@ -253,7 +271,20 @@ def register_intelligence_handlers(
                             if segment_evidence_gateway_factory is not None
                             else None
                         ),
-                        segment_review_settings=segment_review_settings,
+                        segment_rubric_gateway=(
+                            segment_rubric_gateway_factory(session)
+                            if segment_rubric_gateway_factory is not None
+                            else (
+                                create_jev_decision_gateway(
+                                    session,
+                                    task=ModelTask.SEGMENT_RUBRIC_DECISION,
+                                    settings=configured,
+                                )
+                                if configured.jev_segment_rubric_mode == "shadow"
+                                else None
+                            )
+                        ),
+                        segment_review_settings=configured,
                     )
                     results.append(result)
             except Exception as error:  # noqa: BLE001 -- one Session failure is durably aggregated into the bounded reprocess result.

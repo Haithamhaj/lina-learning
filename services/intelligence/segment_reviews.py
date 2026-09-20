@@ -338,6 +338,7 @@ def review_completed_segment(
     session: Session, *, learning_session: LearningSession, segment: LearningSegment,
     gateway: ModelGateway, version: SegmentReviewVersion | None = None,
     settings: Settings | None = None,
+    rubric_decision_gateway: ModelGateway | None = None,
 ) -> SegmentReviewOutcome:
     """Interpret a complete raw Segment and persist only validated staged output."""
 
@@ -405,6 +406,28 @@ def review_completed_segment(
         concept_refs=[finding.concept_ref for finding in envelope.findings],
     )
     session.flush()
+    if rubric_decision_gateway is not None:
+        configured = settings or get_settings()
+    else:
+        configured = None
+    if configured is not None and configured.jev_segment_rubric_mode == "shadow":
+        from services.intelligence.segment_rubric_shadow import run_segment_rubric_shadow
+
+        try:
+            with session.begin_nested():
+                run_segment_rubric_shadow(
+                    session,
+                    review=review,
+                    envelope=envelope,
+                    messages=messages,
+                    historical_anchors=historical_anchors,
+                    gateway=rubric_decision_gateway,
+                    policy_version=configured.jev_segment_rubric_policy_version,
+                )
+        except Exception:
+            # Shadow execution and persistence can never invalidate the
+            # already validated Luna Review or its downstream authority.
+            pass
     return SegmentReviewOutcome(review=review, finding_count=len(envelope.findings), model_called=True)
 
 

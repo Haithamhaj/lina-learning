@@ -19,6 +19,13 @@ from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute
 from services.platform.db import models as m
 from services.platform.db.connection import normalize_database_url
 from services.platform.safety import SafetyAction, SafetyDecision
+from services.platform.storage import LocalObjectStorage
+from services.studio.custom_visual_builds import (
+    CustomVisualBuildResolver,
+    persist_custom_visual_build,
+    promote_custom_visual_build,
+)
+from services.studio.full_power_canvas import CustomVisualPackageV1
 from services.studio.agent.admission import (
     AGENTIC_CANVAS_CAPABILITY_IDENTITY,
     admit_agentic_canvas_brief,
@@ -71,6 +78,13 @@ class _Settings:
 class _TerraSettings(_Settings):
     model_name = "gpt-5.6-luna"
     canvas_model_name = "gpt-5.6-terra"
+
+
+class _JevExactReuseSettings(_TerraSettings):
+    jev_canvas_reuse_mode = "active"
+    jev_canvas_reuse_min_probability = 0.90
+    jev_canvas_reuse_min_margin = 0.20
+    jev_canvas_reuse_policy_version = "jev-canvas-exact-reuse-test-v1"
 
 
 class _AllowPolicy:
@@ -575,15 +589,16 @@ def test_primary_tutor_semantically_insufficient_scene_replacement_flows_to_admi
         assert snapshot.current_scene_version == scene_version
 
 
-def test_v12_status_or_scene_step_cannot_admit_a_new_canvas_run(
-    factory: sessionmaker[Session],
+@pytest.mark.parametrize("schema_version", ["tutor_turn_v12", "tutor_turn_v13"])
+def test_current_status_or_scene_step_cannot_admit_a_new_canvas_run(
+    factory: sessionmaker[Session], schema_version: str,
 ) -> None:
     """A03: lifecycle intent is enforced at the durable admission boundary."""
 
     with factory.begin() as session:
         student, learning, message = _admitted_message(session)
         payload = dict(message.payload)
-        payload["tutor_turn_schema_version"] = "tutor_turn_v12"
+        payload["tutor_turn_schema_version"] = schema_version
         payload["canvas_change_intent"] = None
         message.payload = payload
 
@@ -1025,6 +1040,166 @@ def test_dedicated_canvas_model_is_used_for_composition_and_successful_execution
         assert execution is not None
         assert execution.model == "gpt-5.6-terra"
         assert execution.estimated_cost_usd is None
+
+
+def test_active_jev_exact_reuse_bypasses_terra_only_for_executable_frozen_action(
+    factory: sessionmaker[Session], tmp_path: Path
+) -> None:
+    from test_full_power_canvas import _manifest
+
+    storage = LocalObjectStorage(tmp_path)
+    with factory.begin() as session:
+        student, first_learning, first_message = _admitted_message(session)
+        first_run = admit_agentic_canvas_brief(
+            session,
+            student_id=student.id,
+            learning_session_id=first_learning.id,
+            source_message_id=first_message.id,
+        )
+        assert first_run is not None
+        prior_scene, _ = _install_active_scene(
+            session, student=student, learning=first_learning
+        )
+        package = CustomVisualPackageV1.model_validate(
+            {
+                "version": "custom-visual-package-v1",
+                "runtime_kind": "custom-visual",
+                "dependencies": ["native-svg-v1"],
+                "source": (
+                    "window.mount=(root,params,bridge)=>{root.textContent=params.label;}"
+                    f"/* exact-reuse-test:{uuid4().hex} */"
+                ),
+                "manifest": _manifest(),
+                "parameter_schema": {
+                    "type": "object",
+                    "properties": {"label": {"type": "string"}},
+                },
+            }
+        )
+        build = persist_custom_visual_build(
+            session, storage=storage, run=first_run, package=package
+        )
+        session.flush()
+        version = promote_custom_visual_build(
+            session,
+            resolver=CustomVisualBuildResolver(storage),
+            build_id=build.id,
+            student_id=student.id,
+            runtime_id=first_run.studio_runtime_id,
+            stable_slug=f"exact-reuse-{uuid4().hex}",
+            semantic_purpose="Compare two exact fractions on a movable number line",
+            parameter_schema=package.parameter_schema,
+            promotion_reason="Verified reusable exact fraction comparison",
+        )
+        first_run.status = "CANCELLED"
+        first_job = session.get(m.Job, first_run.job_id)
+        assert first_job is not None
+        first_job.status = m.JobStatus.COMPLETED.value
+        first_job.result = {"fixture": "prior reusable source"}
+        session.add(
+            m.VisualArtifactInstance(
+                artifact_version_id=version.id,
+                studio_scene_id=prior_scene.id,
+                student_id=student.id,
+                bound_parameters={"label": "1/2"},
+                semantic_manifest=package.manifest.model_dump(mode="json"),
+                current_semantic_state={},
+                locale="en",
+                direction="ltr",
+            )
+        )
+
+        later = m.LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(later)
+        session.flush()
+        runtime = m.StudioRuntime(student_id=student.id, learning_session_id=later.id)
+        session.add(runtime)
+        session.flush()
+        _, _, message = _admitted_message(
+            session,
+            student=student,
+            learning=later,
+            objective="Compare two exact fractions on a movable number line.",
+        )
+        session.add(
+            m.StudioSnapshot(
+                studio_runtime_id=runtime.id,
+                student_id=student.id,
+                snapshot_schema_version="studio-snapshot-v1",
+                latest_event_sequence=0,
+                state_payload={},
+            )
+        )
+        run = admit_agentic_canvas_brief(
+            session,
+            student_id=student.id,
+            learning_session_id=later.id,
+            source_message_id=message.id,
+        )
+        assert run is not None
+        run_id = run.id
+
+    class DecisionProvider:
+        def execute(self, route: ModelRoute, payload: dict[str, object]) -> ModelResult:
+            del route
+            options = payload["questions"]["reuse_action"]["criteria"]
+            reuse = next(key for key in options if key != "NO_MATCH")
+            return ModelResult(
+                output={
+                    "answers": {
+                        "reuse_action": {
+                            "choice": reuse,
+                            "probabilities": {reuse: 0.98, "NO_MATCH": 0.02},
+                        }
+                    }
+                },
+                input_tokens=100,
+                output_tokens=0,
+                estimated_cost_usd=0.0000042,
+            )
+
+    async def compose(**_kwargs):
+        raise AssertionError("Terra must not run for accepted exact reuse")
+
+    registry = JobHandlerRegistry()
+    register_agentic_canvas_handlers(
+        registry,
+        session_factory=factory,
+        compose=compose,
+        settings_factory=_JevExactReuseSettings,
+        storage=storage,
+        decision_gateway_factory=lambda session, **_kwargs: ModelGateway(
+            session,
+            routes={
+                m.ModelTask.CANVAS_REUSE_SELECTION: ModelRoute("fixture-jev", "typesafe/jev-1.13")
+            },
+            providers={"fixture-jev": DecisionProvider()},
+        ),
+    )
+    assert run_once(factory, registry, worker_id="jev-exact-reuse") == m.JobStatus.COMPLETED
+
+    with factory() as session:
+        completed = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert completed is not None and completed.scene_id is not None
+        assert completed.agent_execution_metadata["jev_exact_reuse"]["bypassed_canvas_agent"] is True
+        assert completed.agent_execution_metadata["reusable_selections"][0]["version_id"] == str(version.id)
+        execution = session.get(m.AIExecution, completed.ai_execution_id)
+        assert execution is not None
+        assert execution.task == m.ModelTask.CANVAS_REUSE_SELECTION.value
+        assert session.scalar(
+            select(func.count(m.AIExecution.id)).where(
+                m.AIExecution.operation_id == run_id,
+                m.AIExecution.task == "canvas_agent_orchestration",
+            )
+        ) == 0
+        instance = session.scalar(
+            select(m.VisualArtifactInstance).where(
+                m.VisualArtifactInstance.studio_scene_id == completed.scene_id
+            )
+        )
+        assert instance is not None
+        assert instance.artifact_version_id == version.id
+        assert instance.bound_parameters == {"label": "1/2"}
 
 
 def test_dedicated_canvas_model_is_recorded_for_failed_composition(

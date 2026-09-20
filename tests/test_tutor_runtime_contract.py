@@ -5,7 +5,12 @@ from __future__ import annotations
 import pytest
 from uuid import uuid4
 
-from services.tutor.candidate_events import TUTOR_OUTPUT_JSON_SCHEMA, TUTOR_OUTPUT_RESPONSE_SCHEMA
+from services.tutor.candidate_events import (
+    TUTOR_OUTPUT_JSON_SCHEMA,
+    TUTOR_OUTPUT_RESPONSE_SCHEMA,
+    TUTOR_OUTPUT_VISUAL_DELEGATED_JSON_SCHEMA,
+    TUTOR_OUTPUT_VISUAL_DELEGATED_RESPONSE_SCHEMA,
+)
 from services.tutor.runtime import (
     TUTOR_SHARED_INSTRUCTIONS,
     build_tutor_model_payload,
@@ -76,6 +81,22 @@ def test_tutor_turn_v12_requires_nullable_visual_order_without_rewriting_other_m
     assert parent_boundary["properties"]["schema_version"]["enum"] == ["parent-boundary-v1"]
     assert parent_boundary["properties"]["category"]["enum"] == ["RELIGION", "SEXUAL_CONTENT", "RELATIONSHIPS", "POLITICS", "DEATH_GRIEF", "FAMILY_FINANCES", None]
     assert parent_boundary["properties"]["model_action"]["enum"] == ["ALLOW", "AGE_APPROPRIATE_ONLY", "REDIRECT_TO_PARENT"]
+
+
+def test_tutor_turn_v13_removes_only_delegated_visual_selection() -> None:
+    assert TUTOR_OUTPUT_VISUAL_DELEGATED_RESPONSE_SCHEMA["name"] == "tutor_turn_v13"
+    active = TUTOR_OUTPUT_VISUAL_DELEGATED_JSON_SCHEMA
+    assert "canvas_visual_context_selection" not in active["properties"]
+    assert "canvas_visual_context_selection" not in active["required"]
+    assert active["additionalProperties"] is False
+    assert set(active["properties"]) == set(TUTOR_OUTPUT_JSON_SCHEMA["properties"]) - {
+        "canvas_visual_context_selection"
+    }
+    assert active["required"] == [
+        field
+        for field in TUTOR_OUTPUT_JSON_SCHEMA["required"]
+        if field != "canvas_visual_context_selection"
+    ]
 
 
 def test_candidate_contract_exposes_bounded_misconception_evidence_for_source_grounding() -> None:

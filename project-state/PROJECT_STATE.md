@@ -22,6 +22,8 @@ E13 ran 323 focused synthetic/disposable context and Learning Intelligence tests
 
 Lina remains a modular monolith. Primary Tutor owns teaching; the implemented Full-Power Hybrid Canvas composes typed, REUSE, ADAPT and CREATE representations and returns bounded Semantic Manifest/Studio state to the same Tutor. Immutable Build/ObjectStorage references remain authoritative; generated custom code runs only in the approved sandbox.
 
+The A/B branch now also contains an off-by-default, provider-neutral Jev bounded-decision capability for three approved slices only: Visual Personalization fact selection, exact executable Canvas reuse selection, and non-authoritative Segment Evidence rubric shadow comparison. Active Visual Personalization uses `tutor_turn_v13`, which preserves v12 responsibilities except that Luna no longer receives or emits `canvas_visual_context_selection`; off/shadow and historical records retain v12. Luna/Terra retain meaning, teaching, extraction and generation; deterministic code retains admission, ownership, executability, lineage, persistence and fallback authority. Live synthetic evaluation is engineering evidence only, not child-data/privacy or production acceptance.
+
 Selective CREATE, promotion, true REUSE and true ADAPT have desktop production-equivalent browser evidence. Selective REUSE demonstrated materially lower observed Luna time/cost than CREATE (7.189s/$0.006012 versus 55.588s/$0.032735 for the documented exact pair). These are engineering observations, not a general performance guarantee.
 
 Canvas Development Review is an internal on-demand path: it lists experiences, captures a bounded independent review record, runs one advisory AI analysis, and preserves prior reports for comparison. It does not write Learning Intelligence, learner profile/personalization or Tutor memory. The first real report missed the known unequal grid-proportion defect, so AI review is not a correctness or release gate. See `docs/proposals/CANVAS-DEVELOPMENT-REVIEW.md`.
@@ -36,6 +38,7 @@ Canvas Development Review is an internal on-demand path: it lists experiences, c
 - Immutable Build/ObjectStorage source and digest verification remain authoritative; Scenes hold bounded references/state.
 - Canvas change intent remains model-semantic, while Run/Scene identity and stale-decision authority remain server-owned internal metadata.
 - Daily uses the Studio feed as the primary Snapshot path; two-second composition polling supports recovery/wait state, and the elapsed display is derived from server `run_created_at` without percentages or ETA.
+- Jev remains disabled unless a slice-specific mode is explicitly promoted. Visual/reuse probability policy is versioned and configurable; Segment rubric output remains shadow-only and cannot alter Luna Review authority.
 
 ## Protected areas
 
@@ -44,6 +47,8 @@ Primary Tutor authority; child safety and Parent Boundaries; owner/privacy isola
 ## Active risks
 
 Broad unrestricted production CREATE reliability is not accepted, but the two currently approved repair slices are locally DONE in E24/E28. Remaining open product areas are controlled real-Luna/live E2E acceptance, teaching-flow defects, personalization relevance review, and material waits under terminal buffering. Do not collapse these into a call-architecture redesign. Existing promoted Versions are not retroactively certified by AI review or later checks.
+
+Jev child-data use is not production-approved. Synthetic results were conservative at the initial thresholds, so shadow calibration, privacy/retention approval, and a labeled Lina evaluation set are required before enabling any learner-data route.
 
 ## Next recommended action
 

@@ -56,6 +56,9 @@ class ModelTask(str, Enum):
     CANVAS_SPECIALIST = "canvas_specialist"
     CANVAS_DEVELOPMENT_REVIEW = "canvas_development_review"
     SPEECH_TO_TEXT = "speech_to_text"
+    CANVAS_VISUAL_PERSONALIZATION = "canvas_visual_personalization"
+    CANVAS_REUSE_SELECTION = "canvas_reuse_selection"
+    SEGMENT_RUBRIC_DECISION = "segment_rubric_decision"
 
 
 class Job(Base):
@@ -712,6 +715,49 @@ class SegmentLearningReview(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     failure_detail: Mapped[str | None] = mapped_column(Text)
+
+
+class SegmentRubricDecisionShadow(Base):
+    """Non-authoritative, versioned Jev comparison for one validated Review."""
+
+    __tablename__ = "segment_rubric_decision_shadows"
+    __table_args__ = (
+        UniqueConstraint(
+            "segment_review_id",
+            "policy_version",
+            "provider",
+            "model",
+            name="uq_segment_rubric_shadow_identity",
+        ),
+        CheckConstraint(
+            "status IN ('COMPLETED', 'ABSTAINED', 'FAILED', 'NOT_APPLICABLE')",
+            name="ck_segment_rubric_shadow_status",
+        ),
+        Index("ix_segment_rubric_shadow_review", "segment_review_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4
+    )
+    segment_review_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("segment_learning_reviews.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    rubric_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    model: Mapped[str] = mapped_column(String(128), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    output: Mapped[dict[str, object] | None] = mapped_column(JSONB)
+    ai_execution_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), ForeignKey("ai_executions.id", ondelete="SET NULL")
+    )
+    failure_code: Mapped[str | None] = mapped_column(String(128))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class LearningMessage(Base):

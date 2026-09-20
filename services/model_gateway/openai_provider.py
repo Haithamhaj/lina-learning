@@ -302,7 +302,7 @@ def _normalize_output(
     try:
         parsed = json.loads(text)
     except json.JSONDecodeError:
-        if fallback_text and tutor_schema_name not in {"tutor_turn_v9", "tutor_turn_v10", "tutor_turn_v11", "tutor_turn_v12"}:
+        if fallback_text and tutor_schema_name not in {"tutor_turn_v9", "tutor_turn_v10", "tutor_turn_v11", "tutor_turn_v12", "tutor_turn_v13"}:
             return {
                 "text": fallback_text,
                 "suggested_actions": [],
@@ -316,14 +316,19 @@ def _normalize_output(
         return parsed
     if not isinstance(parsed.get("text"), str) or not parsed["text"].strip():
         raise ValueError("OpenAI structured Tutor output has no student-facing text.")
-    if tutor_schema_name in {"tutor_turn_v9", "tutor_turn_v10", "tutor_turn_v11", "tutor_turn_v12"} and "workspace_intent" not in parsed:
+    if tutor_schema_name in {"tutor_turn_v9", "tutor_turn_v10", "tutor_turn_v11", "tutor_turn_v12", "tutor_turn_v13"} and "workspace_intent" not in parsed:
         raise ValueError(f"OpenAI structured {tutor_schema_name} output is missing required workspace_intent.")
-    if tutor_schema_name in {"tutor_turn_v10", "tutor_turn_v11", "tutor_turn_v12"} and "workspace_visual_order" not in parsed:
+    if tutor_schema_name in {"tutor_turn_v10", "tutor_turn_v11", "tutor_turn_v12", "tutor_turn_v13"} and "workspace_visual_order" not in parsed:
         raise ValueError(f"OpenAI structured {tutor_schema_name} output is missing required workspace_visual_order.")
     if tutor_schema_name in {"tutor_turn_v11", "tutor_turn_v12"} and ("canvas_brief" not in parsed or "canvas_visual_context_selection" not in parsed):
         raise ValueError(f"OpenAI structured {tutor_schema_name} output is missing required Canvas fields.")
-    if tutor_schema_name == "tutor_turn_v12" and "canvas_change_intent" not in parsed:
-        raise ValueError("OpenAI structured tutor_turn_v12 output is missing canvas_change_intent.")
+    if tutor_schema_name == "tutor_turn_v13":
+        if "canvas_brief" not in parsed:
+            raise ValueError("OpenAI structured tutor_turn_v13 output is missing required canvas_brief.")
+        if "canvas_visual_context_selection" in parsed:
+            raise ValueError("OpenAI structured tutor_turn_v13 output contains delegated visual selection.")
+    if tutor_schema_name in {"tutor_turn_v12", "tutor_turn_v13"} and "canvas_change_intent" not in parsed:
+        raise ValueError(f"OpenAI structured {tutor_schema_name} output is missing canvas_change_intent.")
     workspace_intent = {"workspace_intent": parsed["workspace_intent"]} if "workspace_intent" in parsed else {}
     workspace_visual_order = {"workspace_visual_order": parsed["workspace_visual_order"]} if "workspace_visual_order" in parsed else {}
     canvas_brief = {"canvas_brief": parsed["canvas_brief"]} if "canvas_brief" in parsed else {}
@@ -366,7 +371,7 @@ def _tutor_response_schema_name(payload: dict[str, object]) -> str | None:
         "tutor_turn_v8",
         "tutor_turn_v9",
         "tutor_turn_v10",
-        "tutor_turn_v11", "tutor_turn_v12",
+        "tutor_turn_v11", "tutor_turn_v12", "tutor_turn_v13",
     } else None
 
 
