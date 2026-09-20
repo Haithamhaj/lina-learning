@@ -24,6 +24,7 @@ from services.studio.service import (
     StudioStateService,
 )
 from services.studio.subjects.registry import SubjectCapabilityError, SubjectCapabilityRegistry
+from services.tutor.student_sessions import ForegroundTutorBusy
 
 
 STUDIO_PROTOCOL_VERSION = "studio-protocol-v1"
@@ -207,7 +208,7 @@ class StudioProtocolService:
                     base_scene_version=request.base_scene_version,
                 )
             )
-        except (IdempotencyConflict, StaleSceneVersion) as error:
+        except (ForegroundTutorBusy, IdempotencyConflict, StaleSceneVersion) as error:
             raise StudioOperationConflict(str(error)) from error
         except (StudioStateError, InvalidStudioLineage) as error:
             raise StudioProtocolError(str(error)) from error

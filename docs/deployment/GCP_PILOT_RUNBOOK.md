@@ -101,7 +101,7 @@ gcloud beta run worker-pools update lina-worker \
   --update-env-vars AWS_RESPONSE_CHECKSUM_VALIDATION=when_required \
   --update-env-vars MODEL_PROVIDER=openai \
   --update-env-vars MODEL_NAME=gpt-5.6-luna \
-  --update-env-vars CANVAS_MODEL_NAME=gpt-5.6-terra \
+  --update-env-vars CANVAS_MODEL_NAME=gpt-5.6-luna \
   --update-secrets DATABASE_URL=lina-database-url:latest \
   --update-secrets SESSION_SECRET=lina-session-secret:latest \
   --update-secrets MODEL_API_KEY=lina-model-api-key:latest \

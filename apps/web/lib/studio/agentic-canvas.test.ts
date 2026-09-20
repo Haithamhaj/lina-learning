@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import {
+  agenticCanvasSemanticControls,
   createAgenticCanvasOperation,
   parseAgenticCanvasScene,
   settleAgenticCanvasOperation,
 } from "./agentic-canvas-contract.ts";
+import type { AgenticCanvasAction } from "./contracts.ts";
+import { AgenticCanvasWorkspace } from "./agentic-canvas.tsx";
+import { clippedLinearExpression, textInteractionPresentation } from "./agentic-canvas-presentation.ts";
 import { activeSceneRendererState, resolveApprovedStudioRenderer } from "./renderer-host.ts";
 
 const commonBlock = {
@@ -221,6 +227,35 @@ test("Agentic Canvas emits one exact semantic Studio operation and no renderer a
   }), /unknown element/);
 });
 
+test("Agentic Canvas SELECT controls require an explicit target while SUBMIT stays block-level", () => {
+  const parsed = parseAgenticCanvasScene(validScene);
+  assert(parsed);
+  const mathBlock = parsed.blocks[0];
+  if (mathBlock.type !== "MATH_BOARD") assert.fail("Expected the Math Board fixture.");
+  const twoTargets = {
+    ...mathBlock,
+    allowed_actions: ["SELECT", "SUBMIT"] as AgenticCanvasAction[],
+    elements: [
+      { id: "item-a", label: "Quantity A", current_value: "3/5" },
+      { id: "item-b", label: "Quantity B", current_value: "1/2" },
+    ],
+  };
+  assert.deepEqual(agenticCanvasSemanticControls(twoTargets), [
+    { action: "SELECT", elementId: "item-a", label: "Select Quantity A" },
+    { action: "SELECT", elementId: "item-b", label: "Select Quantity B" },
+    { action: "SUBMIT", label: "Submit" },
+  ]);
+  assert.deepEqual(agenticCanvasSemanticControls({
+    ...twoTargets,
+    allowed_actions: ["SELECT"] as AgenticCanvasAction[],
+    elements: [],
+  }), []);
+  assert.deepEqual(agenticCanvasSemanticControls({
+    ...twoTargets,
+    board_kind: "PLOT",
+  }), [{ action: "SUBMIT", label: "Submit" }]);
+});
+
 test("Agentic Canvas renders the current reduced Scene after Snapshot reload", () => {
   const updated = structuredClone(validScene);
   updated.blocks[0].elements[0].current_value = "4/5";
@@ -242,4 +277,133 @@ test("Agentic Canvas settles rejected Studio operations without an unhandled rej
     idempotency_key: "focus-failed",
   });
   assert.equal(accepted, false);
+});
+
+test("bounded plot expressions parse and clip exact live linear forms", () => {
+  assert.deepEqual(clippedLinearExpression("line-a", "y=3", { minimumX: -2, maximumX: 2, minimumY: -1, maximumY: 4 }), {
+    id: "line-a", slope: 0, intercept: 3, start: { x: -2, y: 3 }, end: { x: 2, y: 3 },
+  });
+  assert.deepEqual(clippedLinearExpression("line-b", "y=0.4x+1", { minimumX: -5, maximumX: 5, minimumY: -1, maximumY: 4 }), {
+    id: "line-b", slope: 0.4, intercept: 1, start: { x: -5, y: -1 }, end: { x: 5, y: 3 },
+  });
+  const clipped = clippedLinearExpression("line-c", "y=0.9x+1", { minimumX: -5, maximumX: 5, minimumY: -2, maximumY: 4 });
+  assert(clipped);
+  assert.equal(clipped.id, "line-c"); assert.equal(clipped.slope, 0.9); assert.equal(clipped.intercept, 1);
+  assert(Math.abs(clipped.start.x + 10 / 3) < 1e-9); assert.deepEqual(clipped.start.y, -2);
+  assert(Math.abs(clipped.end.x - 10 / 3) < 1e-9); assert.deepEqual(clipped.end.y, 4);
+  assert.equal(clippedLinearExpression("unsafe", "y=Math.sin(x)", { minimumX: -5, maximumX: 5, minimumY: -5, maximumY: 5 }), null);
+  assert.equal(clippedLinearExpression("outside", "y=8", { minimumX: -5, maximumX: 5, minimumY: -5, maximumY: 5 }), null);
+  assert.deepEqual(clippedLinearExpression("negative", "y=-2x", { minimumX: -2, maximumX: 2, minimumY: -4, maximumY: 4 })?.start, { x: -2, y: 4 });
+  assert.deepEqual(clippedLinearExpression("negative", "y=-2x", { minimumX: -2, maximumX: 2, minimumY: -4, maximumY: 4 })?.end, { x: 2, y: -4 });
+  assert.deepEqual(clippedLinearExpression("zero", "y=0x+2.5", { minimumX: -1, maximumX: 3, minimumY: -3, maximumY: 3 })?.end, { x: 3, y: 2.5 });
+  assert.equal(clippedLinearExpression("quadratic", "y=x^2", { minimumX: -5, maximumX: 5, minimumY: -5, maximumY: 5 }), null);
+});
+
+test("Plot renderer draws all supported live expressions and keeps unsupported text truthful", () => {
+  const plotScene: any = structuredClone(validScene);
+  plotScene.blocks = [{
+    ...validScene.blocks[0], board_kind: "PLOT", axis_min: "-5", axis_max: "5",
+    axes: [
+      { axis: "X", minimum: "-5", maximum: "5", step: "1" },
+      { axis: "Y", minimum: "-5", maximum: "5", step: "1" },
+    ],
+    markers: [],
+    expressions: [
+      { id: "constant", label: "Constant", latex: "y=3", role: "GIVEN" },
+      { id: "decimal-a", label: "Decimal A", latex: "y=0.4x+1", role: "GIVEN" },
+      { id: "decimal-b", label: "Decimal B", latex: "y=0.9x+1", role: "GIVEN" },
+      { id: "unsupported", label: "Unsupported", latex: "y=x^2", role: "GIVEN" },
+    ],
+    allowed_actions: ["SELECT"],
+  }];
+  const html = renderToStaticMarkup(React.createElement(AgenticCanvasWorkspace, { sceneId: "scene", sceneVersion: 1, seed: plotScene, onOperation: async () => {}, onReload: () => {} }));
+  assert.match(html, /data-expression-id="constant"/);
+  assert.match(html, /data-expression-id="decimal-a"/);
+  assert.match(html, /data-expression-id="decimal-b"/);
+  assert.match(html, /Unsupported:.*y=x\^2/);
+  assert.match(html, /not drawn/);
+  assert.match(html, /<title>Constant: y=3<\/title>/);
+  assert.match(html, />Reload Workspace<\/button>/);
+  assert.doesNotMatch(html, />Select /);
+});
+
+test("Text interaction presentation uses only saved learner state, never solution grouping", () => {
+  const parsed = parseAgenticCanvasScene(validScene);
+  assert(parsed && parsed.blocks[3].type === "TEXT_INTERACTION");
+  const block = {
+    ...parsed.blocks[3], interaction_family: "CLASSIFICATION" as const,
+    items: [
+      { id: "solid", text: "Solid", group_id: "matter" },
+      { id: "rain", text: "Rain", group_id: "water" },
+    ],
+    groups: [{ id: "matter", label: "Matter" }, { id: "water", label: "Water" }],
+    elements: [
+      { id: "solid", label: "Solid", current_value: null },
+      { id: "rain", label: "Rain", current_value: "water" },
+    ],
+  };
+  const state = textInteractionPresentation(block);
+  assert.deepEqual(state.groups.map((group) => [group.id, group.items.map((item) => item.id)]), [
+    ["matter", []], ["water", ["rain"]],
+  ]);
+  assert.deepEqual(state.unassigned.map((item) => item.id), ["solid"]);
+});
+
+test("Unsupported ordering fails closed without authored order or actionable controls", () => {
+  const parsed = parseAgenticCanvasScene(validScene);
+  assert(parsed && parsed.blocks[3].type === "TEXT_INTERACTION");
+  const block = {
+    ...parsed.blocks[3], interaction_family: "ORDERING" as const,
+    items: [
+      { id: "first", text: "First", group_id: null },
+      { id: "second", text: "Second", group_id: null },
+      { id: "third", text: "Third", group_id: null },
+    ],
+    allowed_actions: ["REORDER", "SUBMIT"] as AgenticCanvasAction[],
+    elements: [
+      { id: "first", label: "First", current_value: null },
+      { id: "second", label: "Second", current_value: null },
+      { id: "third", label: "Third", current_value: null },
+    ],
+  };
+  const presentation = textInteractionPresentation(block);
+  assert.deepEqual(presentation.groups, []);
+  assert.deepEqual(presentation.unassigned, []);
+
+  const scene: any = structuredClone(validScene);
+  scene.blocks = [block];
+  const html = renderToStaticMarkup(React.createElement(AgenticCanvasWorkspace, { sceneId: "scene", sceneVersion: 1, seed: scene, onOperation: async () => {}, onReload: () => {} }));
+  assert.match(html, /Ordering is not available safely in Canvas yet/);
+  assert.match(html, /Continue with Tutor chat/);
+  assert.doesNotMatch(html, /First|Second|Third|>Submit<|Current order/);
+});
+
+test("Grouping, matching and relation presentations all start without solved placement", () => {
+  const parsed = parseAgenticCanvasScene(validScene);
+  assert(parsed && parsed.blocks[3].type === "TEXT_INTERACTION");
+  for (const family of ["GROUPING", "MATCHING", "RELATION"] as const) {
+    const block = {
+      ...parsed.blocks[3], interaction_family: family,
+      groups: [{ id: "left", label: "Left" }, { id: "right", label: "Right" }],
+      items: [{ id: "choice", text: "Choice", group_id: "right" }],
+      elements: [{ id: "choice", label: "Choice", current_value: null }],
+    };
+    const state = textInteractionPresentation(block);
+    assert.deepEqual(state.groups.map(group => group.items), [[], []]);
+    assert.deepEqual(state.unassigned.map(item => item.id), ["choice"]);
+  }
+});
+
+test("Classification renderer separates empty category targets from unassigned choices", () => {
+  const scene: any = structuredClone(validScene);
+  scene.blocks = [{
+    ...scene.blocks[3], interaction_family: "CLASSIFICATION", allowed_actions: ["MOVE"],
+    groups: [{ id: "fastest", label: "Fastest" }, { id: "not-fastest", label: "Not fastest" }],
+    items: [{ id: "steep", text: "Steep line", group_id: "fastest" }, { id: "flat", text: "Flat line", group_id: "not-fastest" }],
+    elements: [{ id: "steep", label: "Steep line", current_value: null }, { id: "flat", label: "Flat line", current_value: null }],
+  }];
+  const html = renderToStaticMarkup(React.createElement(AgenticCanvasWorkspace, { sceneId: "scene", sceneVersion: 1, seed: scene, onOperation: async () => {}, onReload: () => {} }));
+  const categoryRegion = html.slice(html.indexOf('data-text-group="fastest"'), html.indexOf('data-unassigned-choices="true"'));
+  assert.doesNotMatch(categoryRegion, /Steep line|Flat line/);
+  assert.match(html.slice(html.indexOf('data-unassigned-choices="true"')), /Steep line.*Flat line/);
 });

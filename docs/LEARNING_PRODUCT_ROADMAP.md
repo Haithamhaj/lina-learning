@@ -19,11 +19,28 @@ The accepted baseline includes the primary Tutor, safety/Parent Boundaries, owne
 - Division Canvas capability.
 - Other narrowly evidenced visual capabilities.
 
+## Version 2 — Educational Generated Images
+
+- Add generated educational images as a distinct V2 capability, not as a workaround for current Canvas defects.
+- Outside mathematics, when the learning goal depends on visualizing an object, natural structure, scene, or process, prefer a generated educational image or image-led representation over a generic chart/plot. Science is the first priority domain.
+- Mathematics remains structured-Canvas-first unless an actual image is the better representation for the learning goal.
+- Generated images should be child-appropriate, instructional, and clear rather than optimized for photorealistic or marketing-grade quality. Cost/latency efficiency is preferred when educational usefulness is preserved.
+- Delivery should integrate with Canvas. The default educational output is an instructional image with simple labels/arrows/stages when those annotations materially improve understanding; a plain image is acceptable only when annotation adds no learning value.
+- Generated images are illustrative learning aids, not literal scientific reference images. When exact scientific form, terminology, or relationships matter, learner-visible text and labels must come from trusted grounded information rather than guesses inferred from generated pixels.
+- Image generation is available through two paths: an explicit learner request within the V2 eligibility scope, or a contextually offered image CTA when the current concept/turn is genuinely image-appropriate.
+- Initial V2 eligibility is intentionally narrow: the active subject must be Science and the visual need must be one of shape, structure, process, or scene. Requests outside that boundary stay on existing Tutor/Canvas capabilities until a later approved expansion.
+- Eligibility uses a hybrid authority: the Tutor may signal that an image would help, but server-owned/system rules decide whether the image CTA is actually eligible to appear and whether generation may proceed. The Tutor signal cannot bypass the subject/category/quota rules.
+- The image CTA is contextual only; it must not be permanently visible in every conversation or every Tutor turn.
+- Per learner, at most 10 successful generated images that are actually delivered/visible count toward the daily allowance. Failed generations, invisible internal retries, and redisplay of the same generated image do not consume an additional allowance.
+- When the daily allowance is exhausted, hide the image CTA for the rest of that day. If the learner explicitly asks for another image, Lina should state simply that today's image allowance is finished and continue with the available structured Canvas/drawing or verbal explanation instead.
+- The daily image allowance resets at local midnight according to the learner's stored timezone.
+- High-level scientific-grounding and annotated-output principles are decided. Remaining V2 work includes provider/model selection, questionable-output validation/rejection behavior, quota persistence/enforcement, exact Canvas annotation implementation, and acceptance before implementation.
+
 ## Later
 
 - Age/grade-aware evolution and progression across school years toward primary-to-secondary product maturity.
 - Trusted-reference pilot.
-- Broader Science and language visual coverage.
+- Broader Science and language visual coverage beyond the initial V2 generated-image slice.
 - A separately designed Parent experience/dashboard.
 - Grade transition.
 - Wider productization only after real-use evidence.

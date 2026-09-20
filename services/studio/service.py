@@ -43,7 +43,6 @@ from services.studio.custom_visual_builds import (
     CustomVisualBuildResolutionError,
     CustomVisualBuildResolver,
 )
-from services.studio.interactions import StudioInteractionService
 from services.studio.reducer import (
     CORE_EVENT_SCHEMA_VERSION,
     SNAPSHOT_SCHEMA_VERSION,
@@ -56,6 +55,7 @@ from services.studio.reducer import (
 from services.studio.subjects import production_subject_registry
 from services.studio.subjects.contracts import ActivityActionContract, ValidationResult
 from services.studio.subjects.registry import SubjectCapabilityError, SubjectCapabilityRegistry
+from services.tutor.student_sessions import lock_foreground_tutor_lane
 
 
 MAX_EVENT_PAYLOAD_BYTES = 8_192
@@ -211,6 +211,40 @@ class StudioStateService:
 
         self._validate_append_command(command)
         with self.session.begin_nested():
+            # Only Tutor-triggering Student actions enter the shared foreground
+            # lane. Record-only Canvas events retain independent Runtime locks.
+            preflight_scene = self.session.get(StudioScene, command.scene_id) if command.scene_id else None
+            preflight_action = None
+            if (
+                command.actor.value == "STUDENT"
+                and command.action_key is not None
+                and preflight_scene is not None
+                and preflight_scene.studio_runtime_id == command.runtime_id
+                and preflight_scene.student_id == command.student_id
+            ):
+                try:
+                    preflight_action = self.subject_registry.resolve_action(
+                        preflight_scene.subject_key,
+                        preflight_scene.subject_profile_version,
+                        preflight_scene.activity_key,
+                        preflight_scene.activity_contract_version,
+                        command.action_key,
+                    )
+                except SubjectCapabilityError:
+                    # The authoritative validation below preserves the existing
+                    # error contract for unknown or invalid actions.
+                    pass
+            if preflight_action is not None and preflight_action.interaction_policy.value == "TUTOR_TRIGGERING":
+                # Keep the global foreground order LearningSession -> Runtime.
+                learning_session = self.session.execute(
+                    select(LearningSession).where(
+                        LearningSession.id == command.learning_session_id,
+                        LearningSession.student_id == command.student_id,
+                        LearningSession.status == "OPEN",
+                    ).with_for_update()
+                ).scalar_one_or_none()
+                if learning_session is None:
+                    raise InvalidStudioLineage("Open Studio LearningSession was not found.")
             runtime = self._runtime_locked(command.student_id, command.learning_session_id, runtime_id=command.runtime_id)
             self._require_open_runtime(runtime)
             return self._append_locked(runtime, command)
@@ -255,6 +289,17 @@ class StudioStateService:
         durable_event_schema_version = command.event_schema_version if action is None else action.event_schema_version
         if durable_event_kind is None or durable_event_schema_version is None:
             raise StudioStateError("Studio events require a resolved durable event contract.")
+        creates_tutor_interaction = (
+            action is not None
+            and action.interaction_policy.value == "TUTOR_TRIGGERING"
+            and command.actor.value == "STUDENT"
+        )
+        if creates_tutor_interaction:
+            lock_foreground_tutor_lane(
+                self.session,
+                learning_session_id=runtime.learning_session_id,
+                student_id=runtime.student_id,
+            )
         event_payload = self._event_payload(command.payload, validation, subject_action=action is not None)
         event_payload_limit = (
             MAX_SUBJECT_EVENT_ENVELOPE_BYTES
@@ -328,15 +373,7 @@ class StudioStateService:
         self.session.add(event)
         self.session.flush()
         interaction = None
-        if (
-            action is not None
-            and action.interaction_policy.value == "TUTOR_TRIGGERING"
-            and command.actor.value == "STUDENT"
-        ):
-            StudioInteractionService(self.session).supersede_running_for_new_student_interaction(
-                student_id=runtime.student_id,
-                runtime_id=runtime.id,
-            )
+        if creates_tutor_interaction:
             interaction = StudioStudentInteraction(
                 studio_runtime_id=runtime.id,
                 student_id=runtime.student_id,

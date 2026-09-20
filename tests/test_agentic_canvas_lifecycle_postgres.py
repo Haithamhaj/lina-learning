@@ -82,12 +82,40 @@ class _RawReplayProvider:
     def __init__(self, output: dict[str, object]) -> None:
         self.output = output
         self.calls = 0
+        self.payloads: list[dict[str, object]] = []
 
     def stream(self, route: ModelRoute, payload: dict[str, object]):
-        del route, payload
+        del route
         self.calls += 1
+        self.payloads.append(deepcopy(payload))
         yield StreamDelta(str(self.output["text"]))
         yield StreamComplete(ModelResult(output=deepcopy(self.output), input_tokens=101, output_tokens=202))
+
+
+def _tutor_canvas_output(
+    *,
+    text: str,
+    canvas_brief: dict[str, object] | None = None,
+    canvas_change_intent: str | None = None,
+) -> dict[str, object]:
+    return {
+        "text": text,
+        "suggested_actions": [],
+        "guided_check": None,
+        "teaching_mode": None,
+        "teaching_strategy": None,
+        "teaching_method_id": None,
+        "prior_method_relation": None,
+        "candidate_metadata": None,
+        "provisional_broad_subject": None,
+        "segment_relation": None,
+        "structured_segment_state": None,
+        "workspace_intent": None,
+        "workspace_visual_order": None,
+        "canvas_visual_context_selection": None,
+        "canvas_brief": canvas_brief,
+        "canvas_change_intent": canvas_change_intent,
+    }
 
 
 def _brief(*, objective: str = "Compare two decimals on a number line.") -> dict[str, object]:
@@ -255,6 +283,28 @@ def _install_active_scene(
     return scene, snapshot
 
 
+def _install_empty_snapshot(
+    session: Session,
+    *,
+    student: m.Student,
+    learning: m.LearningSession,
+) -> m.StudioSnapshot:
+    runtime = session.scalar(
+        select(m.StudioRuntime).where(m.StudioRuntime.learning_session_id == learning.id)
+    )
+    assert runtime is not None
+    snapshot = m.StudioSnapshot(
+        studio_runtime_id=runtime.id,
+        student_id=student.id,
+        snapshot_schema_version="studio-snapshot-v1",
+        latest_event_sequence=runtime.latest_event_sequence,
+        state_payload={},
+    )
+    session.add(snapshot)
+    session.flush()
+    return snapshot
+
+
 def _registry(factory: sessionmaker[Session], compose, *, settings_factory=_Settings):
     registry = JobHandlerRegistry()
     register_agentic_canvas_handlers(
@@ -264,6 +314,265 @@ def _registry(factory: sessionmaker[Session], compose, *, settings_factory=_Sett
         settings_factory=settings_factory,
     )
     return registry
+
+
+def _stream_tutor_canvas_turn(
+    session: Session,
+    *,
+    learning: m.LearningSession,
+    output: dict[str, object],
+    question: str,
+) -> tuple[_RawReplayProvider, m.LearningMessage]:
+    provider = _RawReplayProvider(output)
+    runtime = TutorRuntime(
+        session,
+        context_builder=TutorContextBuilder(session, retrieval_service=RetrievalService(session)),
+        safety_policy=_AllowPolicy(),
+        gateway=ModelGateway(
+            session,
+            routes={m.ModelTask.TUTOR: ModelRoute("fixture-recovery", "fixture-recovery-output")},
+            providers={"fixture-recovery": provider},
+        ),
+    )
+    list(runtime.stream_turn(learning_session=learning, question=question))
+    session.flush()
+    message = session.scalars(
+        select(m.LearningMessage)
+        .where(m.LearningMessage.session_id == learning.id, m.LearningMessage.role == "tutor")
+        .order_by(m.LearningMessage.created_at.desc(), m.LearningMessage.id.desc())
+    ).first()
+    assert message is not None
+    return provider, message
+
+
+def test_primary_tutor_failed_same_need_retry_flows_to_exactly_one_admitted_run(
+    factory: sessionmaker[Session],
+) -> None:
+    """E26-A: real Tutor output binds RETRY to the failed Run and admission stays idempotent."""
+
+    with factory.begin() as session:
+        student, learning, original_message = _admitted_message(session)
+        failed = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=original_message.id
+        )
+        assert failed is not None and failed.job_id is not None
+        failed.status = "FAILED"
+        failed.completed_at = datetime.now(UTC)
+        failed.failure_metadata = {"code": "AGENT_MODEL_BEHAVIOR_FAILURE"}
+        failed_job = session.get(m.Job, failed.job_id)
+        assert failed_job is not None
+        failed_job.status = "FAILED"
+        failed_job.completed_at = datetime.now(UTC)
+        failed_job.last_error = "fixture failure"
+        _install_empty_snapshot(session, student=student, learning=learning)
+        student_id, learning_id, failed_id = student.id, learning.id, failed.id
+
+    with factory.begin() as session:
+        student = session.get(m.Student, student_id)
+        learning = session.get(m.LearningSession, learning_id)
+        failed = session.get(m.StudioCanvasSpecialistRun, failed_id)
+        assert student is not None and learning is not None and failed is not None
+        provider, retry_message = _stream_tutor_canvas_turn(
+            session,
+            learning=learning,
+            question="The same decimal visual failed. Please try that visual again.",
+            output=_tutor_canvas_output(
+                text="The visual failed, so I am retrying the same visual now.",
+                canvas_brief=_brief(),
+                canvas_change_intent="RETRY",
+            ),
+        )
+
+        encoded_input = str(provider.payloads[-1]["input"])
+        assert str(failed.id) in encoded_input
+        assert '"run_status": "FAILED"' in encoded_input
+        assert '"failure_code": "AGENT_MODEL_BEHAVIOR_FAILURE"' in encoded_input
+        assert retry_message.payload["canvas_change_intent"] == "RETRY"
+        assert retry_message.payload["canvas_decision_base"] == {
+            "version": "canvas-decision-base-v1",
+            "expected_run_id": str(failed.id),
+            "expected_run_status": "FAILED",
+            "expected_scene_id": None,
+            "expected_scene_version": None,
+        }
+        runs = list(session.scalars(
+            select(m.StudioCanvasSpecialistRun)
+            .where(m.StudioCanvasSpecialistRun.learning_session_id == learning.id)
+            .order_by(m.StudioCanvasSpecialistRun.created_at, m.StudioCanvasSpecialistRun.id)
+        ))
+        retry = next(run for run in runs if run.source_message_id == retry_message.id)
+        assert len(runs) == 2
+        assert failed.status == "FAILED"
+        assert retry.status == "PENDING"
+        assert admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=retry_message.id
+        ).id == retry.id
+        assert session.scalar(select(func.count(m.StudioCanvasSpecialistRun.id))) == 2
+
+
+@pytest.mark.parametrize("inflight_status", ["PENDING", "RUNNING"])
+def test_primary_tutor_inflight_visual_reports_status_without_duplicate_composition(
+    factory: sessionmaker[Session], inflight_status: str,
+) -> None:
+    """E26-B: PENDING/RUNNING truth reaches Tutor output and creates no second Run."""
+
+    with factory.begin() as session:
+        student, learning, original_message = _admitted_message(session)
+        inflight = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=original_message.id
+        )
+        assert inflight is not None and inflight.job_id is not None
+        inflight.status = inflight_status
+        job = session.get(m.Job, inflight.job_id)
+        assert job is not None
+        job.status = inflight_status
+        _install_empty_snapshot(session, student=student, learning=learning)
+        student_id, learning_id, inflight_id = student.id, learning.id, inflight.id
+
+    with factory.begin() as session:
+        learning = session.get(m.LearningSession, learning_id)
+        inflight = session.get(m.StudioCanvasSpecialistRun, inflight_id)
+        assert learning is not None and inflight is not None
+        provider, status_message = _stream_tutor_canvas_turn(
+            session,
+            learning=learning,
+            question="Is the decimal visual ready yet?",
+            output=_tutor_canvas_output(
+                text="That visual is still being prepared; I will not start a duplicate.",
+            ),
+        )
+
+        encoded_input = str(provider.payloads[-1]["input"])
+        assert str(inflight.id) in encoded_input
+        assert f'"run_status": "{inflight_status}"' in encoded_input
+        assert status_message.payload["canvas_change_intent"] is None
+        assert status_message.payload["canvas_decision_base"] is None
+        assert status_message.payload["agentic_canvas"]["status"] == "NOT_REQUESTED"
+        assert session.scalar(select(func.count(m.StudioCanvasSpecialistRun.id))) == 1
+        assert inflight.status == inflight_status
+
+
+def test_primary_tutor_ready_but_client_missing_uses_reload_without_new_composition(
+    factory: sessionmaker[Session],
+) -> None:
+    """E26-C: server-ready truth does not claim browser display or create another visual."""
+
+    with factory.begin() as session:
+        student, learning, original_message = _admitted_message(session)
+        completed = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=original_message.id
+        )
+        assert completed is not None and completed.job_id is not None
+        scene, snapshot = _install_active_scene(session, student=student, learning=learning)
+        completed.status = "COMPLETED"
+        completed.scene_id = scene.id
+        completed.completed_at = datetime.now(UTC)
+        job = session.get(m.Job, completed.job_id)
+        assert job is not None
+        job.status = "COMPLETED"
+        job.completed_at = datetime.now(UTC)
+        learning_id, completed_id = learning.id, completed.id
+        scene_id, scene_version, snapshot_id = scene.id, scene.scene_version, snapshot.id
+
+    with factory.begin() as session:
+        learning = session.get(m.LearningSession, learning_id)
+        completed = session.get(m.StudioCanvasSpecialistRun, completed_id)
+        scene = session.get(m.StudioScene, scene_id)
+        snapshot = session.get(m.StudioSnapshot, snapshot_id)
+        assert learning is not None and completed is not None and scene is not None and snapshot is not None
+        provider, status_message = _stream_tutor_canvas_turn(
+            session,
+            learning=learning,
+            question="The visual is not showing in my browser.",
+            output=_tutor_canvas_output(
+                text="The server reports the scene ready, but I cannot verify your browser display. Use Reload Workspace.",
+            ),
+        )
+
+        encoded_input = str(provider.payloads[-1]["input"])
+        assert '"scene_ready": true' in encoded_input
+        assert str(scene.id) in encoded_input
+        assert status_message.content.endswith("Use Reload Workspace.")
+        assert status_message.payload["canvas_change_intent"] is None
+        assert session.scalar(select(func.count(m.StudioCanvasSpecialistRun.id))) == 1
+        assert snapshot.current_scene_id == scene.id
+        assert snapshot.current_scene_version == scene_version
+
+
+def test_primary_tutor_semantically_insufficient_scene_replacement_flows_to_admission(
+    factory: sessionmaker[Session],
+) -> None:
+    """E26-D: real Tutor REPLACE_SCENE preserves the observed Scene lineage."""
+
+    replacement_brief = _brief(objective="Show three equal groups of four counters.")
+    replacement_brief.update({
+        "student_request": "Replace the decimal line with equal groups.",
+        "requested_representation": "Three equal groups of four counters.",
+        "facts": ["There are three equal groups.", "Each group contains four counters."],
+        "quantities": [
+            {"id": "groups", "value": "3", "unit": "groups"},
+            {"id": "per_group", "value": "4", "unit": "counters"},
+        ],
+        "desired_student_action": "Count the counters in each equal group.",
+        "must_not_imply": [],
+    })
+    with factory.begin() as session:
+        student, learning, original_message = _admitted_message(session)
+        completed = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id, source_message_id=original_message.id
+        )
+        assert completed is not None and completed.job_id is not None
+        scene, snapshot = _install_active_scene(session, student=student, learning=learning)
+        completed.status = "COMPLETED"
+        completed.scene_id = scene.id
+        completed.completed_at = datetime.now(UTC)
+        job = session.get(m.Job, completed.job_id)
+        assert job is not None
+        job.status = "COMPLETED"
+        job.completed_at = datetime.now(UTC)
+        learning_id, completed_id = learning.id, completed.id
+        scene_id, scene_version, snapshot_id = scene.id, scene.scene_version, snapshot.id
+
+    with factory.begin() as session:
+        learning = session.get(m.LearningSession, learning_id)
+        completed = session.get(m.StudioCanvasSpecialistRun, completed_id)
+        scene = session.get(m.StudioScene, scene_id)
+        snapshot = session.get(m.StudioSnapshot, snapshot_id)
+        assert learning is not None and completed is not None and scene is not None and snapshot is not None
+        provider, replacement_message = _stream_tutor_canvas_turn(
+            session,
+            learning=learning,
+            question="The number line cannot show the equal groups I need. Replace it with groups of counters.",
+            output=_tutor_canvas_output(
+                text="The current representation is not suitable for equal groups, so I am replacing it.",
+                canvas_brief=replacement_brief,
+                canvas_change_intent="REPLACE_SCENE",
+            ),
+        )
+
+        encoded_input = str(provider.payloads[-1]["input"])
+        assert '"scene_ready": true' in encoded_input
+        assert replacement_message.payload["canvas_change_intent"] == "REPLACE_SCENE"
+        assert replacement_message.payload["canvas_decision_base"] == {
+            "version": "canvas-decision-base-v1",
+            "expected_run_id": str(completed.id),
+            "expected_run_status": "COMPLETED",
+            "expected_scene_id": str(scene.id),
+            "expected_scene_version": scene_version,
+        }
+        runs = list(session.scalars(
+            select(m.StudioCanvasSpecialistRun)
+            .where(m.StudioCanvasSpecialistRun.learning_session_id == learning.id)
+            .order_by(m.StudioCanvasSpecialistRun.created_at, m.StudioCanvasSpecialistRun.id)
+        ))
+        replacement = next(run for run in runs if run.source_message_id == replacement_message.id)
+        assert len(runs) == 2
+        assert completed.status == "COMPLETED"
+        assert replacement.status == "PENDING"
+        assert replacement.base_scene_id == scene.id
+        assert replacement.base_scene_version == scene_version
+        assert snapshot.current_scene_id == scene.id
+        assert snapshot.current_scene_version == scene_version
 
 
 def test_v12_status_or_scene_step_cannot_admit_a_new_canvas_run(

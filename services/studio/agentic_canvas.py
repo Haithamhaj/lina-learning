@@ -484,6 +484,16 @@ def build_agentic_tutor_projection(
                 "visual_descriptions": list(manifest.visual_descriptions),
                 "provenance": dict(manifest.provenance),
             }
+        if isinstance(block, TextInteractionBlockV1):
+            result["solution_semantics"] = {
+                "item_group_assignments": [
+                    {"item_id": item.id, "group_id": item.group_id}
+                    for item in block.items if item.group_id is not None
+                ],
+                "relations": [item.model_dump() for item in block.relations],
+                "authored_order": [item.id for item in block.items]
+                if block.interaction_family == "ORDERING" else [],
+            }
         return result
 
     return {

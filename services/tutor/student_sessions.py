@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from services.platform.db.models import LearningMessage, LearningSession, Student
+from services.platform.db.models import LearningMessage, LearningSession, Student, StudioStudentInteraction
 from services.tutor.candidate_events import (
     PersistedGuidedLearningCheck,
     SuggestedAction,
@@ -30,6 +30,121 @@ class DailySessionNotFound(ValueError):
 
 class DailySessionNotResumable(ValueError):
     """The owned session has ended under the existing lifecycle policy."""
+
+
+class DailySessionReplacementNotAllowed(ValueError):
+    """A replacement was requested for a session that can still be resumed."""
+
+
+FOREGROUND_TUTOR_TURN_KEY = "foreground_tutor_turn"
+FOREGROUND_TUTOR_TURN_VERSION = "foreground-tutor-turn-v1"
+
+
+class ForegroundTutorBusy(ValueError):
+    """Another admitted foreground Tutor request owns this Daily session."""
+
+
+def _active_chat_foreground_message(session: Session, *, learning_session_id: UUID) -> LearningMessage | None:
+    messages = session.execute(
+        select(LearningMessage).where(
+            LearningMessage.session_id == learning_session_id,
+            LearningMessage.role == "student",
+        ).order_by(LearningMessage.created_at.desc(), LearningMessage.id.desc())
+    ).scalars()
+    for message in messages:
+        payload = message.payload if isinstance(message.payload, dict) else {}
+        foreground = payload.get(FOREGROUND_TUTOR_TURN_KEY)
+        if isinstance(foreground, dict) and foreground.get("status") == "RUNNING":
+            return message
+    return None
+
+
+def _active_canvas_foreground_interaction(
+    session: Session, *, learning_session_id: UUID
+) -> StudioStudentInteraction | None:
+    return session.execute(
+        select(StudioStudentInteraction).where(
+            StudioStudentInteraction.learning_session_id == learning_session_id,
+            StudioStudentInteraction.status.in_(("PENDING", "RUNNING")),
+        ).order_by(StudioStudentInteraction.created_at, StudioStudentInteraction.id).limit(1)
+    ).scalar_one_or_none()
+
+
+def lock_foreground_tutor_lane(
+    session: Session, *, learning_session_id: UUID, student_id: UUID
+) -> LearningSession:
+    """Serialize Tutor-triggering Chat and Canvas admission on one LearningSession."""
+
+    learning_session = session.execute(
+        select(LearningSession).where(
+            LearningSession.id == learning_session_id,
+            LearningSession.student_id == student_id,
+            LearningSession.status == "OPEN",
+        ).with_for_update()
+    ).scalar_one_or_none()
+    if learning_session is None:
+        raise ValueError("Open learning session was not found.")
+    if _active_chat_foreground_message(session, learning_session_id=learning_session_id) is not None:
+        raise ForegroundTutorBusy("A foreground Tutor response is already pending for this learning session.")
+    if _active_canvas_foreground_interaction(session, learning_session_id=learning_session_id) is not None:
+        raise ForegroundTutorBusy("A foreground Tutor response is already pending for this learning session.")
+    return learning_session
+
+
+def admit_foreground_student_message(
+    session: Session,
+    *,
+    learning_session: LearningSession,
+    content: str,
+    interaction_payload: dict[str, object] | None = None,
+) -> LearningMessage:
+    """Lock the shared lane and durably admit one truthful Chat foreground turn."""
+
+    locked = lock_foreground_tutor_lane(
+        session,
+        learning_session_id=learning_session.id,
+        student_id=learning_session.student_id,
+    )
+    payload = {
+        **(interaction_payload or {}),
+        FOREGROUND_TUTOR_TURN_KEY: {
+            "version": FOREGROUND_TUTOR_TURN_VERSION,
+            "origin": "CHAT",
+            "status": "RUNNING",
+        },
+    }
+    return append_student_message(
+        session,
+        learning_session=locked,
+        content=content,
+        interaction_payload=payload,
+    )
+
+
+def settle_foreground_student_message(
+    session: Session, *, message_id: UUID, status: str
+) -> None:
+    """Give an admitted Chat turn one explicit terminal state."""
+
+    if status not in {"COMPLETED", "FAILED", "CANCELLED"}:
+        raise ValueError("Foreground Tutor terminal status is unsupported.")
+    # Legacy direct-runtime fixtures and non-persistent callers never used the
+    # durable admission lane. Their Session doubles intentionally expose only
+    # add/flush; there is no foreground marker to settle.
+    if not callable(getattr(session, "execute", None)):
+        return
+    message = session.execute(
+        select(LearningMessage).where(LearningMessage.id == message_id).with_for_update()
+    ).scalar_one_or_none()
+    if message is None or message.role != "student":
+        return
+    payload = dict(message.payload) if isinstance(message.payload, dict) else {}
+    foreground = payload.get(FOREGROUND_TUTOR_TURN_KEY)
+    if not isinstance(foreground, dict) or foreground.get("status") != "RUNNING":
+        return
+    payload[FOREGROUND_TUTOR_TURN_KEY] = {**foreground, "status": status}
+    message.payload = payload
+    session.flush([message])
 
 
 @dataclass(frozen=True)
@@ -71,14 +186,60 @@ def open_or_resume_daily_session(
     *,
     student_id: UUID,
     learning_session_id: UUID | None = None,
+    replacement_for_session_id: UUID | None = None,
     now: datetime | None = None,
     lifecycle_policy: SessionLifecyclePolicy | None = None,
 ) -> LearningSession:
-    """Create without a reference, or resume only the exact Student-owned ID."""
+    """Create, resume an exact ID, or idempotently replace one ended owned ID."""
 
     session.execute(select(Student.id).where(Student.id == student_id).with_for_update()).scalar_one()
     current = now or datetime.now(UTC)
-    if learning_session_id is None:
+    if learning_session_id is not None and replacement_for_session_id is not None:
+        raise ValueError("Daily session resume and replacement references are mutually exclusive.")
+    if replacement_for_session_id is not None:
+        replaced = session.execute(
+            select(LearningSession).where(
+                LearningSession.id == replacement_for_session_id,
+                LearningSession.student_id == student_id,
+            ).with_for_update()
+        ).scalar_one_or_none()
+        if replaced is None:
+            raise DailySessionNotFound("Daily session not found.")
+        if replaced.status == "OPEN" and not close_session_if_eligible(
+            session,
+            learning_session=replaced,
+            now=current,
+            policy=lifecycle_policy or session_lifecycle_policy(),
+        ):
+            raise DailySessionReplacementNotAllowed(
+                "This learning session is still open and must not be replaced."
+            )
+        replacement_id = uuid5(
+            NAMESPACE_URL,
+            f"lina:daily-session-replacement-v1:{student_id}:{replacement_for_session_id}",
+        )
+        learning_session = session.execute(
+            select(LearningSession).where(
+                LearningSession.id == replacement_id,
+                LearningSession.student_id == student_id,
+            ).with_for_update()
+        ).scalar_one_or_none()
+        if learning_session is None:
+            learning_session = LearningSession(
+                id=replacement_id,
+                student_id=student_id,
+                status="OPEN",
+                opened_at=current,
+                last_activity_at=current,
+            )
+            session.add(learning_session)
+        elif learning_session.status != "OPEN":
+            raise DailySessionNotResumable(
+                "This replacement learning session has ended. Start a new session to continue."
+            )
+        else:
+            learning_session.last_activity_at = current
+    elif learning_session_id is None:
         # Keep the model's compatibility default, never a route-kind subject.
         learning_session = LearningSession(student_id=student_id, status="OPEN", opened_at=current, last_activity_at=current)
         session.add(learning_session)

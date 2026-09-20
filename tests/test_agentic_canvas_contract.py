@@ -73,3 +73,42 @@ def test_agentic_projection_is_semantic_and_rejects_browser_noise() -> None:
     assert "renderer_key" not in str(projection)
     with pytest.raises(ValueError):
         AgenticCanvasActionV1.model_validate({"version": "agentic-canvas-action-v1", "action": "MOVE", "block_id": "number-line-1", "element_id": "decimal-a", "x": 421})
+
+
+def test_text_interaction_projection_separates_solution_semantics_from_learner_state() -> None:
+    from services.studio.agentic_canvas import AgenticCanvasActionV1, build_agentic_tutor_projection
+
+    projection = build_agentic_tutor_projection(
+        objective="Classify the examples.", subject_key="SCIENCE", scene_status="ACTIVE",
+        blocks=[{
+            "block_id": "classify", "type": "TEXT_INTERACTION", "meaning": "Classify each example.",
+            "accessibility": {"text_equivalent": "Two classification groups."},
+            "interaction_family": "CLASSIFICATION", "prompt": "Place each item.",
+            "allowed_actions": ["MOVE"],
+            "elements": [
+                {"id": "ice", "label": "Ice", "current_value": None},
+                {"id": "rain", "label": "Rain", "current_value": "liquid"},
+            ],
+            "items": [
+                {"id": "ice", "text": "Ice", "group_id": "solid"},
+                {"id": "rain", "text": "Rain", "group_id": "liquid"},
+            ],
+            "groups": [{"id": "solid", "label": "Solid"}, {"id": "liquid", "label": "Liquid"}],
+            "relations": [],
+        }], actions=[AgenticCanvasActionV1(
+            version="agentic-canvas-action-v1", action="MOVE", block_id="classify",
+            element_id="rain", from_value=None, to_value="liquid",
+        )],
+    )
+
+    block = projection["blocks"][0]
+    assert block["elements"][0]["current_value"] is None
+    assert block["elements"][1]["current_value"] == "liquid"
+    assert block["solution_semantics"]["item_group_assignments"] == [
+        {"item_id": "ice", "group_id": "solid"},
+        {"item_id": "rain", "group_id": "liquid"},
+    ]
+    assert projection["recent_student_actions"] == [{
+        "action": "MOVE", "block_id": "classify", "element_id": "rain",
+        "from": None, "to": "liquid", "related_element_id": None, "step_id": None,
+    }]

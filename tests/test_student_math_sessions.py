@@ -544,6 +544,69 @@ def test_daily_exact_resume_fails_closed_without_creating_a_replacement(
         _clear_overrides()
 
 
+def test_daily_replacement_retry_returns_the_same_owned_session_after_response_loss(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """A committed replacement remains the one replacement when its first response is lost."""
+
+    with postgres_session_factory.begin() as session:
+        owner = _student(session, "daily-replacement-retry")
+        ended = LearningSession(student_id=owner.id, subject="MATH", status="CLOSED")
+        session.add(ended)
+        session.flush()
+        ended_id = ended.id
+
+    client = _client(postgres_session_factory, subject="daily-replacement-retry")
+    request = {"replacement_for_session_id": str(ended_id)}
+    try:
+        committed_but_unobserved = client.post("/api/v1/student/daily/session", json=request)
+        retry = client.post("/api/v1/student/daily/session", json=request)
+    finally:
+        _clear_overrides()
+
+    assert committed_but_unobserved.status_code == 200
+    assert retry.status_code == 200
+    assert retry.json()["learning_session_id"] == committed_but_unobserved.json()["learning_session_id"]
+    assert retry.json()["learning_session_id"] != str(ended_id)
+    with postgres_session_factory() as session:
+        assert session.query(LearningSession).filter_by(student_id=owner.id).count() == 2
+
+
+@pytest.mark.parametrize(
+    "case,expected_status",
+    [("unknown", 404), ("other_student", 404), ("still_open", 409)],
+)
+def test_daily_replacement_requires_an_owned_non_resumable_source_session(
+    postgres_session_factory: sessionmaker[Session], case: str, expected_status: int,
+) -> None:
+    """The recovery identity cannot replace an unknown, foreign, or still-open session."""
+
+    with postgres_session_factory.begin() as session:
+        owner = _student(session, "daily-replacement-owner")
+        other = _student(session, "daily-replacement-other")
+        source = LearningSession(
+            student_id=other.id if case == "other_student" else owner.id,
+            subject="MATH",
+            status="OPEN",
+        )
+        session.add(source)
+        session.flush()
+        source_id = uuid4() if case == "unknown" else source.id
+
+    client = _client(postgres_session_factory, subject="daily-replacement-owner")
+    try:
+        response = client.post(
+            "/api/v1/student/daily/session",
+            json={"replacement_for_session_id": str(source_id)},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == expected_status
+    with postgres_session_factory() as session:
+        assert session.query(LearningSession).count() == 1
+
+
 def test_daily_turn_passes_unknown_live_subject_scope_to_the_existing_tutor_runtime(
     postgres_session_factory: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,
@@ -1333,6 +1396,43 @@ def test_daily_turn_rejects_before_admission_without_persisting_or_leaving_a_ret
         assert str(messages[0].id) == retried.headers["X-Lina-Student-Message-ID"]
 
 
+def test_daily_turn_returns_conflict_while_a_foreground_chat_is_running(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """The API exposes the server-owned lane without admitting a second message."""
+
+    from services.tutor.student_sessions import admit_foreground_student_message
+
+    client = _client(postgres_session_factory, subject="daily-foreground-busy")
+    try:
+        daily = client.post("/api/v1/student/daily/session")
+        learning_session_id = UUID(daily.json()["learning_session_id"])
+        with postgres_session_factory.begin() as session:
+            learning_session = session.get(LearningSession, learning_session_id)
+            assert learning_session is not None
+            admitted = admit_foreground_student_message(
+                session,
+                learning_session=learning_session,
+                content="First admitted foreground request.",
+            )
+            admitted_id = admitted.id
+        rejected = client.post(
+            f"/api/v1/student/daily/session/{learning_session_id}/turn/stream",
+            json={"content": "Do not overlap this request."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert rejected.status_code == 409
+    assert rejected.json()["detail"]["code"] == "FOREGROUND_TUTOR_BUSY"
+    with postgres_session_factory() as session:
+        messages = session.query(LearningMessage).filter_by(
+            session_id=learning_session_id,
+            role="student",
+        ).all()
+        assert [message.id for message in messages] == [admitted_id]
+
+
 def test_daily_turn_rejects_another_students_session_before_admission(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
@@ -1390,6 +1490,7 @@ def test_daily_admitted_provider_failure_retains_the_durable_student_message(
         message = session.query(LearningMessage).filter_by(session_id=learning_session_id, role="student").one()
         assert str(message.id) == failed.headers["X-Lina-Student-Message-ID"]
         assert message.content == "I need help after this partial response."
+        assert message.payload["foreground_tutor_turn"]["status"] == "FAILED"
 
 
 def test_cross_origin_daily_admission_exposes_the_durable_student_message_id(

@@ -315,11 +315,19 @@ def _canvas_composition(session: Session, runtime: StudioRuntime) -> Mapping[str
         return None
     return {
         "version": view.version,
+        "observed_at": view.observed_at.isoformat(),
         "run_id": str(view.run_id),
+        "run_created_at": None if view.run_created_at is None else view.run_created_at.isoformat(),
+        "source_message_id": None if view.source_message_id is None else str(view.source_message_id),
         "run_status": view.run_status,
+        "job_status": view.job_status,
         "objective": view.objective,
+        "scene_id": None if view.scene_id is None else str(view.scene_id),
         "scene_ready": view.scene_ready,
         "active_scene_id": None if view.active_scene_id is None else str(view.active_scene_id),
+        "active_scene_version": view.active_scene_version,
+        "deadline_at": None if view.deadline_at is None else view.deadline_at.isoformat(),
+        "failure_code": view.failure_code,
     }
 
 

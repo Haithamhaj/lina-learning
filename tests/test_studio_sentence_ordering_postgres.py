@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
@@ -461,6 +462,10 @@ def test_sentence_ordering_persists_token_identity_rebuilds_and_rejects_invalid_
         assert replayed_submission.interaction is not None
         assert replayed_submission.interaction.id == submitted.interaction.id
 
+        submitted.interaction.status = "CANCELLED"
+        submitted.interaction.completed_at = datetime.now(UTC)
+        session.flush()
+
         changed_after_submit = service.append_event(
             _reorder_command(
                 runtime_id=runtime.id,
@@ -491,6 +496,9 @@ def test_sentence_ordering_persists_token_identity_rebuilds_and_rejects_invalid_
             "feedback_code": "SENTENCE_ORDER_NEEDS_REORDERING",
             "next_action_keys": ["REORDER_TOKEN", "SUBMIT_CONFIGURATION"],
         }
+        invalid.interaction.status = "CANCELLED"
+        invalid.interaction.completed_at = datetime.now(UTC)
+        session.flush()
 
         before_rejection = service.runtime_state(runtime_id=runtime.id, student_id=student.id)
         with pytest.raises(StudioStateError):

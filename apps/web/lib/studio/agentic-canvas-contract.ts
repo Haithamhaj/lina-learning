@@ -358,6 +358,36 @@ type OperationInput = {
   idempotencyKey: string;
 };
 
+export type AgenticCanvasSemanticControl = {
+  action: "FOCUS" | "SELECT" | "SUBMIT";
+  label: string;
+  elementId?: string;
+};
+
+/** Expose only explicit element targets; SUBMIT remains a block-level action. */
+export function agenticCanvasSemanticControls(
+  block: AgenticCanvasBlock,
+): AgenticCanvasSemanticControl[] {
+  const controls: AgenticCanvasSemanticControl[] = [];
+  const exposesElementTargets = !(block.type === "MATH_BOARD" && block.board_kind === "PLOT");
+  for (const action of block.allowed_actions) {
+    if (action === "SUBMIT") {
+      controls.push({ action, label: "Submit" });
+      continue;
+    }
+    if (action !== "FOCUS" && action !== "SELECT") continue;
+    if (!exposesElementTargets) continue;
+    for (const element of block.elements) {
+      controls.push({
+        action,
+        elementId: element.id,
+        label: `${action === "FOCUS" ? "Focus" : "Select"} ${element.label}`,
+      });
+    }
+  }
+  return controls;
+}
+
 /** Build only the finite semantic action vocabulary accepted by Studio. */
 export function createAgenticCanvasOperation(input: OperationInput): StudioOperation {
   if (!input.block.allowed_actions.includes(input.action)) throw new Error(`Action ${input.action} is not allowed for this block.`);

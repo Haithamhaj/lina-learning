@@ -749,6 +749,19 @@ def test_triggering_operation_returns_the_contract_created_pending_interaction(
         assert replay.json()["replayed"] is True
         assert replay.json()["student_interaction_id"] == body["student_interaction_id"]
         assert replay.json()["student_interaction_status"] == "PENDING"
+
+        snapshot = client.get(f"/api/v1/student/studio/{runtime_id}/snapshot")
+        distinct = client.post(f"/api/v1/student/studio/{runtime_id}/operations", json={
+            **payload,
+            "base_scene_version": snapshot.json()["current_scene_version"],
+            "idempotency_key": "operation-submit-2",
+        })
+        assert distinct.status_code == 409
+        assert "already pending" in distinct.json()["detail"]
+        with postgres_session_factory() as session:
+            assert session.query(StudioStudentInteraction).filter_by(
+                studio_runtime_id=runtime_id,
+            ).count() == 1
     finally:
         app.dependency_overrides.pop(get_studio_subject_registry, None)
         _clear_overrides()
@@ -813,6 +826,18 @@ def test_canvas_tutor_stream_claims_once_and_persists_no_fake_student_message(
         assert operation.status_code == 200
         interaction_id = operation.json()["student_interaction_id"]
 
+        replayed_operation = client.post(
+            f"/api/v1/student/studio/{runtime_id}/operations",
+            json={
+                "scene_id": str(scene_id), "base_scene_version": scene_version,
+                "action_key": "fixture.submit", "payload": {"value": 2}, "idempotency_key": "canvas-stream-1",
+            },
+        )
+        assert replayed_operation.status_code == 200
+        assert replayed_operation.json()["replayed"] is True
+        assert replayed_operation.json()["student_interaction_id"] == interaction_id
+        assert replayed_operation.json()["student_interaction_status"] == "PENDING"
+
         streamed = client.post(
             f"/api/v1/student/studio/{runtime_id}/interactions/{interaction_id}/turn/stream"
         )
@@ -830,9 +855,17 @@ def test_canvas_tutor_stream_claims_once_and_persists_no_fake_student_message(
         with postgres_session_factory.begin() as session:
             interaction = session.get(StudioStudentInteraction, UUID(interaction_id))
             assert interaction is not None and interaction.status == "COMPLETED"
+            assert session.query(StudioStudentInteraction).filter_by(studio_runtime_id=runtime_id).count() == 1
             messages = session.query(LearningMessage).filter(LearningMessage.session_id == learning_session_id).all()
             assert len(messages) == 1 and messages[0].role == "tutor"
             assert messages[0].payload["turn_origin"] == "STUDIO_INTERACTION"
+            from services.tutor.student_sessions import lock_foreground_tutor_lane
+
+            lock_foreground_tutor_lane(
+                session,
+                learning_session_id=learning_session_id,
+                student_id=student_id,
+            )
     finally:
         app.dependency_overrides.pop(get_studio_subject_registry, None)
         _clear_overrides()

@@ -35,7 +35,6 @@ from services.studio.tutor_context import (
     mark_studio_tutor_observation_failed,
     select_studio_tutor_context,
 )
-from services.studio.interactions import StudioInteractionService
 from services.studio.router import (
     ActiveSceneCapability,
     WorkspaceAuthorityContext,
@@ -103,7 +102,9 @@ from services.tutor.segments import (
     parse_structured_segment_state,
 )
 from services.tutor.student_sessions import (
+    admit_foreground_student_message,
     append_student_message,
+    settle_foreground_student_message,
     latest_prior_tutor_teaching_method,
     latest_tutor_guided_check_choice,
 )
@@ -384,7 +385,7 @@ def build_tutor_model_payload(
         "For a matching decimal comparison/rounding exercise, select exactly its source_ref in source_references and its activity_hint. "
         "For selection of a prepared legacy activity, do not change operands, invent a reference, use an approximate match or select a default. These exact-match limits apply only to that prepared activity; absence of a match does not prohibit a grounded Full-Power Canvas request. "
         "Respond naturally to current Workspace behavior when useful. Do not mention internal event, storage, or observation terminology. "
-        "canvas_composition is server-owned lifecycle truth when present: for PENDING or RUNNING, acknowledge that the requested visual is being prepared and do not say Canvas is unavailable; for a ready current Scene, use its supplied capability for a supported next step. Studio validation is not Learning Evidence or mastery. Interpret the supplied action and semantic state without inventing unseen state. A supported step in the current Scene is continuation, not a request to compose it again. Visual request and current-work rules are defined in the loaded visual guidance."
+        "canvas_composition is server-owned lifecycle truth when present. PENDING or RUNNING means acknowledge that the requested visual is being prepared and do not request a duplicate. FAILED, REJECTED or CANCELLED may justify RETRY only when the same visual need remains. A ready current Scene is server state, not proof that the browser displayed it: if the Student reports it missing or broken, acknowledge that report and do not claim it is visible; request no new composition and direct them to the existing Reload Workspace control when reloading the existing Scene is the truthful recovery. Use REPLACE_SCENE only when the current Scene is semantically insufficient for the current educational need. If no truthful recovery path is supplied, say so briefly and keep the visual need active instead of defaulting to text-only when the Student explicitly needs a visual. For a ready supported Scene, use its supplied capability for a supported next step. Studio validation is not Learning Evidence or mastery. Interpret the supplied action and semantic state without inventing unseen state. A supported step in the current Scene is continuation, not a request to compose it again. Visual request and current-work rules are defined in the loaded visual guidance."
         if studio_context is not None
         else ""
     )
@@ -460,7 +461,7 @@ class TutorRuntime:
             guided_check_source_tutor_message_id=guided_check_source_tutor_message_id,
         )
         learning_session.last_activity_at = datetime.now(UTC)
-        return append_student_message(
+        return admit_foreground_student_message(
             self._session,
             learning_session=learning_session,
             content=turn_input.content,
@@ -514,7 +515,7 @@ class TutorRuntime:
         decision = self._safety_policy.evaluate(student_id=learning_session.student_id, text=content, interaction_ref=str(learning_session.id))
         safety = consume_safety_decision(decision)
         if not safety.continue_to_tutor:
-            yield self._persist_turn(
+            turn = self._persist_turn(
                 learning_session,
                 safety.redirect_directive or "Please ask a trusted grown-up for help with this topic.",
                 [],
@@ -524,6 +525,8 @@ class TutorRuntime:
                 None,
                 candidate_metadata_status="not_requested",
             )
+            settle_foreground_student_message(self._session, message_id=student_message.id, status="COMPLETED")
+            yield turn
             return
 
         if source_input is not None and source_asset_id is not None:
@@ -543,7 +546,7 @@ class TutorRuntime:
             )
             safety = consume_safety_decision(source_decision)
             if not safety.continue_to_tutor:
-                yield self._persist_turn(
+                turn = self._persist_turn(
                     learning_session,
                     safety.redirect_directive
                     or "I couldn't safely check that file right now. Please try again.",
@@ -554,6 +557,8 @@ class TutorRuntime:
                     None,
                     candidate_metadata_status="not_requested",
                 )
+                settle_foreground_student_message(self._session, message_id=student_message.id, status="COMPLETED")
+                yield turn
                 return
 
         prior_method = latest_prior_tutor_teaching_method(
@@ -571,16 +576,6 @@ class TutorRuntime:
                 learning_session_id=learning_session.id,
             )
         )
-        # Canvas turns never invent Student prose.  Once the normal Chat
-        # Workspace selection has completed (and released its independent
-        # Runtime lock), this durable Student input becomes the causal
-        # successor of any running Canvas interaction.  Keeping this after
-        # selection avoids lock inversion with Runtime-01's short selector.
-        if callable(getattr(self._session, "execute", None)):
-            StudioInteractionService(self._session).supersede_running_for_new_chat_student_input(
-                student_id=learning_session.student_id,
-                learning_session_id=learning_session.id,
-            )
         context_arguments = {
             "learning_session": learning_session,
             "question": content,
@@ -898,15 +893,6 @@ class TutorRuntime:
         parent_resolution: ParentBoundaryResolution | None = None,
         capacity_lineage: TutorContextCapacityLineage | None = None,
     ) -> TutorTurn:
-        if (
-            context.studio_workspace is not None
-            and callable(getattr(self._session, "execute", None))
-        ):
-            StudioInteractionService(self._session).require_chat_terminal_current(
-                student_id=learning_session.student_id,
-                learning_session_id=learning_session.id,
-                through_event_sequence=context.studio_workspace.through_sequence,
-            )
         if parent_resolution is None:
             parent_decision = parse_parent_boundary_decision(result.output.get("parent_boundary"))
             parent_resolution = self._resolve_parent_boundary(
@@ -992,6 +978,11 @@ class TutorRuntime:
             if state is not None:
                 resolved_segment.segment.structured_state = state.model_dump(mode="json")
                 self._session.flush()
+            settle_foreground_student_message(
+                self._session,
+                message_id=student_message.id,
+                status="COMPLETED",
+            )
             return turn
         teaching_decision = _validate_teaching_decision(
             mode_value=result.output.get("teaching_mode"),
@@ -1073,6 +1064,11 @@ class TutorRuntime:
         if state is not None:
             resolved_segment.segment.structured_state = state.model_dump(mode="json")
             self._session.flush()
+        settle_foreground_student_message(
+            self._session,
+            message_id=student_message.id,
+            status="COMPLETED",
+        )
         return turn
 
     def _effective_parent_boundaries(self, *, student_id: UUID) -> dict[str, str]:

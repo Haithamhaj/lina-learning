@@ -30,6 +30,15 @@ import {
 import { publicConfig } from "@/lib/public-config";
 import { dailySessionRequest, dailySessionUrl } from "@/lib/daily-session-reference";
 import {
+  isNonResumableDailyOpenResponse,
+  isStaleDailyTurnResponse,
+  mergeDailySessionMessages,
+  openDailySessionWithSingleReplacement,
+  rebindRecoveredDailySession,
+  shouldStartCanvasTutorStream,
+  type DailySessionLifecyclePayload,
+} from "@/lib/daily-session-recovery";
+import {
   admittedDailyStudentMessageId,
   replaceDailyStudentMessageId,
   settleDailyChatAttempt,
@@ -39,6 +48,7 @@ import {
   latestActiveStudentSource,
   type StudentSourceAsset,
 } from "@/lib/daily-source";
+import { acquireForegroundGate, releaseForegroundGate } from "@/lib/daily-foreground-gate";
 
 import { dailyPresentationCopy, type DailyPresentationCopy } from "@/lib/daily-presentation-copy";
 
@@ -122,6 +132,7 @@ export function DailyStudentApp() {
   const [activeSource, setActiveSource] = useState<StudentSourceAsset | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [sessionEnded, setSessionEnded] = useState(false);
+  const [sessionRecovering, setSessionRecovering] = useState(false);
   const [surfaceDirection, setSurfaceDirection] = useState<"ltr" | "rtl">("ltr");
   const presentationCopy = dailyPresentationCopy(surfaceDirection);
   const canvasCopy = presentationCopy.canvas;
@@ -135,6 +146,9 @@ export function DailyStudentApp() {
   const priorWorkspaceVisible = useRef<boolean | null>(null);
   const compositionRequestRef = useRef(0);
   const canvasCompositionRef = useRef<StudioCompositionStatus | null>(null);
+  const foregroundPendingRef = useRef(false);
+  const sessionRecoveryRef = useRef(false);
+  const preservedTranscriptRef = useRef<ChatMessage[]>([]);
 
   const applyComposition = (next: StudioCompositionStatus): boolean => {
     if (!shouldReplaceCompositionView(canvasCompositionRef.current, next)) return false;
@@ -173,7 +187,7 @@ export function DailyStudentApp() {
     };
 
     const load = async () => {
-      setState("loading");
+      if (!sessionRecoveryRef.current) setState("loading");
       setStudioConnection("connecting");
       setError("");
       setSessionEnded(false);
@@ -188,26 +202,46 @@ export function DailyStudentApp() {
       try {
         const token = await getToken();
         if (cancelled) return;
-        const response = await fetch(studentEndpoint("/daily/session"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-          body: JSON.stringify(dailySessionRequest(window.location.href)),
-        });
+        const headers = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+        const opened = await openDailySessionWithSingleReplacement(
+          dailySessionRequest(window.location.href),
+          (request) => fetch(studentEndpoint("/daily/session"), {
+            method: "POST",
+            headers,
+            body: JSON.stringify(request),
+          }),
+          async (candidate) => {
+            const lifecycle = await candidate.clone().json().catch(() => ({})) as DailySessionLifecyclePayload;
+            return isNonResumableDailyOpenResponse(candidate.status, lifecycle);
+          },
+        );
+        const response = opened.result;
         if (cancelled) return;
-        if (response.status === 409) {
-          const lifecycle = await response.clone().json().catch(() => ({})) as { code?: string };
-          if (lifecycle.code === "DAILY_SESSION_NOT_RESUMABLE") {
-            setSessionEnded(true);
-            setLearningSession(null);
-          }
+        if (opened.replaced) {
+          sessionRecoveryRef.current = true;
+          setSessionRecovering(true);
         }
         if (!response.ok) throw await errorFrom(response, effectCopy.errors.learningUnavailable);
         const daily = await response.json() as DailySession;
         if (cancelled) return;
+        const reboundState = opened.replaced
+          ? rebindRecoveredDailySession({
+              preservedMessages: preservedTranscriptRef.current,
+              replacement: daily,
+              selectedSource,
+            })
+          : {
+              session: {
+                ...daily,
+                messages: mergeDailySessionMessages(preservedTranscriptRef.current, daily.messages),
+              },
+              activeSource: latestActiveStudentSource(daily.messages),
+              selectedSource: null,
+            };
         window.history.replaceState(window.history.state, "", dailySessionUrl(window.location.href, daily.learning_session_id));
-        setLearningSession(daily);
-        setActiveSource(latestActiveStudentSource(daily.messages));
-        setSelectedSource(null);
+        setLearningSession(reboundState.session);
+        setActiveSource(reboundState.activeSource);
+        setSelectedSource(reboundState.selectedSource);
 
         const refreshSnapshot = async () => {
           const controller = controllerRef.current;
@@ -261,6 +295,10 @@ export function DailyStudentApp() {
         }
         if (cancelled) return;
         setState("ready");
+        setSessionEnded(false);
+        sessionRecoveryRef.current = false;
+        preservedTranscriptRef.current = [];
+        setSessionRecovering(false);
         reconnectLoop = createStudioReconnectLoop({
           connect: () => controller.connect(runtime.runtime_id),
           recover: async () => {
@@ -278,6 +316,8 @@ export function DailyStudentApp() {
         reconnectLoop.start();
       } catch {
         if (!cancelled) {
+          sessionRecoveryRef.current = false;
+          setSessionRecovering(false);
           setState("error");
           setStudioConnection("error");
           setError(effectCopy.errors.workspaceOpen);
@@ -340,7 +380,9 @@ export function DailyStudentApp() {
   const workspaceVisible = snapshot?.active_scene_contract !== null && snapshot !== null;
   const canvasPresentation = canvasPresentationState(canvasComposition, workspaceVisible);
   const showCanvasPanel = canvasPresentation.showWorkspace || canvasStatusNotice !== null;
-  const composerDisabled = isDailyComposerDisabled({ tutorResponding: chatSending, voiceBusy });
+  const foregroundPending = chatSending || operationPending;
+  const interactionPending = foregroundPending || sessionRecovering;
+  const composerDisabled = isDailyComposerDisabled({ tutorResponding: interactionPending, voiceBusy });
   useEffect(() => {
     const previous = priorWorkspaceVisible.current;
     priorWorkspaceVisible.current = workspaceVisible;
@@ -353,6 +395,15 @@ export function DailyStudentApp() {
       ...current,
       messages: current.messages.map((message) => message.id === id ? update(message) : message),
     } : current);
+  };
+
+  const beginSessionRecovery = () => {
+    if (sessionRecoveryRef.current) return;
+    sessionRecoveryRef.current = true;
+    setSessionRecovering(true);
+    preservedTranscriptRef.current = learningSession?.messages ?? [];
+    setSessionEnded(false);
+    setLoadAttempt((value) => value + 1);
   };
 
   const streamTutorTurn = async ({
@@ -374,6 +425,7 @@ export function DailyStudentApp() {
     let studentMessageId = studentContent ? `daily-student-${crypto.randomUUID()}` : null;
     let terminalReceived = false;
     let admitted = false;
+    let replaceSession = false;
     let streamFailureMessage: string | null = null;
     setLearningSession((current) => current ? {
       ...current,
@@ -400,7 +452,11 @@ export function DailyStudentApp() {
         },
         ...(form ? { body: form } : body ? { body: JSON.stringify(body) } : {}),
       });
-      if (!response.ok) throw await errorFrom(response, copy.errors.learningUnavailable);
+      if (!response.ok) {
+        const lifecycle = await response.clone().json().catch(() => ({})) as DailySessionLifecyclePayload;
+        replaceSession = isStaleDailyTurnResponse(response.status, lifecycle);
+        throw await errorFrom(response, copy.errors.learningUnavailable);
+      }
       admitted = true;
       const durableStudentMessageId = admittedDailyStudentMessageId(response);
       const durableSourceAssetId = response.headers.get("X-Lina-Source-Asset-ID");
@@ -481,6 +537,7 @@ export function DailyStudentApp() {
       if (!admitted && studentContent && restoreDraftOnPreAdmission) setDraft(studentContent);
       setError(streamFailureMessage ?? copy.errors.tutorIncomplete);
     }
+    if (replaceSession) beginSessionRecovery();
     return terminalReceived;
   };
 
@@ -489,37 +546,41 @@ export function DailyStudentApp() {
     options: { suggestedAction?: boolean; guidedCheckId?: string } = {},
   ) => {
     const trimmed = content.trim();
-    if (!learningSession || (!trimmed && !selectedSource) || chatSending) return;
+    if (!learningSession || (!trimmed && !selectedSource) || !acquireForegroundGate(foregroundPendingRef)) return;
     setChatSending(true);
     setError("");
     setDraft("");
     const useSource = !options.suggestedAction && !options.guidedCheckId && (selectedSource !== null || activeSource !== null);
-    if (useSource) {
-      const submission = buildDailySourceSubmission({
-        content: trimmed,
-        file: selectedSource,
-        activeSourceId: selectedSource ? null : activeSource?.id ?? null,
-      });
-      await streamTutorTurn({
-        path: `/daily/session/${learningSession.learning_session_id}/source/turn/stream`,
-        form: submission.form,
-        studentContent: submission.studentContent,
-        provisionalSource: selectedSource ? sourceMetadataFromFile(selectedSource) : activeSource,
-        restoreDraftOnPreAdmission: true,
-      });
-    } else {
-      await streamTutorTurn({
-        path: `/daily/session/${learningSession.learning_session_id}/turn/stream`,
-        body: {
+    try {
+      if (useSource) {
+        const submission = buildDailySourceSubmission({
           content: trimmed,
-          suggested_action: options.suggestedAction ?? false,
-          guided_check_id: options.guidedCheckId ?? null,
-        },
-        studentContent: trimmed,
-        restoreDraftOnPreAdmission: !options.suggestedAction && !options.guidedCheckId,
-      });
+          file: selectedSource,
+          activeSourceId: selectedSource ? null : activeSource?.id ?? null,
+        });
+        await streamTutorTurn({
+          path: `/daily/session/${learningSession.learning_session_id}/source/turn/stream`,
+          form: submission.form,
+          studentContent: submission.studentContent,
+          provisionalSource: selectedSource ? sourceMetadataFromFile(selectedSource) : activeSource,
+          restoreDraftOnPreAdmission: true,
+        });
+      } else {
+        await streamTutorTurn({
+          path: `/daily/session/${learningSession.learning_session_id}/turn/stream`,
+          body: {
+            content: trimmed,
+            suggested_action: options.suggestedAction ?? false,
+            guided_check_id: options.guidedCheckId ?? null,
+          },
+          studentContent: trimmed,
+          restoreDraftOnPreAdmission: !options.suggestedAction && !options.guidedCheckId,
+        });
+      }
+    } finally {
+      releaseForegroundGate(foregroundPendingRef);
+      setChatSending(false);
     }
-    setChatSending(false);
   };
 
   const reloadSnapshot = async () => {
@@ -538,15 +599,16 @@ export function DailyStudentApp() {
     const controller = controllerRef.current;
     const runtimeId = runtimeIdRef.current;
     if (!controller || !runtimeId) throw new Error(copy.errors.workspaceNotConnected);
+    if (!acquireForegroundGate(foregroundPendingRef)) return;
     setOperationPending(true);
     setError("");
     try {
       const result = await controller.submit(runtimeId, operation);
       requiredSnapshotSequenceRef.current = Math.max(requiredSnapshotSequenceRef.current, result.sequence);
       applySnapshot(await controller.snapshot(runtimeId));
-      if (!result.replayed && result.student_interaction_id && result.student_interaction_status === "PENDING") {
+      if (shouldStartCanvasTutorStream(result)) {
         await streamTutorTurn({
-          path: `/studio/${runtimeId}/interactions/${result.student_interaction_id}/turn/stream`,
+          path: `/studio/${runtimeId}/interactions/${result.student_interaction_id!}/turn/stream`,
         });
       }
     } catch {
@@ -556,6 +618,7 @@ export function DailyStudentApp() {
       setError(message);
       throw new Error(message);
     } finally {
+      releaseForegroundGate(foregroundPendingRef);
       setOperationPending(false);
     }
   };
@@ -604,7 +667,7 @@ export function DailyStudentApp() {
           <section aria-label={copy.chat} className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5">
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4"><div><h2 className="font-display text-2xl">{copy.chat}</h2><p className="mt-1 text-sm leading-6 text-slate-600">{copy.chatDescription}</p></div><span aria-hidden="true" className="grid size-10 place-items-center rounded-2xl bg-[#e8f6f1] text-[#2e766a]">✦</span></div>
             <div className="mt-4 min-h-[26rem] max-h-[calc(100vh-19rem)] overflow-y-auto rounded-[1.5rem] bg-[#fafbfe] p-3 sm:p-4" aria-live="polite">
-              {learningSession?.messages.length ? <div className="grid gap-4">{learningSession.messages.map((message) => <div key={message.id}><ChatBubble message={message} pending={chatSending} getToken={getToken} copy={presentationCopy} />{message.role === "tutor" && message.id === latestTutor?.id && message.suggested_actions.length > 0 ? <div className="ml-12 mt-2 flex flex-wrap gap-2" aria-label={copy.suggestedActions}>{message.suggested_actions.map((action) => <Button key={`${action.kind}:${action.label}`} className="h-auto min-h-10 rounded-full px-3 py-2 text-left" type="button" variant="secondary" disabled={chatSending} onClick={() => void sendChat(action.label, { suggestedAction: true })}><span dir="auto">{action.label}</span></Button>)}</div> : null}{message.role === "tutor" && message.id === latestTutor?.id && message.guided_check ? <div className="ml-12 mt-3 rounded-2xl border border-emerald-100 bg-white p-3"><p className="text-sm font-semibold" dir="auto">{message.guided_check.prompt}</p><div className="mt-2 flex flex-wrap gap-2">{message.guided_check.choices.map((choice) => <Button key={choice.label} type="button" variant="secondary" disabled={chatSending} onClick={() => void sendChat(choice.label, { guidedCheckId: message.guided_check?.id })}>{choice.label}</Button>)}</div></div> : null}</div>)}</div> : <div className="grid min-h-80 place-items-center px-5 text-center"><div className="max-w-sm"><div aria-hidden="true" className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#e9f7f3] text-2xl text-[#328577]">✎</div><h3 className="mt-4 font-display text-2xl">{copy.emptyHeading}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{copy.emptyDescription}</p></div></div>}
+              {learningSession?.messages.length ? <div className="grid gap-4">{learningSession.messages.map((message) => <div key={message.id}><ChatBubble message={message} pending={chatSending} getToken={getToken} copy={presentationCopy} />{message.role === "tutor" && message.id === latestTutor?.id && message.suggested_actions.length > 0 ? <div className="ml-12 mt-2 flex flex-wrap gap-2" aria-label={copy.suggestedActions}>{message.suggested_actions.map((action) => <Button key={`${action.kind}:${action.label}`} className="h-auto min-h-10 rounded-full px-3 py-2 text-left" type="button" variant="secondary" disabled={composerDisabled} onClick={() => void sendChat(action.label, { suggestedAction: true })}><span dir="auto">{action.label}</span></Button>)}</div> : null}{message.role === "tutor" && message.id === latestTutor?.id && message.guided_check ? <div className="ml-12 mt-3 rounded-2xl border border-emerald-100 bg-white p-3"><p className="text-sm font-semibold" dir="auto">{message.guided_check.prompt}</p><div className="mt-2 flex flex-wrap gap-2">{message.guided_check.choices.map((choice) => <Button key={choice.label} type="button" variant="secondary" disabled={composerDisabled} onClick={() => void sendChat(choice.label, { guidedCheckId: message.guided_check?.id })}>{choice.label}</Button>)}</div></div> : null}</div>)}</div> : <div className="grid min-h-80 place-items-center px-5 text-center"><div className="max-w-sm"><div aria-hidden="true" className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#e9f7f3] text-2xl text-[#328577]">✎</div><h3 className="mt-4 font-display text-2xl">{copy.emptyHeading}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{copy.emptyDescription}</p></div></div>}
             </div>
             <form className="mt-4 grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-3 sm:grid-cols-[auto_1fr_auto] sm:items-center" onSubmit={submit}>
               <label className="sr-only" htmlFor="daily-learning-message">{copy.messageLabel}</label>
@@ -615,7 +678,7 @@ export function DailyStudentApp() {
               <Button className="order-3 min-h-12" type="submit" disabled={(!draft.trim() && !selectedSource) || composerDisabled}>{chatSending ? copy.thinking : copy.send}</Button>
             </form>
           </section>
-          {showCanvasPanel ? <aside aria-label={canvasCopy.workspaceLabel} className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a6b42]">{canvasCopy.workspaceLabel}</p><h2 ref={workspaceHeadingRef} tabIndex={-1} className="mt-1 font-display text-2xl outline-none">{canvasStatusNotice === "failed" ? canvasCopy.failureHeading : canvasStatusNotice === "unavailable" && canvasComposition === null ? canvasCopy.statusHeading : canvasPresentation.showUpdating ? canvasCopy.updatingHeading : workspaceVisible ? canvasCopy.currentSceneHeading : canvasCopy.preparingHeading}</h2></div>{operationPending ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900" role="status">{canvasCopy.saving}</span> : null}</div>{canvasPresentation.showUpdating ? <div className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" role="status"><p>{canvasCopy.preparing(canvasElapsed)}</p><p className="mt-1 text-xs text-amber-800">{canvasCopy.elapsed(canvasElapsed)}</p></div> : null}{canvasStatusNotice === "failed" ? <p className="mb-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-900" role="alert">{canvasCopy.failed}</p> : null}{canvasStatusNotice === "unavailable" ? <p className="mb-4 rounded-2xl bg-slate-100 px-4 py-3 text-sm leading-6 text-slate-700" role="status">{canvasCopy.statusUnavailable}</p> : null}{canvasPresentation.showWaiting ? <CanvasWaitingState copy={canvasCopy} elapsedSeconds={canvasElapsed} /> : null}{workspaceVisible && snapshot ? <StudioRendererHost snapshot={snapshot} operationPending={operationPending} onOperation={submitOperation} onReload={() => { void reloadSnapshot(); }} loadGeneratedAsset={loadGeneratedAsset} loadCustomVisualBuild={loadCustomVisualBuild} /> : null}</aside> : null}
+          {showCanvasPanel ? <aside aria-label={canvasCopy.workspaceLabel} className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a6b42]">{canvasCopy.workspaceLabel}</p><h2 ref={workspaceHeadingRef} tabIndex={-1} className="mt-1 font-display text-2xl outline-none">{canvasStatusNotice === "failed" ? canvasCopy.failureHeading : canvasStatusNotice === "unavailable" && canvasComposition === null ? canvasCopy.statusHeading : canvasPresentation.showUpdating ? canvasCopy.updatingHeading : workspaceVisible ? canvasCopy.currentSceneHeading : canvasCopy.preparingHeading}</h2></div>{interactionPending ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900" role="status">{canvasCopy.saving}</span> : null}</div>{canvasPresentation.showUpdating ? <div className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" role="status"><p>{canvasCopy.preparing(canvasElapsed)}</p><p className="mt-1 text-xs text-amber-800">{canvasCopy.elapsed(canvasElapsed)}</p></div> : null}{canvasStatusNotice === "failed" ? <p className="mb-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-900" role="alert">{canvasCopy.failed}</p> : null}{canvasStatusNotice === "unavailable" ? <p className="mb-4 rounded-2xl bg-slate-100 px-4 py-3 text-sm leading-6 text-slate-700" role="status">{canvasCopy.statusUnavailable}</p> : null}{canvasPresentation.showWaiting ? <CanvasWaitingState copy={canvasCopy} elapsedSeconds={canvasElapsed} /> : null}{workspaceVisible && snapshot ? <StudioRendererHost snapshot={snapshot} operationPending={interactionPending} onOperation={submitOperation} onReload={() => { void reloadSnapshot(); }} loadGeneratedAsset={loadGeneratedAsset} loadCustomVisualBuild={loadCustomVisualBuild} /> : null}</aside> : null}
         </div>
         {error ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert"><span>{error}</span><Button type="button" variant="secondary" onClick={() => setLoadAttempt((value) => value + 1)}>{copy.reconnect}</Button></div> : null}
       </div>

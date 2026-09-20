@@ -16,7 +16,7 @@ from collections.abc import Callable, Iterator
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, Response, StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -50,6 +50,8 @@ from services.tutor.candidate_events import (
 from services.tutor.student_sessions import (
     DailySessionNotFound,
     DailySessionNotResumable,
+    DailySessionReplacementNotAllowed,
+    ForegroundTutorBusy,
     append_student_message,
     latest_tutor_guided_check_choice,
     latest_tutor_suggested_action,
@@ -58,6 +60,7 @@ from services.tutor.student_sessions import (
     ordered_messages,
     owned_open_daily_session,
     owned_open_math_session,
+    settle_foreground_student_message,
 )
 from services.tutor.runtime import LocalTutorProvider, TutorCanvasAdmissionRejected, TutorModelStreamFailure, TutorTextDelta, TutorTurn, create_tutor_runtime
 from services.tutor.parent_boundaries import parse_parent_boundary_decision
@@ -162,6 +165,13 @@ class StudentSessionResponse(BaseModel):
 
 class DailySessionRequest(BaseModel):
     learning_session_id: UUID | None = None
+    replacement_for_session_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def one_session_reference(self) -> "DailySessionRequest":
+        if self.learning_session_id is not None and self.replacement_for_session_id is not None:
+            raise ValueError("Daily session resume and replacement references are mutually exclusive.")
+        return self
 
 
 class DailySessionResponse(BaseModel):
@@ -247,6 +257,7 @@ def start_or_resume_daily_session(
         learning_session = open_or_resume_daily_session(
             session, student_id=student.id,
             learning_session_id=None if request is None else request.learning_session_id,
+            replacement_for_session_id=None if request is None else request.replacement_for_session_id,
         )
     except DailySessionNotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from None
@@ -254,6 +265,11 @@ def start_or_resume_daily_session(
         # A normal response commits any policy-driven closure. Raising an HTTP
         # exception here would roll that durable lifecycle transition back.
         return JSONResponse(status_code=409, content={"code": "DAILY_SESSION_NOT_RESUMABLE", "detail": str(error)})
+    except DailySessionReplacementNotAllowed as error:
+        return JSONResponse(
+            status_code=409,
+            content={"code": "DAILY_SESSION_REPLACEMENT_NOT_ALLOWED", "detail": str(error)},
+        )
     return _daily_response(session, learning_session)
 
 
@@ -483,6 +499,12 @@ def _stream_student_tutor_turn(
                 session.flush([admitted_message])
             if source_asset is not None:
                 source_input = provider_source_input(storage=storage, asset=source_asset)
+        except ForegroundTutorBusy as error:
+            session.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"code": "FOREGROUND_TUTOR_BUSY", "detail": str(error)},
+            ) from None
         except ValueError as error:
             session.rollback()
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)) from None
@@ -508,11 +530,22 @@ def _stream_student_tutor_turn(
         turn_stream: Iterator[TutorTextDelta | TutorTurn] | None = None
         final_turn: TutorTurn | None = None
         committed = False
+
+        def settle_admitted(status_value: str) -> None:
+            if admitted_student_message_id is not None:
+                settle_foreground_student_message(
+                    stream_session,
+                    message_id=admitted_student_message_id,
+                    status=status_value,
+                )
         try:
             owned_session = session_resolver(
                 stream_session, student_id=student_id, session_id=session_id, lock=True
             )
             if owned_session is None:
+                settle_admitted("FAILED")
+                stream_session.commit()
+                committed = True
                 return
             runtime = create_tutor_runtime(stream_session)
             turn_stream = runtime.stream_turn(
@@ -569,26 +602,32 @@ def _stream_student_tutor_turn(
             if turn_stream is not None:
                 turn_stream.close()
             if not committed:
+                settle_admitted("CANCELLED")
                 stream_session.commit()
             raise
         except TutorModelStreamFailure:
             # Streaming headers are already committed. Return a bounded terminal
             # SSE failure so the browser can settle the admitted Student turn
             # instead of waiting for a proxy/Cloud Run timeout.
+            settle_admitted("FAILED")
             stream_session.commit()
             committed = True
             yield f"event: error\ndata: {json.dumps({'code': 'TUTOR_MODEL_FAILED'})}\n\n"
         except TutorContextCapacityExceeded:
+            settle_admitted("FAILED")
             stream_session.commit()
             raise
         except TutorCanvasAdmissionRejected:
             # The provider execution completed and is durable, but no Tutor
             # turn or Canvas admission succeeded. Keep those facts separate.
+            settle_admitted("FAILED")
             stream_session.commit()
             committed = True
             yield f"event: error\ndata: {json.dumps({'code': 'TUTOR_TURN_REJECTED'})}\n\n"
         except Exception:
             stream_session.rollback()
+            settle_admitted("FAILED")
+            stream_session.commit()
             raise
         finally:
             stream_session.close()

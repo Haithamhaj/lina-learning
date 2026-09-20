@@ -130,6 +130,7 @@ def test_spatial_diagram_and_text_tools_store_meaningful_typed_structures() -> N
     assert diagram.nodes[0].node_kind == "PROCESS"
     assert diagram.edges[0].source_id == "evaporation"
     assert text.items[1].text == "Second supplied stage"
+    assert all(element.current_value is None for element in text.elements)
     assert [element.id for element in spatial.elements] == ["cart", "force"]
 
 

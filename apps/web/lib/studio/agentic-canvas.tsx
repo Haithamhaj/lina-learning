@@ -3,11 +3,11 @@
 import { CUSTOM_CHANNEL, customSandboxDocument, customVisualViewportHeight } from "./custom-visual-sandbox";
 import type { StudioCustomVisualBuild } from "./controller";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 
 import type { AgenticCanvasAction, AgenticCanvasBlock, StudioOperation } from "./contracts";
-import { createAgenticCanvasOperation, parseAgenticCanvasScene, settleAgenticCanvasOperation } from "./agentic-canvas-contract";
+import { agenticCanvasSemanticControls, createAgenticCanvasOperation, parseAgenticCanvasScene, settleAgenticCanvasOperation } from "./agentic-canvas-contract";
 import {
   CoordinateConstruction,
   isExactGridPoint,
@@ -18,6 +18,7 @@ import {
   type SemanticPlacement,
 } from "./visual-toolbelt";
 import { diagramHeight, diagramNodeShape, diagramPositions, mathSurfaceKind, presentationLayout, spatialPrimitive } from "./agentic-canvas-geometry";
+import { clippedLinearExpression, textInteractionPresentation } from "./agentic-canvas-presentation";
 
 type Props = {
   sceneId: string;
@@ -62,15 +63,14 @@ function BlockFrame({ block, children }: { block: AgenticCanvasBlock; children: 
 }
 
 function SemanticButtons(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: AgenticCanvasBlock }) {
-  const element = props.block.elements[0];
-  const actions = props.block.allowed_actions.filter((action) => action === "FOCUS" || action === "SELECT" || action === "SUBMIT");
-  if (actions.length === 0) return null;
-  return <div className="mt-3 flex flex-wrap gap-2">{actions.map((action) => <button
-    key={action}
+  const controls = agenticCanvasSemanticControls(props.block);
+  if (controls.length === 0) return null;
+  return <div className="mt-3 flex flex-wrap gap-2">{controls.map((control) => <button
+    key={`${control.action}:${control.elementId ?? props.block.block_id}`}
     type="button"
     className={actionClass}
-    onClick={() => nextOperation(props, props.block, action, element ? { elementId: element.id } : {})}
-  >{action === "FOCUS" ? "Focus" : action === "SELECT" ? "Select" : "Submit"}</button>)}</div>;
+    onClick={() => nextOperation(props, props.block, control.action, control.elementId ? { elementId: control.elementId } : {})}
+  >{control.label}</button>)}</div>;
 }
 
 function ElementList({ block }: { block: AgenticCanvasBlock }) {
@@ -110,6 +110,8 @@ function PlotSurface({ block, kind }: { block: Extract<AgenticCanvasBlock, { typ
   const y = (value: number) => bottom - ((value - minimumY) / (maximumY - minimumY || 1)) * (bottom - top);
   const verticals = Array.from({ length: 9 }, (_, index) => left + (index * (right - left)) / 8);
   const horizontals = Array.from({ length: 7 }, (_, index) => top + (index * (bottom - top)) / 6);
+  const expressions = kind === "plot" ? block.expressions.map((expression) => ({ expression, line: clippedLinearExpression(expression.id, expression.latex, { minimumX, maximumX, minimumY, maximumY }) })) : [];
+  const colours = ["#dc2626", "#7c3aed", "#059669", "#d97706", "#0891b2", "#be185d"];
   return <svg data-agentic-surface={kind} viewBox="0 0 720 340" className="w-full rounded-xl bg-sky-50" role="img" aria-label={block.accessibility.aria_label ?? block.accessibility.text_equivalent}>
     <defs><marker id={`${block.block_id}-plot-arrow`} markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#284b63"/></marker></defs>
     {verticals.map((position) => <line key={position} x1={position} y1={top} x2={position} y2={bottom} stroke="#cbd5e1" strokeWidth="1"/>)}
@@ -117,6 +119,7 @@ function PlotSurface({ block, kind }: { block: Extract<AgenticCanvasBlock, { typ
     <line x1={left} y1={y(0)} x2={right} y2={y(0)} stroke="#284b63" strokeWidth="2.5" markerEnd={`url(#${block.block_id}-plot-arrow)`}/>
     <line x1={x(0)} y1={bottom} x2={x(0)} y2={top} stroke="#284b63" strokeWidth="2.5" markerEnd={`url(#${block.block_id}-plot-arrow)`}/>
     <text x={right - 4} y={y(0) - 8} textAnchor="end" className="fill-slate-700 text-[13px]">x</text><text x={x(0) + 9} y={top + 12} className="fill-slate-700 text-[13px]">y</text>
+    {expressions.map(({ expression, line }, index) => line ? <line key={expression.id} data-expression-id={expression.id} x1={x(line.start.x)} y1={y(line.start.y)} x2={x(line.end.x)} y2={y(line.end.y)} stroke={colours[index % colours.length]} strokeWidth="4"><title>{`${expression.label}: ${expression.latex}`}</title></line> : null)}
     {block.markers.map((marker, index) => { const markerX = x(rational(marker.value)); const markerY = kind === "plot" ? y(0) : y(Math.min(maximumY, Math.max(minimumY, index + 1))); return <g key={marker.id}><line x1={markerX} y1={y(0)} x2={markerX} y2={markerY} stroke="#2563eb" strokeDasharray={kind === "plot" ? "5 4" : undefined}/><circle cx={markerX} cy={markerY} r="7" fill="#2563eb"/><text x={markerX} y={markerY - 12} textAnchor="middle" className="fill-blue-950 text-[13px] font-semibold">{marker.label}</text></g>; })}
   </svg>;
 }
@@ -195,7 +198,13 @@ function MathBoardBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOpera
   if (surface === "cartesian" && props.block.elements[0] && props.block.allowed_actions.includes("MOVE")) return <CartesianMathBoard {...props}/>;
   return <BlockFrame block={props.block}>
     {surface === "number-line" ? <NumberLineSurface block={props.block}/> : <PlotSurface block={props.block} kind={surface}/>}
-    {props.block.expressions.length ? <div className="mt-3 space-y-2">{props.block.expressions.map((expression) => <p key={expression.id} className="rounded-xl bg-emerald-50 px-3 py-2 text-sm" dir="auto">{expression.label}: <span dir="ltr">{expression.latex}</span></p>)}</div> : null}
+    {props.block.expressions.length ? <div className="mt-3 space-y-2">{props.block.expressions.map((expression) => {
+      const unsupported = surface === "plot" && clippedLinearExpression(expression.id, expression.latex, {
+        minimumX: rational(props.block.axes.find(axis => axis.axis === "X")?.minimum ?? "-10"), maximumX: rational(props.block.axes.find(axis => axis.axis === "X")?.maximum ?? "10"),
+        minimumY: rational(props.block.axes.find(axis => axis.axis === "Y")?.minimum ?? "-10"), maximumY: rational(props.block.axes.find(axis => axis.axis === "Y")?.maximum ?? "10"),
+      }) === null;
+      return <p key={expression.id} className="rounded-xl bg-emerald-50 px-3 py-2 text-sm" dir="auto">{expression.label}: <span dir="ltr">{expression.latex}</span>{unsupported ? <span className="ml-2 text-amber-800">(not drawn)</span> : null}</p>;
+    })}</div> : null}
     <SemanticButtons {...props}/>
   </BlockFrame>;
 }
@@ -224,13 +233,25 @@ function DiagramBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperati
 }
 
 function TextInteractionBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "TEXT_INTERACTION" }> }) {
+  if (props.block.interaction_family === "ORDERING") return <BlockFrame block={props.block}>
+    <div role="status" data-text-interaction-fallback="ordering" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
+      Ordering is not available safely in Canvas yet. Continue with Tutor chat.
+    </div>
+  </BlockFrame>;
+  const presentation = textInteractionPresentation(props.block);
+  const movable = props.block.allowed_actions.includes("MOVE") && props.block.groups.length > 0;
+  const itemCard = (item: typeof props.block.items[number]) => <div key={item.id} className="mt-2 rounded-lg bg-white px-3 py-2 text-sm" dir="auto">
+    <p>{item.text}</p>
+    {movable ? <div className="mt-2 flex flex-wrap gap-1">{props.block.groups.map((group) => <button key={group.id} type="button" className={actionClass} onClick={() => nextOperation(props, props.block, "MOVE", { elementId: item.id, toValue: group.id })}>Place in {group.label}</button>)}</div> : null}
+  </div>;
   return <BlockFrame block={props.block}>
     <p className="mb-3 text-sm font-medium text-slate-700" dir="auto">{props.block.prompt}</p>
-    <div className={props.block.interaction_family === "MATCHING" || props.block.interaction_family === "RELATION" ? "grid gap-3 sm:grid-cols-2" : props.block.interaction_family === "ORDERING" ? "flex flex-wrap gap-2 border-l-4 border-amber-400 pl-3" : "grid gap-3 sm:grid-cols-2"}>
-      {props.block.groups.map((group) => <section key={group.id} className="rounded-xl border-2 border-dashed border-amber-300 bg-amber-50 p-3"><p className="text-xs font-bold uppercase text-amber-800" dir="auto">{group.label}</p>{props.block.items.filter((item) => item.group_id === group.id).map((item) => <p key={item.id} className="mt-2 rounded-lg bg-white px-3 py-2 text-sm" dir="auto">{item.text}</p>)}</section>)}
-      {props.block.items.filter((item) => item.group_id === null).map((item, index) => <div key={item.id} className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm shadow-sm" dir="auto"><span className="mr-2 text-xs font-bold text-amber-700">{props.block.interaction_family === "ORDERING" ? index + 1 : ""}</span>{item.text}</div>)}
-    </div>
-    <SemanticButtons {...props}/>
+    {presentation.groups.length ? <div className="grid gap-3 sm:grid-cols-2">{presentation.groups.map((group) => <section key={group.id} data-text-group={group.id} className="rounded-xl border-2 border-dashed border-amber-300 bg-amber-50 p-3"><p className="text-xs font-bold uppercase text-amber-800" dir="auto">{group.label}</p>{group.items.map(itemCard)}</section>)}</div> : null}
+    {presentation.unassigned.length ? <section data-unassigned-choices="true" aria-label="Unassigned choices" className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <p className="mb-2 text-xs font-bold uppercase text-slate-600">Choices</p>
+      <div className="grid gap-2 sm:grid-cols-2">{presentation.unassigned.map((item) => <div key={item.id} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm" dir="auto">{item.text}{movable ? <div className="mt-2 flex flex-wrap gap-1">{props.block.groups.map((group) => <button key={group.id} type="button" className={actionClass} onClick={() => nextOperation(props, props.block, "MOVE", { elementId: item.id, toValue: group.id })}>Place in {group.label}</button>)}</div> : null}</div>)}</div>
+    </section> : null}
+    {movable ? null : <SemanticButtons {...props}/>}
   </BlockFrame>;
 }
 
@@ -404,9 +425,10 @@ export function AgenticCanvasWorkspace(props: Props) {
   const container = presentationLayout(layout, "SUPPORT", "NORMAL");
   const paletteClass = palette === "NATURE" ? "bg-emerald-50" : palette === "WARM" ? "bg-amber-50" : palette === "COOL" ? "bg-sky-50" : "bg-[#f2f7ff]";
   return <section aria-label="Learning canvas" className="space-y-3">
-    {orderedBlocks.some(block => block.type === "CUSTOM_VISUAL") ? null : <header className={`rounded-2xl px-4 py-3 ${paletteClass}`}>
-      <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#496a8b]">Canvas</p>
-      <h2 className="mt-1 font-display text-xl text-slate-900" dir="auto">{scene.objective}</h2>
+    {orderedBlocks.some(block => block.type === "CUSTOM_VISUAL") ? null : <header className={`flex items-start justify-between gap-3 rounded-2xl px-4 py-3 ${paletteClass}`}>
+      <div><p className="text-xs font-bold uppercase tracking-[0.14em] text-[#496a8b]">Canvas</p>
+      <h2 className="mt-1 font-display text-xl text-slate-900" dir="auto">{scene.objective}</h2></div>
+      <button type="button" className={actionClass} onClick={props.onReload}>Reload Workspace</button>
     </header>}
     {operationFailed ? <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-900">That Canvas action was not saved. Reload Workspace to verify the saved state. Tutor chat remains available.</p> : null}
     <div data-agentic-layout={layout} data-agentic-motion={scene.presentation?.motion ?? "NONE"} className={container.container}>{orderedBlocks.map((block) => {

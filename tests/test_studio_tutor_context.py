@@ -112,6 +112,33 @@ def test_tutor_workspace_context_exposes_server_owned_pending_canvas_lifecycle()
     assert payload["canvas_composition"]["run_status"] == "PENDING"
 
 
+def test_tutor_payload_preserves_failed_canvas_truth_and_bounded_recovery_rules() -> None:
+    from services.studio.tutor_context import StudioTutorWorkspaceContext
+    from services.tutor.runtime import build_tutor_model_payload
+
+    context = StudioTutorWorkspaceContext(
+        runtime_id=uuid4(), snapshot_schema_version="studio-snapshot-v1", through_sequence=0,
+        snapshot_sequence=0, current_scene_id=None, current_scene_version=None,
+        active_subject_key=None, active_activity_key=None, state_payload={}, unseen_events=(), observation_id=None,
+        canvas_composition={
+            "version": "canvas-composition-view-v1", "observed_at": "2026-09-20T10:00:00+00:00",
+            "run_id": "run-failed", "run_created_at": "2026-09-20T09:59:00+00:00",
+            "source_message_id": "message-1", "run_status": "FAILED", "job_status": "FAILED",
+            "objective": "Compare three lines.", "scene_id": None, "scene_ready": False,
+            "active_scene_id": None, "active_scene_version": None, "deadline_at": None,
+            "failure_code": "AGENT_MODEL_BEHAVIOR_FAILURE",
+        },
+    )
+
+    payload = build_tutor_model_payload(question="The graph did not appear.", studio_context=context)
+    encoded_input = str(payload["input"])
+    assert "AGENT_MODEL_BEHAVIOR_FAILURE" in encoded_input
+    assert "may justify RETRY only when the same visual need remains" in encoded_input
+    assert "not proof that the browser displayed it" in encoded_input
+    assert "existing Reload Workspace control" in encoded_input
+    assert "Use REPLACE_SCENE only when the current Scene is semantically insufficient" in encoded_input
+
+
 def test_workspace_context_carries_exact_active_scene_capability_without_registry_dump() -> None:
     """Runtime-02 uses Scene-persisted versions rather than a latest capability guess."""
 

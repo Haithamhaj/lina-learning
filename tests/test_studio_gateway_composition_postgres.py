@@ -229,10 +229,16 @@ def test_local_provider_preserves_chat_and_never_echoes_canvas_internal_context(
 
 
 @pytest.mark.parametrize("lane", ["daily", "math"])
-def test_real_application_local_chat_composition_remains_usable(application, lane):
+def test_pending_canvas_gates_daily_chat_while_legacy_math_remains_usable(application, lane):
     client, factory = application
     _runtime_id, session_id, _interaction_id, _operation = prepare_submission(client, factory, "MATH")
     response = client.post(f"/api/v1/student/{lane}/session/{session_id}/turn/stream", json={"content": "Compare 9 and 6"})
+    if lane == "daily":
+        assert response.status_code == 409
+        assert response.json()["detail"]["code"] == "FOREGROUND_TUTOR_BUSY"
+        with factory() as session:
+            assert list(session.scalars(select(m.LearningMessage).where(m.LearningMessage.session_id == session_id))) == []
+        return
     assert response.status_code == 200 and "event: turn" in response.text
     with factory() as session:
         messages = list(session.scalars(select(m.LearningMessage).where(m.LearningMessage.session_id == session_id).order_by(m.LearningMessage.created_at)))

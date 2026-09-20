@@ -213,16 +213,6 @@ def admit_agentic_canvas_brief(session: Session, *, student_id: UUID, learning_s
         and message.payload.get("canvas_change_intent") not in _CANVAS_CHANGE_INTENTS
     ):
         return None
-    if message.payload.get("tutor_turn_schema_version") == "tutor_turn_v12":
-        intent = message.payload.get("canvas_change_intent")
-        if not isinstance(intent, str) or not _decision_base_is_current(
-            session,
-            runtime=runtime,
-            intent=intent,
-            base=message.payload.get("canvas_decision_base"),
-        ):
-            _reject_stale_base(message)
-            return None
     declared_digest, raw_brief = audit.get("brief_digest"), audit.get("brief")
     if not isinstance(declared_digest, str) or len(declared_digest) != 64:
         return None
@@ -236,6 +226,21 @@ def admit_agentic_canvas_brief(session: Session, *, student_id: UUID, learning_s
     digest = _canonical_digest(serialized)
     if declared_digest != digest:
         return None
+    # An exact accepted source/digest replay is idempotent even though the
+    # admitted Run is now the latest lifecycle state. It creates no new work.
+    existing = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.source_message_id == message.id, StudioCanvasSpecialistRun.order_digest == digest, StudioCanvasSpecialistRun.capability_profile_version == AGENTIC_CANVAS_CAPABILITY_IDENTITY)).scalar_one_or_none()
+    if existing is not None:
+        return existing
+    if message.payload.get("tutor_turn_schema_version") == "tutor_turn_v12":
+        intent = message.payload.get("canvas_change_intent")
+        if not isinstance(intent, str) or not _decision_base_is_current(
+            session,
+            runtime=runtime,
+            intent=intent,
+            base=message.payload.get("canvas_decision_base"),
+        ):
+            _reject_stale_base(message)
+            return None
     # Only a later eligible Canvas brief supersedes this composition. Ordinary
     # Chat turns remain independent while Canvas work is in flight.
     newest = latest_admitted_agentic_message(
@@ -245,9 +250,6 @@ def admit_agentic_canvas_brief(session: Session, *, student_id: UUID, learning_s
     )
     if newest is None or newest.id != message.id:
         return None
-    existing = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.source_message_id == message.id, StudioCanvasSpecialistRun.order_digest == digest, StudioCanvasSpecialistRun.capability_profile_version == AGENTIC_CANVAS_CAPABILITY_IDENTITY)).scalar_one_or_none()
-    if existing is not None:
-        return existing
     # Agentic and legacy compose jobs share Studio's Run boundary. A new
     # Agentic brief can supersede unfinished work, but never an accepted Scene.
     prior_runs = session.scalars(

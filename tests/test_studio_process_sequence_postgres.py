@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
@@ -420,6 +421,10 @@ def test_process_sequence_reorder_and_submit_are_durable_rebuildable_and_bounded
         assert replayed_submission.event.id == submission.event.id
         assert replayed_submission.interaction is not None
         assert replayed_submission.interaction.id == submission.interaction.id
+
+        submission.interaction.status = "CANCELLED"
+        submission.interaction.completed_at = datetime.now(UTC)
+        session.flush()
 
         changed_after_submit = service.append_event(
             _reorder_command(

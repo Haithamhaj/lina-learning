@@ -70,6 +70,11 @@ from services.studio.subjects.contracts import (
 )
 from services.studio.subjects.registry import SubjectCapabilityRegistry
 from services.studio.subjects import production_subject_registry
+from services.tutor.student_sessions import (
+    ForegroundTutorBusy,
+    admit_foreground_student_message,
+    settle_foreground_student_message,
+)
 
 
 pytestmark = pytest.mark.skipif(
@@ -970,10 +975,10 @@ def test_pending_interaction_claim_is_owned_atomic_and_non_repeatable(
             )
 
 
-def test_new_triggering_action_supersedes_a_running_interaction(
+def test_new_triggering_action_is_rejected_while_canvas_interaction_is_running(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
-    """A newer meaningful Canvas action wins without treating record-only events as a turn."""
+    """A later Canvas action cannot supersede an admitted foreground turn."""
 
     from services.studio.interactions import StudioInteractionService  # noqa: PLC0415 - RED contract
 
@@ -993,22 +998,22 @@ def test_new_triggering_action_supersedes_a_running_interaction(
         StudioInteractionService(session).claim_pending(
             student_id=student_id, runtime_id=runtime_id, interaction_id=first.interaction.id,
         )
-        second = state.append_event(
-            _append_command(
-                runtime_id, student, learning_session, scene_id=scene_id,
-                base_scene_version=first.scene.scene_version,
-                create_student_interaction=True, actor=StudioActor.STUDENT,
+        with pytest.raises(ForegroundTutorBusy, match="already pending"):
+            state.append_event(
+                _append_command(
+                    runtime_id, student, learning_session, scene_id=scene_id,
+                    base_scene_version=first.scene.scene_version,
+                    create_student_interaction=True, actor=StudioActor.STUDENT,
+                )
             )
-        )
-        assert second.interaction is not None
-        assert first.interaction.status == "SUPERSEDED"
-        assert second.interaction.status == "PENDING"
+        assert first.interaction.status == "RUNNING"
+        assert session.query(StudioStudentInteraction).filter_by(learning_session_id=session_id).count() == 1
 
 
-def test_new_real_chat_input_supersedes_a_running_canvas_interaction(
+def test_chat_admission_is_rejected_while_canvas_interaction_is_running(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
-    """A later Chat Student message is the causal successor of Canvas generation."""
+    """Chat cannot overlap or supersede a previously admitted Canvas turn."""
 
     from services.studio.interactions import StudioInteractionService
 
@@ -1019,22 +1024,25 @@ def test_new_real_chat_input_supersedes_a_running_canvas_interaction(
         StudioInteractionService(session).claim_pending(
             student_id=student_id, runtime_id=runtime_id, interaction_id=interaction_id
         )
-        StudioInteractionService(session).supersede_running_for_new_chat_student_input(
-            student_id=student_id,
-            learning_session_id=session_id,
-        )
+        learning_session = session.get(LearningSession, session_id)
+        assert learning_session is not None
+        with pytest.raises(ForegroundTutorBusy, match="already pending"):
+            admit_foreground_student_message(
+                session,
+                learning_session=learning_session,
+                content="Do not supersede the Canvas turn.",
+            )
 
     with postgres_session_factory.begin() as session:
         interaction = session.get(StudioStudentInteraction, interaction_id)
-        assert interaction is not None and interaction.status == "SUPERSEDED"
+        assert interaction is not None and interaction.status == "RUNNING"
+        assert session.query(LearningMessage).filter_by(session_id=session_id, role="student").count() == 0
 
 
-def test_chat_terminal_guard_rejects_newer_triggering_canvas_but_not_record_only(
+def test_active_chat_blocks_triggering_canvas_but_not_record_only_events(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
-    """The terminal guard consults durable triggering interactions, not all events."""
-
-    from services.studio.interactions import StudioInteractionService, StudioInteractionStateError
+    """The shared lane gates Tutor work without turning exploration into Tutor work."""
 
     student_id, session_id, runtime_id, scene_id = _runtime_scene(postgres_session_factory)
     with postgres_session_factory.begin() as session:
@@ -1043,6 +1051,11 @@ def test_chat_terminal_guard_rejects_newer_triggering_canvas_but_not_record_only
         scene = session.get(StudioScene, scene_id)
         assert student is not None and learning_session is not None and scene is not None
         state = StudioStateService(session)
+        chat_message = admit_foreground_student_message(
+            session,
+            learning_session=learning_session,
+            content="Keep this Chat turn in front.",
+        )
         state.append_event(
             _append_command(
                 runtime_id, student, learning_session, scene_id=scene_id,
@@ -1050,22 +1063,127 @@ def test_chat_terminal_guard_rejects_newer_triggering_canvas_but_not_record_only
                 event_kind="fixture.record", actor=StudioActor.STUDENT, payload={"value": 1},
             )
         )
-        StudioInteractionService(session).require_chat_terminal_current(
-            student_id=student_id, learning_session_id=session_id, through_event_sequence=1,
-        )
         scene = session.get(StudioScene, scene_id)
         assert scene is not None
-        state.append_event(
+        with pytest.raises(ForegroundTutorBusy, match="already pending"):
+            state.append_event(
+                _append_command(
+                    runtime_id, student, learning_session, scene_id=scene_id,
+                    base_scene_version=scene.scene_version, create_student_interaction=True,
+                    actor=StudioActor.STUDENT, payload={"value": 2},
+                )
+            )
+        settle_foreground_student_message(session, message_id=chat_message.id, status="COMPLETED")
+        accepted = state.append_event(
             _append_command(
                 runtime_id, student, learning_session, scene_id=scene_id,
                 base_scene_version=scene.scene_version, create_student_interaction=True,
                 actor=StudioActor.STUDENT, payload={"value": 2},
             )
         )
-        with pytest.raises(StudioInteractionStateError, match="newer Canvas"):
-            StudioInteractionService(session).require_chat_terminal_current(
-                student_id=student_id, learning_session_id=session_id, through_event_sequence=2,
+        assert accepted.interaction is not None and accepted.interaction.status == "PENDING"
+
+
+def test_simultaneous_chat_admissions_create_one_foreground_owner(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """The LearningSession row is the server authority, not browser timing."""
+
+    student_id, session_id, _runtime_id, _scene_id = _runtime_scene(postgres_session_factory)
+    barrier = Barrier(2)
+
+    def admit(content: str) -> str:
+        with postgres_session_factory.begin() as session:
+            learning_session = session.get(LearningSession, session_id)
+            assert learning_session is not None
+            barrier.wait()
+            try:
+                admit_foreground_student_message(
+                    session,
+                    learning_session=learning_session,
+                    content=content,
+                )
+            except ForegroundTutorBusy:
+                return "busy"
+            return "accepted"
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        outcomes = [
+            executor.submit(admit, "first simultaneous attempt"),
+            executor.submit(admit, "second simultaneous attempt"),
+        ]
+    assert sorted(future.result() for future in outcomes) == ["accepted", "busy"]
+    with postgres_session_factory() as session:
+        messages = session.query(LearningMessage).filter_by(
+            session_id=session_id,
+            role="student",
+        ).all()
+        assert len(messages) == 1
+        assert messages[0].payload["foreground_tutor_turn"]["status"] == "RUNNING"
+
+
+def test_simultaneous_chat_and_canvas_admissions_create_one_foreground_owner(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    """Chat and Tutor-triggering Canvas contend for one server-owned lane."""
+
+    student_id, session_id, runtime_id, scene_id = _runtime_scene(postgres_session_factory)
+    barrier = Barrier(2)
+
+    def admit_chat() -> str:
+        with postgres_session_factory.begin() as session:
+            learning_session = session.get(LearningSession, session_id)
+            assert learning_session is not None
+            barrier.wait()
+            try:
+                admit_foreground_student_message(
+                    session,
+                    learning_session=learning_session,
+                    content="simultaneous Chat attempt",
+                )
+            except ForegroundTutorBusy:
+                return "busy"
+            return "accepted"
+
+    def admit_canvas() -> str:
+        with postgres_session_factory.begin() as session:
+            student = session.get(Student, student_id)
+            learning_session = session.get(LearningSession, session_id)
+            assert student is not None and learning_session is not None
+            barrier.wait()
+            try:
+                StudioStateService(session).append_event(
+                    _append_command(
+                        runtime_id,
+                        student,
+                        learning_session,
+                        scene_id=scene_id,
+                        base_scene_version=1,
+                        create_student_interaction=True,
+                        actor=StudioActor.STUDENT,
+                    )
+                )
+            except ForegroundTutorBusy:
+                return "busy"
+            return "accepted"
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        outcomes = [executor.submit(admit_chat), executor.submit(admit_canvas)]
+    assert sorted(future.result() for future in outcomes) == ["accepted", "busy"]
+    with postgres_session_factory() as session:
+        chat_owners = sum(
+            1
+            for message in session.query(LearningMessage).filter_by(
+                session_id=session_id,
+                role="student",
             )
+            if message.payload.get("foreground_tutor_turn", {}).get("status") == "RUNNING"
+        )
+        canvas_owners = session.query(StudioStudentInteraction).filter(
+            StudioStudentInteraction.learning_session_id == session_id,
+            StudioStudentInteraction.status.in_(("PENDING", "RUNNING")),
+        ).count()
+        assert chat_owners + canvas_owners == 1
 
 
 def test_owned_canvas_interaction_executes_once_with_exact_gateway_lineage(

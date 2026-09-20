@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
@@ -608,6 +609,11 @@ def test_make_ten_transfer_and_submit_are_durable_rebuildable_and_truthful(
             "feedback_code": "SUBMITTED_CONFIGURATION_DOES_NOT_MATCH_STATE",
             "next_action_keys": ["TRANSFER_ITEM", "SUBMIT_CONFIGURATION"],
         }
+        # This reducer test does not execute the Canvas Tutor transport. Close
+        # the first admitted attempt before modeling the learner's next try.
+        mismatched.interaction.status = "CANCELLED"
+        mismatched.interaction.completed_at = datetime.now(UTC)
+        session.flush()
         correct = service.append_event(
             _submit_command(
                 runtime_id=runtime.id,

@@ -280,7 +280,7 @@ def create_text_interaction(
     parsed_groups = _parse_many(TextGroupV1, groups)
     parsed_relations = _parse_many(TextRelationV1, relations)
     elements = [
-        AgenticCanvasElementV1(id=item.id, label=item.text, current_value=item.group_id)
+        AgenticCanvasElementV1(id=item.id, label=item.text, current_value=None)
         for item in parsed_items
     ] + [
         AgenticCanvasElementV1(id=item.id, label=item.label, current_value=None)

@@ -2,13 +2,17 @@
 
 ## Current goal
 
-R01-R15, V01, CTX-01, CTX-02 and LEARN-LOOP are locally closed on the current implementation. The owner explicitly authorized preserving this exact reviewed tree as a commit and pushing `codex/tutor-canvas-ab-01` to GitHub without merge or deployment; E14 in the repair tracker records the pre-commit verification. Use the pushed branch SHA as the V02 live teaching-evaluation target. Do not reopen pedagogy design or change call architecture. One Call/multi-call analysis remains a separate deferred study. No merge, deployment, or additional paid-evaluation permission is granted by this update.
+R01-R15, V01, CTX-01, CTX-02 and LEARN-LOOP remain locally closed. REPAIR-SLICE-01 is independently accepted in E24 and REPAIR-SLICE-02 is independently accepted for local scope in E28. CANVAS-RENDER-01, CANVAS-ANSWER-LEAK-01 and VISUAL-RECOVERY-01 are locally DONE. E2E-01 remains IN_REVIEW only for controlled real-Luna/live acceptance after an authorized deployment. The entire reviewed tree remains uncommitted. One Call/multi-call analysis, teaching-flow repairs, and V2 generated images remain separate.
 
 ## Current reality
 
-The earlier TUTOR-PEDAGOGY-REFINE-01 subset remains preserved. The additional R03 teaching block, R04-R10 visual/notation/source guidance, R11-R13 semantic definitions, R14 single guide and R15 schema wording are installed and locally verified. V02 teaching quality, E2E-01 real generated Canvas, UX-BUFFER product acceptance and release remain separate; do not reclassify them as static implementation failures.
+The earlier TUTOR-PEDAGOGY-REFINE-01 subset and the additional R03-R15 guidance remain preserved and locally verified. Earlier controlled live use exposed renderer/interaction/arbitration defects; REPAIR-SLICE-01 and REPAIR-SLICE-02 now close those confirmed local technical defects in E24/E28. E2E-01 is no longer locally blocked: fixture/mock integrated acceptance plus actual Chrome rendering passed, but controlled real-Luna/live acceptance remains IN_REVIEW. V02 and UX-BUFFER remain separate and unresolved; these repairs do not reopen the static R01-R15 implementation.
 
 The A/B branch now has the versioned Canvas composition view, reload/reconnect recovery, durable `run_created_at` ordering, localized Daily waiting/update/failure states, and a server-owned v12 decision base for Chat and Studio-interaction Canvas changes. Admission revalidates the exact Run and Scene identity/version under the existing Runtime lock and rejects stale CREATE/REPLACE/RETRY decisions as `STALE_BASE` without enqueueing or superseding newer work. Historical v11 records retain their prior reader/admission behavior.
+
+REPAIR-SLICE-01 adds one LearningSession-owned foreground admission lane for Daily Chat and Tutor-triggering Canvas, truthful terminal markers, stale-session replacement, target-specific generic SELECT controls, and browser/server duplicate gating. E21 implemented it, E22 found three recovery gaps, E23 corrected them, and E24 independently accepted the corrected local slice. Exact replayed PENDING Canvas interactions resume through the existing atomic server claim; replacement retries use one deterministic Student-owned replacement identity without a schema change; and replacement rebinding keeps old source cards historical while preserving a still-local unsent file. Changes remain uncommitted.
+
+REPAIR-SLICE-02 now draws bounded linear Plot expressions inside declared axes, separates learner state from solution semantics, fails unsupported generic ORDERING closed rather than exposing an answer or fake interaction, and supplies full existing Canvas lifecycle truth plus bounded reload/retry/replace guidance. E27 joins deterministic Primary Tutor recovery outputs to real persistence and Canvas admission; E28 independently accepts that path. Headless Chrome evidence verifies the E16 lines and unsolved classification presentation. The latest full disposable regression is `1519 passed, 4 known baseline failures, 12 skipped`. Changes remain uncommitted.
 
 The targeted repair accepts the exact historical dotted and current colon Personal Fact identities only through exact filtered-catalogue matching, replays the saved failed Luna output locally into one causally linked replacement Run, preserves the successful provider ledger when later Canvas admission rejects the turn, and keeps that rejected promise out of SSE/domain delivery. Daily learner-visible Studio/composer/voice errors now use the Arabic/English copy boundary, and the existing reconnect policy is represented by one deterministic retry loop with duplicate-connection and cleanup tests.
 
@@ -39,11 +43,11 @@ Primary Tutor authority; child safety and Parent Boundaries; owner/privacy isola
 
 ## Active risks
 
-Broad unrestricted production CREATE reliability is not accepted. Deployment, traffic reliability and real learner learning benefit are not established by disposable tests or a synthetic-key build. Runtime CREATE latency/cost remain material considerations. The limited real-Luna AB-V02 sample did not establish improved proactive Canvas choice or teaching quality; human blind scoring remains incomplete. Existing promoted Versions are not retroactively certified by AI review or later checks.
+Broad unrestricted production CREATE reliability is not accepted, but the two currently approved repair slices are locally DONE in E24/E28. Remaining open product areas are controlled real-Luna/live E2E acceptance, teaching-flow defects, personalization relevance review, and material waits under terminal buffering. Do not collapse these into a call-architecture redesign. Existing promoted Versions are not retroactively certified by AI review or later checks.
 
 ## Next recommended action
 
-R01-R15, V01, CTX-01, CTX-02 and LEARN-LOOP are closed locally. Await separate authorization before V02 live teaching quality, E2E-01 real generated Canvas, UX-BUFFER, CALLS-01, AUTH-01, historical reprocessing or release work; no new audit, Call-decomposition experiment, Clerk work or pedagogy expansion is required by this closure.
+Preserve the exact independently reviewed E24/E28 uncommitted tree. Before beginning the next repair slice, preserve this state in a dedicated reviewed commit/branch snapshot if the Product Owner authorizes it. After preservation, the next logical local repair area is teaching-flow integrity: CONV-MOMENTUM-01 + STRATEGY-FIDELITY-01 + PED-ADAPT-01. Controlled real-Luna/live E2E, performance/call architecture, AUTH-01 and IMG-V2-01 remain separate decisions.
 
 ## Prior baseline next action
 
