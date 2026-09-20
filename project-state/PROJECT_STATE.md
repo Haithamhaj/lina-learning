@@ -2,7 +2,7 @@
 
 ## Current goal
 
-R01-R15, V01, CTX-01, CTX-02 and LEARN-LOOP remain locally closed. REPAIR-SLICE-01 is independently accepted in E24 and REPAIR-SLICE-02 is independently accepted for local scope in E28. CANVAS-RENDER-01, CANVAS-ANSWER-LEAK-01 and VISUAL-RECOVERY-01 are locally DONE. The Product Owner has now authorized preservation, main fast-forward, App + Worker deployment, and controlled real-Luna/live acceptance. E2E-01 remains IN_REVIEW for that live phase. One Call/multi-call analysis, teaching-flow repairs, and V2 generated images remain separate.
+R01-R15, V01, CTX-01, CTX-02 and LEARN-LOOP remain locally closed. REPAIR-SLICE-01 is independently accepted in E24 and REPAIR-SLICE-02 in E28. E29 records the authorized main fast-forward and successful App + Worker live deployment from reviewed source SHA `66e2a3a133c9436b0562b1c88792863675c2b520`. CANVAS-RENDER-01, CANVAS-ANSWER-LEAK-01 and VISUAL-RECOVERY-01 are locally DONE. E2E-01 and RELEASE-01 remain IN_REVIEW for controlled real-Luna/live acceptance. One Call/multi-call analysis, teaching-flow repairs, and V2 generated images remain separate.
 
 ## Current reality
 
@@ -47,7 +47,7 @@ Broad unrestricted production CREATE reliability is not accepted, but the two cu
 
 ## Next recommended action
 
-Preserve the exact independently reviewed E24/E28 tree, fast-forward main, deploy both App and Worker using the reviewed source, and begin controlled real-Luna/live testing. Record any new defects as new evidence instead of changing product code during the first live pass unless a blocker prevents testing. Teaching-flow integrity (CONV-MOMENTUM-01 + STRATEGY-FIDELITY-01 + PED-ADAPT-01), PERF/UX-BUFFER, CALLS-01, AUTH-01 and IMG-V2-01 remain separate until the live pass is reviewed.
+Begin controlled real-Luna/live testing on App revision `lina-app-00020-64h` and Worker revision `lina-worker-00016-h9j`. During this first live pass, record new defects as new evidence instead of changing product code unless a blocker prevents testing. Re-test the previously failing Canvas graph/selection/recovery paths plus natural conversation/session continuity. Teaching-flow integrity (CONV-MOMENTUM-01 + STRATEGY-FIDELITY-01 + PED-ADAPT-01), PERF/UX-BUFFER, CALLS-01, AUTH-01 and IMG-V2-01 remain separate until live evidence is reviewed.
 
 ## Prior baseline next action
 
