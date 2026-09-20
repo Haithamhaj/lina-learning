@@ -30,7 +30,7 @@ For Learning Studio, no catalog entry is an installation mandate. React/DOM/SVG
 remains the baseline; an external renderer, activity, protocol, or package is
 adopted only after a named capability demonstrates fit, authority/rights and
 operational cost are acceptable, and the task records an ADOPT, PARTIAL ADOPT,
-or REJECT decision. See `docs/STUDIO_IMPLEMENTATION_PLAN.md`.
+or REJECT decision. See `docs/history/plans/STUDIO_IMPLEMENTATION_PLAN.md`.
 
 A custom implementation is preferred when a reusable option creates more coupling, hides critical behavior, conflicts with FastAPI/Next.js boundaries, weakens traceability, or makes the product harder to modify.
 
@@ -159,7 +159,7 @@ wiring, `useChat`, `UIMessage`, transport, backend routes, runtime/session/
 persistence ownership, provider coupling, or state-machine assumptions.
 
 The concrete visual brief and required screenshot acceptance checklist live in
-`docs/FE-02_GREENFIELD_SURFACE_PLAN.md` section 3.2; the Skill Pack enforces
+`docs/history/plans/FE-02_GREENFIELD_SURFACE_PLAN.md` section 3.2; the Skill Pack enforces
 their use. No visual reference permits a permanent empty Workspace, fake
 capability, unsupported composer affordance, or a change to project-owned
 stream/session authority.
@@ -462,6 +462,29 @@ Use LlamaIndex only if the spike demonstrates lower total complexity without wea
 
 ---
 
+# 9A. Bounded Decision Technology
+
+## OpenRouter Decisions / JEV
+
+**Status:** ADOPTED FOR BOUNDED DECISION SLICES
+**Area:** finite probabilistic decisions with an application-owned candidate set
+**Current use:** visual Personal-Fact selection, exact Canvas reuse selection, and Segment rubric comparison.
+
+### Why it fits
+
+JEV is useful when Lina already owns the allowed state and allowed answers and needs a narrow semantic judgment rather than open-ended generation. It can return probabilities over a finite set while the application keeps ownership, safety, persistence, thresholds, executable validation, and fallback authority.
+
+### Rules
+
+- Do not use JEV as a general Tutor or orchestrator.
+- Do not let it invent candidates that were not authorized by Lina.
+- Keep each decision slice independently versioned and evaluable.
+- Route calls through the Model Gateway ledger.
+- Revalidate executable decisions deterministically before applying them.
+- Prefer no decision or fallback over expanding JEV scope implicitly.
+
+---
+
 # 10. Approved Reuse Decision Matrix
 
 | Area | Candidate | Status | Codex instruction |
@@ -481,6 +504,7 @@ Use LlamaIndex only if the spike demonstrates lower total complexity without wea
 | Document understanding | Docling | **ADOPT BASELINE** | Keep behind project adapter. |
 | RAG plumbing | Native Docling + pgvector | **BASELINE** | Default simplest path. |
 | RAG framework acceleration | LlamaIndex + Docling | **EVALUATE BEFORE CUSTOM BUILD** | Run focused spike; adopt only if total complexity falls. |
+| Bounded semantic decisions | OpenRouter Decisions / JEV | **ADOPTED — BOUNDED ONLY** | Use only with finite application-owned state/actions; keep final authority in Lina. |
 
 ---
 

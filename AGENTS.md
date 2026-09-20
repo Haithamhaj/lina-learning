@@ -2,153 +2,189 @@
 
 ## Purpose
 
-This file is the compact operating guide for AI implementation agents working in Lina. Read the governing references needed for the task, preserve approved product boundaries, and use engineering judgment rather than mechanically following checklists.
+This file is the compact operating guide for AI implementation agents working in Lina.
+
+Read the current repository reality first. Do not implement from old conversation memory or historical plans when the current code, branch, worktree, documentation, or production state says otherwise.
 
 ## Authority map
 
 Read in this order when relevant:
 
-1. `docs/PROJECT_REFERENCE.md` — durable product truth and cross-domain boundaries.
-2. `docs/LEARNING_INTELLIGENCE_SPEC.md` — Evidence / Intelligence semantics.
-3. `docs/CHILD_SAFETY_POLICY.md` — child-safety and Parent Boundary authority.
-4. `docs/IMPLEMENTATION_PLAN.md` — current technical architecture.
-5. `docs/FULL-POWER-CANVAS-01_ARCHITECTURE_IMPLEMENTATION_SPEC.md` — retained Full-Power implementation and acceptance specification.
-6. `research/repository/TECHNOLOGY_REUSE_CATALOG.md` — reusable technology/capability reference.
-7. `project-state/PROJECT_STATE.md` — current operational snapshot.
-8. `TASKS.md` — executable queue and dependencies.
+1. docs/PROJECT_REFERENCE.md — durable product truth and subsystem boundaries.
+2. docs/LEARNING_INTELLIGENCE_SPEC.md — Evidence and Learning Intelligence authority.
+3. docs/CHILD_SAFETY_POLICY.md — child safety and Parent Boundaries.
+4. docs/IMPLEMENTATION_PLAN.md — current technical architecture.
+5. docs/TUTOR_PEDAGOGY_REFERENCE.md — teaching reference.
+6. docs/FULL-POWER-CANVAS-01_ARCHITECTURE_IMPLEMENTATION_SPEC.md — detailed Canvas implementation contract.
+7. research/repository/TECHNOLOGY_REUSE_CATALOG.md — reusable technology reference.
+8. project-state/PROJECT_STATE.md — current operational snapshot.
+9. TASKS.md — active execution queue.
 
-If two governing documents conflict, the most recently approved Product Owner decision controls only where the conflict is explicit. Surface any unresolved protected-area contradiction rather than silently inventing a new product direction.
+Historical plans, reviews, closure documents, and tracker evidence do not override current canonical references unless the Product Owner explicitly revives a historical decision.
+
+## Before implementation
+
+Inspect the actual repository and, when available, the authorized local worktree:
+
+- active branch and worktree;
+- git status;
+- tracked and untracked changes;
+- recent commits;
+- origin/main;
+- relevant source and tests;
+- current project-state and task authority.
+
+Preserve unrelated dirty work. Do not silently reset or overwrite another worktree.
 
 ## Current implementation mode
 
-`FULL-POWER-CANVAS-01` engineering/build work is complete and published. Do not resume hardening, change Canvas architecture, or begin production use from historical task text. The next controlled real-use / production-use phase requires separate Product Owner authorization.
+The system is in controlled real-use validation.
 
-Use **native Codex capabilities only** for this work. Do not use Superpowers or any `superpowers:*` workflow/skill. Native reasoning, repository inspection, editing, debugging, browser work, testing, and native subagents are allowed.
+Core Tutor, learner-context, Learning Intelligence, Student-source, Studio/Canvas, reusable visual, Worker, and live deployment foundations are implemented.
 
-Do not stop for ordinary implementation choices, test failures, layout problems, library selection, or reversible refactors. Stop only for:
+Current work should be driven by observed product need, especially teaching flow, live reliability, latency, personalization relevance, JEV decision quality, and later generated educational images.
 
-- a protected-area change requiring Product Owner approval;
-- contradictory governing requirements that cannot be reconciled from repository truth;
-- missing credentials when no safe useful work remains;
-- an irreversible/destructive external action requiring consent.
-
-Do not merge to `main`, force-push, delete branches, or rewrite unrelated history without explicit approval.
+Do not restart completed architecture programs merely because their historical plans remain in the repository.
 
 ## Engineering rules
 
-- Prefer the smallest robust implementation that satisfies the approved behavior.
+- Prefer the smallest robust implementation that satisfies approved behavior.
 - Preserve the modular monolith.
-- Reuse current Tutor, Studio, filtering, generated-asset ownership, Model Gateway, browser harness, and Agentic Canvas foundations.
-- Do not rebuild working infrastructure merely because FULL-POWER-CANVAS-01 expands capability.
-- Add new abstractions only when they materially improve correctness, safety, reuse, visual quality, recoverability, or maintainability.
-- Generated visual code is never application authority.
-- Exact Math/Science truth comes from typed data or deterministic tools, not renderer guesswork.
-- Route application AI through approved model/provider boundaries and preserve usage/latency/cost lineage.
+- Reuse current Tutor, Studio, Student-source, Learning Intelligence, Model Gateway, Worker, and Canvas foundations.
+- Add abstractions only when they materially improve correctness, safety, recoverability, maintainability, visual quality, or real reuse.
 - Use migrations for schema changes.
-- Preserve raw learner/source provenance and rebuildability.
+- Preserve raw learner and source provenance.
+- Keep application authority in code and governed services.
+- Keep model/provider routes observable and replaceable.
+- Do not optimize away safety, ownership, lineage, or Evidence boundaries.
 
-## Tutor / Canvas authority
+## Product authority model
 
-The invariant is:
+The key invariant is:
 
-```text
-Tutor teaches.
-Canvas Agent composes.
-Tools establish exact truth.
-Code validates and executes.
-Studio persists.
-Tutor understands the Canvas.
-```
+    Tutor teaches.
+    Canvas represents and composes.
+    Tools establish exact truth.
+    JEV makes bounded decisions only.
+    Code validates and admits.
+    Studio persists.
+    Learning Intelligence interprets governed Evidence.
+    The same Tutor continues with the learner.
 
-The Primary Tutor owns:
+### Primary Tutor
 
-- educational objective;
-- facts and grounding;
-- pedagogical strategy;
-- student-facing explanation;
-- interpretation of meaningful learner actions.
+Owns educational objective, teaching strategy, explanation, source grounding, learner-facing reasoning, and interpretation of meaningful learner actions.
 
-The Full-Power Canvas Agent owns bounded visual composition. It may choose REUSE, ADAPT, or CREATE and may use approved visual/runtime capabilities, but it does not gain learner-state, safety, storage, database, or Tutor authority.
+### Canvas
 
-## Full-Power Canvas rules
+Owns bounded visual composition only. It may use REUSE, ADAPT, or CREATE but does not become a second Tutor or learner-state authority.
 
-Typed renderers are a **fast path, not a capability ceiling**.
+### JEV
 
-The Canvas Agent may use the strongest approved route for the educational representation:
+JEV is used for finite bounded decisions such as:
 
-- existing typed visual tools/renderers;
-- reusable visual artifacts;
-- parameter adaptation;
-- React/SVG/Motion;
-- JSXGraph;
-- Konva;
-- MathLive;
-- approved chart/simulation capabilities;
-- generated project-owned images;
-- custom visual code inside the approved isolated sandbox.
+- visual personalization fact selection;
+- exact Canvas reuse selection;
+- Segment rubric comparison.
+
+JEV must not become a free-form orchestrator, teacher, generator, Safety authority, or database authority.
+
+### Deterministic system
+
+Owns:
+
+- identity and ownership;
+- Parent Boundary enforcement;
+- executable validation;
+- lineage;
+- persistence;
+- thresholds and finite allowed-action sets;
+- stale-state admission;
+- Evidence lifecycle rules;
+- fallback behavior.
+
+## Learner-context rules
+
+Keep these authorities separate:
+
+- Current conversation.
+- Student Core Profile.
+- Personal Facts / Personal Memory.
+- Learning Intelligence.
+
+Current Student behavior outranks history.
+
+Personal Facts may personalize context but never prove mastery, ability, personality, motivation, or learning style.
+
+Learning Intelligence may guide teaching but must remain source-linked, revisable, and scoped.
+
+## Canvas rules
+
+Typed renderers are a fast path, not a capability ceiling.
 
 Use:
 
-```text
-REUSE when fit is strong
-REUSE also for parameters/presentation expressible by the existing schema
-ADAPT only when generalized capability must change
-CREATE when reuse/adaptation would compromise the learning representation
-```
+    REUSE when exact fit is strong
+    ADAPT when generalized capability must change
+    CREATE when reuse or adaptation would compromise learning
 
-Do not force reuse merely to reduce cost.
+Do not force reuse merely to save cost.
 
-### Custom visual security boundary
+Every finalized custom visual must expose bounded semantic meaning so the Primary Tutor can understand it without reading generated source code.
 
-Generated custom code must execute only inside the approved visual sandbox. It must not receive:
+Generated visual code must stay inside the approved sandbox and receive no cookies, secrets, database access, unrestricted filesystem or network access, raw broad Personal Memory, raw Learning Intelligence, or direct Studio write authority.
 
-- cookies or browser identity;
-- application secrets;
-- database access;
-- unrestricted filesystem access;
-- arbitrary network access;
-- raw Personal Memory or Learning Intelligence;
-- raw student-source bytes unless a separately approved safe path explicitly requires them;
-- direct Studio writes.
+A Student action must be truthful. Never fabricate a target, answer, interaction, or visual-delivery state.
 
-Only allowlisted dependencies/capabilities and a bounded semantic event bridge are permitted.
+## Learning Intelligence rules
 
-### Semantic Manifest
+- Raw interaction is historical source authority.
+- Candidate Events are optional hints, not Evidence.
+- Segment Review interprets completed learning context.
+- Session Finalization governs activation.
+- Evidence updates Current State and Patterns only through approved rules.
+- Stable patterns require repeated support.
+- Strategy use is not strategy-effectiveness Evidence.
+- Canvas clicks are not automatically learning Evidence.
+- No psychological/personality or permanent learning-style inference.
 
-Every finalized Canvas runtime kind must expose a validated implementation-independent Semantic Manifest with stable semantic IDs sufficient for the same Primary Tutor to understand what the learner sees and does.
+## Verification
 
-The Tutor should normally consume semantic state/events, not generated code. A visual snapshot may be used only when genuinely useful.
+Use focused behavior-first tests during implementation.
 
-### Reusable Visual Registry
+Typical closure sequence:
 
-Separate:
+1. focused contract or unit tests;
+2. affected PostgreSQL integration;
+3. frontend tests and typecheck when relevant;
+4. actual browser evidence for visual behavior;
+5. repository truth;
+6. git diff --check;
+7. broader regression near closure when justified;
+8. real provider/live proof only when the acceptance question requires it.
 
-- build history: every generated visual attempt/version needed for provenance;
-- reusable registry: only parameterizable, validated, safe, high-quality reusable artifacts.
+A task is not complete because unit tests pass.
 
-Never promote student-specific private information into reusable artifact definitions.
+Do not claim learning benefit from structural or synthetic tests.
 
-## Verification rules
+## Production and external actions
 
-Use lightweight behavior-first TDD on meaningful new boundaries when practical:
+Explicit Product Owner approval is required for:
 
-```text
-define behavior → RED for intended reason → implement → GREEN
-```
+- merge to main when not already authorized;
+- production deployment;
+- production DB migration;
+- destructive data operations;
+- material provider/model policy changes;
+- irreversible external actions.
 
-Do not build exhaustive upfront test matrices.
-
-During implementation use focused verification. Do not repeatedly rerun the entire Python/PostgreSQL/browser/live-provider suite after small changes.
-
-For a separately authorized production-use phase, treat real-provider/browser evidence, authenticated Daily use, reliability and learning-benefit evidence as distinct gates. AI Development Review is advisory and cannot certify correctness or release readiness.
-
-A task is not complete because unit tests pass. Visual completion requires actual rendered evidence.
-
-Always run `git diff --check` before closure and report any unrun gate exactly.
+Routine reversible local implementation decisions do not require repeated approval.
 
 ## Project-state discipline
 
-`project-state/PROJECT_STATE.md` is a short operational snapshot, not a diary. Keep only:
+project-state/PROJECT_STATE.md is a short operational snapshot, not a diary.
+
+Keep only:
 
 - current goal;
 - current reality;
@@ -158,8 +194,21 @@ Always run `git diff --check` before closure and report any unrun gate exactly.
 - next recommended action;
 - critical references.
 
-## Active repair tracking and language
+## Documentation discipline
 
-Use [Tutor / Canvas Repair Tracker](docs/TUTOR_CANVAS_REPAIR_TRACKER.md) for the current repair statuses and R01-R15 completion evidence. Update the affected rows after verified work; DONE requires the stated evidence, not a summary claim. Keep PROJECT_STATE.md short and link to this register.
+When product reality changes materially, update:
 
-Write Codex prompts, execution instructions and handoffs in English; keep user-facing discussion Arabic unless requested otherwise. Complete the approved pedagogy/definition/visual-guidance repairs before resuming the separately deferred One Call/multi-call study. Do not treat the tracker as authorization for paid calls or release operations.
+- README.md for orientation;
+- docs/PROJECT_REFERENCE.md for durable product truth;
+- docs/IMPLEMENTATION_PLAN.md for architecture;
+- the relevant governing domain spec;
+- TASKS.md for active execution;
+- PROJECT_STATE.md for current operations.
+
+Do not rewrite historical evidence to look current.
+
+## Language
+
+Write Codex prompts, implementation instructions, and handoffs in English.
+
+Keep Product Owner discussion in Arabic unless requested otherwise.

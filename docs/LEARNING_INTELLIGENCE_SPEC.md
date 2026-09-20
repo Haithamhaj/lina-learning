@@ -2,7 +2,7 @@
 
 ## LEARNING_INTELLIGENCE_SPEC.md
 
-**Status:** Approved governing specification; **Implemented / Full-System Acceptance Completed / Limited Real-Lina use observed / longitudinal real-use validation pending**
+**Status:** Approved governing specification; **Implemented / Full-System Acceptance Completed / controlled real-use underway / longitudinal real-use validation pending**
 **Authority:** Governing specification for the Learning Intelligence subsystem  
 **Audience:** Product owner, ChatGPT, Codex, AI agents, developers, reviewers  
 **Depends on:** `PROJECT_REFERENCE.md`  
@@ -45,7 +45,13 @@ The detailed implementation may evolve, but it must preserve the contracts and i
 
 ## 1.1 Real-Use Verification Scope
 
-Limited real Lina use has occurred: Lina herself participated in part of a real Tutor interaction, and that persisted interaction was subsequently continued and used during system testing/Tutor calibration. This does not establish stable recurring/daily Lina use, a complete naturally recurring `Session → Review → Evidence → Card → later Tutor` loop with Lina, or longitudinal personalization across multiple natural Lina sessions. Those remain separate validation horizons.
+Controlled real Lina use is now underway on the deployed system. This gives the project real conversation, Canvas, session, personalization, latency, and recovery evidence rather than only synthetic or isolated acceptance data. It still does not establish longitudinal learning benefit, stable recurring use across enough natural sessions, or the long-term accuracy of Evidence-derived personalization. Those remain separate validation horizons.
+
+## 1.2 Bounded rubric comparison
+
+The implemented system may use JEV as a bounded comparison layer over already validated Segment findings. JEV receives only the finite rubric choices and the explicitly supplied cited learning context needed for that comparison. Its result is stored separately from the governed Segment Review output and cannot directly create, delete, or rewrite Learning Events, Evidence, Current State, Patterns, or the Learner Intelligence Card.
+
+This comparison exists to evaluate decision quality and calibration. The governing Learning Intelligence authority remains the approved Segment Review → Session Finalization → Event/Evidence pipeline plus deterministic lifecycle rules.
 
 ---
 
@@ -1937,7 +1943,7 @@ The original readiness criteria remain useful as regression requirements:
 15. Multimodal original work remains distinct from AI annotations/reconstructions when that deferred capability is implemented.
 16. Technical acceptance demonstrates intelligence from a meaningful Session can improve a later Tutor interaction without loading the full old transcript.
 
-This technical acceptance does **not** establish stable daily Lina use, a complete naturally recurring cross-session loop with Lina, or longitudinal real-use personalization across multiple natural Lina sessions. Limited Real-Lina interaction has occurred; those broader real-use horizons remain pending.
+Controlled real use is now active, but this technical acceptance still does **not** establish longitudinal learning benefit, stable recurring use across enough natural sessions, or the long-term quality of cross-session personalization. Those broader real-use horizons remain pending and must be evaluated from natural usage rather than inferred from architecture or synthetic tests.
 
 ---
 

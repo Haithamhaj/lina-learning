@@ -1,96 +1,283 @@
 # Lina
 
-Lina is an AI-native personal learning system for school students. It began with one learner—Lina, the founder's daughter—and Grade 5 as its first real proving ground. The product is designed to grow into age- and grade-aware learning support across primary through secondary education; that broader scope is vision, not a claim of current implementation.
+Lina is an AI-native personal learning system for school-age learners. It began with one real learner, Lina, and Grade 5 as its proving ground, but the product is designed to grow across school years without becoming a generic LMS, homework-answer bot, or one-child prototype.
+
+The core idea is simple:
+
+> **Learning is the goal. The answer is only a tool.**
+
+Lina is built to understand what is happening in the learning process, adapt how it teaches, use the right representation when useful, and preserve enough evidence over time to make future support more relevant without turning the learner into a label.
 
 ## Why Lina exists
 
-Students can reach answers easily through AI, teachers, videos, books, and online resources. The harder question is what happened after the answer: did the Student understand, build a foundation, apply the idea independently, retain it, or need a different intervention?
+Students already have access to answers from AI, teachers, videos, books, and the web. The harder questions are:
 
-Parents often see a grade, completed homework, or a test result—not the learning process behind it. Lina exists to make that process more understandable and to improve teaching over time without turning the learner into a label.
+- Did the learner actually understand?
+- What foundation is missing?
+- Was the learner independent or heavily supported?
+- Did one explanation fail while another representation helped?
+- Can the learner apply the idea again later?
+- What should the Tutor do differently next time?
 
-## Vision
+Lina is designed around those questions.
 
-Lina is designed to grow with a Student across school years:
+## Product spirit
 
-```text
-Primary school → Middle school → Secondary school
-```
+Lina should feel like one thoughtful learning companion, not a collection of internal systems.
 
-The daily user is the Student. The initial go-to-market is B2C, with the Parent as the initial buyer/payer and a meaningful partner in understanding learning. This does not define a future Parent Dashboard or institutional product.
+Behind the simple Student experience, Lina keeps responsibilities separate:
 
-## Mission
+- the **Primary Tutor** teaches and holds the conversation;
+- **Canvas / Studio** provides interactive visual representation when it helps;
+- **Student Core Profile** gives authoritative age, Grade, and identity context;
+- **Personal Facts / Personal Memory** preserve explicit safe learner context for continuity and natural examples;
+- **Learning Intelligence** derives revisable conclusions only from meaningful learning evidence;
+- **JEV** supports a small set of bounded decisions such as visual-personalization selection, exact Canvas reuse selection, and rubric comparison;
+- deterministic application logic retains authority for safety, ownership, persistence, lineage, executable validation, and final admission.
 
-Build an AI-native learning environment that helps every Student understand deeply, build strong foundations, and grow in appropriate independence through natural tutoring, multimodal learning, interactive representation, and evidence-grounded personalization over time.
+The system can be sophisticated internally without making the learner experience complicated.
 
-## Learning philosophy
+## What Lina is not
 
-**Learning is the goal. The answer is only a tool.**
+Lina is not:
 
-Lina helps a Student understand, build strong foundations, apply learning, retain it, and become appropriately more independent over time. It is not a homework-answer generator, generic school chatbot, book chatbot, test-prep-only system, or LMS.
+- a generic ChatGPT wrapper;
+- a book chatbot;
+- an LMS;
+- a test-prep-only product;
+- a system that forces hints before teaching;
+- a psychological profiling system;
+- a permanent learning-style classifier;
+- a surveillance product for parents;
+- a Canvas-first product where every answer must become a visual.
 
-When a learner is stuck, explaining or teaching a solution can be appropriate. The goal is understanding, not artificial struggle or indefinite answer withholding.
+## The learner-context model
 
-## How Lina understands a learner
+Lina intentionally keeps four sources of learner context separate.
 
-Lina keeps four authorities separate:
+| Context | What it is | What it must not become |
+| --- | --- | --- |
+| **Current conversation** | What the Student is showing and asking now | Be overridden by old assumptions |
+| **Student Core Profile** | Parent/System-authoritative identity, age and Grade context | Mastery, ability or personality |
+| **Personal Facts / Memory** | Explicit safe learner-provided context such as interests, preferences and personal references | Learning Evidence or a fixed learning style |
+| **Learning Intelligence** | Evidence-grounded conclusions from meaningful learning behavior over time | Permanent labels or unsupported inference |
 
-- **Student Core Profile:** Parent/System-authoritative identity and age/Grade context.
-- **Personal Facts:** explicit, safe, durable context stated by the Student, such as interests or hobbies.
-- **Current Conversation Context:** what matters in the interaction now.
-- **Learning Intelligence:** what actual learning Evidence suggests over time.
-
-This is how Lina can know the learner without labeling the learner. It does not create psychological profiles, intelligence labels, attention labels, permanent learning styles, or inferred talent labels.
+Current demonstrated behavior has priority over stale historical personalization.
 
 ## How personalization works
 
-Lina personalizes how the Student is taught, not merely what content is shown.
+Personalization in Lina is not simply inserting a favorite color or hobby into every answer.
 
-```text
-Student interaction → meaningful Evidence → relevant learner context
-→ teaching decision → adapted teaching → observable new outcome
-```
+    Current Student need
+    + Core Profile
+    + relevant Personal Facts
+    + relevant Learning Intelligence
+    + current subject/source/Canvas state
+            ↓
+    Primary Tutor teaching decision
+            ↓
+    explanation / question / example / visual / practice / support
+            ↓
+    observable learner outcome
 
-Teaching Mode, Teaching Strategy, Teaching Method, and representation/surface are distinct. Historical intelligence is guidance, not a command; current Student behavior outranks stale assumptions. A method being used is not proof it worked—an observable Student outcome is required before it contributes to teaching-effectiveness intelligence.
+Personal Facts may make an example or visual feel natural. Learning Intelligence may provide a narrow evidence-backed prior. Neither is allowed to force a teaching method when the current Student behavior says otherwise.
+
+A teaching method is not considered effective merely because it was used. Lina requires observable learner behavior before treating a strategy outcome as evidence.
+
+## Primary Tutor
+
+There is one student-facing Tutor identity.
+
+The Primary Tutor owns:
+
+- the educational objective;
+- explanation and reasoning;
+- teaching mode, strategy and method;
+- source grounding;
+- interpretation of learner responses;
+- deciding when a visual representation would materially help;
+- continuation after meaningful Canvas interaction.
+
+The Tutor can answer directly, explain, ask, guide, challenge, model, or stop. Lina does not impose one fixed teaching flow.
+
+## Canvas / Studio
+
+Canvas is a teaching surface, not a second Tutor.
+
+The current Full-Power Hybrid Canvas supports:
+
+- typed educational visual capabilities;
+- interactive scenes and semantic learner actions;
+- reusable visual artifacts;
+- exact reuse when a validated prior visual fits;
+- parameterized reuse;
+- structural ADAPT and versioning;
+- new CREATE paths when existing capabilities are insufficient;
+- custom visual packages in an isolated sandbox;
+- browser rendering with durable Scene, Event, and Snapshot state;
+- semantic state returned to the same Primary Tutor.
+
+A learner action must be truthful. Lina must not fabricate a selection, hide an admitted Chat turn, reveal an answer before the learner acts, or claim a visual is visible merely because the server finished composing it.
+
+## JEV bounded decisions
+
+Lina uses OpenRouter Decisions / **JEV** for narrow decision tasks where the answer space is intentionally bounded.
+
+Current uses include:
+
+1. selecting relevant Personal Facts for visual personalization from an already filtered catalogue;
+2. choosing among already authorized executable exact-reuse Canvas actions or NO_MATCH;
+3. comparing Learning Intelligence rubric classifications against the governed review output.
+
+JEV does not become the Primary Tutor, Canvas generator, safety authority, evidence authority, database authority, or free-form orchestration layer. The application still validates allowed actions, provenance, ownership, thresholds, persistence, and fallbacks.
+
+## Learning Intelligence
+
+Learning Intelligence is evidence-first and rebuildable.
+
+    Raw interaction
+    → completed learning Segment
+    → semantic Segment Review
+    → staged findings
+    → Session finalization
+    → validated learning events
+    → Evidence
+    → Current State / Patterns
+    → Learner Intelligence Card
+    → relevant later personalization
+
+It tracks learning meaning, not personality.
+
+Examples of useful evidence include independent reasoning, meaningful hint dependency, self-correction, misconception supported by reasoning, transfer, retention, and observable strategy outcomes.
+
+Raw clicks, greetings, one wrong answer, or Tutor assumptions do not automatically become Evidence.
+
+## Personal Facts / Memory
+
+Personal Facts are separate from Learning Intelligence.
+
+They capture explicit learner context such as interests, hobbies, family references, activities, or preferences when safe and useful for conversational continuity.
+
+They can help Lina use a familiar object in an example. They cannot prove ability, personality, motivation, mastery, or a preferred learning method.
+
+## Student sources and multimodal learning
+
+The Student can learn through text, voice, images, PDFs, DOCX files, textbook pages, homework, handwriting, drawings, and Canvas interaction.
+
+Original Student sources remain protected source authority. Extraction, OCR or normalization, retrieval, and visual representation are processing layers, not replacements for the original.
 
 ## Parents
 
-**Parents get insight, not surveillance.** Important learner conclusions should be explainable through an Evidence summary and, when appropriate, specific relevant learning examples—not default full-transcript monitoring. Parent disagreement can trigger review but cannot manually rewrite Learning Intelligence; Evidence remains authoritative. Safe ordinary Personal Facts may inform Parent understanding where appropriate, without making the Parent their source.
+The governing principle is:
 
-## Current proving ground
+> **Parents get insight, not surveillance.**
 
-Lina and Grade 5 are the current real-world proving ground. That focus keeps evaluation concrete; it does not make Lina permanently a one-child or Grade-5-only product.
+Parent/System authority includes Core Profile and configurable learning boundaries. Evidence-grounded learner conclusions cannot simply be overwritten because an adult disagrees; disagreement can trigger review or revalidation.
 
-## Current implemented capability
+A future Parent experience should expose meaningful evidence and useful explanations rather than default full-transcript monitoring.
 
-The accepted repository baseline includes:
+## Safety
 
-- Student/Parent ownership and authentication;
-- a primary Tutor with child safety and Parent Learning Boundaries;
-- Learning Intelligence foundations, Personal Facts, and Core Profile;
-- optional source-preserving content/RAG grounding;
-- Voice/STT and Student-owned image, PDF, and DOCX sources;
-- durable Studio/Canvas runtime with Chat–Canvas–Tutor continuity;
-- Full-Power Hybrid Canvas: typed capabilities plus immutable REUSE / ADAPT / CREATE builds in the approved sandbox;
-- an on-demand, advisory Canvas Development Review path for internal engineering review; and
-- current MATH, SCIENCE, ENGLISH, and ARABIC Studio support; and
-- the Daily Student surface.
+Child safety is enforced as a system boundary, not as a polite Tutor suggestion.
 
-MATH, SCIENCE, ENGLISH, and ARABIC are the current structured Studio product subjects. Tutor and general conversation are not restricted to those four subjects; broader structured Studio support is not implied.
+Lina separates:
 
-Engineering evidence proves selective CREATE, promotion, true REUSE, true ADAPT and desktop production-equivalent browser paths. It does not establish broad unrestricted CREATE reliability, authenticated Daily production use, deployment, or real learner learning benefit. Mobile is explicitly deferred and is not the current engineering release gate. Canvas Development Review is separate from Learning Intelligence, learner profile/personalization and Tutor memory; its AI reports are advisory, not correctness or release authority.
+- a non-overridable child-safety baseline; and
+- configurable Parent Learning Boundaries.
 
-The next phase is a separately authorized controlled real-use / production-use phase. It is not started by this repository state.
+Canvas, JEV, Student sources, generated code, retrieval, and Tutor behavior must remain inside those boundaries.
 
-## Architecture and reading order
+## Current implementation
 
-Lina is a modular monolith: web client, FastAPI API, PostgreSQL/pgvector, worker, object storage where needed, and Model Gateway. Read `AGENTS.md`, `docs/PROJECT_REFERENCE.md`, and `project-state/PROJECT_STATE.md` first; [docs/README.md](docs/README.md) routes to detailed current contracts. History, reviews, and research are non-authoritative.
+The current repository and live pilot include:
+
+- Next.js Student and Parent surfaces;
+- Daily Student learning experience;
+- Clerk-backed identity and ownership;
+- FastAPI application services;
+- Primary Tutor runtime;
+- child safety and Parent Boundaries;
+- Student Core Profile;
+- Personal Facts / Personal Memory;
+- Learning Intelligence pipeline and reprocessing;
+- optional content ingestion and RAG grounding;
+- voice and speech-to-text;
+- image, PDF, and DOCX Student sources;
+- durable Studio Runtime, Scene, Event, Snapshot, and Interaction;
+- Full-Power Hybrid Canvas with REUSE, ADAPT, and CREATE;
+- isolated custom visual runtime;
+- reusable visual registry and immutable build provenance;
+- OpenAI Model Gateway routes;
+- JEV bounded-decision routes through OpenRouter;
+- PostgreSQL and pgvector;
+- object storage;
+- separate background Worker;
+- GCP live pilot deployment.
+
+Current structured Studio subject support includes MATH, SCIENCE, ENGLISH, and ARABIC. General Tutor conversation is not limited to those subjects.
+
+## Current phase
+
+The system is in controlled real-use validation.
+
+Local engineering acceptance exists for the core Tutor, Canvas, Learning Intelligence, and learner-context boundaries. Real use is now used to discover what only natural interaction can reveal: teaching-flow quality, latency, recovery behavior, personalization relevance, Canvas usefulness, and longitudinal learning value.
+
+Implementation evidence is not the same thing as learning-effectiveness evidence.
+
+## Architecture
+
+    Student / Parent Web
+            ↓
+    FastAPI application
+            ↓
+    Tutor ─ Studio/Canvas ─ Student Sources ─ Content/RAG
+      │          │
+      ├─ Personal Facts / Core Profile
+      ├─ Learning Intelligence
+      └─ bounded JEV decisions
+            ↓
+    PostgreSQL + pgvector / Object Storage / Worker
+            ↓
+    Model Gateway → OpenAI / OpenRouter Decisions
+
+## Read the project
+
+Start here:
+
+1. README.md — product orientation.
+2. docs/PROJECT_REFERENCE.md — durable product truth and boundaries.
+3. docs/IMPLEMENTATION_PLAN.md — current architecture and runtime flows.
+4. project-state/PROJECT_STATE.md — short current operational state.
+5. TASKS.md — active execution queue.
+6. docs/README.md — documentation map.
+
+Historical closure, reviews, research, and acceptance evidence remain useful records, but they do not override the current canonical references.
+
+## Common questions
+
+### Is Lina mainly a chatbot?
+No. Chat is the primary interaction surface, but Lina also has durable learner context, evidence processing, multimodal Student sources, and an interactive Canvas/Studio runtime.
+
+### Does Lina decide a child has one learning style?
+No. Lina may observe that a particular method helped in a specific context, but it does not create a permanent visual, auditory, or similar learner label.
+
+### Does Personal Memory affect mastery?
+No. Personal Facts help with continuity and natural examples. Learning Intelligence is the evidence-grounded learning layer.
+
+### Does Canvas teach independently?
+No. Canvas represents and captures meaningful learner interaction. The same Primary Tutor remains the teaching authority.
+
+### What is JEV used for?
+Small bounded decisions with finite allowed answers, not open-ended teaching or generation.
+
+### Can Lina change its mind about the learner?
+Yes. Learning Intelligence is revisable, evidence-linked, and designed to be rebuilt from source history.
 
 ## Local commands
 
-```bash
-npm install
-npm run dev
-npm run dev:api
-alembic upgrade head
-npm run test
-```
+    npm install
+    npm run dev
+    npm run dev:api
+    alembic upgrade head
+    npm run typecheck
+    npm run test:python

@@ -1,50 +1,149 @@
 # Lina capability roadmap
 
-This roadmap sequences product evolution. It is not execution authority: an explicit current Product Owner instruction authorizes its requested working slice, while this roadmap and `TASKS.md` provide planning/context. Historical status labels do not override that instruction.
+## Purpose
 
-## Completed foundation
+This roadmap describes product evolution and sequencing. It is not automatic execution authority. Explicit Product Owner direction controls the active working slice.
 
-The accepted baseline includes the primary Tutor, safety/Parent Boundaries, ownership, optional content/RAG, Learning Intelligence foundation, Personal Facts/Core Profile, Voice/STT, Student image/PDF/DOCX sources with multimodal safety, durable Studio/Canvas runtime, Chat–Canvas continuity, and Studio subjects MATH/SCIENCE/ENGLISH/ARABIC.
+## Product direction
 
-## Current
+Lina grows from a strong personal learning system for one real learner into a broader age- and grade-aware learning product only when real use justifies the expansion.
 
-1. Student UI refinement: improve the Daily Student experience without reopening protected contracts.
-2. Authenticated Daily end-to-end acceptance: prove the complete disposable Student journey.
-3. Real Lina use: observe natural use before treating implementation as learning benefit.
-4. Evidence/personalization calibration: assess real, observable outcomes and revise only through approved work.
+The roadmap therefore prioritizes **learning quality and evidence before feature count**.
 
-## Near next, usage-driven
+## Implemented foundation
 
-- Fraction Canvas capability.
-- Division Canvas capability.
-- Other narrowly evidenced visual capabilities.
+The current baseline includes:
+
+- Primary Tutor;
+- child safety and Parent Boundaries;
+- Student ownership and authentication;
+- Core Profile;
+- Personal Facts / Personal Memory;
+- Learning Intelligence and reprocessing;
+- optional Content / RAG grounding;
+- voice and STT;
+- image, PDF, and DOCX Student sources;
+- durable Studio / Canvas state;
+- Full-Power Hybrid Canvas;
+- REUSE / ADAPT / CREATE;
+- reusable visual registry;
+- custom visual sandbox;
+- background Worker;
+- JEV bounded-decision integrations;
+- live GCP pilot.
+
+## Current phase — real-use validation
+
+### 1. Natural Lina use
+
+Use the product naturally and capture:
+
+- teaching-flow failures;
+- unnecessary repetition;
+- latency;
+- recovery defects;
+- useful and unhelpful personalization;
+- Canvas usefulness;
+- real evidence quality.
+
+Do not treat one successful demo as product acceptance.
+
+### 2. Teaching-flow integrity
+
+Resolve the already evidenced behaviors:
+
+- unfinished guided sequences without a useful next affordance;
+- teaching strategy labels that do not match visible behavior;
+- failure to make a substantive method change after genuine DID_NOT_HELP.
+
+### 3. Personalization calibration
+
+Evaluate whether Personal Facts and Learning Intelligence improve the experience without becoming forced, repetitive, or label-like.
+
+### 4. JEV decision evaluation
+
+Collect real examples for:
+
+- visual personalization fact selection;
+- exact Canvas reuse selection;
+- Segment rubric comparison.
+
+Evaluate each slice independently using agreement, disagreement, probability, latency, cost, and error cases.
+
+### 5. Performance and buffering
+
+Measure the actual source of perceived waiting before changing model-call architecture.
+
+Separate:
+
+- Tutor inference;
+- bounded decision latency;
+- terminal validation;
+- proxy and stream delivery;
+- persistence;
+- Canvas worker composition.
+
+## Near next — usage-driven capability work
+
+Only add structured visual capabilities when natural use demonstrates a repeated need.
+
+Candidate areas include:
+
+- fractions;
+- division;
+- additional math representations;
+- broader Science process and structure visuals;
+- language learning interactions.
+
+Do not create a capability merely because the technology supports it.
 
 ## Version 2 — Educational Generated Images
 
-- Add generated educational images as a distinct V2 capability, not as a workaround for current Canvas defects.
-- Outside mathematics, when the learning goal depends on visualizing an object, natural structure, scene, or process, prefer a generated educational image or image-led representation over a generic chart/plot. Science is the first priority domain.
-- Mathematics remains structured-Canvas-first unless an actual image is the better representation for the learning goal.
-- Generated images should be child-appropriate, instructional, and clear rather than optimized for photorealistic or marketing-grade quality. Cost/latency efficiency is preferred when educational usefulness is preserved.
-- Delivery should integrate with Canvas. The default educational output is an instructional image with simple labels/arrows/stages when those annotations materially improve understanding; a plain image is acceptable only when annotation adds no learning value.
-- Generated images are illustrative learning aids, not literal scientific reference images. When exact scientific form, terminology, or relationships matter, learner-visible text and labels must come from trusted grounded information rather than guesses inferred from generated pixels.
-- Image generation is available through two paths: an explicit learner request within the V2 eligibility scope, or a contextually offered image CTA when the current concept/turn is genuinely image-appropriate.
-- Initial V2 eligibility is intentionally narrow: the active subject must be Science and the visual need must be one of shape, structure, process, or scene. Requests outside that boundary stay on existing Tutor/Canvas capabilities until a later approved expansion.
-- Eligibility uses a hybrid authority: the Tutor may signal that an image would help, but server-owned/system rules decide whether the image CTA is actually eligible to appear and whether generation may proceed. The Tutor signal cannot bypass the subject/category/quota rules.
-- The image CTA is contextual only; it must not be permanently visible in every conversation or every Tutor turn.
-- Per learner, at most 10 successful generated images that are actually delivered/visible count toward the daily allowance. Failed generations, invisible internal retries, and redisplay of the same generated image do not consume an additional allowance.
-- When the daily allowance is exhausted, hide the image CTA for the rest of that day. If the learner explicitly asks for another image, Lina should state simply that today's image allowance is finished and continue with the available structured Canvas/drawing or verbal explanation instead.
-- The daily image allowance resets at local midnight according to the learner's stored timezone.
-- High-level scientific-grounding and annotated-output principles are decided. Remaining V2 work includes provider/model selection, questionable-output validation/rejection behavior, quota persistence/enforcement, exact Canvas annotation implementation, and acceptance before implementation.
+Generated educational images remain a distinct capability, not a workaround for Canvas defects.
+
+### Agreed direction
+
+- Science first.
+- Initial need categories: shape, structure, process, scene.
+- Mathematics remains structured-Canvas-first unless an actual image is clearly better.
+- Delivery integrates with Canvas.
+- Default output is instructional rather than photorealistic.
+- Labels, arrows, and stages are added when they improve understanding.
+- Exact scientific text and relationships come from trusted grounded information, not guesses from generated pixels.
+- A contextual image action may appear when appropriate.
+- Explicit learner image requests are supported inside the eligible scope.
+- Maximum 10 successful visible generated images per learner per day.
+- Failed or invisible retries do not consume another allowance.
+- Re-displaying the same generated image does not consume another allowance.
+- Allowance resets at learner-local midnight.
+
+### Remaining before implementation
+
+- provider and model selection;
+- questionable-output validation and rejection;
+- retry behavior;
+- quota persistence and enforcement;
+- exact annotation / Canvas composition contract;
+- acceptance criteria.
 
 ## Later
 
-- Age/grade-aware evolution and progression across school years toward primary-to-secondary product maturity.
-- Trusted-reference pilot.
-- Broader Science and language visual coverage beyond the initial V2 generated-image slice.
-- A separately designed Parent experience/dashboard.
-- Grade transition.
-- Wider productization only after real-use evidence.
+- broader primary-to-secondary age and Grade evolution;
+- Grade transition behavior;
+- richer Parent insight experience;
+- trusted-reference expansion;
+- broader structured subject coverage;
+- productization beyond the initial B2C proving ground;
+- institutional or school context only if real product evidence supports it.
 
 ## Permanent sequencing rules
 
-Tutor availability never depends on curriculum. Current behavior outranks historical personalization. A visual surface must serve a Tutor-selected learning purpose. Strategy selection is not strategy-effectiveness evidence. The initial go-to-market is B2C; any school/institution expansion is possible future context, not an active roadmap commitment. No capability above authorizes new infrastructure or a broad architecture redesign.
+- Tutor availability never depends on curriculum.
+- Current Student behavior outranks historical personalization.
+- A visual must serve a learning purpose.
+- Strategy selection is not strategy-effectiveness Evidence.
+- Personal Facts are not Learning Intelligence.
+- JEV remains a bounded decision component, not a general orchestration layer.
+- Parent insight must not become default surveillance.
+- New infrastructure requires demonstrated need.
+- Real learner value outranks architecture elegance.

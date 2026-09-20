@@ -1,9 +1,82 @@
 # Studio and Canvas
 
-Studio is a durable workspace for Tutor-selected educational representation. It is not an autonomous teaching authority: the Tutor keeps language/reasoning authority and Canvas must not block a normal conversation.
+## Purpose
 
-The runtime persists Runtime, Scene, semantic Event, and materialized Snapshot state. A bounded Canvas Specialist may propose/compose a subject-compatible workspace; runtime code validates admission, safety, capability, persistence, retries, and provenance. Canvas-originated turns return to the same primary Tutor context.
+Studio is Lina's durable visual and interactive learning workspace.
 
-Primary Studio subjects are MATH, SCIENCE, ENGLISH, and ARABIC. General/unknown requests retain ordinary Chat behavior. Registered capabilities include Math group transfer, decimal number line/place value, Cartesian construction (`[-10,10]` per axis), Science process sequence/visualization, English sentence ordering, and Arabic sentence ordering/exact registered Arabic activity behavior. Student-source annotation is a separate derived-media concern, not an Arabic Studio production capability.
+It is not an autonomous Tutor. The Primary Tutor retains teaching, language, reasoning, and interpretation authority.
 
-The next Studio work is usage-driven: fraction and division capabilities require their own bounded task, evidence, and acceptance gate.
+## Durable state
+
+Studio persists:
+
+- Runtime;
+- Scene;
+- Event;
+- Snapshot;
+- Student interaction;
+- Tutor observation.
+
+The browser renders and sends bounded actions. It does not own durable semantic state.
+
+## Full-Power Canvas
+
+The current system supports:
+
+- typed educational renderers;
+- diagrams and processes;
+- number lines and plots;
+- text grouping and classification;
+- reusable visual artifacts;
+- exact REUSE;
+- parameterized reuse;
+- structural ADAPT;
+- new CREATE;
+- custom visual packages inside the approved sandbox.
+
+Typed renderers are a fast path, not a capability ceiling.
+
+## Authority flow
+
+    Primary Tutor
+    → educational objective and Canvas brief
+    → Canvas composition
+    → validated Scene
+    → browser
+    → meaningful Student action
+    → Studio state
+    → same Primary Tutor
+
+Canvas-originated actions do not automatically become Learning Evidence.
+
+## Truthful interaction
+
+Studio must not:
+
+- fabricate a Student target;
+- expose a hidden answer as learner state;
+- silently erase an admitted Chat turn;
+- create uncontrolled parallel Tutor interactions;
+- claim a visual is visible only because server work completed.
+
+## Recovery
+
+Canvas lifecycle truth distinguishes pending, running, failed, ready, and current Scene state.
+
+Depending on the actual condition, the product may wait, reload the existing Scene, retry failed work, or replace a semantically insufficient Scene.
+
+Canvas failure must never make normal Tutor chat unavailable.
+
+## Reuse
+
+The system may use JEV to choose among already authorized exact-reuse actions or NO_MATCH.
+
+Candidate loading, ownership, executable validation, artifact/version/build lineage, parameters, storage access, and final reuse admission remain deterministic application responsibilities.
+
+## Current subject support
+
+Structured Studio support currently includes MATH, SCIENCE, ENGLISH, and ARABIC.
+
+General Tutor conversation is broader and does not require a registered Studio subject.
+
+Future Studio capability work is usage-driven rather than catalogue-driven.

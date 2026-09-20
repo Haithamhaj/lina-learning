@@ -11,7 +11,7 @@
 
 # 1. Purpose
 
-Lina Personal Learning System serves a child around ten years old. Student-facing behavior must therefore be age-appropriate by design and must not rely on a Tutor prompt alone for enforcement.
+Lina Personal Learning System serves school-age learners, with Lina around age ten as the current proving ground. Student-facing behavior must therefore be age-appropriate by design and must not rely on a Tutor prompt alone for enforcement.
 
 This policy separates two different concerns:
 
@@ -149,9 +149,10 @@ This policy applies to:
 - interactive HTML/SVG learning artifacts,
 - generated images if enabled later,
 - web-derived information if enabled later,
-- science experiments or hands-on activity suggestions.
+- science experiments or hands-on activity suggestions,
+- bounded external decision processing such as JEV where learner-derived context is supplied for an approved decision slice.
 
-No student-facing tool may bypass the policy because it is “only a visual” or “only a tool call.”
+No student-facing tool or decision provider may bypass the policy because it is “only a visual”, “only a tool call”, or “only a bounded decision”.
 
 ---
 
@@ -188,6 +189,8 @@ Recommended audit fields:
 - downstream tool/tutor action.
 
 The original interaction remains governed by the project's raw-history policy.
+
+When learner-derived context is sent to an external model or bounded decision provider, use only the minimum approved slice-specific state required for that decision. Provider processing does not gain Safety, Parent Boundary, ownership, Evidence, or persistence authority. The application remains responsible for final admission and enforcement.
 
 ---
 

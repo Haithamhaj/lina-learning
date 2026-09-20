@@ -2,294 +2,426 @@
 
 ## Status
 
-Current technical architecture for implemented `FULL-POWER-CANVAS-01`. `docs/FULL-POWER-CANVAS-01_CLOSURE.md` and `docs/FULL-POWER-CANVAS-HARDENING.md` are historical engineering evidence, not current execution instructions.
-
-CREATE uses strict semantic fields → validated immutable package → shared production sandbox preview (wide/narrow and pointer probe) → bounded independent review/refinement → reference-only Scene. Clipped controls or failed preview cannot be finalized. The current runtime permits at most four total authoring attempts: at most two CREATE attempts and at most three source-only refinements, sharing one budget; no unbounded generation loop. The composing worker requires the existing Node/Playwright runtime and installed Chrome; missing preview support fails closed.
-
-Ordinary parameter changes are REUSE. Structural ADAPT carries a validated parent Version and creates a child Build/Version. A trusted source-only correction of a registered implementation creates a further child Version and Instance, preserving previous source, Manifest and Studio history. Promotion remains selective and owner-scoped.
-
-## Current baseline
-
-Implement from the completed Canvas baseline:
-
-`62df59bcc8c43074c223d79b73bcf97a0905ed4c`
-
-Do not silently start from an older `main` if it lacks the required Canvas baseline. Use an isolated short-lived branch/worktree and preserve unrelated work.
-
-## System shape
-
-Lina remains a modular monolith:
-
-```text
-Next.js Student / Parent surfaces
-          ↓
-FastAPI application services
-          ↓
-Tutor / Studio / Content / Intelligence / Model Gateway
-          ↓
-PostgreSQL + pgvector / Object Storage / Worker
-```
+**Current technical architecture and execution direction.**
 
-FULL-POWER-CANVAS-01 adds bounded capabilities inside the existing architecture; it is not a microservice conversion.
-
-## Target Canvas architecture
-
-```text
-Student
-  ↓
-Primary Tutor
-  ├─ teaching / reasoning / facts / grounding
-  └─ CanvasBrief + bounded visual learner context
-        ↓
-Full-Power Canvas Agent
-        ↓
-Capability + Reusable Visual Registry search
-        ↓
-REUSE / ADAPT / CREATE
-        ↓
-┌─────────────────────────────────────────────────────┐
-│ Fast paths                                           │
-│ typed Agentic Canvas / visual-toolbelt / JSXGraph / │
-│ Konva / MathLive / approved visual capabilities     │
-└─────────────────────────────────────────────────────┘
-        or
-┌─────────────────────────────────────────────────────┐
-│ CREATE path                                          │
-│ generated package → validate → compile → sandbox    │
-│ → browser preview → bounded review/refinement       │
-└─────────────────────────────────────────────────────┘
-        ↓
-Semantic Manifest + stable semantic IDs
-        ↓
-Studio Runtime / Scene / Event / Snapshot / Interaction
-        ↓
-same Primary Tutor observation
-```
+This document describes the system that exists now. Historical Canvas closure, hardening, review, and branch-specific implementation documents remain evidence of how the system was built; they are not current execution authority.
 
-## Implementation principles
+## 1. Architectural stance
 
-### 1. Preserve working foundations
+Lina is a modular monolith.
 
-Do not rebuild:
+The current architecture intentionally avoids microservices and standing subject-agent fleets.
 
-- Primary Tutor runtime;
-- safety/Parent Boundaries;
-- filtered learner-context logic;
-- CanvasBrief admission;
-- Studio ownership/persistence/replay;
-- stale-result fencing;
-- ObjectStorage/generated-asset adoption;
-- Model Gateway;
-- browser-independent production renderer harness.
+    Browser
+      ↓
+    Next.js
+      ↓
+    FastAPI application
+      ├─ Tutor
+      ├─ Student Sources
+      ├─ Content / Retrieval
+      ├─ Studio / Canvas
+      ├─ Personal Facts / Core Profile
+      ├─ Learning Intelligence
+      └─ bounded Decision Services
+            ↓
+    PostgreSQL + pgvector / Object Storage / Background Worker
+            ↓
+    Model Gateway
+      ├─ OpenAI
+      └─ OpenRouter Decisions / JEV
 
-### 2. Expand capability, not authority
+Keep the learner-facing experience simple even when internal responsibilities are modular.
 
-The Canvas Agent may choose how to represent the Tutor's approved educational semantics. It must not gain:
+## 2. Main runtime components
 
-- teaching authority;
-- learner-state authority;
-- safety authority;
-- direct database or Studio-write authority;
-- unrestricted private context;
-- unrestricted network/filesystem/application access.
+### 2.1 Web
 
-### 3. Reuse / Adapt / Create
+**Technology:** Next.js, React, TypeScript.
 
-Routing is quality-first and cost-aware:
+Primary surfaces:
 
-```text
-REUSE  = existing artifact strongly fits
-ADAPT  = generalized capability must change while preserving validated parent lineage
-CREATE = existing artifacts would compromise the learning representation
-```
+- Student Daily experience;
+- Student subject and session views;
+- Parent surface;
+- authentication;
+- source upload and source preview;
+- voice input;
+- Studio renderer host.
 
-Do not force CREATE when simple reuse is sufficient. Do not force REUSE when the result would be visibly or educationally inferior.
+The web client does not own durable learning or Canvas semantics.
 
-### 4. Reusable Visual Registry
+### 2.2 API
 
-Use existing PostgreSQL/ObjectStorage unless implementation evidence proves a different core dependency is necessary.
+**Technology:** FastAPI, Python.
 
-Registry responsibilities:
+The API owns authenticated application operations including session opening and recovery, Tutor streaming, Student source admission, Studio protocol, Parent and Core Profile operations, content operations, and controlled status or health endpoints.
 
-- immutable artifact/version identity;
-- capability/semantic tags;
-- parameter schema;
-- runtime/dependency declaration;
-- interaction/Manifest schema;
-- lineage/fork information;
-- quality/validation lifecycle;
-- bounded search/inspect/instantiate.
+### 2.3 PostgreSQL + pgvector
 
-Keep build history separate from promoted reusable artifacts.
+PostgreSQL is durable application authority for users and students, learning sessions and messages, segments, AI execution lineage, Personal Facts, Learning Intelligence, Studio Runtime and Scene state, Canvas specialist runs, artifact lineage, jobs, and bounded decision records.
 
-### 5. Custom Visual Runtime
+pgvector supports semantic retrieval and selection where required.
 
-Custom generated visual packages are allowed only inside an isolated visual runtime.
+### 2.4 Background Worker
 
-Required controls:
+Longer-running work is decoupled from the foreground request where appropriate.
 
-- allowlisted/versioned dependencies;
-- static validation where useful;
-- bounded compilation;
-- opaque/sandboxed browser execution;
-- no cookies/secrets;
-- no arbitrary network;
-- no database/filesystem authority;
-- bounded CPU/time/memory;
-- strict semantic event bridge;
-- failure isolation so Tutor remains available.
+The Worker handles areas such as Canvas specialist composition, content and intelligence jobs, Segment review and finalization flows, reusable visual processing, and bounded JEV decision work associated with background tasks.
 
-Choose the simplest safe implementation. Do not build a giant custom DSL if an isolated generated React/SVG package plus strict contracts is simpler and more expressive.
+Foreground teaching should not wait on unrelated background analysis.
 
-### 6. Semantic Manifest
+### 2.5 Object storage
 
-Every final Canvas runtime kind must produce a validated implementation-independent Manifest.
+Object storage holds project-owned immutable or source assets such as preserved Student originals, generated assets, custom visual build artifacts, and other durable binary objects.
 
-The Manifest is the Tutor understanding contract and should cover educationally meaningful entities, facts, quantities, relations, progression, current state, interactions, focus, calculated results, and provenance.
+Database records hold bounded references and provenance, not arbitrary raw binary state.
 
-Visible/interactive educational objects use stable semantic IDs.
+## 3. Primary Tutor runtime
 
-### 7. Browser preview / bounded refinement
+The Primary Tutor is the only learner-facing teaching authority.
 
-Routine trusted REUSE should not require model visual review.
+### 3.1 Input assembly
 
-Custom CREATE uses the current shared authoring budget:
+The Tutor context builder may include, when relevant:
 
-```text
-generate → render → preview → accept OR bounded source-only refinement
-```
+- current Student turn;
+- immediate and recent conversation;
+- scoped semantic recall;
+- Core Profile;
+- Personal Memory;
+- relevant Learning Intelligence;
+- current Segment state;
+- current subject and concept context;
+- retrieved curriculum or source context;
+- Studio or Canvas state;
+- Parent Boundaries;
+- safe visual-personalization catalogue.
 
-A second correction is justified only by validation/render failure or another concrete acceptance failure. Avoid open-ended self-critique loops.
+Context is capacity-bounded and current behavior remains highest priority.
 
-### 8. Cost and latency
+### 3.2 Model output
 
-Keep every capability available but route intelligently:
+The Tutor produces structured output including student-facing text, optional suggested actions, optional guided check, teaching metadata, prior-method relation, optional subject or concept hints, optional Canvas brief and change intent, and other bounded runtime fields.
 
-- reuse/parameter binding is cheapest;
-- adaptation is preferred when sufficient;
-- typed deterministic rendering should handle common cases;
-- custom generation is used when it materially improves learning;
-- image generation / code interpreter are on demand;
-- avoid extra model calls purely for polish when deterministic rendering can deliver the quality.
+The response schema is versioned.
 
-Record model/tool usage, latency, and cost where existing observability supports it.
+### 3.3 Safety
 
-## Execution workstreams
+Safety and Parent Boundaries are not delegated to the Tutor model as final authority.
 
-These are continuous workstreams, not Product Owner checkpoints.
+The application evaluates non-overridable safety, supplies effective Parent Boundary context, resolves and enforces final visible behavior, and may suppress or replace model output when required.
 
-### A. Governance + protected contracts
+## 4. Student-source flow
 
-Reconcile project rules with the Full-Power direction and introduce/extend versioned contracts for:
+    Student source
+    → owner/session validation
+    → type and size validation
+    → preserved original
+    → safety processing
+    → extraction or normalization when applicable
+    → Tutor context
+    → optional retrieval or Canvas semantics
 
-- reusable artifact identity/version;
-- custom visual package metadata;
-- Semantic Manifest;
-- semantic bridge events;
-- capability/runtime identity.
+The original remains authoritative.
 
-Use lightweight RED→GREEN tests for protected boundaries.
+No extracted representation may silently rewrite source truth.
 
-### B. Registry + REUSE/ADAPT
+## 5. Personal Facts / Memory
 
-Implement bounded search/inspect/instantiate/version/fork behavior using existing infrastructure.
+Personal Facts are a dedicated subsystem separate from Learning Intelligence.
 
-Prove one reusable artifact can serve new values without code regeneration and that learner-specific instance data does not leak into reusable definitions.
+    explicit learner statement
+    → bounded extraction
+    → reconciliation
+    → current Personal Memory document or card
+    → optional later Tutor context
 
-### C. CREATE + sandbox
+Rules:
 
-Implement the smallest safe custom visual build/execution path.
+- Student assertion is the source;
+- current conversation can override old memory immediately;
+- facts do not become Evidence;
+- no psychological or personality inference;
+- no automatic teaching-method selection from interests.
 
-Prove:
+## 6. Core Profile
 
-- allowlisted dependency use;
-- compile/render;
-- arbitrary network blocked;
-- application authority unavailable;
-- Tutor remains available on failure.
+Core Profile is Parent/System-authoritative.
 
-### D. Full-Power Canvas Agent
+It supplies identity, age, and Grade context used to calibrate language, abstraction, amount of information, interaction complexity, representation concreteness, and age-appropriateness.
 
-Extend the existing single Canvas Agent with skills/tools for:
+It does not claim mastery or intelligence.
 
-- registry search/inspect/reuse/adapt;
-- typed visual capabilities;
-- custom creation;
-- generated images;
-- deterministic truth tools;
-- preview/review decision.
+## 7. Learning Intelligence architecture
 
-Do not create permanent subject-specific agents.
+Canonical current pipeline:
 
-### E. Tutor continuity
+    Learning Messages
+    → Learning Segment
+    → Segment Learning Review
+    → staged findings
+    → Session Intelligence Finalization
+    → Learning Events
+    → Evidence
+    → Current Learning State / Learner Patterns
+    → Learner Intelligence Card
+    → relevant Tutor context
 
-Connect finalized Manifest + Studio semantic state/events back to the same Primary Tutor.
+### 7.1 Candidate Events
 
-The Tutor must be able to explain the visible educational state without reading implementation code.
+Candidate Events are optional source-linked hints.
 
-### F. Integrated acceptance
+They do not directly create Evidence or update stable intelligence.
 
-Run a compact real-provider/real-browser acceptance set covering:
+### 7.2 Review authority
 
-- REUSE;
-- ADAPT;
-- novel CREATE;
-- generated illustration + semantic overlay where useful;
-- language/RTL;
-- age/grade presentation calibration;
-- meaningful Canvas action → same Tutor;
-- sandbox negative case.
+Segment Review interprets meaningful learning behavior from raw source context.
 
-Use exact Agent-produced artifacts in browser proof; do not substitute hand-authored replicas.
+Session Finalization controls activation into validated downstream intelligence.
 
-## TDD and verification economy
+### 7.3 Deterministic governance
 
-For meaningful new behavior:
+Code governs lifecycle, recency, scope, evidence weighting, counter-evidence, pattern thresholds, card bounds, versioning, reprocessing, and lineage.
 
-```text
-define behavior
-→ smallest relevant test
-→ RED for intended reason
-→ implement
-→ GREEN
-```
+Models interpret semantic meaning inside bounded contracts.
 
-During implementation:
+## 8. Studio / Canvas architecture
 
-- use focused tests;
-- reuse existing coverage;
-- do not repeatedly run the full PostgreSQL/browser/live-provider suite;
-- do not create duplicate acceptance harnesses.
+### 8.1 Durable Studio state
 
-Near closure:
+Studio owns Runtime, Scene, Event, Snapshot, Student interaction, and Tutor observation.
 
-1. focused new-boundary tests;
-2. representative real-provider + real-browser proof;
-3. directly affected PostgreSQL lifecycle/security proof;
-4. typecheck/build status;
-5. `git diff --check`;
-6. one broad regression.
+The browser renders state; it does not become state authority.
 
-Visual quality is an acceptance dimension; "tests passed" alone is insufficient.
+### 8.2 Full-Power Hybrid Canvas flow
 
-## Deferred
+    Primary Tutor
+    → CanvasBrief
+    → filtered learner presentation context
+    → Canvas composition pipeline
+    → REUSE / ADAPT / CREATE
+    → typed or custom visual runtime
+    → validation / preview / sandbox
+    → accepted Scene
+    → browser
+    → meaningful Student interaction
+    → Studio event/state
+    → same Primary Tutor
 
-Do not bundle unrelated work into this task:
+### 8.3 Typed fast paths
 
-- Parent dashboard redesign;
-- broad UI polish unrelated to Canvas;
-- multi-family SaaS;
-- public artifact marketplace;
-- teacher/classroom administration;
-- generic website/app builder;
-- arbitrary internet-enabled generated applications;
-- new learner psychology/personalization systems;
-- infrastructure replacement without proof.
+Typed educational capabilities remain the safest and fastest option when they fit.
 
-## Definition of Done
+Examples include math boards, number lines, plots, diagrams, process views, grouping and classification, text interaction, and math input.
 
-Use the full Definition of Done in:
+### 8.4 Reusable visual registry
 
-`docs/FULL-POWER-CANVAS-01_ARCHITECTURE_IMPLEMENTATION_SPEC.md`
+Reusable visual identity is separate from Student-specific instances.
 
-At minimum, closure requires working REUSE, ADAPT, CREATE, safe sandboxing, reusable artifact/version behavior, Semantic Manifest/Tutor understanding, meaningful Studio round-trip, exact truth preservation, real-provider output rendered through the production browser path, visible quality at or above the prior accepted floor for comparable cases, and no regression of safety/ownership/Studio/Tutor boundaries.
+The registry stores generalized validated artifacts, versions, and builds.
+
+Instance parameters and learner context do not become generic reusable source by accident.
+
+### 8.5 Custom visual runtime
+
+Generated custom code:
+
+- runs only inside the approved sandbox;
+- has no cookies, secrets, database, or application authority;
+- cannot make unrestricted network calls;
+- communicates through a bounded semantic bridge;
+- is previewed and validated before durable learner-facing use;
+- must expose implementation-independent semantic meaning.
+
+### 8.6 Semantic Manifest
+
+The Primary Tutor should understand educational state without reading generated code.
+
+Every accepted custom runtime therefore exposes bounded semantic identity and state including objective, entities, facts, quantities, relations, meaningful interactions, current state or focus, and provenance.
+
+## 9. REUSE / ADAPT / CREATE
+
+### 9.1 REUSE
+
+Use when an existing validated capability satisfies the educational need without structural change.
+
+Exact reuse is freshly revalidated before execution.
+
+### 9.2 ADAPT
+
+Use when a validated parent artifact remains useful but generalized structure or capability must change.
+
+ADAPT creates new version and build lineage rather than mutating history.
+
+### 9.3 CREATE
+
+Use when reuse or adaptation would compromise learning quality.
+
+CREATE is bounded by capability allowlists, authoring attempt budget, preview, sandbox, semantic validation, and ownership or provenance requirements.
+
+## 10. JEV bounded decision integration
+
+OpenRouter Decisions / JEV is integrated through the existing Model Gateway ledger.
+
+It is used only for finite decision problems.
+
+### 10.1 Visual personalization
+
+Inputs:
+
+- admitted Canvas brief;
+- server-filtered Personal Fact candidates.
+
+Outputs:
+
+- bounded fact-selection probabilities and decision.
+
+Application validation remains final.
+
+### 10.2 Exact reuse
+
+Inputs:
+
+- Canvas brief;
+- finite authorized executable exact-reuse actions;
+- NO_MATCH.
+
+Outputs:
+
+- one bounded choice and probabilities.
+
+Application code revalidates artifact ownership, build identity, manifest digest, parameters, and storage before reuse.
+
+### 10.3 Segment rubric comparison
+
+Inputs:
+
+- already validated Segment findings;
+- cited source messages and explicit authority facts;
+- finite rubric options.
+
+Outputs:
+
+- bounded rubric decisions for comparison and evaluation.
+
+The Learning Intelligence evidence and finalization authority is not replaced by this component.
+
+## 11. Model Gateway
+
+Model and provider use must go through the Model Gateway or another explicitly approved provider boundary.
+
+The ledger records task, provider, model, latency, usage metrics when available, estimated cost when available, success or failure, and lineage IDs.
+
+Current pilot model and provider choices are operational state, not permanent architecture.
+
+## 12. Foreground reliability
+
+### 12.1 One foreground lane
+
+Daily Chat and Tutor-triggering Canvas interactions share a server-owned foreground admission lane per LearningSession.
+
+This prevents silent supersession, duplicated Tutor execution, Canvas interaction storms, and losing an admitted Student Chat turn.
+
+### 12.2 Session recovery
+
+Ended or non-resumable sessions recover through a deterministic replacement identity.
+
+Old transcript can remain visible while old session-scoped source assets remain historical rather than becoming active runtime source in the replacement session.
+
+### 12.3 Tutor stream bounds
+
+Provider streaming has bounded failure behavior. Transport failure should end predictably rather than hang until infrastructure termination.
+
+## 13. Deployment
+
+Current live pilot runs on GCP.
+
+### Application
+
+Cloud Run service contains Next.js standalone, FastAPI, and the production supervisor. The integrated worker is disabled.
+
+### Worker
+
+A separate Cloud Run Worker Pool handles background jobs, Canvas composition, and browser-preview dependencies where needed.
+
+### Data and platform services
+
+- Cloud SQL / PostgreSQL;
+- Secret Manager;
+- Artifact Registry;
+- Cloud Build;
+- object storage.
+
+Deployment and DB migration are explicit operations and require approval.
+
+## 14. Verification strategy
+
+Use the smallest verification that proves the changed boundary.
+
+Typical layers:
+
+1. contract and unit tests;
+2. focused PostgreSQL integration;
+3. typecheck and build;
+4. repository-truth and diff checks;
+5. actual browser rendering for visual work;
+6. controlled live or provider evidence only when required.
+
+Do not claim learning effectiveness from structural tests.
+
+## 15. Current technical priorities
+
+### Priority A — controlled real-use validation
+
+Observe real use before further architectural expansion.
+
+### Priority B — teaching-flow integrity
+
+Open behaviors:
+
+- unfinished guided sequence can end without a useful next affordance;
+- declared EXPLAIN_THEN_CHECK may not visibly include a check;
+- repeated confusion does not always trigger a substantive method change.
+
+### Priority C — performance and terminal buffering
+
+Measure where latency comes from before changing call architecture.
+
+### Priority D — personalization relevance
+
+Reduce forced or repetitive personalization and verify source lineage.
+
+### Priority E — JEV evaluation
+
+Compare bounded JEV decisions against current system decisions and only expand authority where evidence justifies it.
+
+### Priority F — Generated educational images V2
+
+Remain a separately designed capability with Science-first eligibility.
+
+## 16. Things not to do
+
+Do not:
+
+- create a new general orchestrator without demonstrated need;
+- split the modular monolith into microservices for conceptual cleanliness;
+- create one standing agent per subject;
+- let Canvas write Learning Intelligence directly;
+- let Personal Facts become learner-ability evidence;
+- send unrestricted learner context to generated custom code;
+- rebuild working Studio, State, or Model Gateway foundations;
+- treat a model-selected strategy as evidence of effectiveness;
+- force all visuals through custom code;
+- force all decisions through JEV;
+- optimize latency by silently dropping required safety or authority checks.
+
+## 17. Supporting references
+
+- docs/PROJECT_REFERENCE.md
+- docs/LEARNING_INTELLIGENCE_SPEC.md
+- docs/CHILD_SAFETY_POLICY.md
+- docs/TUTOR_PEDAGOGY_REFERENCE.md
+- docs/FULL-POWER-CANVAS-01_ARCHITECTURE_IMPLEMENTATION_SPEC.md
+- docs/TUTOR_CANVAS_REPAIR_TRACKER.md
+- project-state/PROJECT_STATE.md

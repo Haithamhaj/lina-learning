@@ -1,9 +1,65 @@
 # Daily Student frontend
 
-The current proving ground is Lina, Grade 5, and the Daily Student UI. Long-term, Lina is one coherent primary-to-secondary product whose presentation may become age/grade-aware; this is not a commitment to separate apps or a design for that adaptive system.
+## Product direction
 
-The current approved direction is **Learning Chat + Adaptive Learning Workspace**: warm, intelligent, personal, and visually engaging—not preschool/cartoonish, corporate, or noisy. Deep ink is the reading foundation; lavender expresses the Student, mint/teal guides with the Tutor, and restrained apricot/gold marks learning accents. Use soft rounded surfaces and roomy message groups.
+The current proving ground is Lina, Grade 5, using the Daily Student experience.
 
-Tailwind plus current shadcn-style primitives is the functional baseline. Arabic, English, and mixed-direction interaction are first-class. External visual libraries are references or isolated capability choices, never application architecture.
+Long term, Lina should remain one coherent learning product that can evolve with age and Grade. This does not imply separate applications per age group.
 
-Chat remains independently usable. A workspace appears only when visual or interactive representation materially improves learning, while preserving typed input, accessibility, reduced motion, narrow layouts, and original-source context. `UI-REFINE-01` must preserve current SSE, session, auth, Safety, and Studio contracts.
+## Experience
+
+The approved direction is:
+
+**Learning Chat + Adaptive Learning Workspace**
+
+The interface should feel warm, intelligent, personal, calm, and visually useful.
+
+It should not feel preschool-cartoonish, corporate, dashboard-heavy, or technically fragmented.
+
+## Core behavior
+
+Chat remains independently usable.
+
+The workspace appears when visual or interactive representation materially improves learning.
+
+The Student should not need to understand internal concepts such as Runtime, Scene, Canvas Agent, evidence pipeline, or model routing.
+
+## Daily surface responsibilities
+
+The current Daily experience includes:
+
+- Tutor conversation;
+- text input;
+- Arabic, English, and mixed-direction handling;
+- voice input and STT;
+- image, PDF, and DOCX source attachment;
+- source preview/continuity;
+- Canvas rendering;
+- meaningful Canvas actions;
+- session recovery;
+- loading, pending, saving, and failure states.
+
+## UX invariants
+
+- Never hide an admitted Student turn.
+- Never fabricate a Student action.
+- Never expose an answer as if the Student chose it.
+- Preserve draft/source state during recoverable session replacement.
+- Keep Canvas failure isolated from Chat.
+- Preserve accessibility, reduced motion, and narrow layouts.
+- Do not make background processing look like learner progress certainty.
+- Do not show percentages or ETA without evidence.
+
+## Design system
+
+Tailwind plus current shadcn-style primitives remains the functional baseline.
+
+Deep ink is the reading foundation; lavender can express Student identity, mint or teal can guide with the Tutor, and restrained apricot or gold can mark learning accents.
+
+Visual style is subordinate to comprehension and interaction truthfulness.
+
+## Current phase
+
+Frontend work is driven by controlled real use.
+
+Do not redesign the entire interface merely because one local component needs repair. Prefer focused corrections backed by observed Student experience.

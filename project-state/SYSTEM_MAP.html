@@ -3,89 +3,217 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Lina — Full-Power Canvas Operating Map</title>
+<title>Lina — Current System Map</title>
 <style>
-:root{--bg:#f6f7fb;--card:#fff;--ink:#182033;--muted:#667085;--line:#d9e0ec;--tutor:#eef4ff;--agent:#f4efff;--reuse:#eefbf4;--create:#fff5ea;--studio:#fff1f5;--risk:#fff9dd;--accent:#6558d3;--shadow:0 10px 30px rgba(25,35,58,.08);--r:18px}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-.wrap{max-width:1500px;margin:auto;padding:28px}.top{display:flex;justify-content:space-between;gap:22px;align-items:flex-start;margin-bottom:18px}.top h1{margin:0;font-size:32px;letter-spacing:-.03em}.top p{margin:8px 0 0;color:var(--muted);max-width:900px;line-height:1.55}
-.badge{white-space:nowrap;background:#e9f8ee;color:#25754a;padding:8px 12px;border-radius:999px;font-size:12px;font-weight:800}
-.grid{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:18px}.card h2{margin:0 0 12px;font-size:18px}.node{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.88);padding:12px;margin-top:9px}.node b{display:block}.node span{display:block;color:var(--muted);font-size:12px;line-height:1.5;margin-top:4px}
-.tutor{background:linear-gradient(145deg,var(--tutor),#fff)}.agent{background:linear-gradient(145deg,var(--agent),#fff)}.studio{background:linear-gradient(145deg,var(--studio),#fff)}.reuse{background:linear-gradient(145deg,var(--reuse),#fff)}.create{background:linear-gradient(145deg,var(--create),#fff)}
-.flow{margin-top:16px}.flow svg{width:100%;height:auto;display:block}.box{fill:#fff;stroke:#ccd5e3;stroke-width:1.4}.bt{fill:#eef4ff}.ba{fill:#f4efff}.br{fill:#eefbf4}.bc{fill:#fff5ea}.bs{fill:#fff1f5}.tx{fill:#202939;font-size:13px;font-weight:750}.sub{fill:#667085;font-size:10px}.arr{fill:none;stroke:#8c98aa;stroke-width:1.8;marker-end:url(#a)}
-.lower{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:16px;margin-top:16px}.rule{border-top:1px solid #edf0f5;padding:9px 0;font-size:12px}.rule:first-child{border-top:0}.rule strong{display:block}.rule span{color:var(--muted);line-height:1.45}
-.route{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.route div{border:1px solid var(--line);border-radius:13px;padding:11px;text-align:center}.route b{display:block}.route small{color:var(--muted)}
-.risk{background:var(--risk)}code{font-size:11px;background:#f5f6fa;border:1px solid #e5e8ef;border-radius:7px;padding:2px 5px}
-@media(max-width:980px){.grid,.lower{grid-template-columns:1fr}.top{display:block}.badge{display:inline-block;margin-top:12px}.route{grid-template-columns:1fr}}
+:root{
+  --bg:#f5f6fa;--card:#ffffff;--ink:#172033;--muted:#687387;--line:#dce2ec;
+  --student:#f1ecff;--tutor:#eaf4ff;--context:#eefaf5;--canvas:#fff5e8;
+  --intel:#fff0f4;--jev:#f5f0ff;--platform:#f0f4f8;--parent:#eef7ff;
+  --ok:#eaf8ef;--risk:#fff8df;--accent:#6757d8;--shadow:0 12px 30px rgba(31,42,68,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.wrap{max-width:1540px;margin:auto;padding:30px}
+.top{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin-bottom:20px}
+h1{margin:0;font-size:34px;letter-spacing:-.035em}
+.top p{max-width:950px;color:var(--muted);line-height:1.6;margin:8px 0 0}
+.badge{padding:9px 13px;border-radius:999px;background:var(--ok);color:#25623f;font-size:12px;font-weight:800;white-space:nowrap}
+.grid3{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.grid2{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:18px}
+.card h2{font-size:18px;margin:0 0 12px}
+.card h3{font-size:14px;margin:0 0 6px}
+.node{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.86);padding:12px;margin-top:9px}
+.node b{display:block;font-size:13px}
+.node span{display:block;color:var(--muted);font-size:12px;line-height:1.5;margin-top:4px}
+.student{background:linear-gradient(145deg,var(--student),#fff)}
+.tutor{background:linear-gradient(145deg,var(--tutor),#fff)}
+.context{background:linear-gradient(145deg,var(--context),#fff)}
+.canvas{background:linear-gradient(145deg,var(--canvas),#fff)}
+.intel{background:linear-gradient(145deg,var(--intel),#fff)}
+.jev{background:linear-gradient(145deg,var(--jev),#fff)}
+.parent{background:linear-gradient(145deg,var(--parent),#fff)}
+.platform{background:linear-gradient(145deg,var(--platform),#fff)}
+.section{margin-top:16px}
+.flow svg{display:block;width:100%;height:auto}
+.box{fill:#fff;stroke:#cfd7e4;stroke-width:1.4}
+.bt{fill:#eaf4ff}.bc{fill:#fff5e8}.bi{fill:#fff0f4}.bj{fill:#f5f0ff}.bp{fill:#eefaf5}.bs{fill:#f1ecff}
+.tx{fill:#20293c;font-size:13px;font-weight:760}.sub{fill:#69758a;font-size:10px}
+.arr{fill:none;stroke:#8a97aa;stroke-width:1.8;marker-end:url(#arrow)}
+.rule{padding:9px 0;border-top:1px solid #edf0f5;font-size:12px}
+.rule:first-child{border-top:0}
+.rule strong{display:block}
+.rule span{color:var(--muted);line-height:1.45}
+.status{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.pill{border:1px solid var(--line);border-radius:999px;background:#fff;padding:6px 9px;font-size:11px;font-weight:700}
+.risk{background:var(--risk)}
+.small{font-size:12px;color:var(--muted);line-height:1.55}
+@media(max-width:1050px){.grid3,.grid4,.grid2{grid-template-columns:1fr}.top{display:block}.badge{display:inline-block;margin-top:12px}}
 </style>
 </head>
 <body>
 <div class="wrap">
+
 <section class="top">
-<div><h1>Lina — Full-Power Canvas Operating Map</h1><p>Current implemented architecture: Primary Tutor retains teaching authority while one Canvas Agent chooses REUSE, ADAPT, or CREATE. Every finalized Canvas remains sandboxed, explainable, and understandable by the same Primary Tutor.</p></div>
-<div class="badge">ENGINEERING CLOSURE · PUBLISHED</div>
+  <div>
+    <h1>Lina — Current System Map</h1>
+    <p>One learner-facing Tutor, four separate learner-context authorities, a durable visual workspace, evidence-grounded Learning Intelligence, and bounded JEV decisions. Internal complexity is modular; the Student experience stays coherent.</p>
+  </div>
+  <div class="badge">CONTROLLED REAL-USE PILOT</div>
 </section>
 
-<section class="grid">
-<article class="card tutor"><h2>Primary Tutor — Teaching Authority</h2>
-<div class="node"><b>Educational truth</b><span>Objective, facts, grounding, teaching strategy, learner-facing explanation.</span></div>
-<div class="node"><b>Bounded handoff</b><span>CanvasBrief + already-filtered Visual Learner Context only.</span></div>
-<div class="node"><b>Same-Tutor continuity</b><span>Receives Semantic Manifest + meaningful Studio state/events and continues the lesson.</span></div>
-</article>
+<section class="grid3">
+  <article class="card student">
+    <h2>Student Experience</h2>
+    <div class="node"><b>Daily Learning Chat</b><span>Arabic / English conversation, text, voice, source attachments and natural tutoring.</span></div>
+    <div class="node"><b>Adaptive Workspace</b><span>Canvas appears only when seeing or interacting materially helps learning.</span></div>
+    <div class="node"><b>Source Continuity</b><span>Images, PDFs, DOCX, homework and textbook pages remain linked to preserved originals.</span></div>
+  </article>
 
-<article class="card agent"><h2>Full-Power Canvas Agent — Visual Authority</h2>
-<div class="node"><b>Choose representation</b><span>Search reusable capability, adapt it, or create a new visual when quality requires it.</span></div>
-<div class="node"><b>Capability portfolio</b><span>Typed Canvas, React/SVG/Motion, JSXGraph, Konva, MathLive, charts/simulation, images, custom visual packages.</span></div>
-<div class="node"><b>Quality + cost judgment</b><span>Reuse when strong; do not force reuse when it hurts understanding.</span></div>
-</article>
+  <article class="card tutor">
+    <h2>Primary Tutor — Teaching Authority</h2>
+    <div class="node"><b>Meaning + teaching</b><span>Objective, explanation, reasoning, strategy, method, pacing, support and learner-facing continuation.</span></div>
+    <div class="node"><b>Current behavior first</b><span>What the Student demonstrates now outranks stale historical assumptions.</span></div>
+    <div class="node"><b>One identity</b><span>Canvas, retrieval, memory and bounded decisions support the same Tutor rather than becoming separate Student-facing agents.</span></div>
+  </article>
 
-<article class="card studio"><h2>Studio — Durable Authority</h2>
-<div class="node"><b>Persistence</b><span>Runtime / Scene / Event / Snapshot / Interaction remain canonical.</span></div>
-<div class="node"><b>Semantic bridge</b><span>Custom visuals emit only bounded meaningful actions with stable semantic IDs.</span></div>
-<div class="node"><b>Failure isolation</b><span>Canvas failure never blocks Tutor chat.</span></div>
-</article>
+  <article class="card parent">
+    <h2>Parent / System Authority</h2>
+    <div class="node"><b>Core Profile</b><span>Identity, age / date-of-birth and Grade context.</span></div>
+    <div class="node"><b>Learning Boundaries</b><span>Configurable family-sensitive topic settings under a non-overridable safety baseline.</span></div>
+    <div class="node"><b>Insight, not surveillance</b><span>Future Parent insight should explain meaningful evidence rather than default transcript monitoring.</span></div>
+  </article>
 </section>
 
-<section class="card flow">
-<h2>Current end-to-end Canvas flow</h2>
-<svg viewBox="0 0 1420 315" role="img" aria-label="Full-Power Canvas architecture">
-<defs><marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#8c98aa"/></marker></defs>
-<rect class="box bt" x="25" y="92" width="165" height="82" rx="14"/><text class="tx" x="108" y="120" text-anchor="middle">Primary Tutor</text><text class="sub" x="108" y="141" text-anchor="middle">CanvasBrief</text><text class="sub" x="108" y="157" text-anchor="middle">filtered learner context</text>
-<rect class="box ba" x="230" y="92" width="175" height="82" rx="14"/><text class="tx" x="318" y="120" text-anchor="middle">Canvas Agent</text><text class="sub" x="318" y="141" text-anchor="middle">visual composition</text><text class="sub" x="318" y="157" text-anchor="middle">no Tutor authority</text>
-<rect class="box br" x="445" y="55" width="170" height="70" rx="14"/><text class="tx" x="530" y="84" text-anchor="middle">REUSE / ADAPT</text><text class="sub" x="530" y="104" text-anchor="middle">Reusable Visual Registry</text>
-<rect class="box bc" x="445" y="155" width="170" height="70" rx="14"/><text class="tx" x="530" y="184" text-anchor="middle">CREATE</text><text class="sub" x="530" y="204" text-anchor="middle">generated visual package</text>
-<rect class="box bc" x="655" y="155" width="175" height="70" rx="14"/><text class="tx" x="742" y="184" text-anchor="middle">Safe Sandbox</text><text class="sub" x="742" y="204" text-anchor="middle">allowlist · CSP · bounds</text>
-<rect class="box" x="870" y="92" width="175" height="82" rx="14"/><text class="tx" x="958" y="120" text-anchor="middle">Browser Render</text><text class="sub" x="958" y="141" text-anchor="middle">desktop panes + pointer probe</text><text class="sub" x="958" y="157" text-anchor="middle">bounded refinement budget</text>
-<rect class="box br" x="1085" y="92" width="165" height="82" rx="14"/><text class="tx" x="1168" y="120" text-anchor="middle">Semantic Manifest</text><text class="sub" x="1168" y="141" text-anchor="middle">stable semantic IDs</text><text class="sub" x="1168" y="157" text-anchor="middle">implementation-independent</text>
-<rect class="box bs" x="1290" y="92" width="105" height="82" rx="14"/><text class="tx" x="1342" y="120" text-anchor="middle">Studio</text><text class="sub" x="1342" y="141" text-anchor="middle">state/events</text><text class="sub" x="1342" y="157" text-anchor="middle">same Tutor</text>
-<path class="arr" d="M190 133H230"/><path class="arr" d="M405 133H445"/><path class="arr" d="M405 133C425 133 425 90 445 90"/><path class="arr" d="M615 190H655"/><path class="arr" d="M615 90C730 90 760 120 870 133"/><path class="arr" d="M830 190C850 190 850 148 870 148"/><path class="arr" d="M1045 133H1085"/><path class="arr" d="M1250 133H1290"/>
-<path class="arr" d="M1342 174 C1342 275, 180 275, 108 174"/><text class="sub" x="730" y="294" text-anchor="middle">Meaningful Canvas state returns to the same Primary Tutor; implementation code never becomes teaching authority.</text>
-</svg>
+<section class="section card context">
+  <h2>Four learner-context authorities — never collapse these</h2>
+  <div class="grid4">
+    <div class="node"><b>Current Conversation</b><span>Strongest signal for what support is needed now.</span></div>
+    <div class="node"><b>Core Profile</b><span>Age / Grade calibration, not mastery or ability.</span></div>
+    <div class="node"><b>Personal Facts / Memory</b><span>Explicit safe learner context for continuity and natural examples.</span></div>
+    <div class="node"><b>Learning Intelligence</b><span>Evidence-grounded, scoped, revisable learning conclusions.</span></div>
+  </div>
 </section>
 
-<section class="lower">
-<article class="card reuse"><h2>Routing policy</h2><div class="route">
-<div><b>REUSE</b><small>Strong fit; bind parameters and render.</small></div>
-<div><b>ADAPT</b><small>Reuse structure; change presentation/parameters/version.</small></div>
-<div><b>CREATE</b><small>Novel representation when reuse would compromise learning.</small></div>
-</div>
-<div class="rule"><strong>Build history ≠ reusable registry</strong><span>Only safe, generalized, parameterizable, validated visuals are promoted.</span></div>
-<div class="rule"><strong>Quality floor</strong><span>Prior accepted Canvas quality is a floor, never a template.</span></div>
-</article>
+<section class="section card flow">
+  <h2>Primary learning loop</h2>
+  <svg viewBox="0 0 1450 310" role="img" aria-label="Lina learning loop">
+    <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#8a97aa"/></marker></defs>
 
-<article class="card create"><h2>Custom runtime boundary</h2>
-<div class="rule"><strong>No application authority</strong><span>No cookies, secrets, database, unrestricted filesystem/network, or direct Studio writes.</span></div>
-<div class="rule"><strong>Allowlisted capabilities</strong><span>Use approved versioned visual/runtime dependencies only.</span></div>
-<div class="rule"><strong>Exact truth</strong><span>Math/Science values come from typed/deterministic inputs; renderer never invents them.</span></div>
-<div class="rule"><strong>Bounded feedback</strong><span>At most four authoring attempts: two CREATE and three source refinements share one budget.</span></div>
-</article>
+    <rect class="box bs" x="25" y="105" width="150" height="76" rx="14"/>
+    <text class="tx" x="100" y="132" text-anchor="middle">Student</text>
+    <text class="sub" x="100" y="152" text-anchor="middle">question / source</text>
+    <text class="sub" x="100" y="168" text-anchor="middle">action / confusion</text>
 
-<article class="card risk"><h2>Current state & next action</h2>
-<div class="rule"><strong>Migration baseline</strong><span><code>62df59bcc8c43074c223d79b73bcf97a0905ed4c</code></span></div>
-<div class="rule"><strong>Engineering status</strong><span>Full-Power Canvas engineering closure is published. Mobile is deferred, not a current release gate.</span></div>
-<div class="rule"><strong>Development Review</strong><span>On-demand internal evidence/report path; separate from learner intelligence and advisory only.</span></div>
-<div class="rule"><strong>Next phase</strong><span>Controlled production use requires separate authorization and must establish real-use evidence.</span></div>
-</article>
+    <rect class="box bt" x="220" y="105" width="170" height="76" rx="14"/>
+    <text class="tx" x="305" y="132" text-anchor="middle">Primary Tutor</text>
+    <text class="sub" x="305" y="152" text-anchor="middle">teaching decision</text>
+    <text class="sub" x="305" y="168" text-anchor="middle">Chat or Canvas</text>
+
+    <rect class="box bp" x="430" y="30" width="190" height="72" rx="14"/>
+    <text class="tx" x="525" y="57" text-anchor="middle">Learner Context</text>
+    <text class="sub" x="525" y="77" text-anchor="middle">Profile · Facts · LI</text>
+    <text class="sub" x="525" y="92" text-anchor="middle">current behavior wins</text>
+
+    <rect class="box bc" x="430" y="155" width="190" height="72" rx="14"/>
+    <text class="tx" x="525" y="182" text-anchor="middle">Canvas / Studio</text>
+    <text class="sub" x="525" y="202" text-anchor="middle">REUSE · ADAPT · CREATE</text>
+    <text class="sub" x="525" y="217" text-anchor="middle">durable semantic state</text>
+
+    <rect class="box bj" x="670" y="30" width="190" height="72" rx="14"/>
+    <text class="tx" x="765" y="57" text-anchor="middle">JEV Decisions</text>
+    <text class="sub" x="765" y="77" text-anchor="middle">finite candidate sets</text>
+    <text class="sub" x="765" y="92" text-anchor="middle">bounded probabilities</text>
+
+    <rect class="box" x="670" y="155" width="190" height="72" rx="14"/>
+    <text class="tx" x="765" y="182" text-anchor="middle">Deterministic Code</text>
+    <text class="sub" x="765" y="202" text-anchor="middle">safety · ownership · validation</text>
+    <text class="sub" x="765" y="217" text-anchor="middle">persistence · admission</text>
+
+    <rect class="box bi" x="910" y="105" width="190" height="76" rx="14"/>
+    <text class="tx" x="1005" y="132" text-anchor="middle">Learning Review</text>
+    <text class="sub" x="1005" y="152" text-anchor="middle">Segment → Findings</text>
+    <text class="sub" x="1005" y="168" text-anchor="middle">meaningful outcomes only</text>
+
+    <rect class="box bi" x="1140" y="105" width="190" height="76" rx="14"/>
+    <text class="tx" x="1235" y="132" text-anchor="middle">Learning Intelligence</text>
+    <text class="sub" x="1235" y="152" text-anchor="middle">Evidence · State · Patterns</text>
+    <text class="sub" x="1235" y="168" text-anchor="middle">Card / future context</text>
+
+    <path class="arr" d="M175 143H220"/>
+    <path class="arr" d="M390 128C410 105 412 82 430 70"/>
+    <path class="arr" d="M390 160C410 178 415 190 430 190"/>
+    <path class="arr" d="M620 66H670"/>
+    <path class="arr" d="M620 191H670"/>
+    <path class="arr" d="M860 66C885 66 887 118 910 128"/>
+    <path class="arr" d="M860 191C885 191 887 165 910 158"/>
+    <path class="arr" d="M1100 143H1140"/>
+    <path class="arr" d="M1235 181C1235 272 315 272 305 181"/>
+    <text class="sub" x="770" y="291" text-anchor="middle">Relevant evidence-grounded context can influence future teaching; current Student behavior remains highest priority.</text>
+  </svg>
 </section>
+
+<section class="section grid2">
+  <article class="card canvas">
+    <h2>Canvas / Studio details</h2>
+    <div class="rule"><strong>Typed fast paths</strong><span>Math boards, plots, diagrams, processes, grouping, text interaction and other registered capabilities.</span></div>
+    <div class="rule"><strong>Reusable visual registry</strong><span>Generalized validated artifacts are separate from Student-specific instances.</span></div>
+    <div class="rule"><strong>Exact reuse</strong><span>JEV may choose only among already authorized executable exact-reuse actions or NO_MATCH; code revalidates before execution.</span></div>
+    <div class="rule"><strong>ADAPT / CREATE</strong><span>Structural change creates lineage; new custom visuals run only in the approved sandbox.</span></div>
+    <div class="rule"><strong>Truthful interaction</strong><span>No hidden target selection, answer leak, lost admitted Chat turn, or fake delivery success.</span></div>
+  </article>
+
+  <article class="card intel">
+    <h2>Learning Intelligence details</h2>
+    <div class="rule"><strong>Source authority</strong><span>Raw learner interaction remains rebuildable historical truth.</span></div>
+    <div class="rule"><strong>Candidate Events</strong><span>Optional hints only; never Evidence by themselves.</span></div>
+    <div class="rule"><strong>Segment Review</strong><span>Interprets completed learning context and stages supported findings.</span></div>
+    <div class="rule"><strong>Session Finalization</strong><span>Controls activation into validated Events and Evidence.</span></div>
+    <div class="rule"><strong>Patterns</strong><span>Require repeated support and can weaken or resolve; no permanent learner labels.</span></div>
+  </article>
+</section>
+
+<section class="section grid3">
+  <article class="card jev">
+    <h2>JEV bounded decisions</h2>
+    <div class="node"><b>Visual personalization</b><span>Select from already filtered Personal Facts for one Canvas brief.</span></div>
+    <div class="node"><b>Exact visual reuse</b><span>Choose from finite executable reuse actions or NO_MATCH.</span></div>
+    <div class="node"><b>Rubric comparison</b><span>Compare finite Learning Intelligence rubric choices without becoming Evidence authority.</span></div>
+  </article>
+
+  <article class="card platform">
+    <h2>Platform</h2>
+    <div class="node"><b>Application</b><span>Next.js + FastAPI modular monolith.</span></div>
+    <div class="node"><b>Data</b><span>PostgreSQL + pgvector, object storage, migrations and lineage.</span></div>
+    <div class="node"><b>Worker</b><span>Background Canvas, intelligence and other durable jobs.</span></div>
+    <div class="node"><b>Model Gateway</b><span>OpenAI routes plus OpenRouter Decisions with execution ledger.</span></div>
+  </article>
+
+  <article class="card risk">
+    <h2>Current validation focus</h2>
+    <div class="rule"><strong>Teaching flow</strong><span>Momentum, strategy fidelity and substantive method adaptation.</span></div>
+    <div class="rule"><strong>Latency</strong><span>Measure provider, validation, buffering and worker phases separately.</span></div>
+    <div class="rule"><strong>Personalization</strong><span>Useful context without forced or repetitive insertion.</span></div>
+    <div class="rule"><strong>JEV evaluation</strong><span>Collect real agreement/disagreement cases before expanding its role.</span></div>
+    <div class="rule"><strong>Longitudinal value</strong><span>Real learner benefit remains a validation horizon, not an architecture assumption.</span></div>
+  </article>
+</section>
+
+<section class="section card">
+  <h2>Current operating status</h2>
+  <div class="status">
+    <span class="pill">Live GCP pilot</span>
+    <span class="pill">Primary Tutor active</span>
+    <span class="pill">Canvas / Studio active</span>
+    <span class="pill">Learning Intelligence implemented</span>
+    <span class="pill">Personal Memory implemented</span>
+    <span class="pill">JEV integrated</span>
+    <span class="pill">Controlled real-use validation</span>
+  </div>
+  <p class="small">This map is a current operating reference. Historical branch SHAs, closure phases and one-time acceptance campaigns belong in retained evidence documents, not in this diagram.</p>
+</section>
+
 </div>
 </body>
 </html>

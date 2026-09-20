@@ -1,16 +1,74 @@
 # Personal Facts and Core Profile
 
-Four concerns remain separate:
+## Purpose
 
-- **Student Core Profile** is Parent/System-authoritative identity and relationship context.
-- **Personal Facts** are explicit, safe, durable Student-asserted personal context.
-- **Learning Intelligence** is evidence-derived learning state.
-- **Conversation Context** is current/raw continuity, including temporary states and future plans.
+Lina keeps personal continuity separate from learning conclusions.
 
-Personal Facts use a Fact plus Observation History model. `support_count`, `first_observed`, and `last_observed` are deterministic rollups of observations; no confidence percentage is stored. A newer explicit contrary Student assertion becomes current by recency while its observation history remains inspectable. Parent inspection does not make a Parent a Personal Fact source.
+Four authorities must remain distinct:
 
-Allowed categories are `PREFERENCE`, `FAVORITE`, `ACTIVITY`, `PET`, `RELATIONSHIP`, and `SAFE_PERSONAL_CONTEXT`. Personal Facts never hold temporary plans, psychology, personality, intelligence, learning style, inferred talent, mastery, misconception, or duplicated Core Profile information. They remain separate from curriculum RAG and Learning Evidence.
+- **Current Conversation** — what the Student is saying or showing now.
+- **Student Core Profile** — Parent/System-authoritative identity, date-of-birth or age, and Grade context.
+- **Personal Facts / Personal Memory** — explicit, safe, durable Student-asserted personal context.
+- **Learning Intelligence** — Evidence-derived learning state and patterns.
 
-Personal Facts may make examples more personally relevant, preserve safe interests/context, and help interaction feel natural. They never become Learning Evidence, a fixed learner profile, teaching authority, or an override of current Student context. Safe ordinary facts may contribute to Parent understanding where appropriate, while exact dashboard and privacy rules remain deferred.
+## Personal Facts
 
-Current Student conversation and Core Profile authority outrank stale Personal Fact context. Facts retain provenance and lifecycle, remain bounded and reconcilable, and never bypass ownership, Parent Boundaries, or child-safety policy.
+Examples include:
+
+- preferences;
+- favorites;
+- activities;
+- pets;
+- relationships;
+- safe personal context.
+
+Allowed categories currently include PREFERENCE, FAVORITE, ACTIVITY, PET, RELATIONSHIP, and SAFE_PERSONAL_CONTEXT.
+
+Personal Facts retain provenance and observation history. Deterministic rollups may track support count and first/last observation. A newer explicit contrary Student assertion becomes current by recency while history remains inspectable.
+
+## What Personal Facts are for
+
+They may:
+
+- preserve safe conversational continuity;
+- make examples or analogies more natural;
+- provide optional visual-personalization flavor;
+- help Lina resolve an explicit personal reference from an earlier conversation.
+
+They are optional. Lina should not insert a fact merely to demonstrate memory.
+
+## What Personal Facts are not
+
+They must not contain or imply:
+
+- mastery;
+- misconception;
+- intelligence;
+- talent;
+- personality;
+- psychology;
+- attention diagnosis;
+- motivation diagnosis;
+- learning style;
+- temporary plans that should remain conversation context;
+- duplicated Core Profile information.
+
+Personal Facts do not become Learning Evidence.
+
+## Current-context priority
+
+Current Student conversation outranks stale Personal Memory immediately.
+
+Core Profile remains authority for age, Grade, and identity.
+
+## Visual personalization
+
+The system may use JEV as a bounded decision component to select from an already filtered safe Personal Fact catalogue for a specific Canvas brief.
+
+JEV cannot invent a Personal Fact or turn a fact into learning state. Final application validation still checks that selected facts come from the authorized catalogue.
+
+## Parent boundary
+
+Parent inspection does not make the Parent a Personal Fact source.
+
+Future Parent insight may use safe Personal Facts where appropriate, but it must not silently rewrite Student-authored memory or convert it into Learning Intelligence.

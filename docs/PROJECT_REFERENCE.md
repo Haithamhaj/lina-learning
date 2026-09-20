@@ -2,213 +2,421 @@
 
 ## Status
 
-Approved living product reference.
+**Canonical living product reference.**
 
-## Product identity and intended learners
+Updated to reflect the current implemented and deployed system. Historical plans, implementation records, reviews, and closure documents are supporting evidence and do not override this file.
 
-Lina is an AI-native personal learning system that began with Lina and Grade 5 as the first real-world proving ground. It is intended to grow across school-age learners from primary through secondary education without becoming a generic LMS or homework-answer bot.
+## 1. Product identity
 
-The product objective is **learning and understanding**. Answers, visualizations, exercises, tools, and models are means to that end.
+Lina is an AI-native personal learning system for school-age learners.
 
-The durable asset is the evolving, evidence-grounded understanding of the learner together with preserved raw learning history and provenance.
+It began with Lina and Grade 5 as the first real proving ground. The product is intended to grow across school years and subjects, but that future breadth must not turn the current system into an abstract platform before real learner value is proven.
 
-## Core product principles
+The central product objective is:
 
-- Learning before answers.
-- Teach the learner without labeling the learner.
-- Current demonstrated behavior outranks stale historical assumptions.
-- Personalize teaching and representation, not only content.
-- Parents receive meaningful insight, not surveillance.
-- Books and sources ground what is being learned; they do not dictate one teaching method.
-- Raw interactions and originals remain authoritative and rebuildable.
-- Child safety and ownership/privacy are explicit protected boundaries.
-- The Student experience remains simple even when internals are sophisticated.
+> **Help the learner understand deeply, build foundations, apply knowledge, retain it, and become appropriately more independent over time.**
 
-## Learner-context authorities
+Answers, models, visuals, exercises, retrieval, memory, and analytics are means to that objective.
 
-Do not collapse these into one profile:
+## 2. Product spirit
 
-- **Student Core Profile:** age, Grade, identity/context controlled by Parent/System.
-- **Personal Facts:** explicit, safe, reconcilable learner context.
-- **Current Conversation Context:** what matters now.
-- **Learning Intelligence:** evidence-grounded conclusions over time.
+The learner should experience **one coherent learning companion**.
 
-The system must not infer personality, psychology, intelligence, talent, attention, or permanent learning-style labels.
+Internally Lina may use multiple models, background jobs, deterministic validators, memory layers, Studio state, retrieval, and decision services. Those internals must not fragment the learner experience.
 
-## Tutor authority
+The system should be sophisticated where sophistication creates real value and simple where complexity would only make the product harder to use or maintain.
 
-The Primary Tutor is the sole teaching and student-facing reasoning authority.
+## 3. Core principles
 
-It owns:
+1. Learning before answers.
+2. Teach the learner without labeling the learner.
+3. Current demonstrated behavior outranks stale historical assumptions.
+4. Personalize teaching and representation, not just content.
+5. One Primary Tutor owns the learner-facing teaching relationship.
+6. Canvas is a representation and interaction surface, not a second Tutor.
+7. Personal Facts and Learning Intelligence are different authorities.
+8. Raw learner and source history remains authoritative and rebuildable.
+9. Parents receive insight, not surveillance.
+10. Safety, ownership, provenance, and persistence are application authorities, not model discretion.
+11. Use models for semantic judgment; use code for hard boundaries.
+12. Do not force reuse, personalization, visuals, quizzes, or questions merely because the system can produce them.
 
-- the educational objective;
-- facts and source grounding;
-- teaching strategy;
-- explanation;
-- interpretation of meaningful learner actions;
-- continuation after Canvas interaction.
+## 4. What Lina is not
 
-Normal Tutor availability is independent of curriculum availability.
+Lina is not:
 
-## Canvas product direction
+- a generic AI chat wrapper;
+- a homework-answer generator;
+- a curriculum viewer with chat added;
+- a fixed tutoring script;
+- a psychological profiler;
+- a permanent learning-style classifier;
+- a grade-only analytics system;
+- an LMS;
+- a Parent surveillance product;
+- a multi-agent UI where the Student chooses among internal agents.
 
-Canvas is not a finite diagram renderer catalogue.
+## 5. Learner-context authorities
 
-The approved architecture is a **Full-Power Hybrid Canvas**:
+These must remain distinct.
 
-```text
-Primary Tutor
-    ↓
-CanvasBrief
-+ server-filtered Visual Learner Context
-    ↓
-Full-Power Canvas Agent
-    ↓
-REUSE / ADAPT / CREATE
-    ↓
-Visual runtime
-    ↓
-Safe validation / sandbox when generated code is used
-    ↓
-Browser render + bounded preview/refinement
-    ↓
-Semantic Manifest + Studio state/events
-    ↓
-Same Primary Tutor
-```
+### 5.1 Current conversation
 
-### Governing Canvas principles
+The strongest signal for what support is needed now.
 
-- Typed renderers are a fast path, not a capability ceiling.
-- The Canvas Agent receives maximum useful **visual authority** while retaining minimum **system authority**.
-- Reuse is preferred only when it preserves learning quality.
-- The Agent may adapt or create a new visual when that better serves understanding.
-- Custom generated visual code is a first-class approved capability only inside a strict isolated sandbox.
-- The Agent may use approved React/SVG/Motion, JSXGraph, Konva, MathLive, chart/simulation capabilities, project-owned generated images, and future approved visual capabilities according to representational need.
-- No subject-to-library hardcoding is required.
-- Exact mathematical/scientific truth must be supplied by typed inputs or deterministic tools; rendering must not invent missing values.
-- Student-specific private context must not become reusable artifact content.
+The current Student turn can override stale historical expectations immediately.
 
-## Reusable Visual Registry
+### 5.2 Student Core Profile
 
-Successful generalized visual artifacts can be stored as immutable/versioned reusable definitions.
+Parent/System-authoritative context such as identity, date of birth or derived age, active Grade, and other explicitly governed profile context.
 
-The system should distinguish:
+Core Profile calibrates age-appropriateness, language, abstraction, information amount, and interaction complexity.
 
-```text
-Reusable artifact definition
-≠
-student-specific Canvas instance
-```
+It is not mastery, ability, personality, or Evidence.
 
-A reusable artifact may be:
+### 5.3 Personal Facts / Personal Memory
 
-- reused with new parameter values;
-- adapted to new presentation requirements;
-- forked/versioned when structural change is useful.
+Explicit, safe learner context preserved for continuity.
 
-Every generation may remain in build history for provenance, but only safe, parameterizable, validated, reusable, sufficiently high-quality artifacts should be promoted into the reusable registry.
+Examples include interests, hobbies, favorite activities, family or pet references, and ordinary preferences explicitly stated by the Student.
 
-This is intended to improve future latency, cost, consistency, and quality without converting one learner's private information into templates.
+Personal Facts may make examples, analogies, conversation, or visuals feel natural.
 
-## Tutor understanding boundary
+They must not become Evidence, ability claims, personality inference, motivation diagnosis, learning-style labels, or automatic teaching-method selection.
 
-Every finalized Canvas, regardless of implementation technology, must expose a validated **Semantic Manifest** with stable semantic IDs.
+### 5.4 Learning Intelligence
 
-The Manifest should describe educationally meaningful:
+Evidence-grounded, revisable interpretation of meaningful learning behavior over time.
 
-- objective;
-- entities;
-- facts;
-- quantities;
-- relations;
-- presentation/progression;
-- current visual state;
-- meaningful interactions;
-- calculated results;
-- active focus;
-- provenance.
+It can represent current learning state, scoped patterns, support dependence, reasoning evidence, misconception evidence, transfer, retention, self-correction, strategy outcomes, and evidence confidence.
 
-The Tutor should not need to read generated React/SVG code to understand the Canvas.
+It is not a permanent description of the learner.
 
-Meaningful Canvas actions flow through Studio and return to the same Primary Tutor. Raw clickstream does not automatically become Evidence.
+## 6. Primary Tutor
 
-## Student sources and privacy
+There is one student-facing Tutor identity.
 
-Student work may include text, voice, images, PDFs/DOCX, handwriting, drawings, homework, and textbook pages.
+The Primary Tutor owns the educational objective, explanation, reasoning, source grounding, teaching mode, teaching strategy, teaching method, pacing, amount of support, meaningful application or checks when useful, interpretation of Student responses, whether a representation surface would materially help, and continuation after meaningful Canvas interaction.
 
-Raw student sources remain protected originals. The normal safe path is:
+The Tutor does not have to follow a fixed explanation, question, quiz, reward sequence.
 
-```text
-Student source
-→ safety / authorized processing
-→ Primary Tutor understanding
-→ distilled educational semantics
-→ Canvas composition
-```
+A direct answer, concise explanation, worked example, guided attempt, visual, challenge, clarification, or stopping point may each be correct depending on the current need.
 
-Do not casually forward raw source bytes, OCR dumps, private storage IDs, Personal Memory, or Learning Intelligence into custom visual code.
+### 6.1 Teaching concepts
 
-## Learning Intelligence
+Keep these distinct:
 
-Learning Intelligence remains evidence-first, rebuildable, and separate from Personal Facts.
+- **Teaching Mode** — broad interaction posture.
+- **Teaching Strategy** — how the current learning move is organized.
+- **Teaching Method** — concrete instructional method or representation approach.
+- **Surface** — Chat, Canvas, source, voice, and related interaction surfaces.
 
-```text
-Raw interaction
-→ completed learning segment
-→ semantic review
-→ validated learning event
-→ Evidence
-→ Current State / Patterns
-→ compact learner intelligence
-→ relevant later personalization
-```
+A selected strategy or method is not Evidence that it worked.
 
-A selected teaching method or visual representation is not Evidence of effectiveness by itself. Observable learner outcomes are required.
+## 7. Personalization
 
-## Parent / Admin
+Personalization should be felt, not announced.
 
-Parent/Admin may control books, Grade context, safe learning boundaries, model routes, processing/reprocessing, and inspect meaningful learner evidence/changes.
+Canonical decision inputs:
 
-Parent disagreement can trigger review/revalidation but does not directly overwrite evidence-grounded learner conclusions.
+    Current Student behavior
+    + Core Profile
+    + relevant conversation history
+    + relevant Personal Facts
+    + relevant Learning Intelligence
+    + current subject/concept/source
+    + current Canvas/Studio state
+            ↓
+    Primary Tutor decision
 
-## Architecture boundaries
+Rules:
 
-- Lina remains a modular monolith.
-- Model/provider routing remains observable and replaceable.
-- Studio owns durable Runtime/Scene/Event/Snapshot and semantic interaction state.
-- Generated assets become project-owned before durable student-facing use.
-- Canvas failure must never block Tutor chat.
-- Existing Scene/history compatibility is preserved where required.
-- New infrastructure is added only when the approved capability demonstrates need.
+- current behavior wins over history;
+- Personal Facts can personalize context but not ability;
+- Learning Intelligence is a scoped prior, not a command;
+- no method is forced from one old success;
+- no visual is forced because the Student likes drawing;
+- no repeated personalization phrase should be inserted merely because a fact is available;
+- the system should prefer relevance over demonstrating that it remembers.
 
-## Current implementation baseline
+## 8. JEV bounded decision layer
 
-Full-Power Hybrid Canvas is implemented in the modular monolith. It supports typed capabilities and immutable REUSE / ADAPT / CREATE Build paths, approved sandbox execution for custom generated code, Semantic Manifest → Studio → same-Tutor continuity, and selective reusable Artifact Version promotion. Engineering proof exists for CREATE, selective promotion, true REUSE and true ADAPT through desktop production-equivalent browser evidence. This is not acceptance of unrestricted CREATE reliability, authenticated Daily production use, deployment, or learner learning benefit.
+Lina uses OpenRouter Decisions / **JEV** for selected bounded decision tasks.
 
-Canvas Development Review is an internal, on-demand engineering capability. It stores independent review records that reference authoritative Canvas evidence and is separate from Learning Intelligence, learner profile/personalization and Tutor memory. Its AI reviewer is advisory only and cannot modify learner state, Tutor behavior, source code or release decisions. The operator guide is `docs/proposals/CANVAS-DEVELOPMENT-REVIEW.md`.
+### 8.1 Visual personalization selection
 
-The migration baseline for FULL-POWER-CANVAS-01 is the completed Agentic Canvas / Visual Intelligence branch at:
+Given an already filtered safe Personal Fact catalogue and an admitted Canvas brief, JEV can judge which facts, if any, naturally improve the visual presentation.
 
-`62df59bcc8c43074c223d79b73bcf97a0905ed4c`
+The answer space is bounded to the supplied candidate facts. It cannot invent Personal Facts.
 
-That baseline already includes:
+### 8.2 Exact Canvas reuse selection
 
-- Tutor-authored `CanvasBriefV1`;
-- bounded server-resolved visual learner context;
-- one Canvas Agent via OpenAI Agents SDK;
-- typed Studio Scene persistence/replay;
-- deterministic and hosted tools;
-- generated-asset ownership;
-- same-Tutor Canvas continuity;
-- semantic Canvas interactions;
-- visual plan persistence;
-- production renderer/browser harness.
+Given only already authorized, executable, same-learner reusable visual actions, JEV can select one exact replay or NO_MATCH.
 
-FULL-POWER-CANVAS-01 extends that baseline. It does not authorize rebuilding those foundations.
+It cannot alter frozen parameters, invent a new visual, bypass artifact and build validation, override ownership, or turn an inexact match into reuse.
 
-## Governing Full-Power reference
+Application code revalidates executability and provenance.
 
-The detailed approved architecture and acceptance definition lives in:
+### 8.3 Segment rubric comparison
 
-`docs/FULL-POWER-CANVAS-01_ARCHITECTURE_IMPLEMENTATION_SPEC.md`
+JEV can classify already validated Segment findings against finite rubric options so the system can compare bounded rubric judgments.
+
+Learning Intelligence authority remains governed by the approved review, finalization, and Evidence pipeline.
+
+### 8.4 Governing JEV principle
+
+JEV is a bounded decision component, not a general Lina agent.
+
+It does not own teaching, Canvas generation, Safety, learner identity, persistence, Evidence lifecycle, free-form orchestration, or database mutation authority.
+
+## 9. Canvas / Studio
+
+Canvas exists because some ideas are easier to understand by seeing, manipulating, comparing, grouping, sequencing, plotting, or interacting.
+
+### 9.1 Authority split
+
+    Primary Tutor
+      → educational meaning and Canvas brief
+
+    Canvas system
+      → visual composition
+
+    Deterministic tools and code
+      → exact values, validation, executable boundaries
+
+    Studio
+      → durable Runtime, Scene, Event, Snapshot, Interaction state
+
+    Same Primary Tutor
+      → understands the semantic state and continues teaching
+
+### 9.2 Full-Power Hybrid Canvas
+
+The implemented architecture supports typed visual renderers, diagrams and processes, math surfaces, interactive text and grouping activities, reusable visual artifacts, exact REUSE, parameterized reuse, structural ADAPT and versioning, CREATE when needed, custom React/SVG/Motion and approved visual capabilities, JSXGraph, Konva, MathLive, project-owned generated assets, and isolated custom visual packages.
+
+Typed renderers are a fast path, not a capability ceiling.
+
+### 9.3 Reuse rules
+
+    REUSE
+      when the existing validated capability fits the educational need exactly
+
+    ADAPT
+      when generalized capability or structure should change
+
+    CREATE
+      when reuse or adaptation would compromise the educational representation
+
+Reuse must never be forced simply to reduce cost.
+
+### 9.4 Truthful interaction
+
+A Student action must represent what the Student actually did.
+
+The system must not select a hidden element on the learner's behalf, reveal the solution before the Student acts, lose an admitted Chat turn because a Canvas event arrived, create uncontrolled Tutor-interaction storms, or say a visual is visible merely because server composition succeeded.
+
+### 9.5 Failure behavior
+
+Canvas failure must not break Tutor availability.
+
+The system distinguishes pending, running, failed, ready, and learner-reported display failure. Recovery may include waiting, reload, retry, or replacement according to the actual server state and educational need.
+
+## 10. Student sources and grounding
+
+Student learning input may include text, voice or STT, images, PDFs, DOCX, homework, handwriting, drawings, and textbook pages.
+
+The preserved original is source authority.
+
+Safe processing may derive normalized text, extracted structure, retrieval context, educational semantics, and Canvas briefs.
+
+Derived processing must never silently replace the original as truth.
+
+## 11. Content and RAG
+
+Curriculum and content retrieval is optional grounding.
+
+Tutor availability never depends on curriculum availability.
+
+Content helps determine what source material says, which concept or reference is relevant, and what terminology or facts should ground an explanation.
+
+It does not dictate one tutoring style.
+
+## 12. Learning Intelligence
+
+Canonical path:
+
+    Raw Interaction
+    → Completed Learning Segment
+    → Segment Learning Review
+    → Staged Findings
+    → Session Intelligence Finalization
+    → Validated Learning Event
+    → Evidence
+    → Current Learning State / Learner Patterns
+    → Learner Intelligence Card
+    → relevant future personalization
+
+### 12.1 Candidate hints
+
+Turn-level Candidate Events may help later review, but they are optional hints.
+
+They are not Evidence and cannot directly update stable learner intelligence.
+
+### 12.2 Evidence principles
+
+Evidence should represent meaningful observable learning behavior.
+
+Usually meaningful:
+
+- independent reasoning;
+- substantial support need;
+- self-correction;
+- misconception supported by reasoning;
+- meaningful transfer;
+- retention after elapsed time;
+- strategy outcome;
+- resolving a learning loop.
+
+Not meaningful by itself:
+
+- greeting;
+- clicking;
+- viewing;
+- one wrong answer;
+- Tutor choosing a method;
+- vague impressions.
+
+### 12.3 Current State vs Patterns
+
+Current Learning State describes relevant current conditions.
+
+Learner Patterns require repeated, evidence-supported observations across time or context.
+
+One ordinary interaction must not become a stable pattern.
+
+## 13. Parents
+
+Parents are meaningful partners, not default observers of every message.
+
+Parent/System authority includes Core Profile, learning boundaries, and relevant account or ownership controls.
+
+Future Parent insight should expose evidence summaries and useful examples, not default transcript surveillance.
+
+A Parent disagreement can request review or revalidation; it does not manually rewrite Evidence-derived conclusions.
+
+## 14. Safety and boundaries
+
+Lina separates:
+
+1. non-overridable child-safety rules;
+2. Parent-configurable learning boundaries;
+3. age-appropriate Tutor behavior.
+
+Safety is enforced by the application boundary. Models cannot weaken it.
+
+## 15. Architecture
+
+Lina remains a modular monolith.
+
+    Next.js Student / Parent
+            ↓
+    FastAPI
+            ↓
+    Tutor Runtime
+    Studio / Canvas
+    Student Sources
+    Content / Retrieval
+    Personal Facts / Core Profile
+    Learning Intelligence
+    JEV bounded decisions
+            ↓
+    PostgreSQL + pgvector
+    Object Storage
+    Background Worker
+            ↓
+    Model Gateway
+    OpenAI / OpenRouter Decisions
+
+This is intentionally not a microservice architecture.
+
+## 16. Current implementation and deployment
+
+Implemented today:
+
+- Daily Student surface;
+- Parent surface and ownership;
+- Primary Tutor;
+- bilingual Arabic and English behavior;
+- Core Profile;
+- Personal Facts and Personal Memory;
+- Learning Intelligence;
+- Student source upload and safety paths;
+- voice and STT;
+- Content and RAG;
+- Studio durable state;
+- Full-Power Canvas;
+- reusable visual registry;
+- custom visual sandbox;
+- background Worker;
+- Model Gateway;
+- JEV bounded decisions;
+- GCP live pilot.
+
+Current structured Studio product subjects include MATH, SCIENCE, ENGLISH, and ARABIC. General Tutor conversation is broader.
+
+## 17. Current product phase
+
+The system is in **controlled real-use validation**.
+
+Engineering acceptance establishes that architecture and contracts work under tested conditions. It does not yet prove long-term learning benefit, broad unrestricted CREATE reliability, optimal teaching flow, optimal personalization frequency, acceptable latency in every real case, or longitudinal accuracy of Learning Intelligence.
+
+Those require real use.
+
+## 18. Current priorities
+
+1. Natural live-use observation and defect discovery.
+2. Teaching-flow integrity:
+   - unfinished guided learning should leave a useful next affordance;
+   - declared strategy should match visible behavior;
+   - a failed method should cause a substantive adaptation.
+3. Performance and buffering investigation.
+4. Personalization relevance calibration.
+5. JEV decision-quality evaluation against existing decisions.
+6. Generated educational images V2 after remaining design and acceptance questions are resolved.
+
+## 19. Protected areas
+
+Changes require explicit Product Owner approval when they materially alter child safety, Parent Boundaries, ownership and privacy, Learning Intelligence or Evidence semantics, Core Profile authority, Personal Facts authority, Primary Tutor authority, production model/provider policy, production data migration, or irreversible deployment and data operations.
+
+## 20. Product FAQ
+
+### Does Lina remember everything?
+Raw history is retained according to system rules, but runtime context is selective. Personal Memory is not the same as transcript replay, and Learning Intelligence is not a transcript summary.
+
+### Can Lina conclude a learner is visual?
+No. It may learn that a visual method helped in a particular evidenced context, but not create a permanent learning-style label.
+
+### Can Canvas create Evidence?
+Not directly. Canvas actions become durable Studio events. Learning meaning still passes through the governed intelligence path.
+
+### Can JEV change learner truth?
+Not by itself. It provides bounded decisions inside allowed contracts; deterministic code and governed subsystem authority remain final.
+
+### Can the Parent change Learning Intelligence manually?
+No. The Parent may trigger review or revalidation, but Evidence authority remains source-linked.
+
+### Is Grade 5 the product limit?
+No. It is the current proving ground.
+
+## 21. Canonical references
+
+- README.md — orientation.
+- docs/PROJECT_REFERENCE.md — this product reference.
+- docs/IMPLEMENTATION_PLAN.md — technical architecture.
+- docs/LEARNING_INTELLIGENCE_SPEC.md — Learning Intelligence authority.
+- docs/CHILD_SAFETY_POLICY.md — safety and Parent Boundaries.
+- docs/LEARNING_PRODUCT_ROADMAP.md — capability direction.
+- project-state/PROJECT_STATE.md — current operational snapshot.
+- TASKS.md — active execution queue.
+- docs/TUTOR_PEDAGOGY_REFERENCE.md — pedagogy reference.
+- docs/TUTOR_CANVAS_REPAIR_TRACKER.md — repair and acceptance evidence register.
