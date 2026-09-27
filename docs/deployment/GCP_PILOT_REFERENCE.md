@@ -126,7 +126,8 @@ Application and Worker use configuration such as:
 - MODEL_PROVIDER=openai
 - MODEL_NAME=gpt-6-luna
 - CANVAS_MODEL_NAME=gpt-6-sol on Worker
-- JEV_PROVIDER=openrouter for this repair deployment
+- JEV_PROVIDER=typesafe for this repair deployment
+- TYPESAFE_JEV_MODEL_NAME=jev-1.13.0
 - JEV_VISUAL_NEED_MODE=active on App
 - JEV_MODEL_NAME=typesafe/jev-1.13
 - JEV_TIMEOUT_SECONDS=5
