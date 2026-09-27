@@ -320,3 +320,29 @@ def test_provider_failure_returns_safe_error_and_commits_one_failed_execution(
         assert execution.student_id == student_id
         assert execution.learning_session_id == learning_session_id
         assert session.query(LearningMessage).count() == 0
+
+
+def test_no_speech_returns_recoverable_error_and_records_no_student_statement(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from services.model_gateway.openai_transcription_provider import TranscriptionNoSpeechError
+
+    _, learning_session_id = _student_and_session(postgres_session_factory, subject="voice-no-speech")
+    _install_provider(monkeypatch, _TranscriptionProvider(failure=TranscriptionNoSpeechError()))
+    client = _client(postgres_session_factory, subject="voice-no-speech")
+    try:
+        response = client.post(
+            f"/api/v1/student/daily/session/{learning_session_id}/voice/transcribe",
+            files={"audio": ("voice.webm", b"private raw audio", "audio/webm")},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": {"code": "NO_SPEECH_HEARD"}}
+    with postgres_session_factory() as session:
+        execution = session.query(AIExecution).one()
+        assert execution.success is False
+        assert execution.failure_code == "TranscriptionNoSpeechError"
+        assert session.query(LearningMessage).count() == 0

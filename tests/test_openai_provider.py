@@ -142,7 +142,7 @@ def test_openai_responses_provider_returns_text_usage_and_luna_cost() -> None:
     assert result.input_tokens == 392
     assert result.cached_input_tokens == 0
     assert result.output_tokens == 143
-    assert result.estimated_cost_usd == 0.000625
+    assert result.estimated_cost_usd == 0.00025
 
 
 @pytest.mark.parametrize(
@@ -353,7 +353,7 @@ def test_openai_responses_provider_accounts_for_each_luna_prompt_cache_category(
     assert result.cached_input_tokens == 400
     assert result.cache_write_tokens == 200
     assert result.output_tokens == 100
-    assert result.estimated_cost_usd == 0.000645
+    assert result.estimated_cost_usd == 0.000258
 
 
 def test_openai_execute_rejects_v9_result_without_required_workspace_intent() -> None:

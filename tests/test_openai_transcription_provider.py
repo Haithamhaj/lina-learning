@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 
 import pytest
 
 from services.model_gateway.gateway import ModelRoute
+
+
+VOICE_FIXTURES = Path(__file__).parent / "fixtures" / "voice"
 
 
 class _Response:
@@ -52,7 +56,7 @@ def test_openai_transcription_provider_sends_multipart_and_normalizes_text() -> 
     ).execute(
         ModelRoute("openai", "gpt-transcribe"),
         {
-            "audio": b"RIFF disposable wav bytes",
+            "audio": (VOICE_FIXTURES / "known-speech.wav").read_bytes(),
             "filename": "../../student phrase",
             "content_type": "audio/wav",
         },
@@ -64,9 +68,10 @@ def test_openai_transcription_provider_sends_multipart_and_normalizes_text() -> 
     assert request.get_header("Authorization") == "Bearer not-a-real-secret"
     assert request.get_header("Content-type").startswith("multipart/form-data; boundary=")
     assert b'name="model"\r\n\r\ngpt-transcribe' in body
+    assert b'name="response_format"\r\n\r\njson' in body
     assert b'name="file"; filename="student_phrase.wav"' in body
     assert b"Content-Type: audio/wav" in body
-    assert b"RIFF disposable wav bytes" in body
+    assert (VOICE_FIXTURES / "known-speech.wav").read_bytes() in body
     assert captured["timeout"] == 12.5
     assert result.output == {"transcript": "الكسر one half"}
     assert result.input_tokens is None
@@ -74,8 +79,31 @@ def test_openai_transcription_provider_sends_multipart_and_normalizes_text() -> 
     assert result.estimated_cost_usd is None
 
 
-@pytest.mark.parametrize("body", [b"{}", b'{"text":"   "}', b"not-json"])
-def test_openai_transcription_provider_rejects_missing_blank_or_malformed_text(
+def test_openai_transcription_provider_sends_completed_webm_with_matching_filename_and_type() -> None:
+    OpenAITranscriptionProvider, _, _ = _provider_types()
+    captured: dict[str, object] = {}
+    audio = (VOICE_FIXTURES / "known-speech.webm").read_bytes()
+
+    def send(request: object, *, timeout: float) -> _Response:
+        captured["body"] = request.data
+        return _Response(b'{"text":"A short spoken phrase.","languages":[{"code":"en"}]}')
+
+    result = OpenAITranscriptionProvider(
+        api_key="test-key", request_sender=send,
+    ).execute(
+        ModelRoute("openai", "gpt-transcribe"),
+        {"audio": audio, "filename": "voice.webm", "content_type": "audio/webm"},
+    )
+
+    body = captured["body"]
+    assert b'name="file"; filename="voice.webm"' in body
+    assert b"Content-Type: audio/webm" in body
+    assert audio in body
+    assert result.output == {"transcript": "A short spoken phrase."}
+
+
+@pytest.mark.parametrize("body", [b"{}", b"not-json"])
+def test_openai_transcription_provider_rejects_missing_or_malformed_text(
     body: bytes,
 ) -> None:
     OpenAITranscriptionProvider, _, TranscriptionResponseError = _provider_types()
@@ -92,6 +120,22 @@ def test_openai_transcription_provider_rejects_missing_blank_or_malformed_text(
         )
 
 
+def test_openai_transcription_provider_distinguishes_a_blank_successful_transcript() -> None:
+    from services.model_gateway.openai_transcription_provider import TranscriptionNoSpeechError
+
+    OpenAITranscriptionProvider, _, _ = _provider_types()
+    provider = OpenAITranscriptionProvider(
+        api_key="test-key",
+        request_sender=lambda request, *, timeout: _Response(b'{"text":"   ","languages":[]}'),
+    )
+
+    with pytest.raises(TranscriptionNoSpeechError):
+        provider.execute(
+            ModelRoute("openai", "gpt-transcribe"),
+            {"audio": (VOICE_FIXTURES / "known-speech.wav").read_bytes(), "filename": "voice.wav", "content_type": "audio/wav"},
+        )
+
+
 @pytest.mark.parametrize(
     "failure,code",
     [
@@ -103,6 +147,7 @@ def test_openai_transcription_provider_rejects_missing_blank_or_malformed_text(
 def test_openai_transcription_provider_normalizes_transport_failures_without_details(
     failure: Exception,
     code: str,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     OpenAITranscriptionProvider, TranscriptionProviderError, _ = _provider_types()
 
@@ -120,6 +165,9 @@ def test_openai_transcription_provider_normalizes_transport_failures_without_det
     assert caught.value.code == code
     assert "private" not in str(caught.value)
     assert "secret" not in str(caught.value)
+    assert "private" not in caplog.text
+    assert "secret" not in caplog.text
+    assert "test-key" not in caplog.text
 
 
 def test_openai_transcription_provider_rejects_unapproved_content_type() -> None:

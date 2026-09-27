@@ -59,8 +59,8 @@ def main() -> None:
     database_url = os.environ.get("DATABASE_URL")
     if not database_url or not database_url.endswith("/lina_learning_test"):
         raise SystemExit("VISION-01 live proof requires the canonical disposable lina_learning_test database.")
-    if os.getenv("MODEL_PROVIDER") != "openai" or os.getenv("MODEL_NAME") != "gpt-5.6-luna":
-        raise SystemExit("VISION-01 live proof requires OpenAI gpt-5.6-luna explicitly.")
+    if os.getenv("MODEL_PROVIDER") != "openai" or os.getenv("MODEL_NAME") != "gpt-6-luna":
+        raise SystemExit("VISION-01 live proof requires OpenAI gpt-6-luna explicitly.")
 
     reset_settings_cache()
     settings = get_settings()
@@ -137,7 +137,7 @@ def main() -> None:
                 })
             result = {
                 "provider": "openai",
-                "model": "gpt-5.6-luna",
+                "model": "gpt-6-luna",
                 "tutor_call_count": len(executions),
                 "execution_source_asset_ids": [str(item.source_asset_id) for item in executions],
                 "student_message_source_asset_ids": [str(item.source_asset_id) for item in messages if item.role == "student"],

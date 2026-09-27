@@ -305,10 +305,21 @@ def _pattern_targets(
     ) in {"independent", "light_support"}
     relationship = item.evidence.relationship
     targets: list[tuple[str, str, PatternRole]] = []
-    if supports_need:
+    support_episode = item.event.event_type not in {"strategy_outcome"}
+    if item.event.event_type == "guided_success" and _has_prior_support_episode(
+        session, item=item
+    ):
+        # A successful correction after an already-counted wrong/support episode
+        # is recovery evidence, not a second independent recurrence signal.
+        support_episode = False
+    if supports_need and support_episode:
         targets.append(("support_need", "support_need", "supports"))
-    elif independent and relationship in {"contradicts", "improvement"}:
-        targets.append(("support_need", "support_need", relationship))
+    elif independent and _existing_support_need_pattern(
+        session, item=item, policy=policy
+    ):
+        # A later independent demonstration challenges an existing support need
+        # even when the Evidence relationship describes the success itself.
+        targets.append(("support_need", "support_need", "improvement"))
 
     if item.event.event_type == "misconception_signal" and item.candidate is not None:
         targets.append(("misconception_recurrence", f"misconception:{_normalized_token(item.candidate.signal, fallback='observed')}", "supports"))
@@ -352,6 +363,56 @@ def _pattern_targets(
     if persistence in {"continued_independently", "continued_with_support", "stopped"}:
         targets.append(("learning_behavior", f"persistence:{persistence}", "supports"))
     return targets
+
+
+def _has_prior_support_episode(session: Session, *, item: _EvidenceContext) -> bool:
+    """Detect an earlier support-defining event in the same causal Segment."""
+
+    if item.event.segment_id is None:
+        return False
+    statement = (
+        select(LearningEvent.id)
+        .join(LearningEvidence, LearningEvidence.event_id == LearningEvent.id)
+        .where(
+            LearningEvent.session_id == item.event.session_id,
+            LearningEvent.segment_id == item.event.segment_id,
+            LearningEvent.subject == item.event.subject,
+            LearningEvent.concept_ref == item.event.concept_ref,
+            LearningEvent.event_type.in_(
+                ("incorrect_attempt", "misconception_signal", "open_loop_created")
+            ),
+            LearningEvent.id != item.event.id,
+        )
+    )
+    if item.event.segment_review_finding_index is not None:
+        statement = statement.where(
+            LearningEvent.segment_review_finding_index.is_not(None),
+            LearningEvent.segment_review_finding_index
+            < item.event.segment_review_finding_index,
+        )
+    return session.execute(statement.limit(1)).scalar_one_or_none() is not None
+
+
+def _existing_support_need_pattern(
+    session: Session,
+    *,
+    item: _EvidenceContext,
+    policy: PatternPolicy,
+) -> bool:
+    scope_key = _scope_key(_concept_scope(item))
+    return (
+        session.execute(
+            select(LearnerPattern.id).where(
+                LearnerPattern.student_id == item.learning_session.student_id,
+                LearnerPattern.policy_version == policy.version,
+                LearnerPattern.pattern_type == "support_need",
+                LearnerPattern.pattern_key == "support_need",
+                LearnerPattern.scope_key == scope_key,
+                LearnerPattern.status.notin_(("RESOLVED", "SUPERSEDED")),
+            )
+        ).scalar_one_or_none()
+        is not None
+    )
 
 
 def _matching_misconception_key(

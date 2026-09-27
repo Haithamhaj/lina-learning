@@ -8,9 +8,11 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
+from scripts.bootstrap_student_core_profile import bootstrap_student_core_profile
 from services.platform.core_profile import (
     EffectiveGradePeriodConflict,
     InvalidDateOfBirth,
+    StudentCoreProfileNotFound,
     derive_age_years,
     resolve_effective_grade_period,
     set_active_grade_period,
@@ -54,6 +56,117 @@ def _student(session: Session, *, name: str | None = None, dob: date | None = No
     session.add(student)
     session.flush()
     return student
+
+
+def test_operator_bootstrap_previews_applies_and_repeats_without_new_rows(
+    session_factory: sessionmaker[Session],
+) -> None:
+    today = date(2026, 9, 28)
+    dob = date(2016, 9, 28)
+    starts_on = date(2026, 8, 1)
+    with session_factory.begin() as session:
+        target = _student(session)
+        other = _student(session, name="Other Student")
+        target_id, other_id = target.id, other.id
+
+    values = dict(
+        student_id=target_id,
+        display_name="  Lina  ",
+        date_of_birth=dob,
+        grade_level=5,
+        grade_starts_on=starts_on,
+        as_of=today,
+    )
+    preview = bootstrap_student_core_profile(session_factory, **values)
+    assert preview["mode"] == "PREVIEW_ROLLED_BACK"
+    assert preview["changed"] is True
+    assert preview["before"] == {"date_of_birth_set": False, "grade_starts_on": None}
+    assert preview["after"] == {
+        "display_name": "Lina",
+        "age_years": 10,
+        "grade_level": 5,
+        "date_of_birth_set": True,
+        "grade_starts_on": starts_on.isoformat(),
+    }
+    assert dob.isoformat() not in str(preview)
+    with session_factory() as session:
+        assert session.get(Student, target_id).display_name is None
+        assert session.query(GradePeriod).count() == 0
+
+    applied = bootstrap_student_core_profile(session_factory, **values, apply=True)
+    assert applied["mode"] == "APPLIED"
+    assert applied["after"] == preview["after"]
+    with session_factory() as session:
+        period_id = session.query(GradePeriod).one().id
+        assert session.get(Student, target_id).date_of_birth == dob
+        assert session.get(Student, other_id).display_name == "Other Student"
+        assert session.query(Student).count() == 2
+        assert session.query(User).count() == 2
+
+    repeated = bootstrap_student_core_profile(session_factory, **values, apply=True)
+    assert repeated["changed"] is False
+    assert repeated["before"] == repeated["after"] == applied["after"]
+    with session_factory() as session:
+        assert session.query(GradePeriod).one().id == period_id
+
+
+@pytest.mark.parametrize(
+    ("override", "error"),
+    [
+        ({"date_of_birth": date(2026, 9, 29)}, InvalidDateOfBirth),
+        ({"grade_level": 0}, ValueError),
+        ({"grade_level": 13}, ValueError),
+        ({"grade_starts_on": date(2026, 9, 29)}, ValueError),
+        ({"display_name": "  "}, ValueError),
+        ({"display_name": "x" * 201}, ValueError),
+    ],
+)
+def test_operator_bootstrap_rejects_invalid_input_without_writes(
+    session_factory: sessionmaker[Session], override: dict[str, object], error: type[Exception]
+) -> None:
+    with session_factory.begin() as session:
+        student_id = _student(session).id
+    values = dict(
+        student_id=student_id,
+        display_name="Lina",
+        date_of_birth=date(2016, 9, 28),
+        grade_level=5,
+        grade_starts_on=date(2026, 8, 1),
+        as_of=date(2026, 9, 28),
+        apply=True,
+    )
+    values.update(override)
+    with pytest.raises(error):
+        bootstrap_student_core_profile(session_factory, **values)
+    with session_factory() as session:
+        assert session.get(Student, student_id).display_name is None
+        assert session.query(GradePeriod).count() == 0
+
+
+def test_operator_bootstrap_rejects_missing_student_and_overlapping_grade_atomically(
+    session_factory: sessionmaker[Session],
+) -> None:
+    today = date(2026, 9, 28)
+    values = dict(
+        display_name="Lina",
+        date_of_birth=date(2016, 9, 28),
+        grade_level=5,
+        grade_starts_on=date(2026, 8, 1),
+        as_of=today,
+        apply=True,
+    )
+    with pytest.raises(StudentCoreProfileNotFound):
+        bootstrap_student_core_profile(session_factory, student_id=uuid4(), **values)
+
+    with session_factory.begin() as session:
+        student = _student(session)
+        student_id = student.id
+        session.add(GradePeriod(student_id=student_id, grade_level=4, starts_on=date(2026, 7, 1)))
+    with pytest.raises(EffectiveGradePeriodConflict, match="overlaps"):
+        bootstrap_student_core_profile(session_factory, student_id=student_id, **values)
+    with session_factory() as session:
+        assert session.get(Student, student_id).display_name is None
+        assert session.query(GradePeriod).one().grade_level == 4
 
 
 @pytest.mark.parametrize(

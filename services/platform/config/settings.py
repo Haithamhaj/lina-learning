@@ -20,6 +20,8 @@ ModelProvider = Literal["mock", "openai"]
 JevVisualPersonalizationMode = Literal["off", "shadow", "active"]
 JevCanvasReuseMode = Literal["off", "shadow", "active"]
 JevSegmentRubricMode = Literal["off", "shadow"]
+JevVisualNeedMode = Literal["off", "shadow", "active"]
+JevProvider = Literal["openrouter", "typesafe"]
 _HOSTNAME_PATTERN = re.compile(
     r"(?=.{1,253}\Z)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*"
     r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\Z"
@@ -122,10 +124,16 @@ class Settings(BaseSettings):
     canvas_model_name: str | None = None
     model_base_url: str | None = None
     model_api_key: SecretStr | None = None
-    # Jev is an optional, separately authorized bounded-decision provider.  A
+    # Jev is an optional, separately authorized bounded-decision provider. A
     # configured key alone never enables a learner-data call.
+    jev_provider: JevProvider = "openrouter"
     openrouter_api_key: SecretStr | None = None
+    typesafe_api_key: SecretStr | None = None
+    typesafe_api_base_url: str = "https://api.typesafe.ai/v1/systemone"
+    # Keep the established OpenRouter model ID separate from TypeSafe's native
+    # version spelling so transport can change without changing domain slices.
     jev_model_name: str = "typesafe/jev-1.13"
+    typesafe_jev_model_name: str = "jev-1.13.0"
     jev_timeout_seconds: float = Field(default=5.0, gt=0, le=30)
     jev_visual_personalization_mode: JevVisualPersonalizationMode = "off"
     jev_visual_personalization_policy_version: str = Field(
@@ -144,6 +152,11 @@ class Settings(BaseSettings):
     jev_segment_rubric_policy_version: str = Field(
         default="jev-segment-rubric-shadow-v1", min_length=1
     )
+    jev_visual_need_mode: JevVisualNeedMode = "off"
+    jev_visual_need_policy_version: str = Field(
+        default="jev-visual-need-v1", min_length=1
+    )
+    jev_visual_need_min_probability: float = Field(default=0.40, ge=0, le=1)
     tutor_max_output_tokens: int = Field(default=2000, gt=0)
     # CTX-03D implementation calibration, measured as deterministic serialized
     # request characters rather than provider/model tokens.
@@ -213,12 +226,17 @@ class Settings(BaseSettings):
         if self.model_provider != "mock" and self.model_api_key is None:
             missing.append("MODEL_API_KEY")
 
-        if (
+        jev_enabled = (
             self.jev_visual_personalization_mode != "off"
             or self.jev_canvas_reuse_mode != "off"
             or self.jev_segment_rubric_mode != "off"
-        ) and self.openrouter_api_key is None:
-            missing.append("OPENROUTER_API_KEY")
+            or self.jev_visual_need_mode != "off"
+        )
+        if jev_enabled:
+            if self.jev_provider == "openrouter" and self.openrouter_api_key is None:
+                missing.append("OPENROUTER_API_KEY")
+            if self.jev_provider == "typesafe" and self.typesafe_api_key is None:
+                missing.append("TYPESAFE_API_KEY")
 
         if missing:
             joined = ", ".join(missing)

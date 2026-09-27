@@ -87,7 +87,7 @@ def _responses_file_probe(filename: str, content_type: str, content: bytes) -> d
     request = Request(
         "https://api.openai.com/v1/responses",
         data=json.dumps({
-            "model": "gpt-5.6-luna",
+            "model": "gpt-6-luna",
             "instructions": "Return only OK.",
             "input": [{
                 "role": "user",
@@ -145,8 +145,8 @@ def main() -> None:
     database_url = os.environ.get("DATABASE_URL")
     if not database_url or not database_url.endswith("/lina_learning_test"):
         raise SystemExit("VISION-01S requires the disposable lina_learning_test database.")
-    if os.getenv("MODEL_PROVIDER") != "openai" or os.getenv("MODEL_NAME") != "gpt-5.6-luna":
-        raise SystemExit("VISION-01S requires OpenAI gpt-5.6-luna explicitly.")
+    if os.getenv("MODEL_PROVIDER") != "openai" or os.getenv("MODEL_NAME") != "gpt-6-luna":
+        raise SystemExit("VISION-01S requires OpenAI gpt-6-luna explicitly.")
 
     safe_pdf = _pdf(SAFE_TEXT)
     unsafe_pdf = _pdf(UNSAFE_TEXT)

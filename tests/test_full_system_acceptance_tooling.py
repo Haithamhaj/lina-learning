@@ -370,7 +370,7 @@ def test_review_execution_requires_exact_production_segment_review_lineage() -> 
         success=True,
         task=ModelTask.SEGMENT_EVIDENCE.value,
         provider="openai",
-        model="gpt-5.6-luna",
+        model="gpt-6-luna",
         student_id=student_id,
         learning_session_id=HISTORICAL_SESSION_ID,
         operation_type="full_system_acceptance_segment_reconstruction",
@@ -775,14 +775,14 @@ def test_provider_settings_ignore_unrelated_inherited_project_environment(
     monkeypatch.setenv("APP_ENV", "production")
     explicit_environment = {
         "MODEL_PROVIDER": "openai",
-        "MODEL_NAME": "gpt-5.6-luna",
+        "MODEL_NAME": "gpt-6-luna",
         "MODEL_API_KEY": "provider-secret",
     }
 
     settings = _provider_settings(TARGET, explicit_environment)
 
     assert settings.model_provider == "openai"
-    assert settings.model_name == "gpt-5.6-luna"
+    assert settings.model_name == "gpt-6-luna"
     assert settings.database_url == TARGET
     assert settings.allowed_origins == ["http://localhost:5000"]
     assert "provider-secret" not in repr(settings)
@@ -813,7 +813,7 @@ def test_acceptance_gateway_injects_scoped_provider_timeout() -> None:
         TARGET,
         {
             "MODEL_PROVIDER": "openai",
-            "MODEL_NAME": "gpt-5.6-luna",
+            "MODEL_NAME": "gpt-6-luna",
             "MODEL_API_KEY": "provider-secret",
         },
     )
@@ -1194,7 +1194,7 @@ def test_verified_reconstruction_ledger_requires_exact_route_and_lineage() -> No
         id=uuid4(),
         task=ModelTask.SEGMENT_EVIDENCE.value,
         provider="openai",
-        model="gpt-5.6-luna",
+        model="gpt-6-luna",
         latency_ms=1,
         success=True,
         operation_id=operation_id,
@@ -1291,7 +1291,7 @@ def test_staging_failure_rolls_back_and_pending_audit_can_be_published(
         "operation_id": str(uuid4()),
         "historical_session_id": str(uuid4()),
         "provider": "openai",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-6-luna",
         "ai_execution_id": str(uuid4()),
         "assignments": [],
     }

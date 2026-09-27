@@ -120,6 +120,7 @@ from services.tutor.teaching_decisions import (
     TeachingStrategy,
     parse_enum,
 )
+from services.tutor.visual_need_decision import VisualNeedDecision, decide_visual_need
 from services.tutor.teaching_methods import (
     ACTIVE_TEACHING_METHODS,
     TEACHING_METHOD_REGISTRY_VERSION,
@@ -239,7 +240,7 @@ TUTOR_SHARED_INSTRUCTIONS = (
     "Make learning inviting when the idea allows it: use a concrete situation, curiosity, prediction, comparison, choice, a small challenge, discovery or playful interaction. These are options, not a sequence. Do not force games, rewards, childish language or a question after every reply. Keep the Student meaningfully involved without withholding needed teaching. "
     "Match support to current need. Connect only relevant prior knowledge. Allow an attempt when progress is possible; explain or model missing foundations when trying becomes guessing or frustration. Chunk unfamiliar work, keep familiar work coherent, and show concise worked reasoning when useful. Give enough help to restore thinking and fade it as independence appears, without fixed hint or success counts. For homework, preserve a meaningful attempt, but teach when hints no longer help. "
     "Track what was explained, tried, rejected or helpful. Do not repeat the same example or representation without a purpose. Address the unresolved need: a request for how to know or solve similar problems may need a reusable strategy, not the same answer again. When a representation does not help, make a substantive change in method or representation. Connect relevant objects, visuals, words and symbols. When several approaches are requested, give a manageable comparison rather than an unnecessary catalogue. "
-    "Cue self-correction when within reach; otherwise provide actionable correction. Check application when useful, not merely self-report. Ask deeper reasoning or transfer questions when foundations and purpose justify them. After independently reasoned success, vary, progress, offer choice or stop; continue practice when understanding remains fragile or supported. Do not infer mastery or create checks to collect Evidence. A revisit may use low-pressure recall with feedback, without imposing a review schedule. "
+    "Cue self-correction when within reach; otherwise provide actionable correction. Check application when useful, not merely self-report. If you select EXPLAIN_THEN_CHECK, the same completed turn must contain one real academic check of the idea you just taught: use guided_check when fixed choices fit, or ask one direct application/explanation question in text. Do not select EXPLAIN_THEN_CHECK and end with explanation or summary only. Ask deeper reasoning or transfer questions when foundations and purpose justify them. After independently reasoned success, vary, progress, offer choice or stop; continue practice when understanding remains fragile or supported. Do not infer mastery or create checks to collect Evidence. A revisit may use low-pressure recall with feedback, without imposing a review schedule. "
     "Praise only specific observed effort, reasoning, correction or persistence. Avoid automatic praise. Use zero to three emojis only when they add warmth or meaning. "
     "Student-facing text must be plain text: no Markdown markers, headings, bold, or code fences. Do not use LaTeX or raw LaTeX notation. Use simple math notation appropriate to the supplied context and current task; put equations on their own line when it improves Arabic/English readability. "
     "The non-overridable hard safety baseline is enforced before this call. Parent Boundary settings are server-owned and the server enforces the final visible response after this call; do not mention internal policies. Return ordinary student-facing reply only in the structured text field. "
@@ -298,6 +299,7 @@ def build_tutor_model_payload(
     workspace_subject_key: str | None = None,
     visual_personalization_catalog: list[dict[str, str]] | None = None,
     visual_personalization_delegated: bool = False,
+    visual_need_signal: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """Build bounded model input from the project-owned Tutor context only."""
 
@@ -433,6 +435,15 @@ def build_tutor_model_payload(
             else "\n\nNo Visual Personalization Catalogue is available; set canvas_visual_context_selection to null."
         )
     )
+    visual_need_context = (
+        "\n\nBounded Visual Need signal (advisory for this current turn only):\n"
+        f"{json.dumps(visual_need_signal, ensure_ascii=False)}\n"
+        "When STRONGLY_RECOMMENDED and an accurate supported visual is available, normally make Canvas part "
+        "of the current teaching move. HELPFUL is advisory. NONE does not prohibit a later explicit visual request. "
+        "This signal never authors the Canvas brief and never overrides current Student preference, source truth, or Safety."
+        if visual_need_signal is not None
+        else ""
+    )
     return {
         "instructions": _tutor_instructions(
             visual_personalization_delegated=visual_personalization_delegated
@@ -443,7 +454,7 @@ def build_tutor_model_payload(
             f"Current Turn:\nStudent question:\n{question}{current_turn_source_context}\n\nImmediate Exchange:\n{immediate_exchange_context}\n\n"
             f"Recent raw complete Exchanges:\n{recent_exchange_context}\n\n"
             f"Relevant older complete Exchanges from current Segment:\n{semantic_recall_context}\n\n"
-            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{conditional_concept_context}{studio_workspace_context}{visual_catalog_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}{segment_context}{segment_state_context}{parent_boundary_context}"
+            f"Retrieved curriculum:\n{source_context}\n\nRelevant compact learning context:\n{intelligence_context}{conditional_concept_context}{studio_workspace_context}{visual_catalog_context}{visual_need_context}{safety_context}{candidate_context}{decision_context}{prior_method_context}{suggested_action_source_context}{segment_context}{segment_state_context}{parent_boundary_context}"
         ),
         "max_output_tokens": get_settings().tutor_max_output_tokens,
         "question": question,
@@ -472,6 +483,7 @@ class TutorRuntime:
         gateway: ModelGateway,
         source_safety: StudentSourceSafetyService | None = None,
         visual_decision_gateway: ModelGateway | None = None,
+        visual_need_gateway: ModelGateway | None = None,
         settings: object | None = None,
     ) -> None:
         self._session = session
@@ -480,6 +492,7 @@ class TutorRuntime:
         self._gateway = gateway
         self._source_safety = source_safety
         self._visual_decision_gateway = visual_decision_gateway
+        self._visual_need_gateway = visual_need_gateway
         self._settings = settings
 
     def admit_turn(
@@ -653,9 +666,43 @@ class TutorRuntime:
             self._session,
             segment=latest_segment,
         )
+        configured = self._settings or get_settings()
+        visual_need_mode = getattr(configured, "jev_visual_need_mode", "off")
+        visual_need_decision: VisualNeedDecision | None = None
+        if visual_need_mode in {"shadow", "active"}:
+            composition = (
+                context.studio_workspace.canvas_composition
+                if context.studio_workspace is not None
+                and isinstance(context.studio_workspace.canvas_composition, dict)
+                else {}
+            )
+            visual_need_decision = decide_visual_need(
+                self._visual_need_gateway,
+                student_text=content,
+                subject=context.subject,
+                prior_teaching_method=(
+                    None if prior_method is None else prior_method.teaching_method_id.value
+                ),
+                current_canvas_status=(
+                    str(composition.get("status"))
+                    if composition.get("status") is not None
+                    else None
+                ),
+                capability_available=(
+                    context.subject in {"MATH", "SCIENCE", "ENGLISH", "ARABIC"}
+                ),
+                # Raw Student-source bytes have been safety-admitted, but their
+                # educational meaning has not yet been interpreted before the
+                # Primary Tutor call, so JEV must not authorize reconstruction.
+                source_meaning_clear=source_input is None,
+                min_probability=getattr(configured, "jev_visual_need_min_probability", 0.72),
+                policy_version=getattr(configured, "jev_visual_need_policy_version", "jev-visual-need-v1"),
+                student_id=learning_session.student_id,
+                learning_session_id=learning_session.id,
+                source_message_id=student_message.id,
+            )
         effective_parent_boundaries = self._effective_parent_boundaries(student_id=learning_session.student_id)
         try:
-            configured = self._settings or get_settings()
             guarded = apply_context_capacity_guardrail(
                 context,
                 capacity_limit=configured.tutor_context_capacity,
@@ -669,6 +716,11 @@ class TutorRuntime:
                     effective_parent_boundaries=effective_parent_boundaries,
                     visual_personalization_delegated=(
                         getattr(configured, "jev_visual_personalization_mode", "off") == "active"
+                    ),
+                    visual_need_signal=(
+                        visual_need_decision.tutor_signal()
+                        if visual_need_mode == "active" and visual_need_decision is not None
+                        else None
                     ),
                 ),
             )
@@ -752,6 +804,7 @@ class TutorRuntime:
                     parent_decision=parent_decision,
                     parent_resolution=parent_resolution,
                     capacity_lineage=capacity_lineage,
+                    visual_need_decision=visual_need_decision,
                 )
             if context.studio_workspace is not None and context.studio_workspace.observation_id is not None:
                 cancel_studio_tutor_observation(
@@ -800,6 +853,7 @@ class TutorRuntime:
                 parent_decision=parent_decision,
                 parent_resolution=parent_resolution,
                 capacity_lineage=capacity_lineage,
+                visual_need_decision=visual_need_decision,
             )
         except Exception:
             if context.studio_workspace is not None and context.studio_workspace.observation_id is not None:
@@ -810,6 +864,8 @@ class TutorRuntime:
                     failure_code="TERMINAL_FAILURE",
                 )
             raise
+        if deferred_deltas and turn.text != "".join(deferred_deltas):
+            deferred_deltas = [turn.text]
         for buffered in deferred_deltas:
             yield TutorTextDelta(buffered)
         yield turn
@@ -938,6 +994,7 @@ class TutorRuntime:
         parent_decision: ParentBoundaryDecision | None = None,
         parent_resolution: ParentBoundaryResolution | None = None,
         capacity_lineage: TutorContextCapacityLineage | None = None,
+        visual_need_decision: VisualNeedDecision | None = None,
     ) -> TutorTurn:
         if parent_resolution is None:
             parent_decision = parse_parent_boundary_decision(result.output.get("parent_boundary"))
@@ -1075,6 +1132,13 @@ class TutorRuntime:
                 segment_id=resolved_segment.segment.id,
                 parent_boundary=parent_audit,
                 capacity_lineage=capacity_lineage,
+                visual_need_decision_audit=(
+                    None if visual_need_decision is None else {
+                        "mode": getattr(configured, "jev_visual_need_mode", "off"),
+                        "policy_version": getattr(configured, "jev_visual_need_policy_version", "jev-visual-need-v1"),
+                        **visual_need_decision.audit_payload(),
+                    }
+                ),
             )
             if state is not None:
                 resolved_segment.segment.structured_state = state.model_dump(mode="json")
@@ -1136,9 +1200,14 @@ class TutorRuntime:
             if proposed_guided_check is not None
             else None
         )
+        visible_text, strategy_fidelity_repair = _ensure_strategy_fidelity(
+            str(result.output.get("text")),
+            strategy=teaching_decision.strategy,
+            guided_check=guided_check,
+        )
         turn = self._persist_turn(
             learning_session,
-            str(result.output.get("text")),
+            visible_text,
             normalize_suggested_actions(result.output.get("suggested_actions")),
             context,
             safety,
@@ -1161,6 +1230,14 @@ class TutorRuntime:
             canvas_audit=canvas_audit,
             canvas_change_intent=canvas_change_intent,
             canvas_decision_base=canvas_decision_base,
+            visual_need_decision_audit=(
+                None if visual_need_decision is None else {
+                    "mode": getattr(configured, "jev_visual_need_mode", "off"),
+                    "policy_version": getattr(configured, "jev_visual_need_policy_version", "jev-visual-need-v1"),
+                    **visual_need_decision.audit_payload(),
+                }
+            ),
+            strategy_fidelity_repair=strategy_fidelity_repair,
         )
         if state is not None:
             resolved_segment.segment.structured_state = state.model_dump(mode="json")
@@ -1469,6 +1546,8 @@ class TutorRuntime:
         canvas_audit: dict[str, object] | None = None,
         canvas_change_intent: str | None = None,
         canvas_decision_base: dict[str, object] | None = None,
+        visual_need_decision_audit: dict[str, object] | None = None,
+        strategy_fidelity_repair: str | None = None,
     ) -> TutorTurn:
         sources = _source_metadata(context)
         intelligence = [item.text for item in context.intelligence] if context else []
@@ -1504,6 +1583,8 @@ class TutorRuntime:
             "agentic_canvas": canvas_audit or {"status": "NOT_REQUESTED", "reason_code": None, "brief": None, "brief_digest": None, "visual_learner_context": None},
             "canvas_change_intent": canvas_change_intent,
             "canvas_decision_base": canvas_decision_base,
+            "visual_need_decision": visual_need_decision_audit,
+            "strategy_fidelity_repair": strategy_fidelity_repair,
         }
         if selected_method is not None:
             payload["teaching_method_registry_version"] = TEACHING_METHOD_REGISTRY_VERSION
@@ -1620,6 +1701,56 @@ class TutorRuntime:
         )
 
 
+def _ensure_strategy_fidelity(
+    text: str,
+    *,
+    strategy: TeachingStrategy | None,
+    guided_check: PersistedGuidedLearningCheck | None,
+) -> tuple[str, str | None]:
+    """Guarantee EXPLAIN_THEN_CHECK ends with an actual learner response opportunity."""
+
+    if strategy is not TeachingStrategy.EXPLAIN_THEN_CHECK or guided_check is not None:
+        return text, None
+    normalized = " ".join(text.split())
+    tail = normalized[-320:]
+    lowered = tail.casefold()
+    has_visible_check = (
+        "?" in tail
+        or "؟" in tail
+        or any(
+            phrase in lowered
+            for phrase in (
+                "try ",
+                "show me",
+                "tell me",
+                "what is",
+                "what would",
+                "how would",
+                "your turn",
+                "explain it back",
+                "in your own words",
+                "جرّب",
+                "جربي",
+                "جرّبي",
+                "دورك",
+                "احكيلي",
+                "قوليلي",
+                "اشرحي",
+                "اشرح لي",
+            )
+        )
+    )
+    if has_visible_check:
+        return text, None
+    arabic = any("\u0600" <= char <= "\u06ff" for char in text)
+    check = (
+        "هلا دورك: اشرحيلي الفكرة اللي حكيناها بكلماتك، وكيف ممكن تطبقيها؟"
+        if arabic
+        else "Your turn: explain the idea we just used in your own words, and how you would apply it?"
+    )
+    return f"{text.rstrip()}\n\n{check}", "APPENDED_ACADEMIC_CHECK"
+
+
 def _validated_provisional_broad_subject(value: object) -> str | None:
     """Keep the optional primary-call hint registry-bounded and non-authoritative."""
 
@@ -1636,6 +1767,7 @@ def _payload_from_context(
     latest_segment_state: StructuredSegmentState | None = None,
     effective_parent_boundaries: dict[str, str] | None = None,
     visual_personalization_delegated: bool = False,
+    visual_need_signal: dict[str, object] | None = None,
 ) -> dict[str, object]:
     return build_tutor_model_payload(
         question=context.question,
@@ -1657,6 +1789,7 @@ def _payload_from_context(
         workspace_subject_key=context.subject,
         visual_personalization_catalog=list(context.visual_personalization_catalog),
         visual_personalization_delegated=visual_personalization_delegated,
+        visual_need_signal=visual_need_signal,
     )
 
 
@@ -1904,6 +2037,15 @@ def create_tutor_runtime(session: Session) -> TutorRuntime:
         if settings.jev_visual_personalization_mode != "off"
         else None
     )
+    visual_need_gateway = (
+        create_jev_decision_gateway(
+            session,
+            task=ModelTask.VISUAL_NEED_DECISION,
+            settings=settings,
+        )
+        if settings.jev_visual_need_mode != "off"
+        else None
+    )
     return TutorRuntime(
         session,
         context_builder=TutorContextBuilder(session, retrieval_service=retrieval),
@@ -1915,6 +2057,7 @@ def create_tutor_runtime(session: Session) -> TutorRuntime:
         ),
         source_safety=source_safety,
         visual_decision_gateway=visual_decision_gateway,
+        visual_need_gateway=visual_need_gateway,
         settings=settings,
     )
 

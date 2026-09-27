@@ -86,8 +86,8 @@ def validate_configuration(
         raise AcceptanceConfigurationError("Acceptance database configuration is invalid.") from error
     if source == target or not target.database.startswith("lina_acceptance_"):
         raise AcceptanceConfigurationError("Acceptance target must be a distinct lina_acceptance_ database.")
-    if provider != "openai" or model != "gpt-5.6-luna":
-        raise AcceptanceConfigurationError("SEG-EVID-01F requires openai / gpt-5.6-luna.")
+    if provider != "openai" or model != "gpt-6-luna":
+        raise AcceptanceConfigurationError("SEG-EVID-01F requires openai / gpt-6-luna.")
     return AcceptanceConfiguration(source=source_url, target=target_url, provider=provider, model=model)
 
 
@@ -206,8 +206,8 @@ def _summary(session: Session, *, student_id: UUID, session_ids: list[UUID]) -> 
         "events": session.query(LearningEvent).join(LearningSession).filter(LearningSession.student_id == student_id).count(),
         "evidence": session.query(LearningEvidence).join(LearningEvent).join(LearningSession).filter(LearningSession.student_id == student_id).count(),
         "cards": session.query(LearnerIntelligenceCard).filter_by(student_id=student_id).count(),
-        "real_luna_tutor_calls": sum(execution.task == ModelTask.TUTOR.value and execution.provider == "openai" and execution.model == "gpt-5.6-luna" and execution.success for execution in executions),
-        "real_luna_segment_review_calls": sum(execution.task == ModelTask.SEGMENT_EVIDENCE.value and execution.provider == "openai" and execution.model == "gpt-5.6-luna" and execution.success for execution in executions),
+        "real_luna_tutor_calls": sum(execution.task == ModelTask.TUTOR.value and execution.provider == "openai" and execution.model == "gpt-6-luna" and execution.success for execution in executions),
+        "real_luna_segment_review_calls": sum(execution.task == ModelTask.SEGMENT_EVIDENCE.value and execution.provider == "openai" and execution.model == "gpt-6-luna" and execution.success for execution in executions),
         "sessions": sessions,
     }
 
@@ -254,7 +254,7 @@ def run_acceptance(*, target_database_url: str) -> dict[str, object]:
             request=IntelligenceReprocessRequest(
                 student_id=student_id,
                 session_ids=(second,),
-                evidence=EvidenceVersionSelection(provider="openai", model="gpt-5.6-luna"),
+                evidence=EvidenceVersionSelection(provider="openai", model="gpt-6-luna"),
             ),
         )
         reprocess_job_id = queued.job.id

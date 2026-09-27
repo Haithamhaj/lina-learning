@@ -59,8 +59,8 @@ def main() -> None:
     database_url = os.environ.get("DATABASE_URL")
     if not database_url or not database_url.endswith("/lina_learning_test"):
         raise SystemExit("The DOCX proof requires the disposable lina_learning_test database.")
-    if os.getenv("MODEL_PROVIDER") != "openai" or os.getenv("MODEL_NAME") != "gpt-5.6-luna":
-        raise SystemExit("The DOCX proof requires OpenAI gpt-5.6-luna explicitly.")
+    if os.getenv("MODEL_PROVIDER") != "openai" or os.getenv("MODEL_NAME") != "gpt-6-luna":
+        raise SystemExit("The DOCX proof requires OpenAI gpt-6-luna explicitly.")
 
     reset_settings_cache()
     settings = get_settings()
@@ -123,7 +123,7 @@ def main() -> None:
             assert "extracted_text" not in StudentSourceAsset.__table__.columns
             storage_keys.extend(asset.storage_key for asset in assets)
             print(json.dumps({
-                "model": "gpt-5.6-luna",
+                "model": "gpt-6-luna",
                 "question": QUESTION,
                 "answer": answer,
                 "tutor_call_count": len(executions),

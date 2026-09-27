@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from collections.abc import Callable
 from typing import Any
@@ -17,6 +18,7 @@ _CONTENT_TYPE_EXTENSIONS = {
     "audio/webm": ".webm",
     "audio/wav": ".wav",
 }
+logger = logging.getLogger(__name__)
 
 
 class TranscriptionProviderError(RuntimeError):
@@ -30,8 +32,16 @@ class TranscriptionProviderError(RuntimeError):
 class TranscriptionResponseError(TranscriptionProviderError):
     """The provider returned no usable transcript."""
 
-    def __init__(self) -> None:
+    def __init__(self, reason: str = "invalid_response") -> None:
+        self.reason = reason
         super().__init__("invalid transcription response")
+
+
+class TranscriptionNoSpeechError(TranscriptionProviderError):
+    """A valid transcription response contained no audible speech text."""
+
+    def __init__(self) -> None:
+        super().__init__("no_speech")
 
 
 class OpenAITranscriptionProvider:
@@ -83,22 +93,46 @@ class OpenAITranscriptionProvider:
         try:
             with self._request_sender(request, timeout=self._timeout_seconds) as response:
                 raw_result = response.read()
-        except HTTPError:
+                response_content_type = _safe_content_type(
+                    getattr(response, "headers", None)
+                )
+        except HTTPError as error:
+            logger.warning(
+                "Transcription provider rejected request: http_status=%s audio_bytes=%s media_type=%s",
+                error.code, len(audio), content_type,
+            )
             raise TranscriptionProviderError("provider_error") from None
         except TimeoutError:
+            logger.warning("Transcription provider timed out: audio_bytes=%s media_type=%s", len(audio), content_type)
             raise TranscriptionProviderError("timeout") from None
         except URLError as error:
             code = "timeout" if isinstance(error.reason, TimeoutError) else "network_error"
+            logger.warning("Transcription provider transport failed: category=%s audio_bytes=%s media_type=%s", code, len(audio), content_type)
             raise TranscriptionProviderError(code) from None
 
         try:
             result = json.loads(raw_result)
         except (json.JSONDecodeError, UnicodeDecodeError, TypeError):
-            raise TranscriptionResponseError() from None
+            logger.warning("Transcription response rejected: category=malformed_json content_type=%s", response_content_type)
+            raise TranscriptionResponseError("malformed_json") from None
         transcript = result.get("text") if isinstance(result, dict) else None
-        if not isinstance(transcript, str) or not transcript.strip():
-            raise TranscriptionResponseError()
+        if not isinstance(transcript, str):
+            logger.warning(
+                "Transcription response rejected: category=missing_text content_type=%s shape=%s",
+                response_content_type,
+                "object" if isinstance(result, dict) else type(result).__name__,
+            )
+            raise TranscriptionResponseError("missing_text")
+        if not transcript.strip():
+            logger.info("Transcription response contained no speech: content_type=%s", response_content_type)
+            raise TranscriptionNoSpeechError()
         return ModelResult(output={"transcript": transcript.strip()})
+
+
+def _safe_content_type(headers: object) -> str:
+    value = headers.get("Content-Type", "") if hasattr(headers, "get") else ""
+    media_type = value.split(";", 1)[0].strip().lower() if isinstance(value, str) else ""
+    return media_type if re.fullmatch(r"[a-z0-9.+/-]{1,64}", media_type) else "unknown"
 
 
 def _safe_filename(filename: str, *, content_type: str) -> str:
@@ -125,6 +159,9 @@ def _multipart_body(
         b'Content-Disposition: form-data; name="model"\r\n\r\n',
         model.encode(),
         b"\r\n",
+        delimiter,
+        b'Content-Disposition: form-data; name="response_format"\r\n\r\n',
+        b"json\r\n",
     ]
     if isinstance(context_hint, str) and context_hint.strip():
         parts.extend(

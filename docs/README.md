@@ -26,6 +26,7 @@ This directory contains both **current living references** and **historical engi
 - domains/EDUCATIONAL_VISUALS.md — educational visual policy.
 - FULL-POWER-CANVAS-01_ARCHITECTURE_IMPLEMENTATION_SPEC.md — detailed Full-Power Canvas architecture.
 - TUTOR_CANVAS_REPAIR_TRACKER.md — current repair and acceptance evidence register.
+- REAL_USE_REPAIR_01_IMPLEMENTATION_SPEC.md — approved E30 repair/recalibration implementation contract for Codex/AI execution.
 
 ## Operational references
 

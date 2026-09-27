@@ -3,27 +3,36 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
+import json
 import os
+from pathlib import Path
+import subprocess
+import sys
 from uuid import uuid4
 
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
+from scripts.bootstrap_student_core_profile import bootstrap_student_core_profile
 from services.intelligence.current_state import CURRENT_STATE_POLICY_VERSION
 from services.intelligence.patterns import PATTERN_POLICY_VERSION
 from services.intelligence.selection import select_relevant_intelligence
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete
-from services.platform.core_profile import set_active_grade_period
+from services.platform.core_profile import set_active_grade_period, student_core_context
 from services.platform.db.connection import normalize_database_url
 from services.platform.db.models import (
+    AIExecution,
     CurrentLearningState,
     GradePeriod,
     IntelligenceProcessingRun,
     LearnerPattern,
+    LearningEvidence,
     LearningMessage,
     LearningSession,
     ModelTask,
+    ParentStudentRelationship,
+    PersonalFact,
     Student,
     User,
 )
@@ -240,6 +249,81 @@ def test_context_projects_only_the_current_students_effective_core_profile(
     }
     assert "Other Student" not in context.student_core_context.as_model_input().values()
     assert retrieval.calls[0]["grade_level"] == 4
+
+
+def test_operator_bootstrap_reaches_tutor_context_without_raw_dob(
+    factory: sessionmaker[Session],
+) -> None:
+    today = date.today()
+    birthday = date(today.year - 10, today.month, today.day)
+    with factory.begin() as session:
+        student, learning_session, _ = _seed(session)
+        student_id, learning_session_id = student.id, learning_session.id
+
+    bootstrap_student_core_profile(
+        factory,
+        student_id=student_id,
+        display_name="Lina",
+        date_of_birth=birthday,
+        grade_level=5,
+        grade_starts_on=date(today.year, 1, 1),
+        as_of=today,
+        apply=True,
+    )
+    retrieval = RecordingRetrieval()
+    with factory() as session:
+        context = TutorContextBuilder(
+            session,
+            retrieval_service=retrieval,  # type: ignore[arg-type]
+        ).build(
+            learning_session=session.get(LearningSession, learning_session_id),
+            question="How do I compare fractions?",
+        )
+    core = context.student_core_context.as_model_input()
+    payload = build_tutor_model_payload(
+        question=context.question,
+        student_core_context=core,
+    )
+    assert core == {"display_name": "Lina", "age_years": 10, "grade_level": 5}
+    assert retrieval.calls[0]["grade_level"] == 5
+    assert payload["student_core_context"] == core
+    assert birthday.isoformat() not in json.dumps(payload)
+    assert "date_of_birth" not in json.dumps(payload)
+
+
+def test_operator_command_requires_apply_to_persist_profile(
+    factory: sessionmaker[Session],
+) -> None:
+    today = date.today()
+    with factory.begin() as session:
+        student, _, _ = _seed(session)
+        student_id = student.id
+
+    command = [
+        sys.executable,
+        "scripts/bootstrap_student_core_profile.py",
+        "--student-id", str(student_id),
+        "--display-name", "Lina",
+        "--date-of-birth", date(today.year - 10, today.month, today.day).isoformat(),
+        "--grade-level", "5",
+        "--grade-starts-on", date(today.year, 1, 1).isoformat(),
+    ]
+    root = Path(__file__).resolve().parents[1]
+    preview = subprocess.run(command, cwd=root, capture_output=True, text=True, check=True)
+    assert json.loads(preview.stdout)["mode"] == "PREVIEW_ROLLED_BACK"
+    with factory() as session:
+        assert session.get(Student, student_id).display_name is None
+        assert session.query(GradePeriod).filter_by(student_id=student_id).count() == 0
+
+    applied = subprocess.run([*command, "--apply"], cwd=root, capture_output=True, text=True, check=True)
+    assert json.loads(applied.stdout)["mode"] == "APPLIED"
+    with factory() as session:
+        assert student_core_context(session, student_id=student_id, as_of=today).as_model_input() == {
+            "display_name": "Lina", "age_years": 10, "grade_level": 5,
+        }
+        assert session.query(GradePeriod).filter_by(student_id=student_id).count() == 1
+        for model in (ParentStudentRelationship, PersonalFact, LearningEvidence, LearnerPattern, AIExecution):
+            assert session.query(model).count() == 0
 
 
 def test_context_and_retrieval_follow_a_scheduled_grade_transition(

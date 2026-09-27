@@ -204,10 +204,12 @@ def _runtime(
     source_decision: SafetyDecision | None = None,
     context_subject: str | None = "MATH",
     settings: object | None = None,
+    text: str = "Try one small step.",
 ) -> tuple[TutorRuntime, _ContextBuilder, _Provider, _Session]:
     session = _Session()
     context = _ContextBuilder(immediate_exchange, subject=context_subject)
     provider = _Provider(
+        text=text,
         candidate_metadata=candidate_metadata,
         suggested_actions=suggested_actions,
         guided_check=guided_check,
@@ -2010,3 +2012,96 @@ def test_malformed_candidate_metadata_never_breaks_the_tutor_response(candidate_
     assert provider.calls == 1
     assert not [row for row in session.rows if isinstance(row, CandidateEvent)]
     assert tutor_message.payload["candidate_metadata_status"] == "invalid"
+
+
+def test_active_visual_need_signal_reaches_primary_tutor_and_audit() -> None:
+    session = _Session()
+    context = _ContextBuilder(subject="SCIENCE")
+    tutor_provider = _Provider(text="Sunlight travels from the Sun to Earth.")
+    tutor_gateway = ModelGateway(
+        session,
+        routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")},
+        providers={"fixture": tutor_provider},
+    )
+
+    class VisualProvider:
+        def execute(self, route, payload):
+            del route, payload
+            return ModelResult(
+                output={
+                    "answers": {
+                        "visual_need": {
+                            "choice": "STRONGLY_RECOMMENDED",
+                            "probabilities": {
+                                "NONE": 0.01,
+                                "HELPFUL": 0.04,
+                                "STRONGLY_RECOMMENDED": 0.95,
+                            },
+                        },
+                        "visual_category": {
+                            "choice": "PROCESS",
+                            "probabilities": {
+                                "NONE": 0.01,
+                                "SHAPE": 0.01,
+                                "STRUCTURE": 0.02,
+                                "PROCESS": 0.95,
+                                "SCENE": 0.01,
+                            },
+                        },
+                    }
+                },
+                input_tokens=8,
+                output_tokens=0,
+            )
+
+    visual_gateway = ModelGateway(
+        session,
+        routes={ModelTask.VISUAL_NEED_DECISION: ModelRoute("fixture-visual", "jev")},
+        providers={"fixture-visual": VisualProvider()},
+    )
+    runtime = TutorRuntime(
+        session,
+        context_builder=context,
+        safety_policy=_Policy(_decision()),
+        gateway=tutor_gateway,
+        visual_need_gateway=visual_gateway,
+        settings=SimpleNamespace(
+            tutor_context_capacity=1_000_000,
+            jev_visual_personalization_mode="off",
+            jev_visual_need_mode="active",
+            jev_visual_need_min_probability=0.72,
+            jev_visual_need_policy_version="jev-visual-need-v1",
+        ),
+    )
+
+    events = list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="SCIENCE", last_activity_at=None),
+        question="How does sunlight reach Earth?",
+    ))
+
+    assert isinstance(events[-1], TutorTurn)
+    assert "STRONGLY_RECOMMENDED" in str(tutor_provider.payloads[0]["input"])
+    assert "PROCESS" in str(tutor_provider.payloads[0]["input"])
+    tutor_message = [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor"][-1]
+    assert tutor_message.payload["visual_need_decision"]["visual_need"] == "STRONGLY_RECOMMENDED"
+
+
+def test_explain_then_check_cannot_finish_as_explanation_only() -> None:
+    runtime, _, _, session = _runtime(
+        _decision(),
+        teaching_mode="LEARN",
+        teaching_strategy="EXPLAIN_THEN_CHECK",
+        teaching_method_id="DECOMPOSITION",
+        text="Break the idea into two small steps.",
+    )
+
+    events = list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        question="Explain this to me.",
+    ))
+
+    turn = events[-1]
+    assert isinstance(turn, TutorTurn)
+    assert "Your turn:" in turn.text
+    tutor_message = [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor"][-1]
+    assert tutor_message.payload["strategy_fidelity_repair"] == "APPENDED_ACADEMIC_CHECK"

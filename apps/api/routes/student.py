@@ -8,6 +8,7 @@ from uuid import UUID
 
 import json
 import inspect
+import logging
 
 from anyio import CancelScope
 from starlette.concurrency import iterate_in_threadpool, run_in_threadpool
@@ -87,6 +88,7 @@ from services.student_sources.validation import (
 
 
 router = APIRouter(prefix="/api/v1/student", tags=["student"])
+logger = logging.getLogger(__name__)
 
 
 def create_studio_interaction_tutor_gateway(session: Session):
@@ -362,11 +364,12 @@ async def transcribe_daily_voice(
         # The Gateway has already flushed exactly one truthful failed execution.
         # Commit it before the HTTP exception triggers dependency rollback.
         session.commit()
-        response_status = (
-            status.HTTP_504_GATEWAY_TIMEOUT
-            if error.code == "timeout"
-            else status.HTTP_502_BAD_GATEWAY
-        )
+        if error.code == "no_speech":
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"code": "NO_SPEECH_HEARD"},
+            ) from None
+        response_status = status.HTTP_504_GATEWAY_TIMEOUT if error.code == "timeout" else status.HTTP_502_BAD_GATEWAY
         raise HTTPException(
             status_code=response_status,
             detail="Voice transcription is temporarily unavailable.",
@@ -459,8 +462,7 @@ def _stream_student_tutor_turn(
     )
     bind = session.get_bind()
     admitted_student_message_id: UUID | None = None
-    source_asset: StudentSourceAsset | None = None
-    source_input: dict[str, object] | None = None
+    source_asset_id: UUID | None = None
     storage = None
     compensating_storage_key: str | None = None
     if admit_before_response:
@@ -474,7 +476,7 @@ def _stream_student_tutor_turn(
                 guided_check_source_tutor_message_id=guided_check_source_tutor_message_id,
             )
             admitted_student_message_id = admitted_message.id
-            if validated_source is not None or requested_source_asset_id is not None:
+            if validated_source is not None:
                 storage = create_object_storage(get_settings())
             if validated_source is not None:
                 source_asset = store_source_asset(
@@ -485,6 +487,7 @@ def _stream_student_tutor_turn(
                     source_message=admitted_message,
                     source=validated_source,
                 )
+                source_asset_id = source_asset.id
                 compensating_storage_key = source_asset.storage_key
             elif requested_source_asset_id is not None:
                 source_asset = owned_source_asset(
@@ -497,8 +500,7 @@ def _stream_student_tutor_turn(
                     raise ValueError("Student source is unavailable for this learning session.")
                 link_source_to_message(admitted_message, asset=source_asset)
                 session.flush([admitted_message])
-            if source_asset is not None:
-                source_input = provider_source_input(storage=storage, asset=source_asset)
+                source_asset_id = source_asset.id
         except ForegroundTutorBusy as error:
             session.rollback()
             raise HTTPException(
@@ -547,6 +549,34 @@ def _stream_student_tutor_turn(
                 stream_session.commit()
                 committed = True
                 return
+            source_input: dict[str, object] | None = None
+            if source_asset_id is not None:
+                # Only stable identity crosses request commit. Read the original
+                # through this stream's owned Session after admission is durable.
+                try:
+                    stream_asset = owned_source_asset(
+                        stream_session,
+                        student_id=student_id,
+                        learning_session_id=session_id,
+                        asset_id=source_asset_id,
+                    )
+                    if stream_asset is None:
+                        raise ValueError("Student source is unavailable for this learning session.")
+                    source_input = provider_source_input(
+                        storage=create_object_storage(get_settings()), asset=stream_asset
+                    )
+                except Exception as error:
+                    logger.error(
+                        "Student source stream preparation failed: %s; source_asset_id=%s",
+                        type(error).__name__,
+                        source_asset_id,
+                    )
+                    stream_session.rollback()
+                    settle_admitted("FAILED")
+                    stream_session.commit()
+                    committed = True
+                    yield f"event: error\ndata: {json.dumps({'code': 'SOURCE_UNAVAILABLE'})}\n\n"
+                    return
             runtime = create_tutor_runtime(stream_session)
             turn_stream = runtime.stream_turn(
                 learning_session=owned_session,
@@ -559,7 +589,7 @@ def _stream_student_tutor_turn(
                 before_model_stream=stream_session.commit,
                 admitted_student_message_id=admitted_student_message_id,
                 source_input=source_input,
-                source_asset_id=None if source_asset is None else source_asset.id,
+                source_asset_id=source_asset_id,
             )
             for event in turn_stream:
                 if isinstance(event, TutorTextDelta):
@@ -635,8 +665,8 @@ def _stream_student_tutor_turn(
     headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
     if admitted_student_message_id is not None:
         headers["X-Lina-Student-Message-ID"] = str(admitted_student_message_id)
-    if source_asset is not None:
-        headers["X-Lina-Source-Asset-ID"] = str(source_asset.id)
+    if source_asset_id is not None:
+        headers["X-Lina-Source-Asset-ID"] = str(source_asset_id)
     return StreamingResponse(
         events(),
         media_type="text/event-stream",

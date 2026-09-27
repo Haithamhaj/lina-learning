@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   DailyVoiceRecorder,
+  NoSpeechHeardError,
   formatRecordingElapsed,
   preferredRecordingMimeType,
   transcribeDailyRecording,
@@ -13,9 +14,11 @@ import {
 
 class FakeTrack {
   stopped = false;
+  onStop: (() => void) | null = null;
 
   stop() {
     this.stopped = true;
+    this.onStop?.();
   }
 }
 
@@ -33,16 +36,20 @@ class FakeMediaRecorder {
   ondataavailable: ((event: BlobEvent) => void) | null = null;
   onerror: ((event: ErrorEvent) => void) | null = null;
   onstop: ((event: Event) => void) | null = null;
+  suppressStopEvent = false;
+  throwOnStop = false;
+  omitData = false;
 
   start() {
     this.state = "recording";
   }
 
   stop() {
+    if (this.throwOnStop) throw new DOMException("Recorder already inactive", "InvalidStateError");
     if (this.state === "inactive") return;
     this.state = "inactive";
-    this.ondataavailable?.({ data: new Blob(["voice"], { type: this.mimeType }) } as BlobEvent);
-    this.onstop?.(new Event("stop"));
+    if (!this.omitData) this.ondataavailable?.({ data: new Blob(["voice"], { type: this.mimeType }) } as BlobEvent);
+    if (!this.suppressStopEvent) this.onstop?.(new Event("stop"));
   }
 
   fail() {
@@ -60,7 +67,7 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-function recorderHarness(options: { permission?: Promise<FakeStream>; transcript?: Promise<string>; createFailure?: Error; messages?: VoiceRecorderMessages } = {}) {
+function recorderHarness(options: { permission?: Promise<FakeStream>; transcript?: Promise<string>; createFailure?: Error; supported?: boolean; messages?: VoiceRecorderMessages } = {}) {
   const stream = new FakeStream();
   const mediaRecorder = new FakeMediaRecorder();
   const states: VoiceRecorderState[] = [];
@@ -70,13 +77,15 @@ function recorderHarness(options: { permission?: Promise<FakeStream>; transcript
   const transcriptionBlobs: Blob[] = [];
   let intervalCallback: (() => void) | null = null;
   let clearCount = 0;
+  let nextTimeoutId = 100;
+  const timeouts = new Map<number, () => void>();
   const voice = new DailyVoiceRecorder({
     requestStream: () => options.permission ?? Promise.resolve(stream),
     createRecorder: () => {
       if (options.createFailure) throw options.createFailure;
       return mediaRecorder;
     },
-    isTypeSupported: (type) => type.startsWith("audio/webm"),
+    isTypeSupported: (type) => options.supported !== false && type.startsWith("audio/webm"),
     transcribe: async (blob) => {
       transcriptionBlobs.push(blob);
       return options.transcript ?? Promise.resolve("One half equals 0.5.");
@@ -94,6 +103,12 @@ function recorderHarness(options: { permission?: Promise<FakeStream>; transcript
       clearCount += 1;
       intervalCallback = null;
     },
+    setTimeout: (callback) => {
+      const id = nextTimeoutId++;
+      timeouts.set(id, callback);
+      return id;
+    },
+    clearTimeout: (id) => { timeouts.delete(id); },
     onStateChange: (state) => states.push(state),
     onElapsedChange: (seconds) => elapsed.push(seconds),
     onTranscript: (transcript) => transcripts.push(transcript),
@@ -111,6 +126,11 @@ function recorderHarness(options: { permission?: Promise<FakeStream>; transcript
     transcriptionBlobs,
     tick: () => intervalCallback?.(),
     clearCount: () => clearCount,
+    fireTimeouts: () => {
+      const callbacks = Array.from(timeouts.values());
+      timeouts.clear();
+      callbacks.forEach((callback) => callback());
+    },
   };
 }
 
@@ -223,6 +243,15 @@ test("device initialization failure releases a granted microphone stream", async
   assert.equal(harness.states.at(-1), "IDLE");
 });
 
+test("unsupported recording type releases the stream and returns to idle", async () => {
+  const harness = recorderHarness({ supported: false });
+  await harness.voice.start();
+  assert.equal(harness.stream.track.stopped, true);
+  assert.equal(harness.mediaRecorder.state, "inactive");
+  assert.equal(harness.states.at(-1), "IDLE");
+  assert.match(harness.errors.at(-1) ?? "", /not supported/i);
+});
+
 test("an empty transcript is recoverable and does not populate the composer", async () => {
   const harness = recorderHarness({ transcript: Promise.resolve("   ") });
   await harness.voice.start();
@@ -230,6 +259,26 @@ test("an empty transcript is recoverable and does not populate the composer", as
   await harness.voice.stop();
 
   assert.deepEqual(harness.transcripts, []);
+  assert.equal(harness.states.at(-1), "IDLE");
+  assert.match(harness.errors.at(-1) ?? "", /hear|speech/i);
+});
+
+test("an empty completed recording reports no speech captured without sending audio", async () => {
+  const harness = recorderHarness();
+  await harness.voice.start();
+  harness.mediaRecorder.omitData = true;
+  await harness.voice.stop();
+
+  assert.deepEqual(harness.transcriptionBlobs, []);
+  assert.equal(harness.states.at(-1), "IDLE");
+  assert.match(harness.errors.at(-1) ?? "", /captured/i);
+});
+
+test("a provider no-speech response uses the distinct recoverable message", async () => {
+  const harness = recorderHarness({ transcript: Promise.reject(new NoSpeechHeardError()) });
+  await harness.voice.start();
+  await harness.voice.stop();
+
   assert.equal(harness.states.at(-1), "IDLE");
   assert.match(harness.errors.at(-1) ?? "", /hear|speech/i);
 });
@@ -243,6 +292,75 @@ test("STT failure is recoverable and never produces a transcript", async () => {
   assert.deepEqual(harness.transcripts, []);
   assert.equal(harness.states.at(-1), "IDLE");
   assert.match(harness.errors.at(-1) ?? "", /transcrib/i);
+});
+
+test("Stop installs its completion handler before tracks can terminate the recorder", async () => {
+  const harness = recorderHarness();
+  harness.stream.track.onStop = () => {
+    if (harness.mediaRecorder.state === "recording") harness.mediaRecorder.stop();
+  };
+  await harness.voice.start();
+
+  await harness.voice.stop();
+
+  assert.deepEqual(harness.transcripts, ["One half equals 0.5."]);
+  assert.equal(harness.states.at(-1), "IDLE");
+});
+
+test("an already inactive recorder and a throwing Stop both recover", async () => {
+  for (const mode of ["inactive", "throw"] as const) {
+    const harness = recorderHarness();
+    await harness.voice.start();
+    if (mode === "inactive") harness.mediaRecorder.state = "inactive";
+    else harness.mediaRecorder.throwOnStop = true;
+
+    await harness.voice.stop();
+
+    assert.equal(harness.states.at(-1), "IDLE");
+    assert.equal(harness.stream.track.stopped, true);
+    assert.equal(harness.transcriptionBlobs.length, 0);
+    assert.match(harness.errors.at(-1) ?? "", /stopped/i);
+  }
+});
+
+test("a missing stop event cannot strand the voice state", async () => {
+  const harness = recorderHarness();
+  await harness.voice.start();
+  harness.mediaRecorder.suppressStopEvent = true;
+  const stopping = harness.voice.stop();
+
+  harness.fireTimeouts();
+  await stopping;
+
+  assert.equal(harness.states.at(-1), "IDLE");
+  assert.equal(harness.stream.track.stopped, true);
+  assert.match(harness.errors.at(-1) ?? "", /stopped/i);
+});
+
+test("transcription timeout recovers and ignores a late transcript", async () => {
+  const transcript = deferred<string>();
+  const harness = recorderHarness({ transcript: transcript.promise });
+  await harness.voice.start();
+  const stopping = harness.voice.stop();
+  harness.fireTimeouts();
+  await stopping;
+
+  assert.equal(harness.states.at(-1), "IDLE");
+  assert.match(harness.errors.at(-1) ?? "", /transcrib/i);
+  transcript.resolve("late speech");
+  await Promise.resolve();
+  assert.deepEqual(harness.transcripts, []);
+});
+
+test("disposing during transcription ignores its late result", async () => {
+  const transcript = deferred<string>();
+  const harness = recorderHarness({ transcript: transcript.promise });
+  await harness.voice.start();
+  const stopping = harness.voice.stop();
+  harness.voice.dispose();
+  transcript.resolve("late speech");
+  await stopping;
+  assert.deepEqual(harness.transcripts, []);
 });
 
 test("webm opus is preferred and unsupported browsers are explicit", () => {
@@ -293,4 +411,47 @@ test("the transcription client sends exactly one authenticated multipart audio r
   const body = requests[0]?.init?.body;
   assert.ok(body instanceof FormData);
   assert.ok(body.get("audio") instanceof Blob);
+});
+
+test("the transcription client distinguishes no speech from provider and malformed failures", async () => {
+  const base = {
+    apiBaseUrl: "https://api.example.test",
+    learningSessionId: "session-123",
+    audio: new Blob(["voice"], { type: "audio/webm" }),
+    getToken: async () => "student-token",
+  };
+  await assert.rejects(
+    transcribeDailyRecording({ ...base, fetch: async () => new Response(JSON.stringify({ detail: { code: "NO_SPEECH_HEARD" } }), { status: 422 }) }),
+    NoSpeechHeardError,
+  );
+  await assert.rejects(
+    transcribeDailyRecording({ ...base, fetch: async () => new Response("provider unavailable", { status: 502 }) }),
+    /could not be transcribed/i,
+  );
+  await assert.rejects(
+    transcribeDailyRecording({ ...base, fetch: async () => { throw new TypeError("offline"); } }),
+    /offline/,
+  );
+  await assert.rejects(
+    transcribeDailyRecording({ ...base, fetch: async () => new Response("not json", { status: 200 }) }),
+    /json/i,
+  );
+});
+
+test("an aborted transcription does not send audio after delayed token retrieval", async () => {
+  const token = deferred<string | null>();
+  const abort = new AbortController();
+  let fetches = 0;
+  const attempt = transcribeDailyRecording({
+    apiBaseUrl: "https://api.example.test",
+    learningSessionId: "session-123",
+    audio: new Blob(["voice"], { type: "audio/webm" }),
+    getToken: () => token.promise,
+    signal: abort.signal,
+    fetch: async () => { fetches += 1; throw new Error("fetch must not happen"); },
+  });
+  abort.abort();
+  token.resolve("student-token");
+  await assert.rejects(attempt, { name: "AbortError" });
+  assert.equal(fetches, 0);
 });

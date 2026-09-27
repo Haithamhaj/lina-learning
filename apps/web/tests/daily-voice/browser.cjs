@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const { execFileSync } = require("node:child_process");
 const { chromium } = require("playwright");
 
 (async () => {
@@ -13,6 +14,7 @@ const { chromium } = require("playwright");
   const errors = [];
   const shot = async (name) => { const file = `${name}.png`; await page.screenshot({ path: path.join(evidence, file), fullPage: true }); screenshots.push(file); };
   page.on("pageerror", (error) => errors.push(error.message));
+  await page.addInitScript(() => { window.nativeMediaRecorderForProof = window.MediaRecorder; });
   await page.goto(process.env.DAILY_VOICE_URL || "http://127.0.0.1:5086");
 
   const mic = page.getByRole("button", { name: "Record a message" });
@@ -24,7 +26,7 @@ const { chromium } = require("playwright");
   assert.deepEqual(await page.evaluate(() => window.voiceProof.result()), { transcriptionRequests: 0, submittedMessages: [], stoppedTracks: 0 });
 
   await page.getByRole("button", { name: "Stop recording and transcribe" }).click();
-  await page.getByText("Transcribing your recording…").waitFor();
+  await page.getByRole("status").getByText("Transcribing your recording…").waitFor();
   await shot("03-transcribing");
   assert.equal((await page.evaluate(() => window.voiceProof.result())).transcriptionRequests, 1);
   assert.equal((await page.evaluate(() => window.voiceProof.result())).stoppedTracks, 1);
@@ -34,23 +36,71 @@ const { chromium } = require("playwright");
   await page.waitForFunction(() => document.querySelector("#daily-learning-message")?.value === "What is one half?");
   await shot("04-transcript-in-composer");
   assert.deepEqual((await page.evaluate(() => window.voiceProof.result())).submittedMessages, []);
+  assert.equal(await composer.isEnabled(), true);
+  assert.equal(await page.getByRole("button", { name: "Send", exact: true }).isEnabled(), true);
   assert.equal(await page.locator('form button[type="button"]').first().isDisabled(), true);
 
   await composer.fill("What is one half as a decimal?");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
   assert.deepEqual((await page.evaluate(() => window.voiceProof.result())).submittedMessages, ["What is one half as a decimal?"]);
 
+  await page.evaluate(() => window.voiceProof.failNextTranscription("http"));
   await mic.click();
-  await page.getByRole("button", { name: "Cancel recording" }).click();
-  assert.equal((await page.evaluate(() => window.voiceProof.result())).transcriptionRequests, 1);
-  assert.equal((await page.evaluate(() => window.voiceProof.result())).stoppedTracks, 2);
+  await page.getByRole("button", { name: "Stop recording and transcribe" }).click();
+  await page.getByText("The recording could not be transcribed. Please try again.").waitFor();
+  assert.equal(await composer.isEnabled(), true);
+  assert.equal(await mic.isEnabled(), true);
+  await shot("05-provider-failure-recovers");
+
+  await page.evaluate(() => window.voiceProof.failNextTranscription("no-speech"));
+  await mic.click();
+  await page.getByRole("button", { name: "Stop recording and transcribe" }).click();
+  await page.getByText("We could not hear any speech. Please record again.").waitFor();
+  assert.equal(await composer.isEnabled(), true);
+  await composer.fill("I will type instead.");
+  assert.equal(await page.getByRole("button", { name: "Send", exact: true }).isEnabled(), true);
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  assert.deepEqual((await page.evaluate(() => window.voiceProof.result())).submittedMessages, ["What is one half as a decimal?", "I will type instead."]);
+
+  await mic.click();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  assert.equal((await page.evaluate(() => window.voiceProof.result())).transcriptionRequests, 3);
+  assert.equal((await page.evaluate(() => window.voiceProof.result())).stoppedTracks, 4);
 
   await page.setViewportSize({ width: 320, height: 800 });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-  await shot("05-narrow-after-cancel");
+  await shot("06-narrow-after-cancel");
+
+  const recorded = await page.evaluate(async () => {
+    const context = new AudioContext();
+    await context.resume();
+    const source = context.createOscillator();
+    const destination = context.createMediaStreamDestination();
+    source.connect(destination);
+    source.start();
+    const NativeRecorder = window.nativeMediaRecorderForProof;
+    const mimeType = NativeRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
+    const recorder = new NativeRecorder(destination.stream, { mimeType, audioBitsPerSecond: 32_000 });
+    const chunks = [];
+    recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+    const stopped = new Promise((resolve) => { recorder.onstop = resolve; });
+    recorder.start();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    recorder.stop();
+    await stopped;
+    source.stop();
+    destination.stream.getTracks().forEach((track) => track.stop());
+    await context.close();
+    const bytes = await new Blob(chunks, { type: "audio/webm" }).arrayBuffer();
+    return { mimeType, bytes: Array.from(new Uint8Array(bytes)) };
+  });
+  const webmPath = path.join(evidence, "chrome-media-recorder.webm");
+  fs.writeFileSync(webmPath, Buffer.from(recorded.bytes));
+  const mediaProbe = execFileSync("ffprobe", ["-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name", "-of", "default=noprint_wrappers=1:nokey=1", webmPath], { encoding: "utf8" }).trim();
+  assert.equal(mediaProbe, "opus");
   await browser.close();
 
-  const payload = { environment: "Chrome with deterministic getUserMedia and MediaRecorder boundary", productionComponent: "DailyVoiceInput used by DailyStudentApp", physicalMicrophone: false, screenshots, result: { transcriptionRequests: 1, submittedMessages: 1, cancelledRequests: 0 }, errors };
+  const payload = { environment: "Chrome with deterministic getUserMedia and recorder boundary; native Chrome MediaRecorder container probe", productionComponent: "DailyVoiceInput used by DailyStudentApp", physicalMicrophone: false, screenshots, result: { transcriptionRequests: 3, submittedMessages: 2, cancelledRequests: 0, nativeRecording: { mimeType: recorded.mimeType, bytes: recorded.bytes.length, codec: mediaProbe } }, errors };
   fs.writeFileSync(path.join(evidence, "results.json"), `${JSON.stringify(payload, null, 2)}\n`);
   assert.deepEqual(errors, []);
 })().catch((error) => { console.error(error); process.exitCode = 1; });

@@ -65,7 +65,9 @@ def apply_evidence_to_current_state(
             now=effective_now,
             policy_version=policy_version,
         )
-    elif _partial_improvement(dimensions, evidence.relationship):
+    elif _partial_improvement(dimensions, evidence.relationship) or _supported_recovery(
+        event=event, dimensions=dimensions
+    ):
         touched = _mark_states_resolving(
             session,
             student_id=learning_session.student_id,
@@ -93,7 +95,11 @@ def apply_evidence_to_current_state(
             )
         )
 
-    for state_type, detail in _state_proposals(event=event, evidence=evidence):
+    for state_type, detail in _state_proposals(
+        event=event,
+        evidence=evidence,
+        recovering=bool(touched) and _supported_recovery(event=event, dimensions=dimensions),
+    ):
         state = _upsert_active_state(
             session,
             student_id=learning_session.student_id,
@@ -277,7 +283,12 @@ def _states_for_evidence(session: Session, *, evidence_id: UUID, policy_version:
     )
 
 
-def _state_proposals(*, event: LearningEvent, evidence: LearningEvidence) -> list[tuple[str, str]]:
+def _state_proposals(
+    *,
+    event: LearningEvent,
+    evidence: LearningEvidence,
+    recovering: bool = False,
+) -> list[tuple[str, str]]:
     dimensions = evidence.dimensions
     understanding = dimensions.get("understanding")
     independence = dimensions.get("independence")
@@ -294,7 +305,9 @@ def _state_proposals(*, event: LearningEvent, evidence: LearningEvidence) -> lis
         "learning_attempt",
         "incorrect_attempt",
         "guided_success",
-    } and not _independent_demonstration(dimensions):
+    } and not _independent_demonstration(dimensions) and not (
+        event.event_type == "guided_success" and recovering
+    ):
         proposals.append(("open_learning_loop", "Independent understanding or application of this concept remains unverified."))
     if dimensions.get("strategy_effectiveness") in {"helped", "enabled_independent_success"}:
         proposals.append(("recent_strategy_success", "A teaching strategy had an observable recent positive outcome."))
@@ -311,6 +324,25 @@ def _independent_demonstration(dimensions: dict[str, object]) -> bool:
     return dimensions.get("understanding") in {"demonstrated", "strong_demonstration"} and dimensions.get(
         "independence"
     ) in {"independent", "light_support"}
+
+
+def _supported_recovery(*, event: LearningEvent, dimensions: dict[str, object]) -> bool:
+    """Recognize successful supported recovery without calling it independence."""
+
+    if event.event_type not in {"guided_success", "strategy_outcome"}:
+        return False
+    if dimensions.get("understanding") not in {"demonstrated", "strong_demonstration"}:
+        return False
+    if event.event_type == "strategy_outcome":
+        return dimensions.get("strategy_effectiveness") in {
+            "helped",
+            "enabled_independent_success",
+        }
+    return dimensions.get("independence") in {
+        "light_support",
+        "moderate_support",
+        "substantial_support",
+    }
 
 
 def _partial_improvement(dimensions: dict[str, object], relationship: str) -> bool:

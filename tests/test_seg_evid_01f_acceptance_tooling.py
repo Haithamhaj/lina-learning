@@ -15,7 +15,7 @@ def test_f_acceptance_requires_a_unique_isolated_openai_luna_target() -> None:
         source_database_url=source,
         target_database_url=target,
         provider="openai",
-        model="gpt-5.6-luna",
+        model="gpt-6-luna",
     )
 
     assert configuration.target.database == "lina_acceptance_20260830_f"
@@ -25,7 +25,7 @@ def test_f_acceptance_requires_a_unique_isolated_openai_luna_target() -> None:
             source_database_url=source,
             target_database_url=source,
             provider="openai",
-            model="gpt-5.6-luna",
+            model="gpt-6-luna",
         )
     with pytest.raises(AcceptanceConfigurationError):
         validate_configuration(

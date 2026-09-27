@@ -2,16 +2,18 @@
 
 ## Current goal
 
-Use the deployed Lina system naturally, keep the canonical documentation aligned with the real implementation, and collect enough real evidence to decide the next corrections rather than expanding architecture from assumptions.
+Pause further natural Lina use temporarily, correct the first real-use defects and calibration gaps exposed by E30, then resume controlled testing from a cleaner baseline.
 
 The immediate product focus is:
 
-- controlled real Lina use;
-- teaching-flow quality;
-- Tutor and Canvas latency;
-- personalization relevance;
-- JEV bounded-decision quality;
-- continued live end-to-end reliability.
+- Student source-stream reliability;
+- voice/STT reliability;
+- proactive visual teaching / Canvas choice;
+- real-account Core Profile bootstrap and later Personal Memory verification;
+- Learning Intelligence mixed-evidence calibration;
+- teaching-strategy fidelity;
+- GPT-6 model-route migration and cost-rate correction;
+- bounded JEV activation only where slice-specific evidence supports it.
 
 ## Current reality
 
@@ -50,18 +52,24 @@ The implemented product includes:
 
 REPAIR-SLICE-01 and REPAIR-SLICE-02 are locally accepted. Real-use E2E and product-quality acceptance remain ongoing rather than inferred from local tests.
 
+SOURCE-STREAM-01 (R01) is locally closed after review in this uncommitted worktree. The request now commits source/message lineage before the stream-owned Session loads the original; source preparation failures settle the admitted turn with a bounded SSE error. General Tutor stream error behavior remains at its pre-R01 contract. Real authenticated browser and deployed behavior are unverified.
+
+VOICE-STT-01 (R02) is locally closed in the same uncommitted worktree: local Chrome proves recording Stop, transcript-to-editable-draft/Send, failure recovery, and native WebM/Opus output; provider, PostgreSQL, and frontend tests pass. The actual Lina adapter and Gateway also transcribed disposable WAV and WebM through the authorized production-equivalent `MODEL_API_KEY`, twice each, with HTTP 200 and successful disposable AI executions. The five historical 502 response shapes remain unknown; authenticated/deployed Lina acceptance remains unverified.
+
+CORE-PROFILE-BOOTSTRAP-01 (R03) is locally closed in this uncommitted worktree. After explicit Product Owner approval, its exact-Student operator command applied Lina's existing production Core Profile (E37). Independent read-only verification found one active GradePeriod and the existing Tutor context/model payload projected name, derived age and grade without raw DOB. No new Tutor turn or provider call tested learner-facing use; Parent linking remains separate.
+
 ## Active decisions
 
 - One Primary Tutor remains the learner-facing teaching authority.
 - Current Student behavior outranks historical personalization.
 - Core Profile, Personal Facts, Current Conversation, and Learning Intelligence remain separate authorities.
 - Canvas is a representation and interaction surface, not a second Tutor.
-- JEV is used only for bounded finite decisions; it is not a general agent or orchestration layer.
+- JEV is used only for bounded finite decisions; it is not a general agent or orchestration layer. Existing Visual Personalization, Exact Reuse, and Segment Rubric roles remain unchanged; REAL-USE-REPAIR-01 adds a bounded Visual Need decision slice.
 - Application code retains Safety, ownership, persistence, executable validation, stale-state admission, Evidence lifecycle, and fallback authority.
 - Lina remains a modular monolith.
 - Tutor availability does not depend on curriculum.
 - Structured Studio support currently includes MATH, SCIENCE, ENGLISH, and ARABIC.
-- Generated educational images remain a separate planned V2 capability.
+- Proactive use of the existing Canvas for high-value visual teaching is a current repair, not a V2 dependency. Generated educational images remain a separate planned capability, but selected V2 product rules may be promoted into the current release when they directly improve the learner experience without requiring unresolved provider/quota/safety work.
 
 ## Protected areas
 
@@ -92,23 +100,19 @@ Do not change without explicit Product Owner approval:
 
 ## Next recommended action
 
-Continue natural Lina usage without scripting the conversation around features.
+Do not continue natural Lina testing until the E30 repair/recalibration batch is accepted and deployed.
 
-During the live pass:
+The current repair planning order is:
 
-1. record real defects and surprising behavior;
-2. inspect logs/state only after observed behavior;
-3. separate model variation from product-contract failure;
-4. collect JEV comparison cases;
-5. do not patch immediately unless a blocker prevents further testing.
+1. Retain SOURCE-STREAM-01's authenticated browser/live acceptance gate and retest the authenticated VOICE-STT-01 flow after authorized deployment;
+2. Verify the applied Core Profile in one new authenticated Tutor turn, then assess MEMORY-LIVE-01 readiness;
+3. VISUAL-CHOICE-01 plus STRATEGY-FIDELITY-01, preserving the E30 good DID_NOT_HELP method-change path;
+4. LI-CALIBRATION-01 with mixed-evidence regression coverage;
+5. MODEL-GPT6-01 and COST-RATE-01;
+6. slice-specific JEV decision on whether to stay shadow or become active;
+7. focused + affected regression, browser/provider proof, then one controlled deployment and Lina retest.
 
-After enough real evidence, the next likely implementation slice is teaching-flow integrity:
-
-- CONV-MOMENTUM-01;
-- STRATEGY-FIDELITY-01;
-- PED-ADAPT-01.
-
-Performance, Personalization relevance, JEV evaluation, generated educational images, AUTH-01, and CALLS-01 remain separate decisions.
+Generated educational-image capability, performance/buffering, personalization relevance beyond the observed cases, AUTH-01, and CALLS-01 remain separate unless explicitly promoted into this repair release.
 
 ## Critical references
 
@@ -120,5 +124,6 @@ Performance, Personalization relevance, JEV evaluation, generated educational im
 - ../docs/LEARNING_PRODUCT_ROADMAP.md
 - ../docs/TUTOR_PEDAGOGY_REFERENCE.md
 - ../docs/TUTOR_CANVAS_REPAIR_TRACKER.md
+- ../docs/REAL_USE_REPAIR_01_IMPLEMENTATION_SPEC.md
 - ../TASKS.md
 - SYSTEM_MAP.html

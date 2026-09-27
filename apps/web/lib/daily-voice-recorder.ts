@@ -50,10 +50,12 @@ type VoiceRecorderDependencies = {
   requestStream: () => Promise<StreamLike>;
   createRecorder: (stream: StreamLike, mimeType: string) => RecorderLike;
   isTypeSupported?: (mimeType: string) => boolean;
-  transcribe: (audio: Blob) => Promise<string>;
+  transcribe: (audio: Blob, signal: AbortSignal) => Promise<string>;
   now?: () => number;
   setInterval?: (callback: () => void, milliseconds: number) => number;
   clearInterval?: (id: number) => void;
+  setTimeout?: (callback: () => void, milliseconds: number) => number;
+  clearTimeout?: (id: number) => void;
   onStateChange: (state: VoiceRecorderState) => void;
   onElapsedChange: (seconds: number) => void;
   onTranscript: (transcript: string) => void;
@@ -110,6 +112,7 @@ export class DailyVoiceRecorder {
   private disposed = false;
   private requestVersion = 0;
   private stopPromise: Promise<void> | null = null;
+  private transcriptionAbort: AbortController | null = null;
 
   private get messages(): VoiceRecorderMessages {
     return this.dependencies.messages ?? defaultMessages;
@@ -149,6 +152,7 @@ export class DailyVoiceRecorder {
         if (!this.cancelled && event.data.size > 0) this.chunks.push(event.data);
       };
       recorder.onerror = () => this.failRecording(this.messages.recordingStopped);
+      recorder.onstop = () => this.failRecording(this.messages.recordingStopped);
       recorder.start();
       this.startedAt = (this.dependencies.now ?? Date.now)();
       this.timer = (this.dependencies.setInterval ?? window.setInterval)(() => {
@@ -175,15 +179,41 @@ export class DailyVoiceRecorder {
     }
     this.cancelled = false;
     this.clearTimer();
-    stopTracks(this.stream);
-    this.stream = null;
     this.setState("TRANSCRIBING");
     const recorder = this.recorder;
     this.stopPromise = new Promise<void>((resolve) => {
-      recorder.onstop = () => {
-        void this.finishTranscription(recorder.mimeType).finally(resolve);
+      let settled = false;
+      let timeoutId: number | null = null;
+      const finish = (completed: boolean) => {
+        if (settled) return;
+        settled = true;
+        if (timeoutId !== null) (this.dependencies.clearTimeout ?? window.clearTimeout)(timeoutId);
+        recorder.onstop = null;
+        recorder.onerror = null;
+        if (!completed) {
+          this.failRecording(this.messages.recordingStopped);
+          resolve();
+          return;
+        }
+        stopTracks(this.stream);
+        this.stream = null;
+        void this.finishTranscription(recorder.mimeType).then(resolve, () => {
+          this.failRecording(this.messages.transcriptionFailed);
+          resolve();
+        });
       };
-      recorder.stop();
+      recorder.onstop = () => finish(true);
+      recorder.onerror = () => finish(false);
+      timeoutId = (this.dependencies.setTimeout ?? window.setTimeout)(() => finish(false), 5_000);
+      if (recorder.state === "inactive") {
+        finish(false);
+        return;
+      }
+      try {
+        recorder.stop();
+      } catch {
+        finish(false);
+      }
     }).finally(() => {
       this.stopPromise = null;
     });
@@ -195,10 +225,16 @@ export class DailyVoiceRecorder {
     this.cancelled = true;
     this.requestVersion += 1;
     this.clearTimer();
+    if (this.recorder) {
+      this.recorder.onstop = null;
+      this.recorder.onerror = null;
+      if (this.recorder.state !== "inactive") {
+        try { this.recorder.stop(); } catch { /* Recorder is already stopped. */ }
+      }
+    }
     stopTracks(this.stream);
     this.stream = null;
     this.chunks = [];
-    if (this.recorder && this.recorder.state !== "inactive") this.recorder.stop();
     this.recorder = null;
     this.setState("IDLE");
   }
@@ -207,11 +243,18 @@ export class DailyVoiceRecorder {
     this.disposed = true;
     this.cancelled = true;
     this.requestVersion += 1;
+    this.transcriptionAbort?.abort();
     this.clearTimer();
+    if (this.recorder) {
+      this.recorder.onstop = null;
+      this.recorder.onerror = null;
+      if (this.recorder.state !== "inactive") {
+        try { this.recorder.stop(); } catch { /* Recorder is already stopped. */ }
+      }
+    }
     stopTracks(this.stream);
     this.stream = null;
     this.chunks = [];
-    if (this.recorder && this.recorder.state !== "inactive") this.recorder.stop();
     this.recorder = null;
   }
 
@@ -227,16 +270,33 @@ export class DailyVoiceRecorder {
       this.dependencies.onError(this.messages.noSpeechCaptured);
       return;
     }
+    const requestVersion = this.requestVersion;
+    const abort = new AbortController();
+    this.transcriptionAbort = abort;
+    let timeoutId: number | null = null;
     try {
-      const transcript = (await this.dependencies.transcribe(audio)).trim();
+      const transcript = (await Promise.race([
+        this.dependencies.transcribe(audio, abort.signal),
+        new Promise<never>((_resolve, reject) => {
+          timeoutId = (this.dependencies.setTimeout ?? window.setTimeout)(() => {
+            abort.abort();
+            reject(new Error("Transcription timed out."));
+          }, 45_000);
+        }),
+      ])).trim();
+      if (this.disposed || requestVersion !== this.requestVersion) return;
       if (!transcript) {
         this.dependencies.onError(this.messages.noSpeechHeard);
       } else {
         this.dependencies.onTranscript(transcript);
       }
-    } catch {
-      this.dependencies.onError(this.messages.transcriptionFailed);
+    } catch (error) {
+      if (!this.disposed && requestVersion === this.requestVersion) {
+        this.dependencies.onError(error instanceof NoSpeechHeardError ? this.messages.noSpeechHeard : this.messages.transcriptionFailed);
+      }
     } finally {
+      if (timeoutId !== null) (this.dependencies.clearTimeout ?? window.clearTimeout)(timeoutId);
+      if (this.transcriptionAbort === abort) this.transcriptionAbort = null;
       if (!this.disposed) this.setState("IDLE");
     }
   }
@@ -244,10 +304,16 @@ export class DailyVoiceRecorder {
   private failRecording(message: string): void {
     this.cancelled = true;
     this.clearTimer();
+    if (this.recorder) {
+      this.recorder.onstop = null;
+      this.recorder.onerror = null;
+      if (this.recorder.state !== "inactive") {
+        try { this.recorder.stop(); } catch { /* Recorder is already stopped. */ }
+      }
+    }
     stopTracks(this.stream);
     this.stream = null;
     this.chunks = [];
-    if (this.recorder && this.recorder.state !== "inactive") this.recorder.stop();
     this.recorder = null;
     if (!this.disposed) {
       this.setState("IDLE");
@@ -267,20 +333,25 @@ export class DailyVoiceRecorder {
   }
 }
 
+export class NoSpeechHeardError extends Error {}
+
 export async function transcribeDailyRecording({
   apiBaseUrl,
   learningSessionId,
   audio,
   getToken,
+  signal,
   fetch: fetchRequest = fetch,
 }: {
   apiBaseUrl: string;
   learningSessionId: string;
   audio: Blob;
   getToken: () => Promise<string | null>;
+  signal?: AbortSignal;
   fetch?: typeof fetch;
 }): Promise<{ text: string; executionId: string }> {
   const token = await getToken();
+  if (signal?.aborted) throw new DOMException("Transcription cancelled.", "AbortError");
   const form = new FormData();
   form.append("audio", audio, audio.type === "audio/wav" ? "daily-recording.wav" : "daily-recording.webm");
   const response = await fetchRequest(
@@ -289,9 +360,20 @@ export async function transcribeDailyRecording({
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: form,
+      signal,
     },
   );
-  if (!response.ok) throw new Error("The recording could not be transcribed.");
+  if (!response.ok) {
+    if (response.status === 422) {
+      try {
+        const error = await response.json() as { detail?: { code?: unknown } };
+        if (error.detail?.code === "NO_SPEECH_HEARD") throw new NoSpeechHeardError();
+      } catch (error) {
+        if (error instanceof NoSpeechHeardError) throw error;
+      }
+    }
+    throw new Error("The recording could not be transcribed.");
+  }
   const payload = await response.json() as { transcript?: unknown; transcription_execution_id?: unknown };
   if (typeof payload.transcript !== "string" || typeof payload.transcription_execution_id !== "string") {
     throw new Error("The transcription response was invalid.");

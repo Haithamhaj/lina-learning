@@ -8,13 +8,13 @@ An explicit current Product Owner instruction authorizes work. A task appearing 
 
 The core Tutor, learner-context, Learning Intelligence, Student-source, Studio and Canvas, and live deployment foundations are implemented.
 
-The current phase is **controlled real-use validation and product correction**.
+The current phase is **real-use repair and recalibration**. Controlled natural use is temporarily paused after the first real Lina sessions exposed blocking/important repair items; resume only after the agreed repair batch is locally accepted and deployed.
 
 ## 1. LIVE-VALIDATION-01 — Controlled natural use
 
-**Status:** ACTIVE
+**Status:** PAUSED AFTER E30 REAL-USE FINDINGS
 
-**Purpose:** Use Lina naturally and capture real defects and behavior before additional architecture work.
+**Purpose:** Use Lina naturally and capture real defects and behavior before additional architecture work. This activity is currently paused while the E30 repair/recalibration batch is defined and implemented.
 
 **Expected output:**
 
@@ -33,6 +33,51 @@ The current phase is **controlled real-use validation and product correction**.
 - no product patch during initial observation unless a blocker prevents testing.
 
 **Depends on:** deployed App and Worker.
+
+## 1A. REAL-USE-REPAIR-01 — E30 repair and recalibration batch
+
+**Status:** APPROVED / IN PROGRESS — R01 AND R02 LOCALLY CLOSED; LATER SLICES PENDING
+
+**Implementation spec:** `docs/REAL_USE_REPAIR_01_IMPLEMENTATION_SPEC.md`
+
+**R01 local result:** SOURCE-STREAM-01 passes focused and affected PostgreSQL tests, including the shared-stream scope review (E31-E33 in the repair tracker). Authenticated browser and deployed real-use acceptance remain pending; this does not advance R02 or the rest of the batch.
+
+**R02 local result:** VOICE-STT-01 has a bounded browser recorder lifecycle, editable transcript/Send recovery, explicit JSON file-transcription request, safe provider failure categories, and a distinct no-speech response. Local Chrome, provider contracts, PostgreSQL, TypeScript, and broad regression passed apart from two documented baseline failures (E34). The actual Lina STT adapter and Model Gateway then transcribed synthetic WAV and WebM through the authorized `MODEL_API_KEY`, twice each, with HTTP 200, JSON `text`, and one successful disposable AI execution per attempt (E35). The cause of E30's five historical 502 responses cannot be reconstructed from this current success. Authenticated/deployed Lina acceptance remains pending.
+
+**R03 local result:** CORE-PROFILE-BOOTSTRAP-01 has a preview-first operator command that updates only an exact existing Student's display name, DOB, and active GradePeriod through existing Core Profile services (E36). Disposable PostgreSQL proves preview rollback, idempotent apply, bounded Tutor context/model input without raw DOB, and no Parent/Personal Facts/Evidence/Pattern/AI execution writes. The known date-dependent Parent Grade test remains a separate baseline failure. At E36, no production data had been changed; the later approved application is recorded below. R04 is not started.
+
+**R03 production data result:** With the Product Owner's explicit approval and supplied values, the operator command applied Lina's Core Profile to the exact existing Clerk Student (E37). Independent read-only production verification found one active GradePeriod, no Parent relationship or Personal Fact, and the existing Tutor context/model payload projected `display_name=لينا`, `age_years=9`, and `grade_level=5` without raw DOB. No model call, new Tutor turn, deployment, commit, or push occurred; live learner-facing use remains to be verified. R04 is not started.
+
+**Current tracker scope:**
+
+- SOURCE-STREAM-01;
+- VOICE-STT-01;
+- VISUAL-CHOICE-01;
+- CORE-PROFILE-BOOTSTRAP-01;
+- MEMORY-LIVE-01 acceptance;
+- LI-CALIBRATION-01;
+- STRATEGY-FIDELITY-01;
+- MODEL-GPT6-01;
+- COST-RATE-01.
+
+**Purpose:** Correct the first real-use defects before further natural Lina testing, without reopening settled architecture.
+
+**Scope rules:**
+
+- preserve Primary Tutor, Evidence, Personal Facts, Core Profile, Studio, and Safety authority boundaries;
+- use the current Canvas capability for proactive visual teaching before treating generated images as a required workaround;
+- keep raw Evidence/provenance even when downstream LI calibration is weakened;
+- migrate model routing intent rather than flattening every route to one model;
+- evaluate each JEV decision slice separately.
+
+**Verification required:**
+
+- focused deterministic regressions for every changed contract;
+- affected PostgreSQL tests;
+- real provider checks for STT and GPT-6;
+- actual browser proof for source/voice/Canvas-visible behavior;
+- full affected regression before deployment;
+- controlled Lina retest only after deployment.
 
 ## 2. TEACH-FLOW-01 — Teaching-flow integrity
 
@@ -75,6 +120,7 @@ The current phase is **controlled real-use validation and product correction**.
 1. Visual Personalization fact selection.
 2. Exact Canvas reuse selection.
 3. Segment rubric comparison.
+4. Visual Need decision — new repair-release slice; existing three semantic roles/modes remain unchanged.
 
 **Expected output:**
 

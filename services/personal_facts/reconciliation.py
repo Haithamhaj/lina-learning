@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session
 from services.personal_facts.extraction import (
     AddNewPersonalFactCandidate,
     PersonalFactsExtractionCandidate,
+    PersonalFactsProviderCandidate,
     SupportExistingFactCandidate,
+    _to_domain_candidate,
     normalize_assertion,
 )
 from services.platform.db.models import LearningMessage, LearningSession, PersonalFact, PersonalFactObservation
@@ -22,9 +24,18 @@ def reconcile_candidates(
     *,
     student_id: UUID,
     learning_session: LearningSession,
-    candidates: list[PersonalFactsExtractionCandidate],
+    candidates: list[PersonalFactsExtractionCandidate | PersonalFactsProviderCandidate],
 ) -> dict[str, int]:
     """Append source observations; never overwrite a contrary historical value."""
+
+    normalized_candidates: list[PersonalFactsExtractionCandidate] = []
+    for candidate in candidates:
+        if isinstance(candidate, (AddNewPersonalFactCandidate, SupportExistingFactCandidate)):
+            normalized_candidates.append(candidate)
+            continue
+        domain_candidate = _to_domain_candidate(candidate)
+        if domain_candidate is not None:
+            normalized_candidates.append(domain_candidate)
 
     results: Counter[str] = Counter(added=0, supported=0, noop=0)
     sources = {
@@ -36,7 +47,7 @@ def reconcile_candidates(
             )
         )
     }
-    for candidate in candidates:
+    for candidate in normalized_candidates:
         fact = _existing_fact(session, student_id=student_id, candidate=candidate)
         new_fact = fact is None
         for assertion in candidate.supporting_assertions:

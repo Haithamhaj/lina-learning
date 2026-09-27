@@ -13,6 +13,7 @@ from services.model_gateway.gateway import (
 )
 from services.model_gateway.openai_provider import OpenAIResponsesProvider
 from services.model_gateway.openrouter_decisions_provider import OpenRouterDecisionsProvider
+from services.model_gateway.typesafe_decisions_provider import TypeSafeDecisionsProvider
 from services.intelligence.segment_reviews import SEGMENT_LEARNING_REVIEW_SCHEMA_VERSION
 from services.model_gateway.openai_embedding_provider import OpenAIEmbeddingProvider
 from services.platform.config import Settings, get_settings
@@ -24,6 +25,7 @@ _JEV_TASKS = frozenset(
         ModelTask.CANVAS_VISUAL_PERSONALIZATION,
         ModelTask.CANVAS_REUSE_SELECTION,
         ModelTask.SEGMENT_RUBRIC_DECISION,
+        ModelTask.VISUAL_NEED_DECISION,
     }
 )
 
@@ -41,17 +43,31 @@ def create_jev_decision_gateway(
         raise ValueError(f"{task.value!r} is not a Jev bounded-decision task.")
     configured = settings or get_settings()
     selected = provider
-    if selected is None:
-        if configured.openrouter_api_key is None:
-            raise ValueError("OPENROUTER_API_KEY is required for an enabled Jev route.")
-        selected = OpenRouterDecisionsProvider(
-            api_key=configured.openrouter_api_key.get_secret_value(),
-            timeout_seconds=configured.jev_timeout_seconds,
-        )
+    if configured.jev_provider == "typesafe":
+        provider_name = "typesafe-decisions"
+        model_name = configured.typesafe_jev_model_name
+        if selected is None:
+            if configured.typesafe_api_key is None:
+                raise ValueError("TYPESAFE_API_KEY is required for an enabled TypeSafe Jev route.")
+            selected = TypeSafeDecisionsProvider(
+                api_key=configured.typesafe_api_key.get_secret_value(),
+                timeout_seconds=configured.jev_timeout_seconds,
+                base_url=configured.typesafe_api_base_url,
+            )
+    else:
+        provider_name = "openrouter-decisions"
+        model_name = configured.jev_model_name
+        if selected is None:
+            if configured.openrouter_api_key is None:
+                raise ValueError("OPENROUTER_API_KEY is required for an enabled Jev route.")
+            selected = OpenRouterDecisionsProvider(
+                api_key=configured.openrouter_api_key.get_secret_value(),
+                timeout_seconds=configured.jev_timeout_seconds,
+            )
     return ModelGateway(
         session,
-        routes={task: ModelRoute("openrouter-decisions", configured.jev_model_name)},
-        providers={"openrouter-decisions": selected},
+        routes={task: ModelRoute(provider_name, model_name)},
+        providers={provider_name: selected},
     )
 
 

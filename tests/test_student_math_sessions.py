@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 from io import BytesIO
 import json
 import os
@@ -16,7 +17,7 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, object_session, sessionmaker
 
 from services.platform.auth import AuthenticatedPrincipal, UserRole, get_current_principal
 from services.platform.db.connection import normalize_database_url
@@ -50,7 +51,7 @@ from services.model_gateway.openai_moderation_provider import SourceModerationSi
 from services.platform.db.models import ModelTask
 from services.platform.safety import SafetyPolicyService
 from services.student_sources.safety import StudentSourceSafetyService
-from services.platform.storage import LocalObjectStorage, StorageError
+from services.platform.storage import LocalObjectStorage, StorageError, StoredObject
 from services.retrieval.service import RetrievalService
 from services.studio.contracts import AppendStudioEventCommand, CreateSceneCommand, StudioActor
 from services.studio.reducer import CORE_EVENT_SCHEMA_VERSION
@@ -791,6 +792,404 @@ def test_daily_source_uses_one_primary_tutor_call_with_exact_source_lineage(
         assert session.query(LearningEvidence).count() == 0
         assert session.query(LearningEvent).count() == 0
         assert session.query(LearnerIntelligenceCard).count() == 0
+
+
+def test_daily_source_new_and_reused_inputs_are_loaded_after_commit_in_stream_session(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    """The Tutor source must be read from durable lineage, not request-owned ORM state."""
+
+    from apps.api.routes import student as student_routes
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "daily-source-session-boundary")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    request_sessions: list[Session] = []
+    source_reads: list[tuple[Session | None, bool, UUID]] = []
+    original_store = student_routes.store_source_asset
+    original_link = student_routes.link_source_to_message
+    original_input = student_routes.provider_source_input
+    original_commit = Session.commit
+
+    def detach_request_after_commit(db: Session) -> None:
+        original_commit(db)
+        if db in request_sessions:
+            # Reproduce the production boundary hidden by this suite's
+            # expire_on_commit=False fixture.
+            db.expunge_all()
+
+    def record_store(db: Session, **kwargs: object):
+        request_sessions.append(db)
+        return original_store(db, **kwargs)
+
+    def record_link(message: LearningMessage, *, asset: StudentSourceAsset):
+        db = object_session(message)
+        assert db is not None
+        request_sessions.append(db)
+        return original_link(message, asset=asset)
+
+    def record_input(*, storage: LocalObjectStorage, asset: StudentSourceAsset):
+        with postgres_session_factory() as check:
+            committed = (
+                check.get(StudentSourceAsset, asset.id) is not None
+                and check.query(LearningMessage).filter_by(source_asset_id=asset.id).count() > 0
+            )
+        source_reads.append((object_session(asset), committed, asset.id))
+        return original_input(storage=storage, asset=asset)
+
+    storage = LocalObjectStorage(tmp_path / "student-sources", signing_secret="fixture")
+    provider = _ImmediateSuccessfulTutorProvider()
+    monkeypatch.setattr(student_routes, "create_object_storage", lambda *_: storage)
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    monkeypatch.setattr(student_routes, "store_source_asset", record_store)
+    monkeypatch.setattr(student_routes, "link_source_to_message", record_link)
+    monkeypatch.setattr(student_routes, "provider_source_input", record_input)
+    monkeypatch.setattr(Session, "commit", detach_request_after_commit)
+    client = _client(postgres_session_factory, subject="daily-source-session-boundary")
+    try:
+        first = client.post(
+            f"/api/v1/student/daily/session/{session_id}/source/turn/stream",
+            files={"source": ("worksheet.png", _small_png(), "image/png")},
+            data={"content": "What is here?"},
+        )
+        asset_id = UUID(first.headers["X-Lina-Source-Asset-ID"])
+        second = client.post(
+            f"/api/v1/student/daily/session/{session_id}/source/turn/stream",
+            data={"content": "And this part?", "source_asset_id": str(asset_id)},
+        )
+    finally:
+        _clear_overrides()
+
+    assert "event: turn" in first.text
+    assert "event: turn" in second.text
+    assert second.headers["X-Lina-Source-Asset-ID"] == str(asset_id)
+    assert len(source_reads) == len(request_sessions) == 2
+    assert all(db is not None and db not in request_sessions for db, _, _ in source_reads)
+    assert all(committed and read_id == asset_id for _, committed, read_id in source_reads)
+    assert provider.call_count == 2
+
+
+@pytest.mark.parametrize("source_failure", ["missing", "integrity"])
+def test_daily_source_unavailable_or_corrupt_original_has_bounded_sse_failure(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+    source_failure: str,
+) -> None:
+    from apps.api.routes import student as student_routes
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "daily-source-missing-original")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    storage = LocalObjectStorage(tmp_path / "student-sources", signing_secret="fixture")
+
+    class _MissingOriginalStorage:
+        def put(self, *args: object, **kwargs: object):
+            return storage.put(*args, **kwargs)
+
+        def get(self, key: str):
+            if source_failure == "missing":
+                raise StorageError("original unavailable")
+            stored = storage.get(key)
+            return StoredObject(
+                content=stored.content,
+                metadata=replace(stored.metadata, checksum_sha256="0" * 64),
+            )
+
+        def delete(self, key: str):
+            return storage.delete(key)
+
+    provider = _ImmediateSuccessfulTutorProvider()
+    monkeypatch.setattr(student_routes, "create_object_storage", lambda *_: _MissingOriginalStorage())
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    client = _client(
+        postgres_session_factory,
+        subject="daily-source-missing-original",
+        raise_server_exceptions=False,
+    )
+    try:
+        response = client.post(
+            f"/api/v1/student/daily/session/{session_id}/source/turn/stream",
+            files={"source": ("worksheet.png", _small_png(), "image/png")},
+            data={"content": "Help with this."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert "event: error" in response.text
+    assert "SOURCE_UNAVAILABLE" in response.text
+    assert "event: turn" not in response.text
+    assert provider.call_count == 0
+    with postgres_session_factory() as session:
+        messages = session.query(LearningMessage).filter_by(session_id=session_id, role="student").all()
+        asset = session.query(StudentSourceAsset).one()
+        assert len(messages) == 1
+        assert str(messages[0].id) == response.headers["X-Lina-Student-Message-ID"]
+        assert messages[0].source_asset_id == asset.id
+        assert response.headers["X-Lina-Source-Asset-ID"] == str(asset.id)
+        assert messages[0].payload["foreground_tutor_turn"]["status"] == "FAILED"
+
+
+@pytest.mark.parametrize("source_failure", ["missing_asset", "unexpected"])
+def test_daily_source_rehydrate_failure_settles_admitted_message(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+    source_failure: str,
+) -> None:
+    from apps.api.routes import student as student_routes
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, f"daily-source-rehydrate-{source_failure}")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    storage = LocalObjectStorage(tmp_path / "student-sources", signing_secret="fixture")
+    provider = _ImmediateSuccessfulTutorProvider()
+    monkeypatch.setattr(student_routes, "create_object_storage", lambda *_: storage)
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _successful_streaming_runtime(provider))
+    if source_failure == "missing_asset":
+        monkeypatch.setattr(student_routes, "owned_source_asset", lambda *_args, **_kwargs: None)
+    else:
+        def fail_preparation(**_: object):
+            raise RuntimeError("source preparation failed")
+
+        monkeypatch.setattr(student_routes, "provider_source_input", fail_preparation)
+
+    client = _client(
+        postgres_session_factory,
+        subject=f"daily-source-rehydrate-{source_failure}",
+        raise_server_exceptions=False,
+    )
+    try:
+        response = client.post(
+            f"/api/v1/student/daily/session/{session_id}/source/turn/stream",
+            files={"source": ("worksheet.png", _small_png(), "image/png")},
+            data={"content": "Help with this."},
+        )
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert '"code": "SOURCE_UNAVAILABLE"' in response.text
+    assert "event: turn" not in response.text
+    assert provider.call_count == 0
+    with postgres_session_factory() as session:
+        messages = session.query(LearningMessage).filter_by(session_id=session_id, role="student").all()
+        asset = session.query(StudentSourceAsset).one()
+        assert len(messages) == 1
+        assert messages[0].source_asset_id == asset.id
+        assert messages[0].payload["foreground_tutor_turn"]["status"] == "FAILED"
+
+
+def test_daily_source_stream_cancellation_settles_the_admitted_message(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    from apps.api.routes import student as student_routes
+    from services.student_sources.validation import validate_student_source
+    from services.tutor.context import unknown_live_subject
+    from services.tutor.student_sessions import owned_open_daily_session
+
+    with postgres_session_factory.begin() as session:
+        student = _student(session, "daily-source-cancelled")
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    provider = _ImmediateSuccessfulTutorProvider()
+    make_runtime = _successful_streaming_runtime(provider)
+
+    class _CancellableRuntime:
+        def __init__(self, db: Session) -> None:
+            self.delegate = make_runtime(db)
+
+        def admit_turn(self, **kwargs: object):
+            return self.delegate.admit_turn(**kwargs)
+
+        def stream_turn(self, *, source_input: dict[str, object], **_: object):
+            assert source_input["content"] == original
+            yield TutorTextDelta("Partial response")
+            yield TutorTurn("This should not be sent.", [], [], [], None, None, {})
+
+    storage = LocalObjectStorage(tmp_path / "student-sources", signing_secret="fixture")
+    monkeypatch.setattr(student_routes, "create_object_storage", lambda *_: storage)
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", _CancellableRuntime)
+    monkeypatch.setattr(
+        student_routes,
+        "StreamingResponse",
+        lambda events, **kwargs: SimpleNamespace(body_iterator=events, headers=kwargs["headers"]),
+    )
+    original = _small_png()
+    source = validate_student_source(
+        content=original, filename="worksheet.png", content_type="image/png"
+    )
+    with postgres_session_factory() as request_session:
+        response = student_routes._stream_student_tutor_turn(
+            session_id,
+            student_routes.StudentMessageRequest(content="What is here?"),
+            AuthenticatedPrincipal(
+                subject="daily-source-cancelled",
+                role=UserRole.STUDENT,
+                email="daily-source-cancelled@example.test",
+            ),
+            request_session,
+            live_subject_context=unknown_live_subject(),
+            not_found_detail="Open Daily session not found.",
+            session_resolver=owned_open_daily_session,
+            admit_before_response=True,
+            validated_source=source,
+        )
+    events = response.body_iterator
+    assert "event: delta" in next(events)
+    events.close()
+
+    with postgres_session_factory() as session:
+        message = session.query(LearningMessage).filter_by(session_id=session_id, role="student").one()
+        asset = session.query(StudentSourceAsset).one()
+        assert message.source_asset_id == asset.id
+        assert message.payload["foreground_tutor_turn"]["status"] == "CANCELLED"
+        assert session.query(LearningMessage).filter_by(session_id=session_id, role="tutor").count() == 0
+
+
+@pytest.mark.parametrize("entry", ["math", "daily"])
+@pytest.mark.parametrize("failure_kind", ["capacity", "unexpected"])
+def test_non_source_stream_failures_retain_their_original_exception(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    entry: str,
+    failure_kind: str,
+) -> None:
+    """A source repair must not turn shared Tutor failures into new SSE success paths."""
+
+    from apps.api.routes import student as student_routes
+
+    subject = f"non-source-{entry}-{failure_kind}"
+    with postgres_session_factory.begin() as session:
+        student = _student(session, subject)
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    failure: Exception = (
+        TutorContextCapacityExceeded(
+            TutorContextCapacityLineage(
+                capacity_limit=1,
+                initial_measured_size=2,
+                final_measured_size=2,
+                selected_context={},
+                kept_context={},
+                dropped_context=(),
+            )
+        )
+        if failure_kind == "capacity"
+        else RuntimeError("unexpected Tutor stream failure")
+    )
+    make_runtime = _successful_streaming_runtime(_ImmediateSuccessfulTutorProvider())
+
+    class FailingRuntime:
+        def __init__(self, db: Session) -> None:
+            self.delegate = make_runtime(db)
+
+        def admit_turn(self, **kwargs: object):
+            return self.delegate.admit_turn(**kwargs)
+
+        def stream_turn(self, **_: object):
+            raise failure
+            yield  # pragma: no cover - keeps the failure at stream iteration
+
+    monkeypatch.setattr(student_routes, "create_tutor_runtime", FailingRuntime)
+    monkeypatch.setattr(
+        student_routes,
+        "StreamingResponse",
+        lambda events, **kwargs: SimpleNamespace(body_iterator=events, headers=kwargs["headers"]),
+    )
+    principal = AuthenticatedPrincipal(subject=subject, role=UserRole.STUDENT, email=f"{subject}@example.test")
+    route = (
+        student_routes.stream_math_tutor_turn
+        if entry == "math"
+        else student_routes.stream_daily_tutor_turn
+    )
+    with postgres_session_factory() as request_session:
+        response = route(session_id, student_routes.StudentMessageRequest(content="Help me."), principal, request_session)
+
+    with pytest.raises(type(failure)) as caught:
+        list(response.body_iterator)
+    assert caught.value is failure
+    if entry == "daily":
+        with postgres_session_factory() as session:
+            admitted = session.query(LearningMessage).filter_by(session_id=session_id, role="student").one()
+            assert admitted.payload["foreground_tutor_turn"]["status"] == "FAILED"
+
+
+def test_disappearing_daily_session_keeps_the_shared_stream_contract(
+    postgres_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Session loss after admission keeps the established settlement and return behavior."""
+
+    from apps.api.routes import student as student_routes
+
+    subject = "daily-disappearing-session"
+    with postgres_session_factory.begin() as session:
+        student = _student(session, subject)
+        learning_session = LearningSession(student_id=student.id, subject="MATH", status="OPEN")
+        session.add(learning_session)
+        session.flush()
+        session_id = learning_session.id
+
+    resolves = 0
+    original_resolver = student_routes.owned_open_daily_session
+
+    def disappear_after_admission(db: Session, **kwargs: object):
+        nonlocal resolves
+        resolves += 1
+        return original_resolver(db, **kwargs) if resolves == 1 else None
+
+    monkeypatch.setattr(
+        student_routes,
+        "StreamingResponse",
+        lambda events, **kwargs: SimpleNamespace(body_iterator=events, headers=kwargs["headers"]),
+    )
+    monkeypatch.setattr(
+        student_routes,
+        "create_tutor_runtime",
+        _successful_streaming_runtime(_ImmediateSuccessfulTutorProvider()),
+    )
+    principal = AuthenticatedPrincipal(subject=subject, role=UserRole.STUDENT, email=f"{subject}@example.test")
+    with postgres_session_factory() as request_session:
+        response = student_routes._stream_student_tutor_turn(
+            session_id,
+            student_routes.StudentMessageRequest(content="Help me."),
+            principal,
+            request_session,
+            live_subject_context=student_routes.unknown_live_subject(),
+            not_found_detail="Open Daily session not found.",
+            session_resolver=disappear_after_admission,
+            admit_before_response=True,
+        )
+
+    assert list(response.body_iterator) == []
+    assert resolves == 2
+    with postgres_session_factory() as session:
+        admitted = session.query(LearningMessage).filter_by(session_id=session_id, role="student").one()
+        assert admitted.payload["foreground_tutor_turn"]["status"] == "FAILED"
 
 
 def test_daily_canvas_rejection_preserves_provider_ledger_without_delivering_its_promise_or_partial_domain_writes(

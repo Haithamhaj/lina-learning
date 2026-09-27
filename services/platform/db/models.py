@@ -59,6 +59,7 @@ class ModelTask(str, Enum):
     CANVAS_VISUAL_PERSONALIZATION = "canvas_visual_personalization"
     CANVAS_REUSE_SELECTION = "canvas_reuse_selection"
     SEGMENT_RUBRIC_DECISION = "segment_rubric_decision"
+    VISUAL_NEED_DECISION = "visual_need_decision"
 
 
 class Job(Base):

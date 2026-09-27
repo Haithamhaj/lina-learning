@@ -7,9 +7,14 @@ let transcriptionRequests = 0;
 let submittedMessages: string[] = [];
 let stoppedTracks = 0;
 let completeTranscription: (() => void) | null = null;
+let nextTranscriptionFailure: "http" | "no-speech" | "malformed" | "network" | null = null;
+let activeRecorder: ProofMediaRecorder | null = null;
 
 class ProofTrack {
-  stop() { stoppedTracks += 1; }
+  stop() {
+    stoppedTracks += 1;
+    if (activeRecorder?.state === "recording") activeRecorder.stop();
+  }
 }
 
 class ProofMediaRecorder {
@@ -22,6 +27,7 @@ class ProofMediaRecorder {
 
   constructor(_stream: MediaStream, options?: MediaRecorderOptions) {
     this.mimeType = options?.mimeType ?? "audio/webm";
+    activeRecorder = this;
   }
 
   start() { this.state = "recording"; }
@@ -44,6 +50,12 @@ Object.assign(globalThis, {
     if (!(init?.body instanceof FormData) || !(init.body.get("audio") instanceof Blob)) {
       return new Response(JSON.stringify({ detail: "missing audio" }), { status: 422 });
     }
+    const failure = nextTranscriptionFailure;
+    nextTranscriptionFailure = null;
+    if (failure === "http") return new Response("unavailable", { status: 502 });
+    if (failure === "no-speech") return new Response(JSON.stringify({ detail: { code: "NO_SPEECH_HEARD" } }), { status: 422 });
+    if (failure === "malformed") return new Response("not json", { status: 200 });
+    if (failure === "network") throw new TypeError("offline");
     await new Promise<void>((resolve) => { completeTranscription = resolve; });
     return new Response(JSON.stringify({
       transcript: "What is one half?",
@@ -80,6 +92,7 @@ function App() {
 Object.assign(window, {
   voiceProof: {
     completeTranscription: () => completeTranscription?.(),
+    failNextTranscription: (failure: "http" | "no-speech" | "malformed" | "network") => { nextTranscriptionFailure = failure; },
     result: () => ({ transcriptionRequests, submittedMessages, stoppedTracks }),
   },
 });

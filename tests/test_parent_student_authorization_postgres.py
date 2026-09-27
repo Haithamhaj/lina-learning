@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import date
+from datetime import date, timedelta
 from uuid import UUID, uuid4
 
 import pytest
@@ -180,6 +180,9 @@ def test_linked_parent_can_read_and_update_only_core_profile_fields(
 def test_parent_schedules_future_grade_without_blanking_current_grade(
     postgres_session_factory: sessionmaker[Session],
 ) -> None:
+    today = date.today()
+    current_start = today - timedelta(days=30)
+    future_start = today + timedelta(days=30)
     with postgres_session_factory.begin() as session:
         parent = _parent(session, "parent-schedule")
         student = _student(session, "student-schedule", "Lina")
@@ -188,7 +191,7 @@ def test_parent_schedules_future_grade_without_blanking_current_grade(
             GradePeriod(
                 student_id=student.id,
                 grade_level=5,
-                starts_on=date(2026, 8, 1),
+                starts_on=current_start,
                 is_active=True,
             )
         )
@@ -198,7 +201,12 @@ def test_parent_schedules_future_grade_without_blanking_current_grade(
     try:
         response = client.put(
             f"/api/v1/parent/students/{student_id}/core-profile",
-            json={"active_grade_period": {"grade_level": 6, "starts_on": "2026-09-15"}},
+            json={
+                "active_grade_period": {
+                    "grade_level": 6,
+                    "starts_on": future_start.isoformat(),
+                }
+            },
         )
     finally:
         _clear_overrides()
@@ -212,9 +220,12 @@ def test_parent_schedules_future_grade_without_blanking_current_grade(
 
     assert response.status_code == 200
     assert response.json()["grade_level"] == 5
-    assert [(period.grade_level, period.starts_on, period.ends_on, period.is_active) for period in periods] == [
-        (5, date(2026, 8, 1), date(2026, 9, 14), True),
-        (6, date(2026, 9, 15), None, True),
+    assert [
+        (period.grade_level, period.starts_on, period.ends_on, period.is_active)
+        for period in periods
+    ] == [
+        (5, current_start, future_start - timedelta(days=1), True),
+        (6, future_start, None, True),
     ]
 
 

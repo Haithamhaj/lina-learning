@@ -80,8 +80,8 @@ The application preserves source and build provenance in PostgreSQL and uses obj
 ### Primary / Canvas
 
 - Provider: OpenAI through the Model Gateway.
-- Current pilot Tutor model: gpt-5.6-luna.
-- Current pilot Canvas model: gpt-5.6-luna.
+- Current pilot Tutor model after REAL-USE-REPAIR-01 deploy: gpt-6-luna.
+- Current pilot Canvas model after REAL-USE-REPAIR-01 deploy: gpt-6-sol.
 
 Provider/model choices are operational configuration, not permanent architecture.
 
@@ -124,8 +124,10 @@ Application and Worker use configuration such as:
 - AWS_REQUEST_CHECKSUM_CALCULATION=when_required
 - AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
 - MODEL_PROVIDER=openai
-- MODEL_NAME=gpt-5.6-luna
-- CANVAS_MODEL_NAME=gpt-5.6-luna on Worker
+- MODEL_NAME=gpt-6-luna
+- CANVAS_MODEL_NAME=gpt-6-sol on Worker
+- JEV_PROVIDER=openrouter for this repair deployment
+- JEV_VISUAL_NEED_MODE=active on App
 - JEV_MODEL_NAME=typesafe/jev-1.13
 - JEV_TIMEOUT_SECONDS=5
 - versioned JEV policy/threshold settings

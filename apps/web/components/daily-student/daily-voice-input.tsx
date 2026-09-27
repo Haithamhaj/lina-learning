@@ -37,7 +37,10 @@ export function DailyVoiceInput({
   const [voiceError, setVoiceError] = useState("");
   const recorderRef = useRef<DailyVoiceRecorder | null>(null);
 
-  useEffect(() => () => recorderRef.current?.dispose(), []);
+  useEffect(() => () => {
+    recorderRef.current?.dispose();
+    onActiveChange(false);
+  }, [onActiveChange]);
 
   const availability = voiceControlAvailability({ state: voiceState, draft, chatSending, copy });
   const start = () => {
@@ -53,11 +56,12 @@ export function DailyVoiceInput({
         mimeType,
         audioBitsPerSecond: 32_000,
       }),
-      transcribe: async (audio) => (await transcribeDailyRecording({
+      transcribe: async (audio, signal) => (await transcribeDailyRecording({
         apiBaseUrl,
         learningSessionId,
         audio,
         getToken,
+        signal,
       })).text,
       onStateChange: (state) => {
         setVoiceState(state);

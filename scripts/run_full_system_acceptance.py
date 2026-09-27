@@ -958,10 +958,10 @@ def _provider_settings(
         )
     if (
         environment.get("MODEL_PROVIDER") != "openai"
-        or environment.get("MODEL_NAME") != "gpt-5.6-luna"
+        or environment.get("MODEL_NAME") != "gpt-6-luna"
     ):
         raise AcceptanceSafetyError(
-            "Real reconstruction requires the configured openai / gpt-5.6-luna route."
+            "Real reconstruction requires the configured openai / gpt-6-luna route."
         )
     return Settings(
         _env_file=None,
@@ -971,7 +971,7 @@ def _provider_settings(
         _env_prefix=f"__LINA_ACCEPTANCE_EXPLICIT_{uuid4().hex.upper()}__",
         database_url=target_database_url,
         model_provider="openai",
-        model_name="gpt-5.6-luna",
+        model_name="gpt-6-luna",
         model_api_key=environment["MODEL_API_KEY"],
         model_base_url=environment.get("MODEL_BASE_URL"),
     )
@@ -1042,7 +1042,7 @@ def _verified_reconstruction_execution(
         or execution.success is not True
         or execution.task != ModelTask.SEGMENT_EVIDENCE.value
         or execution.provider != "openai"
-        or execution.model != "gpt-5.6-luna"
+        or execution.model != "gpt-6-luna"
         or execution.operation_type != ACCEPTANCE_RECONSTRUCTION_OPERATION
         or execution.operation_id != operation_id
         or execution.learning_session_id != learning_session.id
@@ -1298,9 +1298,9 @@ def execute_real_reconstruction(
                     gateway_factory=gateway_factory,
                 )
                 route = gateway.route_for(ModelTask.SEGMENT_EVIDENCE)
-                if route.provider != "openai" or route.model != "gpt-5.6-luna":
+                if route.provider != "openai" or route.model != "gpt-6-luna":
                     raise AcceptanceSafetyError(
-                        "Gateway route is not the required openai / gpt-5.6-luna route."
+                        "Gateway route is not the required openai / gpt-6-luna route."
                     )
                 operation_id = _required_reconstruction_operation_id(
                     learning_session.id
@@ -1533,7 +1533,7 @@ def _validate_segment_review_execution(
         or getattr(execution, "success", None) is not True
         or getattr(execution, "task", None) != ModelTask.SEGMENT_EVIDENCE.value
         or getattr(execution, "provider", None) != "openai"
-        or getattr(execution, "model", None) != "gpt-5.6-luna"
+        or getattr(execution, "model", None) != "gpt-6-luna"
         or getattr(execution, "student_id", None) != expected_student_id
         or getattr(execution, "learning_session_id", None)
         != HISTORICAL_SESSION_ID
@@ -1808,7 +1808,7 @@ def _load_committed_reconstruction_audit(
         "operation_id": str(operation_id),
         "ai_execution_id": str(execution_id),
         "provider": "openai",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-6-luna",
         "segment_count": len(segments),
         "publication_state": "COMMITTED",
     }
@@ -2103,7 +2103,7 @@ def _collect_completed_historical_reviews(
                     SegmentLearningReview.review_policy_version
                     == SEGMENT_REVIEW_POLICY_VERSION,
                     SegmentLearningReview.provider == "openai",
-                    SegmentLearningReview.model == "gpt-5.6-luna",
+                    SegmentLearningReview.model == "gpt-6-luna",
                 )
                 .order_by(SegmentLearningReview.segment_id)
             )
@@ -2670,7 +2670,7 @@ def run_historical_intelligence_acceptance(
                 and all(
                     review.get("execution_success") is True
                     and review.get("provider") == "openai"
-                    and review.get("model") == "gpt-5.6-luna"
+                    and review.get("model") == "gpt-6-luna"
                     and review.get("operation") == "segment_learning_review"
                     for review in review_report
                 ),
@@ -2775,7 +2775,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--execute-reconstruction",
         action="store_true",
-        help="After cloning, execute real openai/gpt-5.6-luna reconstruction through the Model Gateway.",
+        help="After cloning, execute real openai/gpt-6-luna reconstruction through the Model Gateway.",
     )
     parser.add_argument(
         "--resume-reconstruction",
