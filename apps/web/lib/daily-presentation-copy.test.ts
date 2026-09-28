@@ -46,3 +46,17 @@ test("English Canvas waiting copy advances through equivalent elapsed stages", (
   assert.equal(canvas.elapsed(18), "Working for 18 seconds");
   assert.equal(canvas.statusUnavailable, "The visual status could not be refreshed just now.");
 });
+
+test("Canvas lifecycle copy is bilingual, truthful, and has no fixed ETA", () => {
+  const arabic = dailyPresentationCopy("rtl").canvas.lifecycle;
+  const english = dailyPresentationCopy("ltr").canvas.lifecycle;
+  assert.match(arabic.preparing, /أجهّز/);
+  assert.match(english.preparing, /preparing/);
+  assert.match(arabic.ready, /جاهزًا/);
+  assert.match(english.ready, /ready in Canvas/);
+  assert.match(arabic.ready, /جاهزًا في Canvas/);
+  assert.doesNotMatch(english.ready, /open Canvas/);
+  assert.match(arabic.cancelled, /توقّف/);
+  assert.match(english.cancelled, /stopped/);
+  assert.doesNotMatch(`${arabic.preparing} ${english.preparing}`, /\d|minute|دقيقة/);
+});

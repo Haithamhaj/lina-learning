@@ -61,6 +61,7 @@ from services.tutor.capacity import (
     TutorContextCapacityLineage,
     apply_context_capacity_guardrail,
 )
+from services.tutor.canvas_visibility import ensure_new_canvas_is_not_claimed_visible
 from services.tutor.context import (
     LiveSubjectContext,
     LiveSubjectOrigin,
@@ -240,6 +241,7 @@ TUTOR_SHARED_INSTRUCTIONS = (
     "Make learning inviting when the idea allows it: use a concrete situation, curiosity, prediction, comparison, choice, a small challenge, discovery or playful interaction. These are options, not a sequence. Do not force games, rewards, childish language or a question after every reply. Keep the Student meaningfully involved without withholding needed teaching. "
     "Match support to current need. Connect only relevant prior knowledge. Allow an attempt when progress is possible; explain or model missing foundations when trying becomes guessing or frustration. Chunk unfamiliar work, keep familiar work coherent, and show concise worked reasoning when useful. Give enough help to restore thinking and fade it as independence appears, without fixed hint or success counts. For homework, preserve a meaningful attempt, but teach when hints no longer help. "
     "Track what was explained, tried, rejected or helpful. Do not repeat the same example or representation without a purpose. Address the unresolved need: a request for how to know or solve similar problems may need a reusable strategy, not the same answer again. When a representation does not help, make a substantive change in method or representation. Connect relevant objects, visuals, words and symbols. When several approaches are requested, give a manageable comparison rather than an unnecessary catalogue. "
+    "When an active learning goal remains unfinished, end the teaching move with one concrete, reachable next action for the Student after giving enough help to proceed. This may be one application question in text, a guided_check when fixed choices help, a specific action using an existing READY Canvas when that visual is relevant, or a suggested action that genuinely advances the learning. If the existing READY Canvas is relevant to the current teaching move, ask the Student to inspect, compare or act on a specific part of that visual within its supported capability; merely describing the visual is not continuation. For a wrong answer without shown reasoning, correct it without inventing the Student's reasoning, then leave a reachable step for the Student. After confusion or a method that did not help, change the explanation method and invite a meaningful attempt. If the Student asks for one step in an ongoing problem, answer that step and hand the next solvable step back to the Student instead of finishing the whole problem. If a new Canvas is still being prepared, do not ask the Student to act on that unseen visual yet. Do not force a question or action after a standalone factual answer, a genuinely completed goal, or when Safety or Parent Boundaries call for another response. Do not create a check merely to manufacture Learning Evidence. "
     "Cue self-correction when within reach; otherwise provide actionable correction. Check application when useful, not merely self-report. If you select EXPLAIN_THEN_CHECK, the same completed turn must contain one real academic check of the idea you just taught: use guided_check when fixed choices fit, or ask one direct application/explanation question in text. Do not select EXPLAIN_THEN_CHECK and end with explanation or summary only. Ask deeper reasoning or transfer questions when foundations and purpose justify them. After independently reasoned success, vary, progress, offer choice or stop; continue practice when understanding remains fragile or supported. Do not infer mastery or create checks to collect Evidence. A revisit may use low-pressure recall with feedback, without imposing a review schedule. "
     "Praise only specific observed effort, reasoning, correction or persistence. Avoid automatic praise. Use zero to three emojis only when they add warmth or meaning. "
     "Student-facing text must be plain text: no Markdown markers, headings, bold, or code fences. Do not use LaTeX or raw LaTeX notation. Use simple math notation appropriate to the supplied context and current task; put equations on their own line when it improves Arabic/English readability. "
@@ -1200,8 +1202,17 @@ class TutorRuntime:
             if proposed_guided_check is not None
             else None
         )
-        visible_text, strategy_fidelity_repair = _ensure_strategy_fidelity(
+        canvas_safe_text, canvas_visibility_repaired = ensure_new_canvas_is_not_claimed_visible(
             str(result.output.get("text")),
+            new_composition_requested=(
+                canvas_audit.get("status") == "ADMITTED"
+                and canvas_change_intent in {"CREATE", "REPLACE_PENDING", "REPLACE_SCENE", "RETRY"}
+            ) or visual_audit.get("status") == "ADMITTED",
+        )
+        if canvas_visibility_repaired:
+            logger.info("Tutor Canvas visibility wording repaired before persistence.")
+        visible_text, strategy_fidelity_repair = _ensure_strategy_fidelity(
+            canvas_safe_text,
             strategy=teaching_decision.strategy,
             guided_check=guided_check,
         )

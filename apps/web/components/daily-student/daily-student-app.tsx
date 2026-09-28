@@ -22,11 +22,18 @@ import {
   canvasElapsedSeconds,
   canvasPresentationState,
   canvasWaitingMotionClass,
-  isCompositionInFlight,
+  isCompositionPreparing,
   isDailyComposerDisabled,
   shouldRefreshCompositionSnapshot,
   shouldReplaceCompositionView,
 } from "@/lib/studio/composition-recovery";
+import {
+  claimCanvasLifecycleNotice,
+  conversationNoticeDirection,
+  readSeenCanvasNotices,
+  saveSeenCanvasNotices,
+  type CanvasLifecycleNotice,
+} from "@/lib/studio/composition-notices";
 import { publicConfig } from "@/lib/public-config";
 import { dailySessionRequest, dailySessionUrl } from "@/lib/daily-session-reference";
 import {
@@ -78,6 +85,14 @@ function tutorMessage(id: string): ChatMessage {
   return { id, role: "tutor", content: "", created_at: new Date().toISOString(), suggested_actions: [] };
 }
 
+function canvasNoticeStorage(): Storage | null {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
 function ChatBubble({ message, pending, getToken, copy }: { message: ChatMessage; pending: boolean; getToken: () => Promise<string | null>; copy: DailyPresentationCopy }) {
   const tutor = message.role === "tutor";
   return (
@@ -90,6 +105,18 @@ function ChatBubble({ message, pending, getToken, copy }: { message: ChatMessage
       </div>
       {!tutor ? <span aria-hidden="true" className="mt-1 grid size-9 shrink-0 place-items-center rounded-2xl bg-[#ece7ff] text-sm text-[#524596] shadow-sm">●</span> : null}
     </article>
+  );
+}
+
+function CanvasLifecycleBubble({ notice, copy }: { notice: CanvasLifecycleNotice; copy: DailyPresentationCopy["canvas"]["lifecycle"] }) {
+  return (
+    <aside className="flex gap-3" dir={notice.direction} aria-label={copy.label}>
+      <span aria-hidden="true" className="mt-1 grid size-9 shrink-0 place-items-center rounded-2xl bg-[#17334f] text-sm text-white shadow-sm">✦</span>
+      <div className="max-w-[85%] rounded-[1.35rem] rounded-bl-md border border-[#cde7df] bg-[#effaf7] px-4 py-3 text-sm leading-6 text-[#173d3a] shadow-sm">
+        <p className="text-xs font-bold text-[#37796f]">{copy.label}</p>
+        <p dir="auto" className="mt-1.5">{copy[notice.kind]}</p>
+      </div>
+    </aside>
   );
 }
 
@@ -122,6 +149,7 @@ export function DailyStudentApp() {
   const [chatSending, setChatSending] = useState(false);
   const [operationPending, setOperationPending] = useState(false);
   const [canvasComposition, setCanvasComposition] = useState<StudioCompositionStatus | null>(null);
+  const [canvasNotices, setCanvasNotices] = useState<CanvasLifecycleNotice[]>([]);
   const [canvasStatusNotice, setCanvasStatusNotice] = useState<"failed" | "unavailable" | null>(null);
   const [canvasElapsed, setCanvasElapsed] = useState(0);
   const [studioConnection, setStudioConnection] = useState<"connecting" | "connected" | "reconnecting" | "error">("connecting");
@@ -146,14 +174,32 @@ export function DailyStudentApp() {
   const priorWorkspaceVisible = useRef<boolean | null>(null);
   const compositionRequestRef = useRef(0);
   const canvasCompositionRef = useRef<StudioCompositionStatus | null>(null);
+  const canvasNoticeSessionIdRef = useRef<string | null>(null);
+  const seenCanvasNoticeIdsRef = useRef<Set<string>>(new Set());
+  const conversationNoticeDirectionRef = useRef<"ltr" | "rtl" | null>(null);
   const foregroundPendingRef = useRef(false);
   const sessionRecoveryRef = useRef(false);
   const preservedTranscriptRef = useRef<ChatMessage[]>([]);
 
+  const recordCanvasNotice = (view: StudioCompositionStatus) => {
+    const sessionId = canvasNoticeSessionIdRef.current;
+    if (!sessionId) return;
+    const notice = claimCanvasLifecycleNotice(view, seenCanvasNoticeIdsRef.current);
+    if (!notice) return;
+    saveSeenCanvasNotices(canvasNoticeStorage(), sessionId, seenCanvasNoticeIdsRef.current);
+    setCanvasNotices((current) => [...current, {
+      ...notice,
+      direction: conversationNoticeDirectionRef.current ?? undefined,
+    }]);
+  };
+
   const applyComposition = (next: StudioCompositionStatus): boolean => {
+    if (next.runtime_id !== runtimeIdRef.current) return false;
     if (!shouldReplaceCompositionView(canvasCompositionRef.current, next)) return false;
     canvasCompositionRef.current = next;
     setCanvasComposition(next);
+    setCanvasStatusNotice(["FAILED", "REJECTED", "CANCELLED"].includes(next.run_status) ? "failed" : null);
+    recordCanvasNotice(next);
     return true;
   };
 
@@ -162,10 +208,6 @@ export function DailyStudentApp() {
     if (next.latest_event_sequence < required) return false;
     appliedSnapshotSequenceRef.current = next.latest_event_sequence;
     setSnapshot(next);
-    if (next.active_scene_contract !== null && canvasCompositionRef.current?.scene_ready) {
-      canvasCompositionRef.current = null;
-      setCanvasComposition(null);
-    }
     return true;
   };
 
@@ -239,6 +281,12 @@ export function DailyStudentApp() {
               selectedSource: null,
             };
         window.history.replaceState(window.history.state, "", dailySessionUrl(window.location.href, daily.learning_session_id));
+        if (canvasNoticeSessionIdRef.current !== daily.learning_session_id) {
+          canvasNoticeSessionIdRef.current = daily.learning_session_id;
+          seenCanvasNoticeIdsRef.current = readSeenCanvasNotices(canvasNoticeStorage(), daily.learning_session_id);
+          setCanvasNotices([]);
+        }
+        conversationNoticeDirectionRef.current = conversationNoticeDirection(reboundState.session.messages);
         setLearningSession(reboundState.session);
         setActiveSource(reboundState.activeSource);
         setSelectedSource(reboundState.selectedSource);
@@ -257,7 +305,6 @@ export function DailyStudentApp() {
           const view = await controller.compositionStatus(runtimeId);
           if (cancelled) return;
           if (!applyComposition(view)) return;
-          setCanvasStatusNotice(null);
           if (shouldRefreshCompositionSnapshot(view)) await refreshSnapshot();
         };
         const controller = createStudioController({
@@ -334,13 +381,7 @@ export function DailyStudentApp() {
   }, [getToken, isLoaded, loadAttempt]);
 
   useEffect(() => {
-    if (canvasComposition?.run_status === "FAILED" || canvasComposition?.run_status === "REJECTED" || canvasComposition?.run_status === "CANCELLED") {
-      setCanvasStatusNotice("failed");
-    }
-  }, [canvasComposition?.run_status]);
-
-  useEffect(() => {
-    if (!isCompositionInFlight(canvasComposition)) {
+    if (!isCompositionPreparing(canvasComposition)) {
       setCanvasElapsed(0);
       return;
     }
@@ -349,10 +390,10 @@ export function DailyStudentApp() {
     updateElapsed();
     const timer = window.setInterval(updateElapsed, 1_000);
     return () => window.clearInterval(timer);
-  }, [canvasComposition?.run_created_at, canvasComposition?.run_status]);
+  }, [canvasComposition?.run_created_at, canvasComposition?.run_status, canvasComposition?.scene_ready]);
 
   useEffect(() => {
-    if (!isCompositionInFlight(canvasComposition)) return;
+    if (!isCompositionPreparing(canvasComposition)) return;
     const timer = window.setInterval(() => {
       const controller = controllerRef.current;
       const runtimeId = runtimeIdRef.current;
@@ -361,18 +402,17 @@ export function DailyStudentApp() {
       void controller.compositionStatus(runtimeId).then((view) => {
         if (request !== compositionRequestRef.current || runtimeId !== runtimeIdRef.current) return;
         if (!applyComposition(view)) return;
-        setCanvasStatusNotice(null);
         if (shouldRefreshCompositionSnapshot(view)) {
           void controller.snapshot(runtimeId).then((next) => {
             if (runtimeId !== runtimeIdRef.current) return;
             applySnapshot(next);
-            if (canvasCompositionRef.current?.run_id === view.run_id) {
-              canvasCompositionRef.current = null;
-              setCanvasComposition(null);
-            }
-          }).catch(() => { setCanvasStatusNotice("unavailable"); });
+          }).catch(() => {
+            if (runtimeId === runtimeIdRef.current && canvasCompositionRef.current?.run_id === view.run_id) setCanvasStatusNotice("unavailable");
+          });
         }
-      }).catch(() => { setCanvasStatusNotice("unavailable"); });
+      }).catch(() => {
+        if (runtimeId === runtimeIdRef.current) setCanvasStatusNotice("unavailable");
+      });
     }, 2_000);
     return () => window.clearInterval(timer);
   }, [canvasComposition]);
@@ -458,6 +498,11 @@ export function DailyStudentApp() {
         throw await errorFrom(response, copy.errors.learningUnavailable);
       }
       admitted = true;
+      if (studentContent) {
+        conversationNoticeDirectionRef.current = conversationNoticeDirection([
+          { role: "student", content: studentContent },
+        ]) ?? conversationNoticeDirectionRef.current;
+      }
       const durableStudentMessageId = admittedDailyStudentMessageId(response);
       const durableSourceAssetId = response.headers.get("X-Lina-Source-Asset-ID");
       if (studentMessageId && durableStudentMessageId) {
@@ -506,7 +551,20 @@ export function DailyStudentApp() {
           if (type === "turn") {
             const turn = payload as TutorTurn;
             terminalReceived = true;
-            if (turn.canvas_composition) applyComposition(turn.canvas_composition);
+            conversationNoticeDirectionRef.current = conversationNoticeDirection([
+              { role: "tutor", content: turn.text },
+            ]) ?? conversationNoticeDirectionRef.current;
+            if (turn.canvas_composition && applyComposition(turn.canvas_composition) && shouldRefreshCompositionSnapshot(turn.canvas_composition)) {
+              const controller = controllerRef.current;
+              const runtimeId = runtimeIdRef.current;
+              if (controller && runtimeId) {
+                void controller.snapshot(runtimeId).then((next) => {
+                  if (runtimeId === runtimeIdRef.current) applySnapshot(next);
+                }).catch(() => {
+                  if (runtimeId === runtimeIdRef.current && canvasCompositionRef.current?.run_id === turn.canvas_composition?.run_id) setCanvasStatusNotice("unavailable");
+                });
+              }
+            }
             updateTutor(provisionalTutorId, (message) => ({
               ...message,
               content: turn.text,
@@ -641,6 +699,17 @@ export function DailyStudentApp() {
   }, [copy.errors.buildAuthentication]);
 
   const latestTutor = [...(learningSession?.messages ?? [])].reverse().find((message) => message.role === "tutor");
+  const chatTimeline: Array<{ type: "message"; message: ChatMessage } | { type: "notice"; notice: CanvasLifecycleNotice }> = [];
+  const orderedNotices = [...canvasNotices].sort((left, right) => Date.parse(left.observedAt) - Date.parse(right.observedAt));
+  let nextNotice = 0;
+  for (const message of learningSession?.messages ?? []) {
+    // Preserve the durable Chat order; insert only local lifecycle notices.
+    while (nextNotice < orderedNotices.length && Date.parse(orderedNotices[nextNotice].observedAt) < Date.parse(message.created_at)) {
+      chatTimeline.push({ type: "notice", notice: orderedNotices[nextNotice++] });
+    }
+    chatTimeline.push({ type: "message", message });
+  }
+  while (nextNotice < orderedNotices.length) chatTimeline.push({ type: "notice", notice: orderedNotices[nextNotice++] });
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     void sendChat(draft);
@@ -667,7 +736,11 @@ export function DailyStudentApp() {
           <section aria-label={copy.chat} className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5">
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4"><div><h2 className="font-display text-2xl">{copy.chat}</h2><p className="mt-1 text-sm leading-6 text-slate-600">{copy.chatDescription}</p></div><span aria-hidden="true" className="grid size-10 place-items-center rounded-2xl bg-[#e8f6f1] text-[#2e766a]">✦</span></div>
             <div className="mt-4 min-h-[26rem] max-h-[calc(100vh-19rem)] overflow-y-auto rounded-[1.5rem] bg-[#fafbfe] p-3 sm:p-4" aria-live="polite">
-              {learningSession?.messages.length ? <div className="grid gap-4">{learningSession.messages.map((message) => <div key={message.id}><ChatBubble message={message} pending={chatSending} getToken={getToken} copy={presentationCopy} />{message.role === "tutor" && message.id === latestTutor?.id && message.suggested_actions.length > 0 ? <div className="ml-12 mt-2 flex flex-wrap gap-2" aria-label={copy.suggestedActions}>{message.suggested_actions.map((action) => <Button key={`${action.kind}:${action.label}`} className="h-auto min-h-10 rounded-full px-3 py-2 text-left" type="button" variant="secondary" disabled={composerDisabled} onClick={() => void sendChat(action.label, { suggestedAction: true })}><span dir="auto">{action.label}</span></Button>)}</div> : null}{message.role === "tutor" && message.id === latestTutor?.id && message.guided_check ? <div className="ml-12 mt-3 rounded-2xl border border-emerald-100 bg-white p-3"><p className="text-sm font-semibold" dir="auto">{message.guided_check.prompt}</p><div className="mt-2 flex flex-wrap gap-2">{message.guided_check.choices.map((choice) => <Button key={choice.label} type="button" variant="secondary" disabled={composerDisabled} onClick={() => void sendChat(choice.label, { guidedCheckId: message.guided_check?.id })}>{choice.label}</Button>)}</div></div> : null}</div>)}</div> : <div className="grid min-h-80 place-items-center px-5 text-center"><div className="max-w-sm"><div aria-hidden="true" className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#e9f7f3] text-2xl text-[#328577]">✎</div><h3 className="mt-4 font-display text-2xl">{copy.emptyHeading}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{copy.emptyDescription}</p></div></div>}
+              {chatTimeline.length ? <div className="grid gap-4">{chatTimeline.map((item) => {
+                if (item.type === "notice") return <CanvasLifecycleBubble key={item.notice.id} notice={item.notice} copy={dailyPresentationCopy(item.notice.direction ?? surfaceDirection).canvas.lifecycle} />;
+                const message = item.message;
+                return <div key={message.id}><ChatBubble message={message} pending={chatSending} getToken={getToken} copy={presentationCopy} />{message.role === "tutor" && message.id === latestTutor?.id && message.suggested_actions.length > 0 ? <div className="ml-12 mt-2 flex flex-wrap gap-2" aria-label={copy.suggestedActions}>{message.suggested_actions.map((action) => <Button key={`${action.kind}:${action.label}`} className="h-auto min-h-10 rounded-full px-3 py-2 text-left" type="button" variant="secondary" disabled={composerDisabled} onClick={() => void sendChat(action.label, { suggestedAction: true })}><span dir="auto">{action.label}</span></Button>)}</div> : null}{message.role === "tutor" && message.id === latestTutor?.id && message.guided_check ? <div className="ml-12 mt-3 rounded-2xl border border-emerald-100 bg-white p-3"><p className="text-sm font-semibold" dir="auto">{message.guided_check.prompt}</p><div className="mt-2 flex flex-wrap gap-2">{message.guided_check.choices.map((choice) => <Button key={choice.label} type="button" variant="secondary" disabled={composerDisabled} onClick={() => void sendChat(choice.label, { guidedCheckId: message.guided_check?.id })}>{choice.label}</Button>)}</div></div> : null}</div>;
+              })}</div> : <div className="grid min-h-80 place-items-center px-5 text-center"><div className="max-w-sm"><div aria-hidden="true" className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#e9f7f3] text-2xl text-[#328577]">✎</div><h3 className="mt-4 font-display text-2xl">{copy.emptyHeading}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{copy.emptyDescription}</p></div></div>}
             </div>
             <form className="mt-4 grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-3 sm:grid-cols-[auto_1fr_auto] sm:items-center" onSubmit={submit}>
               <label className="sr-only" htmlFor="daily-learning-message">{copy.messageLabel}</label>

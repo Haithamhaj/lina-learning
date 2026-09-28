@@ -1,0 +1,1877 @@
+{
+  "experiment": "A1 Current Turn Last",
+  "date": "2026-09-28",
+  "source_sha256": "9f0d4aebb799216cb0f1722db1303d7b4a1ea08d8ea6bc5957acb0ab44a66017",
+  "plan_sha256": "bb1ca22fdc74402f2b796bc1afaf34a963dbb4e1eb96a503d2a87655d769eed3",
+  "complete": true,
+  "design": {
+    "model": "gpt-6-luna",
+    "reasoning_effort_override": null,
+    "recent_exchange_count": 1,
+    "repeats_per_arm": 3,
+    "ordering": "alternated within each repetition; starting arm balanced across cases",
+    "cache_limit": "Repeated identical synthetic prompts may reuse provider cache. These measurements do not estimate production cross-turn cache improvement."
+  },
+  "case_count": 20,
+  "paired_repetitions": 60,
+  "first_call_order_counts": {
+    "production_current": 30,
+    "current_turn_last": 30
+  },
+  "arms": {
+    "production_current": {
+      "runs": 60,
+      "all_checks_passed": 49,
+      "mean_rubric_fraction": 0.9734,
+      "checks": {
+        "authority_boundary": {
+          "pass": 59,
+          "applicable": 60
+        },
+        "current_over_history": {
+          "pass": 18,
+          "applicable": 18
+        },
+        "current_turn_understood": {
+          "pass": 57,
+          "applicable": 57
+        },
+        "method_change": {
+          "pass": 6,
+          "applicable": 6
+        },
+        "no_invented_reasoning": {
+          "pass": 3,
+          "applicable": 3
+        },
+        "prior_method_relation": {
+          "pass": 28,
+          "applicable": 30
+        },
+        "schema_shape_valid": {
+          "pass": 60,
+          "applicable": 60
+        },
+        "strategy_choice": {
+          "pass": 3,
+          "applicable": 3
+        },
+        "strategy_fidelity": {
+          "pass": 20,
+          "applicable": 20
+        },
+        "teaching_response_screen": {
+          "pass": 60,
+          "applicable": 60
+        },
+        "useful_next_action": {
+          "pass": 19,
+          "applicable": 27
+        },
+        "visual_choice": {
+          "pass": 54,
+          "applicable": 54
+        }
+      },
+      "latency_mean_ms": 9192,
+      "latency_median_ms": 8642,
+      "latency_p95_ms": 15119,
+      "normal_input_tokens": 180,
+      "cached_input_tokens": 436036,
+      "cache_write_tokens": 39638,
+      "output_tokens": 51979,
+      "estimated_cost_usd": 0.03532261,
+      "total_input_tokens": 475854
+    },
+    "current_turn_last": {
+      "runs": 60,
+      "all_checks_passed": 49,
+      "mean_rubric_fraction": 0.9724,
+      "checks": {
+        "authority_boundary": {
+          "pass": 58,
+          "applicable": 60
+        },
+        "current_over_history": {
+          "pass": 18,
+          "applicable": 18
+        },
+        "current_turn_understood": {
+          "pass": 57,
+          "applicable": 57
+        },
+        "method_change": {
+          "pass": 6,
+          "applicable": 6
+        },
+        "no_invented_reasoning": {
+          "pass": 3,
+          "applicable": 3
+        },
+        "prior_method_relation": {
+          "pass": 30,
+          "applicable": 30
+        },
+        "schema_shape_valid": {
+          "pass": 60,
+          "applicable": 60
+        },
+        "strategy_choice": {
+          "pass": 3,
+          "applicable": 3
+        },
+        "strategy_fidelity": {
+          "pass": 15,
+          "applicable": 15
+        },
+        "teaching_response_screen": {
+          "pass": 60,
+          "applicable": 60
+        },
+        "useful_next_action": {
+          "pass": 18,
+          "applicable": 27
+        },
+        "visual_choice": {
+          "pass": 54,
+          "applicable": 54
+        }
+      },
+      "latency_mean_ms": 9490,
+      "latency_median_ms": 9150,
+      "latency_p95_ms": 14922,
+      "normal_input_tokens": 180,
+      "cached_input_tokens": 434016,
+      "cache_write_tokens": 41658,
+      "output_tokens": 52933,
+      "estimated_cost_usd": 0.03603191,
+      "total_input_tokens": 475854
+    }
+  },
+  "paired_latency": {
+    "variant_minus_baseline_mean_ms": 298,
+    "variant_minus_baseline_median_ms": 256,
+    "variant_faster_pairs": 25,
+    "baseline_faster_pairs": 35
+  },
+  "cases": {
+    "g01_correct_independent": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 10003,
+        "latency_median_ms": 10345,
+        "latency_p95_ms": 11160,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21723,
+        "cache_write_tokens": 2094,
+        "output_tokens": 2889,
+        "estimated_cost_usd": 0.00192438
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 10185,
+        "latency_median_ms": 9597,
+        "latency_p95_ms": 11742,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21723,
+        "cache_write_tokens": 2094,
+        "output_tokens": 2871,
+        "estimated_cost_usd": 0.00191538
+      }
+    },
+    "g02_wrong_no_reasoning": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 0,
+        "mean_rubric_fraction": 0.875,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "no_invented_reasoning": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 0,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8700,
+        "latency_median_ms": 8355,
+        "latency_p95_ms": 9617,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21555,
+        "cache_write_tokens": 2010,
+        "output_tokens": 2624,
+        "estimated_cost_usd": 0.0017797
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 1,
+        "mean_rubric_fraction": 0.9167,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "no_invented_reasoning": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 1,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 10458,
+        "latency_median_ms": 10336,
+        "latency_p95_ms": 11348,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21555,
+        "cache_write_tokens": 2010,
+        "output_tokens": 2634,
+        "estimated_cost_usd": 0.0017847
+      }
+    },
+    "g03_explicit_confusion": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "method_change": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 15096,
+        "latency_median_ms": 15119,
+        "latency_p95_ms": 15730,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21575,
+        "cache_write_tokens": 2020,
+        "output_tokens": 4344,
+        "estimated_cost_usd": 0.00264115
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9583,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "method_change": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 2,
+            "applicable": 2
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 2,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 14836,
+        "latency_median_ms": 14922,
+        "latency_p95_ms": 15538,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21575,
+        "cache_write_tokens": 2020,
+        "output_tokens": 4368,
+        "estimated_cost_usd": 0.00265315
+      }
+    },
+    "g04_did_not_help_change": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "method_change": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 2,
+            "applicable": 2
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 12623,
+        "latency_median_ms": 11354,
+        "latency_p95_ms": 16754,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 23595,
+        "cache_write_tokens": 0,
+        "output_tokens": 3760,
+        "estimated_cost_usd": 0.00211685
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "method_change": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 13784,
+        "latency_median_ms": 11987,
+        "latency_p95_ms": 17733,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21575,
+        "cache_write_tokens": 2020,
+        "output_tokens": 4294,
+        "estimated_cost_usd": 0.00261615
+      }
+    },
+    "g05_clarification_not_failure": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9524,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 1,
+            "applicable": 1
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 2,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8227,
+        "latency_median_ms": 8046,
+        "latency_p95_ms": 8897,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21555,
+        "cache_write_tokens": 2010,
+        "output_tokens": 2232,
+        "estimated_cost_usd": 0.0015837
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 1,
+        "mean_rubric_fraction": 0.9048,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 1,
+            "applicable": 1
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 1,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 9954,
+        "latency_median_ms": 9739,
+        "latency_p95_ms": 11676,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21555,
+        "cache_write_tokens": 2010,
+        "output_tokens": 2385,
+        "estimated_cost_usd": 0.0016602
+      }
+    },
+    "g06_explain_then_check": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_choice": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 10449,
+        "latency_median_ms": 10531,
+        "latency_p95_ms": 12946,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21417,
+        "cache_write_tokens": 1941,
+        "output_tokens": 3082,
+        "estimated_cost_usd": 0.00199869
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_choice": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 11043,
+        "latency_median_ms": 12143,
+        "latency_p95_ms": 12799,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21417,
+        "cache_write_tokens": 1941,
+        "output_tokens": 3248,
+        "estimated_cost_usd": 0.00208169
+      }
+    },
+    "g07_unfinished_arabic": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 2,
+            "applicable": 2
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8296,
+        "latency_median_ms": 8378,
+        "latency_p95_ms": 8779,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21987,
+        "cache_write_tokens": 2226,
+        "output_tokens": 2328,
+        "estimated_cost_usd": 0.00166302
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8257,
+        "latency_median_ms": 8378,
+        "latency_p95_ms": 8541,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21987,
+        "cache_write_tokens": 2226,
+        "output_tokens": 2393,
+        "estimated_cost_usd": 0.00169552
+      }
+    },
+    "g08_unfinished_science": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9444,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 2,
+            "applicable": 2
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 2,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8883,
+        "latency_median_ms": 7572,
+        "latency_p95_ms": 12276,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21791,
+        "cache_write_tokens": 2128,
+        "output_tokens": 2422,
+        "estimated_cost_usd": 0.00169581
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9444,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 2,
+            "applicable": 2
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 2,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8392,
+        "latency_median_ms": 8373,
+        "latency_p95_ms": 9292,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21791,
+        "cache_write_tokens": 2128,
+        "output_tokens": 2341,
+        "estimated_cost_usd": 0.00165531
+      }
+    },
+    "g09_science_process_visual": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 12430,
+        "latency_median_ms": 12748,
+        "latency_p95_ms": 13188,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21417,
+        "cache_write_tokens": 1941,
+        "output_tokens": 3820,
+        "estimated_cost_usd": 0.00236769
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 13365,
+        "latency_median_ms": 14200,
+        "latency_p95_ms": 14207,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21417,
+        "cache_write_tokens": 1941,
+        "output_tokens": 4269,
+        "estimated_cost_usd": 0.0025922
+      }
+    },
+    "g10_science_structure_visual": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9333,
+        "checks": {
+          "authority_boundary": {
+            "pass": 2,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 1,
+            "applicable": 1
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8862,
+        "latency_median_ms": 8851,
+        "latency_p95_ms": 9425,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21435,
+        "cache_write_tokens": 1950,
+        "output_tokens": 2799,
+        "estimated_cost_usd": 0.0018585
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9333,
+        "checks": {
+          "authority_boundary": {
+            "pass": 2,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 9552,
+        "latency_median_ms": 9084,
+        "latency_p95_ms": 10510,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21435,
+        "cache_write_tokens": 1950,
+        "output_tokens": 2932,
+        "estimated_cost_usd": 0.001925
+      }
+    },
+    "g11_visual_not_needed": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 4069,
+        "latency_median_ms": 4300,
+        "latency_p95_ms": 4404,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21397,
+        "cache_write_tokens": 1931,
+        "output_tokens": 984,
+        "estimated_cost_usd": 0.00094824
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 3858,
+        "latency_median_ms": 3771,
+        "latency_p95_ms": 4444,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21397,
+        "cache_write_tokens": 1931,
+        "output_tokens": 756,
+        "estimated_cost_usd": 0.00083425
+      }
+    },
+    "g12_explicit_visual_request": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 9696,
+        "latency_median_ms": 9504,
+        "latency_p95_ms": 11078,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21411,
+        "cache_write_tokens": 1938,
+        "output_tokens": 2883,
+        "estimated_cost_usd": 0.00189876
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8881,
+        "latency_median_ms": 8609,
+        "latency_p95_ms": 9601,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21411,
+        "cache_write_tokens": 1938,
+        "output_tokens": 2629,
+        "estimated_cost_usd": 0.00177176
+      }
+    },
+    "g13_canvas_ready_continue": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 0,
+        "mean_rubric_fraction": 0.8571,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 0,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 11761,
+        "latency_median_ms": 9591,
+        "latency_p95_ms": 18239,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 23145,
+        "cache_write_tokens": 2805,
+        "output_tokens": 3341,
+        "estimated_cost_usd": 0.00225348
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 0,
+        "mean_rubric_fraction": 0.8571,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 0,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 12239,
+        "latency_median_ms": 11322,
+        "latency_p95_ms": 15844,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 23145,
+        "cache_write_tokens": 2805,
+        "output_tokens": 3416,
+        "estimated_cost_usd": 0.00229097
+      }
+    },
+    "g14_canvas_pending_no_duplicate": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 4467,
+        "latency_median_ms": 4714,
+        "latency_p95_ms": 4905,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 22753,
+        "cache_write_tokens": 2609,
+        "output_tokens": 1060,
+        "estimated_cost_usd": 0.00108456
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9333,
+        "checks": {
+          "authority_boundary": {
+            "pass": 2,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 5193,
+        "latency_median_ms": 4767,
+        "latency_p95_ms": 7022,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 22753,
+        "cache_write_tokens": 2609,
+        "output_tokens": 1251,
+        "estimated_cost_usd": 0.00118005
+      }
+    },
+    "g15_memory_relevant": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 1,
+            "applicable": 1
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 6833,
+        "latency_median_ms": 6839,
+        "latency_p95_ms": 7318,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21449,
+        "cache_write_tokens": 1957,
+        "output_tokens": 1829,
+        "estimated_cost_usd": 0.00137451
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 7158,
+        "latency_median_ms": 7317,
+        "latency_p95_ms": 7754,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21449,
+        "cache_write_tokens": 1957,
+        "output_tokens": 1892,
+        "estimated_cost_usd": 0.00140602
+      }
+    },
+    "g16_memory_irrelevant": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 6071,
+        "latency_median_ms": 6070,
+        "latency_p95_ms": 6953,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21463,
+        "cache_write_tokens": 1964,
+        "output_tokens": 1412,
+        "estimated_cost_usd": 0.00116703
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 5884,
+        "latency_median_ms": 5745,
+        "latency_p95_ms": 6319,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21463,
+        "cache_write_tokens": 1964,
+        "output_tokens": 1457,
+        "estimated_cost_usd": 0.00118953
+      }
+    },
+    "g17_memory_contradicted": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 2,
+            "applicable": 2
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 7867,
+        "latency_median_ms": 8323,
+        "latency_p95_ms": 8892,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21471,
+        "cache_write_tokens": 1968,
+        "output_tokens": 2115,
+        "estimated_cost_usd": 0.00151911
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 1,
+            "applicable": 1
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 7618,
+        "latency_median_ms": 7272,
+        "latency_p95_ms": 8795,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21471,
+        "cache_write_tokens": 1968,
+        "output_tokens": 1959,
+        "estimated_cost_usd": 0.00144111
+      }
+    },
+    "g18_li_mixed_evidence": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9524,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 2,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8605,
+        "latency_median_ms": 8974,
+        "latency_p95_ms": 9554,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21743,
+        "cache_write_tokens": 2104,
+        "output_tokens": 2457,
+        "estimated_cost_usd": 0.00170983
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 11364,
+        "latency_median_ms": 10847,
+        "latency_p95_ms": 12571,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21743,
+        "cache_write_tokens": 2104,
+        "output_tokens": 3210,
+        "estimated_cost_usd": 0.00208633
+      }
+    },
+    "g19_current_over_history": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 7907,
+        "latency_median_ms": 7539,
+        "latency_p95_ms": 9299,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21441,
+        "cache_write_tokens": 1953,
+        "output_tokens": 2194,
+        "estimated_cost_usd": 0.00155644
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 7378,
+        "latency_median_ms": 7211,
+        "latency_p95_ms": 8146,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21441,
+        "cache_write_tokens": 1953,
+        "output_tokens": 1911,
+        "estimated_cost_usd": 0.00141493
+      }
+    },
+    "g20_history_visual_overridden": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9524,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 2,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 12998,
+        "latency_median_ms": 13413,
+        "latency_p95_ms": 14362,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21713,
+        "cache_write_tokens": 2089,
+        "output_tokens": 3404,
+        "estimated_cost_usd": 0.00218115
+      },
+      "current_turn_last": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 10410,
+        "latency_median_ms": 10862,
+        "latency_p95_ms": 11303,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21713,
+        "cache_write_tokens": 2089,
+        "output_tokens": 2717,
+        "estimated_cost_usd": 0.00183765
+      }
+    }
+  },
+  "combined_estimated_cost_usd": 0.07135452,
+  "cache_limit": "Repeated identical synthetic prompts may reuse provider cache; these totals do not estimate production cross-turn cache improvement."
+}

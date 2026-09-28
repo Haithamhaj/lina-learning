@@ -145,6 +145,8 @@ class _Provider:
         prior_method_relation: object | None = None,
         workspace_intent: object | None = None,
         workspace_visual_order: object | None = None,
+        canvas_brief: object | None = None,
+        canvas_change_intent: str | None = None,
     ) -> None:
         self.calls = 0
         self.payloads: list[dict[str, object]] = []
@@ -158,6 +160,8 @@ class _Provider:
         self.prior_method_relation = prior_method_relation
         self.workspace_intent = workspace_intent
         self.workspace_visual_order = workspace_visual_order
+        self.canvas_brief = canvas_brief
+        self.canvas_change_intent = canvas_change_intent
 
     def stream(self, route: ModelRoute, payload: dict[str, object]):
         del route
@@ -177,6 +181,8 @@ class _Provider:
             "candidate_metadata": metadata,
             "workspace_intent": self.workspace_intent,
             "workspace_visual_order": self.workspace_visual_order,
+            "canvas_brief": self.canvas_brief,
+            "canvas_change_intent": self.canvas_change_intent,
         }
         if self.suggested_actions is not None:
             output["suggested_actions"] = self.suggested_actions
@@ -200,6 +206,8 @@ def _runtime(
     prior_method_relation: object | None = None,
     workspace_intent: object | None = None,
     workspace_visual_order: object | None = None,
+    canvas_brief: object | None = None,
+    canvas_change_intent: str | None = None,
     immediate_exchange: ConversationExchangeContext | None = None,
     source_decision: SafetyDecision | None = None,
     context_subject: str | None = "MATH",
@@ -219,6 +227,8 @@ def _runtime(
         prior_method_relation=prior_method_relation,
         workspace_intent=workspace_intent,
         workspace_visual_order=workspace_visual_order,
+        canvas_brief=canvas_brief,
+        canvas_change_intent=canvas_change_intent,
     )
     gateway = ModelGateway(session, routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")}, providers={"fixture": provider})
     source_safety = None if source_decision is None else _SourceSafety(source_decision)
@@ -416,6 +426,48 @@ def test_valid_visual_order_is_hidden_admitted_metadata_with_no_execution_side_e
     non_message_rows = [row for row in session.rows if not isinstance(row, LearningMessage)]
     assert {type(row).__name__ for row in non_message_rows} == {"AIExecution", "LearningSegment"}
     assert [row.task for row in non_message_rows if type(row).__name__ == "AIExecution"] == [ModelTask.TUTOR.value]
+
+
+def test_new_canvas_visibility_repair_is_persisted_and_streamed_without_another_model_call() -> None:
+    brief = {
+        "version": "canvas-brief-v1",
+        "subject_key": "SCIENCE",
+        "objective": "Show the parts of a plant.",
+        "student_request": "Help me see the roots, stem, and leaves.",
+        "requested_representation": "A labeled plant diagram.",
+        "facts": ["Roots are usually below the soil.", "The stem grows above the soil."],
+        "relations": [],
+        "quantities": [],
+        "desired_student_action": "Identify the roots.",
+        "must_not_imply": [],
+        "source_references": [],
+        "locale": "ar",
+        "direction": "rtl",
+    }
+    runtime, _, provider, session = _runtime(
+        _decision(),
+        context_subject="SCIENCE",
+        text="الجذور تحت التربة. انظري إلى الرسم لترَي ترتيب الأجزاء.",
+        canvas_brief=brief,
+        canvas_change_intent="CREATE",
+    )
+
+    events = list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="SCIENCE", last_activity_at=None),
+        question="أين الجذور؟ أريني رسمًا.",
+    ))
+
+    turn = events[-1]
+    assert isinstance(turn, TutorTurn)
+    assert "الجذور تحت التربة" in turn.text
+    assert "أجهّز" in turn.text
+    assert "انظري إلى الرسم" not in turn.text
+    assert "".join(event.text for event in events if isinstance(event, TutorTextDelta)) == turn.text
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    assert tutor_message.content == turn.text
+    assert tutor_message.payload["agentic_canvas"]["status"] == "ADMITTED"
+    assert provider.calls == 1
+    assert len([row for row in session.rows if type(row).__name__ == "AIExecution"]) == 1
 
 
 @pytest.mark.parametrize("statement", ["Chemical reaction", "How a reaction happens", "Reactants are used in a reaction."])

@@ -23,6 +23,10 @@ export function isCompositionInFlight(view: CompositionView | null): boolean {
   return view?.run_status === "PENDING" || view?.run_status === "RUNNING";
 }
 
+export function isCompositionPreparing(view: CompositionView | null): boolean {
+  return isCompositionInFlight(view) || (view?.run_status === "COMPLETED" && !view.scene_ready);
+}
+
 export function isCompositionTerminal(view: CompositionView | null): boolean {
   return view !== null && terminal.has(view.run_status);
 }
@@ -31,7 +35,7 @@ export function canvasPresentationState(
   view: CompositionView | null,
   hasActiveScene: boolean,
 ): CanvasPresentationState {
-  const inFlight = isCompositionInFlight(view);
+  const inFlight = isCompositionPreparing(view);
   const showFailure = view !== null && failed.has(view.run_status);
   return {
     showWorkspace: hasActiveScene || inFlight || showFailure,

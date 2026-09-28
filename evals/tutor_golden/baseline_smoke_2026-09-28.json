@@ -1,0 +1,43 @@
+{
+  "kind": "synthetic_primary_tutor_smoke_baseline",
+  "date": "2026-09-28",
+  "source_head_before_local_changes": "8954e6333f2ee25019717ce52fa09525d5b547fc",
+  "live_app_revision_observed_read_only": "lina-app-00024-6xs",
+  "live_worker_revision_observed_read_only": "lina-worker-00019-fsc",
+  "case_id": "g04_did_not_help_change",
+  "case_pattern": "E30 successful method switch with missed visual; fully synthetic wording",
+  "model": "gpt-6-luna",
+  "prompt_ordering": "production_current",
+  "recent_exchange_count": 1,
+  "reasoning_effort_override": null,
+  "visual_need_signal": "fixture-provided STRONGLY_RECOMMENDED / PROCESS",
+  "schema": "tutor_turn_v12",
+  "production_request_sha256": "867ef164998756425716a92a9020efa62e3bff0fc8ffe933a758e24707bf168e",
+  "runs": [
+    {
+      "run": 1, "latency_ms": 12022, "input_tokens": 3, "cached_input_tokens": 7865,
+      "cache_write_tokens": 0, "output_tokens": 1109, "estimated_cost_usd": 0.00063345,
+      "rubric_passed": 9, "rubric_total": 9, "failed_checks": []
+    },
+    {
+      "run": 2, "latency_ms": 14617, "input_tokens": 3, "cached_input_tokens": 7865,
+      "cache_write_tokens": 0, "output_tokens": 1347, "estimated_cost_usd": 0.00075245,
+      "rubric_passed": 8, "rubric_total": 9, "failed_checks": ["authority_boundary"]
+    },
+    {
+      "run": 3, "latency_ms": 17303, "input_tokens": 3, "cached_input_tokens": 7865,
+      "cache_write_tokens": 0, "output_tokens": 1627, "estimated_cost_usd": 0.00089245,
+      "rubric_passed": 9, "rubric_total": 9, "failed_checks": []
+    }
+  ],
+  "summary": {
+    "all_checks_passed_runs": 2,
+    "total_runs": 3,
+    "mean_latency_ms": 14647,
+    "baseline_estimated_cost_usd": 0.00227835,
+    "earlier_provider_capture_probe_estimated_cost_usd": 0.003285825,
+    "total_live_evaluation_estimated_cost_usd": 0.005564175,
+    "review_finding": "One run told the learner to look at a drawing before Canvas delivery was confirmed. The other two used future language. All three changed method and requested a visual."
+  },
+  "limits": "One synthetic case only; cached input was warm from the earlier capture probe. This is harness proof, not a representative quality estimate for the 20-case set or browser-visible Canvas acceptance."
+}

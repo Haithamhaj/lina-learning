@@ -6,6 +6,8 @@ Operational runbook for the current Lina controlled live pilot.
 
 This file describes routine build, deploy, migration, verification, log inspection, and rollback procedures.
 
+The last read-only configuration check (2026-09-28) found App revision `lina-app-00024-6xs` and Worker revision `lina-worker-00019-fsc`, each at 100%; see `project-state/PROJECT_STATE.md` for the current operational snapshot before any later action.
+
 > **Security:** Never paste, commit, echo, or log raw secret values. Runtime secrets belong in GCP Secret Manager.
 
 ## 1. Environment
@@ -165,7 +167,7 @@ Expected architecture:
 - Worker JEV_CANVAS_REUSE_MODE=shadow
 - Worker JEV_SEGMENT_RUBRIC_MODE=shadow
 - JEV model configured
-- OPENROUTER_API_KEY comes from Secret Manager
+- TYPESAFE_API_KEY comes from Secret Manager for the direct JEV route; any retained OpenRouter key is a legacy/fallback secret, not the active decision provider
 - current approved JEV mode values preserved
 
 ## 11. App logs

@@ -1,0 +1,1894 @@
+{
+  "mode": "live",
+  "cases": [
+    {
+      "case_id": "g01_correct_independent",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "visual_choice": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 6,
+            "total": 6,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 11832,
+          "input_tokens": 3,
+          "output_tokens": 1016,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 2094,
+          "estimated_cost_usd": 0.00083105,
+          "output": {
+            "text": "صحيح يا نور! 4 × 7 يعني نجمع 4 سبع مرات: 4 + 4 + 4 + 4 + 4 + 4 + 4 = 28.",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+            "teaching_method_id": "SYMBOLIC_EXPLANATION",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "فهم الضرب بوصفه جمعًا متكررًا",
+              "unresolved_point": null,
+              "active_references": [],
+              "established_facts": [
+                "7 × 4 = 28",
+                "يمكن تمثيل 7 × 4 بجمع العدد 4 سبع مرات"
+              ],
+              "source_message_ids": [
+                "8e4df23c-5621-58e6-be8d-2c7941b4615a",
+                "d0bb10db-11d2-5859-b917-4ca47f1e6ab7",
+                "1442b5e7-924e-5c3d-9f0a-1e9a83fa6783"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": {
+              "version": "candidate-event-v1",
+              "candidates": [
+                {
+                  "event_type": "guided_success",
+                  "concept_ref": "multiplication as repeated addition",
+                  "summary": "وصلت نور إلى الناتج الصحيح 28 وبيّنت أنه ناتج جمع 4 سبع مرات، بعد توجيهها إلى تكوين سبع مجموعات من أربعة.",
+                  "signal": "إجابة صحيحة مع طريقة مناسبة بعد دعم خاص بالمهمة",
+                  "source_message_ids": [
+                    "8e4df23c-5621-58e6-be8d-2c7941b4615a"
+                  ],
+                  "school_or_extended": "school",
+                  "observed_student_outcome": "أجابت بأن 7 × 4 = 28، وشرحت أنها جمعت 4 سبع مرات.",
+                  "misconception_evidence": null
+                }
+              ]
+            },
+            "provisional_broad_subject": "MATH",
+            "segment_concept_ref": "الضرب بوصفه جمعًا متكررًا",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 11832,
+        "estimated_cost_usd": 0.00083105
+      }
+    },
+    {
+      "case_id": "g02_wrong_no_reasoning",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "strategy_fidelity": true,
+              "current_turn_understood": true,
+              "no_invented_reasoning": true,
+              "authority_boundary": true
+            },
+            "passed": 9,
+            "total": 9,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 9721,
+          "input_tokens": 3,
+          "output_tokens": 764,
+          "cached_input_tokens": 8110,
+          "cache_write_tokens": 0,
+          "estimated_cost_usd": 0.0004634,
+          "output": {
+            "text": "في ٧ مجموعات، بكل مجموعة ٤: ٤ + ٤ + ٤ + ٤ + ٤ + ٤ + ٤ = ٢٨. إذن ٧ × ٤ = ٢٨، وليس ٣٥. جرّبي الآن: كم يساوي ٦ × ٤؟",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_THEN_CHECK",
+            "teaching_method_id": "CONCRETE_EXAMPLE",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": null,
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": {
+              "version": "candidate-event-v1",
+              "candidates": [
+                {
+                  "event_type": "incorrect_attempt",
+                  "concept_ref": "multiplication",
+                  "summary": "أجابت ٣٥ عن مسألة ٧ × ٤.",
+                  "signal": "إجابة غير صحيحة",
+                  "source_message_ids": [
+                    "949cf6fb-3ca9-5b8f-bdfc-5dde0d06854d"
+                  ],
+                  "school_or_extended": "school",
+                  "observed_student_outcome": "أجابت ٣٥ بدلًا من ٢٨.",
+                  "misconception_evidence": null
+                }
+              ]
+            },
+            "provisional_broad_subject": "MATH",
+            "segment_concept_ref": "multiplication",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 9721,
+        "estimated_cost_usd": 0.0004634
+      }
+    },
+    {
+      "case_id": "g03_explicit_confusion",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "method_change": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "strategy_fidelity": true,
+              "current_turn_understood": true,
+              "authority_boundary": false
+            },
+            "passed": 8,
+            "total": 9,
+            "all_passed": false,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 21618,
+          "input_tokens": 3,
+          "output_tokens": 1951,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 2020,
+          "estimated_cost_usd": 0.0012893,
+          "output": {
+            "text": "خلّينا نغيّر الطريقة وننظر لما يحدث لجزيئات الماء نفسها. بخار الماء ماءٌ في صورة غاز، وجزيئاته متباعدة وتتحرك. عندما يبرد البخار، تفقد الجزيئات بعض الطاقة فتتباطأ، وتتقارب وتبقى معًا؛ وهكذا يتكوّن الماء السائل على شكل قطرات.\n\nمثلًا، قد تظهر قطرات على مرآة باردة بعد حمّام دافئ: بخار الماء في الهواء يبرد عندما يلامس المرآة، فيتكاثف. وفي السحب تحدث الفكرة نفسها عندما يبرد بخار الماء في الهواء.\n\nانظري إلى الرسم: ما الذي يساعد جزيئات البخار على تكوين القطرات؟",
+            "suggested_actions": [],
+            "guided_check": {
+              "prompt": "ما الذي يحدث لجزيئات بخار الماء عندما تبرد؟",
+              "choices": [
+                {
+                  "label": "تتباطأ وتتقارب، فتكوّن ماءً سائلًا"
+                },
+                {
+                  "label": "تبتعد أكثر وتتحول إلى هواء"
+                },
+                {
+                  "label": "تختفي ولا تبقى ماءً"
+                }
+              ]
+            },
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_THEN_CHECK",
+            "teaching_method_id": "VISUAL_REPRESENTATION",
+            "prior_method_relation": "DID_NOT_HELP",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "فهم كيف يتكاثف بخار الماء ليكوّن قطرات",
+              "unresolved_point": "كيف يؤدي تبريد جزيئات بخار الماء إلى تكوّن قطرات سائلة",
+              "active_references": [
+                "تكاثف بخار الماء",
+                "دورة الماء"
+              ],
+              "established_facts": [
+                "يتبخر الماء ثم يبرد ويتكاثف قبل أن يسقط مطرًا."
+              ],
+              "source_message_ids": [
+                "45779f4f-15c2-5ffc-bbf8-1804f537bd6e",
+                "c6d227b7-68ba-5144-9748-29aeaa30eebb",
+                "86106be2-2668-5eca-b7c8-797269df4668"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "SCIENCE",
+            "segment_concept_ref": "water condensation",
+            "workspace_intent": null,
+            "canvas_brief": {
+              "version": "canvas-brief-v1",
+              "subject_key": "SCIENCE",
+              "objective": "إظهار كيف يبرد بخار الماء، فتتباطأ جزيئاته وتتقارب مكوّنة قطرات ماء سائلة.",
+              "student_request": "أريد أن أفهم كيف يتحول بخار الماء إلى قطرات.",
+              "requested_representation": "رسم تعليمي من ثلاث مراحل يقرّب جزيئات الماء: بخار دافئ، ثم بخار يبرد، ثم قطرات ماء سائلة على سطح بارد.",
+              "facts": [
+                "بخار الماء ماء في الحالة الغازية، وجزيئاته متباعدة وتتحرك.",
+                "عندما يبرد بخار الماء، تفقد جزيئاته بعض الطاقة وتتباطأ.",
+                "عندما تتقارب جزيئات الماء وتبقى معًا، يتكوّن الماء السائل على هيئة قطرات.",
+                "قد تتكوّن قطرات على مرآة أو زجاج بارد عندما يلامسه هواء دافئ رطب."
+              ],
+              "relations": [
+                {
+                  "id": "cooling_slows_particles",
+                  "source_id": "warm_vapor",
+                  "target_id": "cool_vapor",
+                  "meaning": "عند التبريد تفقد جزيئات الماء بعض الطاقة وتتباطأ."
+                },
+                {
+                  "id": "particles_form_drops",
+                  "source_id": "cool_vapor",
+                  "target_id": "liquid_droplets",
+                  "meaning": "تتقارب جزيئات الماء وتبقى معًا، فتتكوّن قطرات سائلة."
+                }
+              ],
+              "quantities": [],
+              "desired_student_action": "تتبّع المراحل ولاحظ ما يحدث للجزيئات عند التبريد.",
+              "must_not_imply": [
+                "لا تُظهر بخار الماء على أنه سحابة بيضاء مرئية من قطرات قبل التكاثف.",
+                "لا توحِ بأن الماء يختفي أو يتكوّن من لا شيء.",
+                "لا توحِ بأن كل بخار الماء يتحول فورًا إلى قطرات."
+              ],
+              "source_references": [],
+              "locale": "ar",
+              "direction": "rtl"
+            },
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": "CREATE",
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 0,
+        "mean_latency_ms": 21618,
+        "estimated_cost_usd": 0.0012893
+      }
+    },
+    {
+      "case_id": "g04_did_not_help_change",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "method_change": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "strategy_fidelity": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 9,
+            "total": 9,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 17266,
+          "input_tokens": 3,
+          "output_tokens": 1471,
+          "cached_input_tokens": 8120,
+          "cache_write_tokens": 0,
+          "estimated_cost_usd": 0.000817,
+          "output": {
+            "text": "خلّينا نجرّبها كأننا نتتبّع مسار شعاع واحد: الشمس تُصدر الضوء، والشعاع يعبر الفضاء حتى يصل إلى الأرض. الفضاء شبه فارغ، لكن الضوء لا يحتاج إلى هواء كي ينتقل فيه.\n\nأي وصف صحيح لرحلة الضوء؟",
+            "suggested_actions": [],
+            "guided_check": {
+              "prompt": "كيف يستطيع ضوء الشمس أن يعبر الفضاء؟",
+              "choices": [
+                {
+                  "label": "ينتقل عبر الفضاء، ولا يحتاج إلى هواء."
+                },
+                {
+                  "label": "يحتاج إلى الهواء كي يدفعه من الشمس إلى الأرض."
+                }
+              ]
+            },
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_THEN_CHECK",
+            "teaching_method_id": "VISUAL_REPRESENTATION",
+            "prior_method_relation": "DID_NOT_HELP",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "فهم رحلة ضوء الشمس من الشمس إلى الأرض",
+              "unresolved_point": "كيف ينتقل الضوء عبر الفضاء",
+              "active_references": [
+                "ضوء الشمس",
+                "الفضاء",
+                "الأرض"
+              ],
+              "established_facts": [
+                "سبق أن ذُكر أن الضوء ينطلق من الشمس ويعبر الفضاء حتى يصل إلى الأرض."
+              ],
+              "source_message_ids": [
+                "42921952-4136-520a-b025-4ef08d0c255d",
+                "d274af66-9ff6-533c-8300-b79a4589690e",
+                "09590cf9-b83e-53b1-a264-0b2396ccaf98"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "SCIENCE",
+            "segment_concept_ref": "انتقال الضوء عبر الفضاء",
+            "workspace_intent": null,
+            "canvas_brief": {
+              "version": "canvas-brief-v1",
+              "subject_key": "SCIENCE",
+              "objective": "توضيح مسار عينة من ضوء الشمس عبر الفضاء حتى الأرض، وأن الضوء لا يحتاج إلى الهواء لينتقل.",
+              "student_request": "أريني طريقة أخرى لفهم رحلة الضوء من الشمس إلى الأرض.",
+              "requested_representation": "رسم بصري بسيط لمسار شعاع ضوء من الشمس عبر الفضاء إلى الأرض",
+              "facts": [
+                "الشمس مصدر الضوء المرسوم.",
+                "الشعاع المرسوم مثال لمسار الضوء عبر الفضاء.",
+                "يصل الضوء إلى الأرض.",
+                "الفضاء شبه فارغ، والضوء لا يحتاج إلى الهواء كي ينتقل."
+              ],
+              "relations": [
+                {
+                  "id": "emits",
+                  "source_id": "sun",
+                  "target_id": "light_ray",
+                  "meaning": "الشمس تصدر الضوء"
+                },
+                {
+                  "id": "travels",
+                  "source_id": "light_ray",
+                  "target_id": "earth",
+                  "meaning": "يمر شعاع الضوء عبر الفضاء حتى يصل إلى الأرض"
+                }
+              ],
+              "quantities": [],
+              "desired_student_action": "تتبّع مسار الشعاع من الشمس إلى الأرض",
+              "must_not_imply": [
+                "أن الضوء يحتاج إلى الهواء لينتقل.",
+                "أن الشعاع المرسوم هو المسار الوحيد الذي يسلكه ضوء الشمس."
+              ],
+              "source_references": [],
+              "locale": "ar",
+              "direction": "rtl"
+            },
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": "CREATE",
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 17266,
+        "estimated_cost_usd": 0.000817
+      }
+    },
+    {
+      "case_id": "g05_clarification_not_failure",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 7,
+            "total": 7,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 8828,
+          "input_tokens": 3,
+          "output_tokens": 763,
+          "cached_input_tokens": 8110,
+          "cache_write_tokens": 0,
+          "estimated_cost_usd": 0.0004629,
+          "output": {
+            "text": "في 80 عندك 8 عشرات و0 آحاد. خذي عشرة واحدة من العشرات وحوّليها إلى 10 آحاد؛ فيصير عندك 7 عشرات و10 آحاد. الآن اطرحي الآحاد: 10 − 3 = 7. بقيت 7 عشرات؛ كم يبقى إذا طرحنا منها 5 عشرات؟",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+            "teaching_method_id": "DECOMPOSITION",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "طرح عدد من عدد آخر مع إعادة التجميع",
+              "unresolved_point": "إكمال طرح العشرات بعد طرح الآحاد",
+              "active_references": [
+                "80 − 53"
+              ],
+              "established_facts": [
+                "80 = 8 عشرات و0 آحاد",
+                "إعادة تجميع عشرة واحدة تجعل 80 = 7 عشرات و10 آحاد",
+                "10 − 3 = 7 آحاد"
+              ],
+              "source_message_ids": [
+                "3d2179dd-215e-5940-aab1-2333aef53d44",
+                "98e51ddf-e479-5ad2-a3ad-ac75bf439839",
+                "25807bf8-d920-5fc7-aab0-d7dd09da6d69"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "MATH",
+            "segment_concept_ref": "الطرح مع إعادة التجميع",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 8828,
+        "estimated_cost_usd": 0.0004629
+      }
+    },
+    {
+      "case_id": "g06_explain_then_check",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "strategy_choice": true,
+              "useful_next_action": true,
+              "strategy_fidelity": true,
+              "current_turn_understood": true,
+              "authority_boundary": false
+            },
+            "passed": 6,
+            "total": 7,
+            "all_passed": false,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 12671,
+          "input_tokens": 3,
+          "output_tokens": 1149,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 1941,
+          "estimated_cost_usd": 0.000878425,
+          "output": {
+            "text": "تخيّلي أن لدينا شكلين متساويين تمامًا. نقسم الأول إلى جزأين متساويين، فنأخذ جزءًا واحدًا: 1/2. ونقسم الثاني إلى أربعة أجزاء متساوية، فنأخذ جزءًا واحدًا: 1/4. عندما يكون الشكل كله متساويًا، تكون القطعة أكبر إذا قسمناه إلى أجزاء أقل. لذلك 1/2 أكبر من 1/4.\n\nانظري إلى الجزأين المظللين في الرسم، ثم اختاري: أي كسر أكبر، 1/3 أم 1/5؟",
+            "suggested_actions": [],
+            "guided_check": {
+              "prompt": "أي كسر أكبر؟",
+              "choices": [
+                {
+                  "label": "1/3"
+                },
+                {
+                  "label": "1/5"
+                },
+                {
+                  "label": "هما متساويان"
+                }
+              ]
+            },
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_THEN_CHECK",
+            "teaching_method_id": "VISUAL_REPRESENTATION",
+            "prior_method_relation": null,
+            "segment_relation": "NEW_SEGMENT",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "فهم مقارنة كسرين لهما البسط نفسه",
+              "unresolved_point": "تحديد أيهما أكبر: 1/3 أم 1/5",
+              "active_references": [
+                "1/2",
+                "1/4",
+                "1/3",
+                "1/5"
+              ],
+              "established_facts": [
+                "عند مقارنة كسرين وحديان من الكل نفسه، تكون القطعة أكبر عندما يُقسّم الكل إلى أجزاء أقل."
+              ],
+              "source_message_ids": [
+                "848b7340-1ce7-5010-816c-9f55da35b3af"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "MATH",
+            "segment_concept_ref": "مقارنة الكسور",
+            "workspace_intent": null,
+            "canvas_brief": {
+              "version": "canvas-brief-v1",
+              "subject_key": "MATH",
+              "objective": "إظهار ومقارنة كسرَي وحدة من شكلين متساويين في الحجم.",
+              "student_request": "وضّح بصريًا لماذا 1/2 أكبر من 1/4.",
+              "requested_representation": "شريطان متساويان في الطول، أحدهما مقسم إلى جزأين متساويين مع تظليل جزء، والآخر إلى أربعة أجزاء متساوية مع تظليل جزء.",
+              "facts": [
+                "الشريطان يمثلان كلين متساويين في الحجم.",
+                "في الشريط الأول جزء واحد مظلل من جزأين متساويين: 1/2.",
+                "في الشريط الثاني جزء واحد مظلل من أربعة أجزاء متساوية: 1/4."
+              ],
+              "relations": [
+                {
+                  "id": "same_whole",
+                  "source_id": "first_bar",
+                  "target_id": "second_bar",
+                  "meaning": "الشريطان متساويان في حجم الكل."
+                },
+                {
+                  "id": "compare_parts",
+                  "source_id": "first_shaded_part",
+                  "target_id": "second_shaded_part",
+                  "meaning": "الجزء المظلل في 1/2 أكبر من الجزء المظلل في 1/4."
+                }
+              ],
+              "quantities": [],
+              "desired_student_action": "قارن حجمي الجزأين المظَلَّلين.",
+              "must_not_imply": [
+                "لا تقارن شكلين كليهما مختلفا الحجم.",
+                "لا تظلل أكثر من جزء واحد في أي شريط."
+              ],
+              "source_references": [],
+              "locale": "ar",
+              "direction": "rtl"
+            },
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": "CREATE",
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 0,
+        "mean_latency_ms": 12671,
+        "estimated_cost_usd": 0.000878425
+      }
+    },
+    {
+      "case_id": "g07_unfinished_arabic",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "strategy_fidelity": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 8,
+            "total": 8,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 7744,
+          "input_tokens": 3,
+          "output_tokens": 770,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 2226,
+          "estimated_cost_usd": 0.00072455,
+          "output": {
+            "text": "اسألي بعد الفعل: «رسمت مريم ماذا؟» الجواب: «زهرة». إذن «زهرة» هي المفعول به؛ لأنها الشيء الذي وقع عليه فعل الرسم. وللتأكد، اسألي أيضًا: «من رسم؟» الجواب «مريم»، فهي الفاعل.",
+            "suggested_actions": [],
+            "guided_check": {
+              "prompt": "في جملة «أكل خالد التفاحة»، ما المفعول به؟",
+              "choices": [
+                {
+                  "label": "خالد"
+                },
+                {
+                  "label": "التفاحة"
+                }
+              ]
+            },
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_THEN_CHECK",
+            "teaching_method_id": "WORKED_EXAMPLE",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "تحديد الفاعل والمفعول به في جملة قصيرة",
+              "unresolved_point": "تطبيق سؤال ماذا بعد الفعل على جملة جديدة",
+              "active_references": [],
+              "established_facts": [
+                "الفاعل يقوم بالفعل",
+                "المفعول به يقع عليه الفعل",
+                "نسأل بعد الفعل: ماذا؟ أو من؟ لتحديد ما وقع عليه الفعل"
+              ],
+              "source_message_ids": [
+                "a12601b1-266f-5c46-9674-ed8c57a6226a",
+                "70c1765d-c60b-58e4-9239-bc81305035d8"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "LANGUAGE_ARTS",
+            "segment_concept_ref": "الفاعل والمفعول به",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 7744,
+        "estimated_cost_usd": 0.00072455
+      }
+    },
+    {
+      "case_id": "g08_unfinished_science",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "useful_next_action": true,
+              "strategy_fidelity": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 7,
+            "total": 7,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 7537,
+          "input_tokens": 3,
+          "output_tokens": 626,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 2128,
+          "estimated_cost_usd": 0.0006403,
+          "output": {
+            "text": "بعد الماء ننتقل إلى الضوء: تستخدم النبتة ضوء الشمس، مع الماء والهواء، لتصنع غذاءها في أوراقها. والهواء يزوّدها بغاز تحتاجه لصنع الغذاء.\n\nسؤال سريع: أيّ شيء يساعد النبتة على صنع غذائها؟",
+            "suggested_actions": [],
+            "guided_check": {
+              "prompt": "أيّ شيء يساعد النبتة على صنع غذائها؟",
+              "choices": [
+                {
+                  "label": "ضوء الشمس"
+                },
+                {
+                  "label": "التربة"
+                }
+              ]
+            },
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_THEN_CHECK",
+            "teaching_method_id": "DECOMPOSITION",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "فهم حاجات النبتة",
+              "unresolved_point": "شرح دور الهواء بعد الضوء",
+              "active_references": [],
+              "established_facts": [
+                "الماء من حاجات النبتة",
+                "الضوء يساعد النبتة على صنع غذائها مع الماء والهواء"
+              ],
+              "source_message_ids": [
+                "6b2dda88-8121-5f47-805e-53f759b32ef1",
+                "b8ec49a5-bf10-5e16-b13d-b67a11f4fccb"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "SCIENCE",
+            "segment_concept_ref": "احتياجات النبات",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 7537,
+        "estimated_cost_usd": 0.0006403
+      }
+    },
+    {
+      "case_id": "g09_science_process_visual",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "strategy_fidelity": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 7,
+            "total": 7,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 13483,
+          "input_tokens": 3,
+          "output_tokens": 1278,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 1941,
+          "estimated_cost_usd": 0.000942925,
+          "output": {
+            "text": "تخيّلي أن للشمس دورًا في تشغيل دورة الماء: تسخّن ماء البحر، فيتحول بعضه إلى بخار يصعد في الهواء. عندما يبرد البخار، يتكاثف ويكوّن قطرات صغيرة تتجمع في السحب. ثم تسقط القطرات مطرًا، ويعود الماء إلى البحر عبر الأنهار والجريان على الأرض. أجهّز لك رسمًا يوضّح المراحل على شكل دورة.",
+            "suggested_actions": [],
+            "guided_check": {
+              "prompt": "ما الذي يساعد ماء البحر على التحول إلى بخار يصعد؟",
+              "choices": [
+                {
+                  "label": "حرارة الشمس"
+                },
+                {
+                  "label": "برودة الهواء"
+                },
+                {
+                  "label": "قطرات المطر"
+                }
+              ]
+            },
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_THEN_CHECK",
+            "teaching_method_id": "VISUAL_REPRESENTATION",
+            "prior_method_relation": null,
+            "segment_relation": "NEW_SEGMENT",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "فهم مراحل دورة الماء من البحر إلى السحب ثم عودته مطرًا",
+              "unresolved_point": "ربط المراحل وترتيبها في دورة",
+              "active_references": [],
+              "established_facts": [
+                "تسخّن الشمس ماء البحر فيتبخر بعضه ويصعد",
+                "يبرد بخار الماء ويتكاثف مكوّنًا قطرات في السحب",
+                "يسقط الماء مطرًا ويعود إلى البحر"
+              ],
+              "source_message_ids": [
+                "ccfc6fa1-1593-53f9-b0c6-8b874658ced6"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "SCIENCE",
+            "segment_concept_ref": "دورة الماء",
+            "workspace_intent": null,
+            "canvas_brief": {
+              "version": "canvas-brief-v1",
+              "subject_key": "SCIENCE",
+              "objective": "إظهار دورة الماء من ماء البحر إلى السحب ثم عودته مطرًا",
+              "student_request": "رسم بصري بسيط يساعد على تخيّل مراحل انتقال الماء من البحر إلى السحاب ثم عودته مطرًا",
+              "requested_representation": "مخطط دائري واضح لدورة الماء، بعناوين عربية وأسهم توضّح اتجاه المراحل",
+              "facts": [
+                "تسخّن الشمس ماء البحر فيتبخر بعضه ويصعد بخار الماء",
+                "يبرد بخار الماء ويتكاثف إلى قطرات صغيرة تكوّن السحب",
+                "تسقط القطرات مطرًا",
+                "يعود الماء إلى البحر عبر الجريان على الأرض والأنهار"
+              ],
+              "relations": [
+                {
+                  "id": "evaporation",
+                  "source_id": "sea_water",
+                  "target_id": "water_vapor",
+                  "meaning": "تسخّن الشمس ماء البحر فيتبخر بعضه ويصعد"
+                },
+                {
+                  "id": "condensation",
+                  "source_id": "water_vapor",
+                  "target_id": "clouds",
+                  "meaning": "يبرد بخار الماء ويتكاثف إلى قطرات تكوّن السحب"
+                },
+                {
+                  "id": "precipitation",
+                  "source_id": "clouds",
+                  "target_id": "rain",
+                  "meaning": "تسقط قطرات الماء من السحب مطرًا"
+                },
+                {
+                  "id": "collection",
+                  "source_id": "rain",
+                  "target_id": "sea_water",
+                  "meaning": "يعود الماء إلى البحر عبر الجريان والأنهار"
+                }
+              ],
+              "quantities": [],
+              "desired_student_action": "تتبّع الأسهم واذكر المراحل بالترتيب من البحر إلى المطر ثم العودة إلى البحر",
+              "must_not_imply": [
+                "أن كل ماء المطر يعود مباشرة إلى البحر؛ فقد يجري عبر الأرض والأنهار",
+                "أن السحب تتكوّن من ماء البحر وحده"
+              ],
+              "source_references": [],
+              "locale": "ar",
+              "direction": "rtl"
+            },
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": "CREATE",
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 13483,
+        "estimated_cost_usd": 0.000942925
+      }
+    },
+    {
+      "case_id": "g10_science_structure_visual",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "visual_choice": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 5,
+            "total": 5,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 11549,
+          "input_tokens": 3,
+          "output_tokens": 1216,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 1950,
+          "estimated_cost_usd": 0.00091305,
+          "output": {
+            "text": "ترتيب أجزاء النبتة من أسفل إلى أعلى: الجذور تحت التربة، ثم الساق يصعد فوقها، والأوراق تتصل بالساق. سأجهّز لكِ رسماً يوضّح هذا الترتيب.",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+            "teaching_method_id": "VISUAL_REPRESENTATION",
+            "prior_method_relation": null,
+            "segment_relation": "NEW_SEGMENT",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "رؤية ترتيب الجذور والساق والأوراق في النبتة",
+              "unresolved_point": null,
+              "active_references": [],
+              "established_facts": [
+                "الجذور تحت التربة",
+                "الساق يصعد فوق التربة",
+                "الأوراق تتصل بالساق"
+              ],
+              "source_message_ids": [
+                "2fee95c4-c544-5b2c-a7e4-75e70d9d7c49"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "SCIENCE",
+            "segment_concept_ref": "أجزاء النبات",
+            "workspace_intent": null,
+            "canvas_brief": {
+              "version": "canvas-brief-v1",
+              "subject_key": "SCIENCE",
+              "objective": "إظهار مواضع الجذور والساق والأوراق وترتيبها بالنسبة إلى التربة.",
+              "student_request": "أريد أن أرى ترتيب الجذور والساق والأوراق في النبتة.",
+              "requested_representation": "رسم تخطيطي جانبي واضح لنبتة واحدة مع تسميات عربية.",
+              "facts": [
+                "الجذور تحت سطح التربة.",
+                "الساق يصعد من منطقة الجذور إلى أعلى التربة.",
+                "الأوراق متصلة بالساق فوق سطح التربة."
+              ],
+              "relations": [
+                {
+                  "id": "roots-below-soil",
+                  "source_id": "roots",
+                  "target_id": "soil",
+                  "meaning": "الجذور تحت التربة"
+                },
+                {
+                  "id": "stem-above-soil",
+                  "source_id": "stem",
+                  "target_id": "soil",
+                  "meaning": "الساق يصعد فوق التربة من منطقة الجذور"
+                },
+                {
+                  "id": "leaves-on-stem",
+                  "source_id": "leaves",
+                  "target_id": "stem",
+                  "meaning": "الأوراق متصلة بالساق"
+                }
+              ],
+              "quantities": [],
+              "desired_student_action": "تتبّع الأجزاء من أسفل إلى أعلى: الجذور ثم الساق والأوراق.",
+              "must_not_imply": [
+                "لا تُظهر الجذور فوق سطح التربة.",
+                "لا تُظهر الأوراق كأنها جزء منفصل غير متصل بالساق."
+              ],
+              "source_references": [],
+              "locale": "ar",
+              "direction": "rtl"
+            },
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": "CREATE",
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 11549,
+        "estimated_cost_usd": 0.00091305
+      }
+    },
+    {
+      "case_id": "g11_visual_not_needed",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "visual_choice": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 5,
+            "total": 5,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 3717,
+          "input_tokens": 3,
+          "output_tokens": 244,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 1931,
+          "estimated_cost_usd": 0.000424675,
+          "output": {
+            "text": "17",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": null,
+            "teaching_strategy": null,
+            "teaching_method_id": null,
+            "prior_method_relation": null,
+            "segment_relation": "NEW_SEGMENT",
+            "structured_segment_state": null,
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "MATH",
+            "segment_concept_ref": "addition",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 3717,
+        "estimated_cost_usd": 0.000424675
+      }
+    },
+    {
+      "case_id": "g12_explicit_visual_request",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "visual_choice": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 5,
+            "total": 5,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 7136,
+          "input_tokens": 3,
+          "output_tokens": 674,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 1938,
+          "estimated_cost_usd": 0.00064055,
+          "output": {
+            "text": "نعم، سأرسم مستطيلاً مقسّماً إلى أربعة أجزاء متساوية، وأظلّل جزءاً واحداً. هذا يمثّل جزءاً واحداً من أربعة: ١⁄٤.",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+            "teaching_method_id": "VISUAL_REPRESENTATION",
+            "prior_method_relation": null,
+            "segment_relation": "UNCERTAIN",
+            "structured_segment_state": null,
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "MATH",
+            "segment_concept_ref": "fractions as parts of a whole",
+            "workspace_intent": null,
+            "canvas_brief": {
+              "version": "canvas-brief-v1",
+              "subject_key": "MATH",
+              "objective": "Show that a whole rectangle divided into four equal parts has one part shaded, representing one fourth.",
+              "student_request": "Draw a rectangle divided into four equal parts and shade one part.",
+              "requested_representation": "A clear rectangle partitioned into four equal-sized regions, with exactly one region shaded.",
+              "facts": [
+                "There is one whole rectangle.",
+                "The rectangle is divided into four equal parts.",
+                "Exactly one of the four parts is shaded."
+              ],
+              "relations": [
+                {
+                  "id": "parts_make_whole",
+                  "source_id": "four_equal_parts",
+                  "target_id": "whole_rectangle",
+                  "meaning": "The four equal parts together make the whole rectangle."
+                },
+                {
+                  "id": "shaded_part_is_one_of_four",
+                  "source_id": "one_shaded_part",
+                  "target_id": "four_equal_parts",
+                  "meaning": "Exactly one of the four equal parts is shaded."
+                }
+              ],
+              "quantities": [],
+              "desired_student_action": "Notice that one out of the four equal parts is shaded.",
+              "must_not_imply": [
+                "Do not shade more or less than one part.",
+                "Do not make the four parts unequal."
+              ],
+              "source_references": [],
+              "locale": "ar",
+              "direction": "rtl"
+            },
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": "CREATE",
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 7136,
+        "estimated_cost_usd": 0.00064055
+      }
+    },
+    {
+      "case_id": "g13_canvas_ready_continue",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "strategy_fidelity": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 8,
+            "total": 8,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 15453,
+          "input_tokens": 3,
+          "output_tokens": 1485,
+          "cached_input_tokens": 8905,
+          "cache_write_tokens": 0,
+          "estimated_cost_usd": 0.00083185,
+          "output": {
+            "text": "بعد اليرقة تأتي الشرنقة. داخلها تتغيّر اليرقة، ثم تخرج فراشة بالغة. انظري إلى الرسم: ما المرحلة التي تأتي بعد الشرنقة؟",
+            "suggested_actions": [],
+            "guided_check": {
+              "prompt": "ما المرحلة التي تأتي بعد الشرنقة؟",
+              "choices": [
+                {
+                  "label": "الفراشة البالغة"
+                },
+                {
+                  "label": "البيضة"
+                },
+                {
+                  "label": "اليرقة"
+                }
+              ]
+            },
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_THEN_CHECK",
+            "teaching_method_id": "VISUAL_REPRESENTATION",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "ترتيب مراحل دورة حياة الفراشة",
+              "unresolved_point": "المرحلة التي تلي الشرنقة",
+              "active_references": [],
+              "established_facts": [
+                "اليرقة مرحلة بعد البيضة",
+                "الشرنقة تأتي بعد اليرقة",
+                "الفراشة البالغة تخرج بعد الشرنقة"
+              ],
+              "source_message_ids": [
+                "8ad81614-11e6-569a-905d-583160411541",
+                "f668571a-346c-58f5-a7b3-4be685a1f990"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "SCIENCE",
+            "segment_concept_ref": "دورة حياة الفراشة",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 15453,
+        "estimated_cost_usd": 0.00083185
+      }
+    },
+    {
+      "case_id": "g14_canvas_pending_no_duplicate",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "visual_choice": true,
+              "current_over_history": true,
+              "authority_boundary": true
+            },
+            "passed": 5,
+            "total": 5,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 5992,
+          "input_tokens": 3,
+          "output_tokens": 472,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 2609,
+          "estimated_cost_usd": 0.000623425,
+          "output": {
+            "text": "لا أستطيع تأكيد ظهوره عندك بعد؛ الرسم ما زال قيد التجهيز. عندما يكتمل، سيظهر لك.",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": null,
+            "teaching_strategy": null,
+            "teaching_method_id": null,
+            "prior_method_relation": null,
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "رؤية مراحل نمو النبتة",
+              "unresolved_point": "الرسم ما زال قيد التجهيز",
+              "active_references": [
+                "مراحل نمو النبتة"
+              ],
+              "established_facts": [
+                "طلبت نور عرض مراحل نمو النبتة بالرسم."
+              ],
+              "source_message_ids": [
+                "a1c7dc0c-9701-5917-921e-f19f27492b49",
+                "beced6c7-0bdb-5ec9-8e20-6757c35c6e29"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "SCIENCE",
+            "segment_concept_ref": "نمو النبتة",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 5992,
+        "estimated_cost_usd": 0.000623425
+      }
+    },
+    {
+      "case_id": "g15_memory_relevant",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "visual_choice": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 5,
+            "total": 5,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 5391,
+          "input_tokens": 3,
+          "output_tokens": 455,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 1957,
+          "estimated_cost_usd": 0.000533425,
+          "output": {
+            "text": "تحتاج النبتة إلى الضوء لأنه يزوّدها بالطاقة لتصنع غذاءها بنفسها. تستخدم الضوء مع الماء والهواء لصنع سكر يساعدها على النمو، وتُطلق الأكسجين أيضًا. هذه العملية اسمها البناء الضوئي. حتى نبتة النعناع تحتاج إلى ضوء كافٍ لتنمو.",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+            "teaching_method_id": "CONCRETE_EXAMPLE",
+            "prior_method_relation": null,
+            "segment_relation": "NEW_SEGMENT",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "فهم أهمية الضوء للنبات والبناء الضوئي",
+              "unresolved_point": null,
+              "active_references": [],
+              "established_facts": [
+                "يستخدم النبات الضوء لصنع غذائه بعملية البناء الضوئي"
+              ],
+              "source_message_ids": [
+                "ef488b71-b79c-5181-813f-4ea5fb2887cf"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "SCIENCE",
+            "segment_concept_ref": "البناء الضوئي",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 5391,
+        "estimated_cost_usd": 0.000533425
+      }
+    },
+    {
+      "case_id": "g16_memory_irrelevant",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "visual_choice": true,
+              "current_turn_understood": true,
+              "current_over_history": true,
+              "authority_boundary": true
+            },
+            "passed": 6,
+            "total": 6,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 4984,
+          "input_tokens": 3,
+          "output_tokens": 401,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 1964,
+          "estimated_cost_usd": 0.0005073,
+          "output": {
+            "text": "طريقة سريعة: خذي 1 من 8 وأضيفيه إلى 9، فيصير 10. يبقى من 8 عدد 7، إذن 10 + 7 = 17.\nالناتج: 17",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+            "teaching_method_id": "DECOMPOSITION",
+            "prior_method_relation": null,
+            "segment_relation": "NEW_SEGMENT",
+            "structured_segment_state": null,
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "MATH",
+            "segment_concept_ref": "mental addition using make ten",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 4984,
+        "estimated_cost_usd": 0.0005073
+      }
+    },
+    {
+      "case_id": "g17_memory_contradicted",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "visual_choice": true,
+              "current_turn_understood": true,
+              "current_over_history": true,
+              "authority_boundary": true
+            },
+            "passed": 6,
+            "total": 6,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 9313,
+          "input_tokens": 3,
+          "output_tokens": 859,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 1968,
+          "estimated_cost_usd": 0.0007368,
+          "output": {
+            "text": "تخيّلي أن مجموعة من النمل وجدت قطعة طعام كبيرة. قد تحملها عدة نملات معًا إلى العش، وتتبع نملات أخرى أثرًا كيميائيًا يبيّن الطريق إلى الطعام. كل نملة تساهم بطريقة، فيصبح إنجاز المهمة أسهل من أن تحاول نملة واحدة حملها وحدها. هذا مثال على التعاون: أن يعمل أفراد المجموعة معًا لتحقيق هدف مشترك.",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "EXPLORE",
+            "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+            "teaching_method_id": "CONCRETE_EXAMPLE",
+            "prior_method_relation": null,
+            "segment_relation": "NEW_SEGMENT",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "التعلّم عن التعاون من خلال مثال النمل",
+              "unresolved_point": null,
+              "active_references": [
+                "النمل يتعاون في نقل الطعام إلى العش"
+              ],
+              "established_facts": [
+                "تعاون عدة نملات قد يجعل نقل الطعام أسهل"
+              ],
+              "source_message_ids": [
+                "035c4590-8569-57c3-b90f-80991b0795d2"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "SCIENCE",
+            "segment_concept_ref": "التعاون عند النمل",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 9313,
+        "estimated_cost_usd": 0.0007368
+      }
+    },
+    {
+      "case_id": "g18_li_mixed_evidence",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "visual_choice": true,
+              "current_turn_understood": true,
+              "current_over_history": true,
+              "authority_boundary": true
+            },
+            "passed": 7,
+            "total": 7,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 10586,
+          "input_tokens": 3,
+          "output_tokens": 992,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 2104,
+          "estimated_cost_usd": 0.0008203,
+          "output": {
+            "text": "نعم، صحيح: 6 × 5 = 30. إذا تحبين تكملي، ما ناتج 6 × 7؟",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "INDEPENDENT_CHECK",
+            "teaching_method_id": "SOCRATIC_FOCUS",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": null,
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": {
+              "version": "candidate-event-v1",
+              "candidates": [
+                {
+                  "event_type": "independent_success",
+                  "concept_ref": "multiplication facts",
+                  "summary": "أوجدت نور حاصل 6 × 5 بشكل صحيح: 30.",
+                  "signal": "correct_product",
+                  "source_message_ids": [
+                    "3b64f241-d2d6-540c-966a-3ad4b99ebb97"
+                  ],
+                  "school_or_extended": "school",
+                  "observed_student_outcome": "أجابت بشكل صحيح أن 6 × 5 = 30.",
+                  "misconception_evidence": null
+                }
+              ]
+            },
+            "provisional_broad_subject": "MATH",
+            "segment_concept_ref": "multiplication facts",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 10586,
+        "estimated_cost_usd": 0.0008203
+      }
+    },
+    {
+      "case_id": "g19_current_over_history",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "visual_choice": true,
+              "current_turn_understood": true,
+              "current_over_history": true,
+              "authority_boundary": true
+            },
+            "passed": 6,
+            "total": 6,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 7977,
+          "input_tokens": 3,
+          "output_tokens": 633,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 1953,
+          "estimated_cost_usd": 0.000621925,
+          "output": {
+            "text": "نعم، صحيحة: 46 + 27 = 73.",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": null,
+            "teaching_strategy": null,
+            "teaching_method_id": null,
+            "prior_method_relation": null,
+            "segment_relation": "UNCERTAIN",
+            "structured_segment_state": null,
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": {
+              "version": "candidate-event-v1",
+              "candidates": [
+                {
+                  "event_type": "independent_success",
+                  "concept_ref": "جمع عددين من رقمين",
+                  "summary": "ذكرت نور أنها حسبت 46 + 27 وحدها وأجابت 73، وهي إجابة صحيحة.",
+                  "signal": "correct_answer_reported_as_independent",
+                  "source_message_ids": [
+                    "17b0a4c8-b6ed-5622-9648-8cad5d7be4b3"
+                  ],
+                  "school_or_extended": "school",
+                  "observed_student_outcome": "الإجابة صحيحة",
+                  "misconception_evidence": null
+                }
+              ]
+            },
+            "provisional_broad_subject": "MATH",
+            "segment_concept_ref": "جمع عددين من رقمين",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 7977,
+        "estimated_cost_usd": 0.000621925
+      }
+    },
+    {
+      "case_id": "g20_history_visual_overridden",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "visual_choice": true,
+              "current_turn_understood": true,
+              "current_over_history": true,
+              "authority_boundary": true
+            },
+            "passed": 7,
+            "total": 7,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 16393,
+          "input_tokens": 3,
+          "output_tokens": 1205,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 2089,
+          "estimated_cost_usd": 0.000924925,
+          "output": {
+            "text": "ينتقل الصوت في الهواء لأن الصوت يبدأ باهتزاز، مثل اهتزاز الأحبال الصوتية عندما نتكلم. هذا الاهتزاز يدفع جزيئات الهواء القريبة، فتتحرك قليلًا ذهابًا وإيابًا وتنقل الاهتزاز إلى جزيئات مجاورة، حتى يصل إلى الأذن. جزيئات الهواء لا تسافر كلها من الفم إلى الأذن؛ الذي ينتقل هو الاهتزاز والطاقة. فكّري: لماذا لا يصل الصوت عبر فراغٍ لا يحتوي على هواء؟",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+            "teaching_method_id": "CONCRETE_EXAMPLE",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "فهم كيفية انتقال الصوت في الهواء",
+              "unresolved_point": "تطبيق فكرة أن الصوت يحتاج إلى جزيئات تنقل الاهتزاز",
+              "active_references": [
+                "الصوت",
+                "اهتزاز جزيئات الهواء"
+              ],
+              "established_facts": [
+                "الاهتزاز حركة متكررة سريعة يمكن أن تولّد صوتًا",
+                "ينتقل الاهتزاز بين جزيئات الهواء المتجاورة"
+              ],
+              "source_message_ids": [
+                "9febcd3b-a457-5ed7-9d66-1e95850e7007",
+                "4a26384c-d982-575d-9aec-bb5d736402e6",
+                "5da605a0-ce13-5b77-ba45-c31007f27c43"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "SCIENCE",
+            "segment_concept_ref": "انتقال الصوت في الهواء",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 16393,
+        "estimated_cost_usd": 0.000924925
+      }
+    }
+  ],
+  "paid_cost_usd": 0.014628075
+}

@@ -28,7 +28,7 @@ Run the complete Lina system for controlled real learner use with minimal infras
 | lina | Artifact Registry | App and Worker images |
 | Clerk | External auth | Student/Parent identity and session verification |
 | OpenAI | Model provider | Primary Tutor, Canvas and approved model tasks |
-| OpenRouter Decisions / JEV | Bounded decision provider | Visual personalization, exact Canvas reuse, Segment rubric comparison |
+| TypeSafe JEV (direct) | Bounded decision provider | Active Visual Need; shadow visual personalization, exact Canvas reuse, and Segment rubric comparison |
 | Secret Manager | GCP | Runtime credentials and provider keys |
 
 ## Application topology
@@ -87,13 +87,14 @@ Provider/model choices are operational configuration, not permanent architecture
 
 ### JEV
 
-OpenRouter Decisions / JEV is integrated as a bounded decision provider.
+Direct TypeSafe JEV is the deployed bounded decision provider. The App and Worker both use `jev-1.13.0`; the Visual Need slice is active on App. Visual Personalization on App, exact Canvas reuse and Segment Rubric on Worker are shadow.
 
 Current decision slices:
 
 - visual-personalization fact selection;
 - exact Canvas reuse selection;
 - Segment rubric comparison.
+- Visual Need (active on App).
 
 JEV mode settings are environment-specific operational controls. Routine deploys must preserve the currently approved JEV mode values rather than resetting them implicitly.
 
@@ -106,6 +107,7 @@ Core secret references include:
 - lina-clerk-publishable-key
 - lina-clerk-secret-key
 - lina-model-api-key
+- lina-typesafe-api-key
 - lina-openrouter-api-key
 - lina-s3-access-key-id
 - lina-s3-secret-access-key
@@ -156,7 +158,7 @@ The deployed application origins must remain authorized in Clerk.
 
 ## Current validation focus
 
-The pilot is used for controlled natural learning rather than only infrastructure smoke tests.
+The pilot supports controlled natural learning, but new natural Lina use is temporarily paused while the E30 repair/recalibration batch is accepted. Synthetic Tutor evaluation can proceed without learner data or production mutation.
 
 Current validation includes:
 
@@ -167,6 +169,7 @@ Current validation includes:
 - Personalization relevance;
 - latency and buffering;
 - JEV decision-quality collection.
+- synthetic Golden Tutor evaluation before any prompt-ordering proposal.
 
 ## Protected product areas
 
@@ -194,6 +197,6 @@ Major continuing cost categories are:
 - Cloud Run / Worker runtime;
 - object and artifact storage;
 - OpenAI model usage;
-- OpenRouter/JEV decision usage.
+- direct TypeSafe JEV decision usage.
 
 Do not optimize cost by silently weakening required product boundaries.

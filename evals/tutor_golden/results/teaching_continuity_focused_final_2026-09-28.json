@@ -1,0 +1,1119 @@
+{
+  "mode": "live",
+  "cases": [
+    {
+      "case_id": "g02_wrong_no_reasoning",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "current_turn_understood": true,
+              "no_invented_reasoning": true,
+              "authority_boundary": true
+            },
+            "passed": 8,
+            "total": 8,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 13161,
+          "input_tokens": 3,
+          "output_tokens": 1127,
+          "cached_input_tokens": 0,
+          "cache_write_tokens": 8110,
+          "estimated_cost_usd": 0.00157755,
+          "output": {
+            "text": "٧ × ٤ يعني ٧ مجموعات، في كل مجموعة ٤. نعدّ بالأربعة: ٤، ٨، ١٢، ١٦، ٢٠، ٢٤، ثم نصل إلى العدد الأخير. جرّبي إكماله:",
+            "suggested_actions": [],
+            "guided_check": {
+              "prompt": "٤، ٨، ١٢، ١٦، ٢٠، ٢٤، ___ — ما العدد التالي؟",
+              "choices": [
+                {
+                  "label": "٢٦"
+                },
+                {
+                  "label": "٢٨"
+                },
+                {
+                  "label": "٣٢"
+                }
+              ]
+            },
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "HINT_FIRST",
+            "teaching_method_id": "CONCRETE_EXAMPLE",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "إيجاد حاصل ضرب ٧ × ٤",
+              "unresolved_point": "تحديد العدد الناتج عن العدّ سبع مرات بمقدار ٤",
+              "active_references": [
+                "الضرب كمجموعات متساوية",
+                "٧ × ٤"
+              ],
+              "established_facts": [
+                "٧ × ٤ تمثّل ٧ مجموعات في كل منها ٤."
+              ],
+              "source_message_ids": [
+                "949cf6fb-3ca9-5b8f-bdfc-5dde0d06854d",
+                "afa0ec57-78d0-5f01-87f1-04ffc3f86cb6"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": {
+              "version": "candidate-event-v1",
+              "candidates": [
+                {
+                  "event_type": "incorrect_attempt",
+                  "concept_ref": "multiplication",
+                  "summary": "أجابت الطالبة ٣٥ عن حاصل ٧ × ٤.",
+                  "signal": "الإجابة لا تطابق حاصل الضرب؛ لم تذكر الطالبة طريقة أو سببًا.",
+                  "source_message_ids": [
+                    "949cf6fb-3ca9-5b8f-bdfc-5dde0d06854d"
+                  ],
+                  "school_or_extended": "school",
+                  "observed_student_outcome": "قدمت إجابة عددية غير صحيحة.",
+                  "misconception_evidence": null
+                }
+              ]
+            },
+            "provisional_broad_subject": "MATH",
+            "segment_concept_ref": "الضرب",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        },
+        {
+          "run": 2,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "strategy_fidelity": true,
+              "current_turn_understood": true,
+              "no_invented_reasoning": true,
+              "authority_boundary": true
+            },
+            "passed": 9,
+            "total": 9,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 9310,
+          "input_tokens": 3,
+          "output_tokens": 873,
+          "cached_input_tokens": 8110,
+          "cache_write_tokens": 0,
+          "estimated_cost_usd": 0.0005179,
+          "output": {
+            "text": "ليس 35؛ 7 × 4 تعني سبع مجموعات من أربعة: 4 + 4 + 4 + 4 + 4 + 4 + 4 = 28. إذن الناتج 28.\nوالآن جرّبي: كم 7 × 5؟",
+            "suggested_actions": [],
+            "guided_check": {
+              "prompt": "كم 7 × 5؟",
+              "choices": [
+                {
+                  "label": "30"
+                },
+                {
+                  "label": "35"
+                },
+                {
+                  "label": "40"
+                }
+              ]
+            },
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_THEN_CHECK",
+            "teaching_method_id": "SYMBOLIC_EXPLANATION",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "التدرّب على حقائق الضرب",
+              "unresolved_point": "تحديد ناتج 7 × 5",
+              "active_references": [
+                "7 × 4"
+              ],
+              "established_facts": [
+                "7 × 4 = 28"
+              ],
+              "source_message_ids": [
+                "949cf6fb-3ca9-5b8f-bdfc-5dde0d06854d",
+                "afa0ec57-78d0-5f01-87f1-04ffc3f86cb6"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": {
+              "version": "candidate-event-v1",
+              "candidates": [
+                {
+                  "event_type": "incorrect_attempt",
+                  "concept_ref": "multiplication facts",
+                  "summary": "أجابت 35 عن 7 × 4، والإجابة الصحيحة 28.",
+                  "signal": "incorrect_answer",
+                  "source_message_ids": [
+                    "949cf6fb-3ca9-5b8f-bdfc-5dde0d06854d"
+                  ],
+                  "school_or_extended": "school",
+                  "observed_student_outcome": "إجابة غير صحيحة لمسألة ضرب",
+                  "misconception_evidence": null
+                }
+              ]
+            },
+            "provisional_broad_subject": "MATH",
+            "segment_concept_ref": "multiplication facts",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        },
+        {
+          "run": 3,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "current_turn_understood": true,
+              "no_invented_reasoning": true,
+              "authority_boundary": true
+            },
+            "passed": 8,
+            "total": 8,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 11248,
+          "input_tokens": 3,
+          "output_tokens": 960,
+          "cached_input_tokens": 8110,
+          "cache_write_tokens": 0,
+          "estimated_cost_usd": 0.0005614,
+          "output": {
+            "text": "٧ × ٤ = ٢٨، لأن سبع مجموعات من أربعة تعني ٤ + ٤ + ٤ + ٤ + ٤ + ٤ + ٤ = ٢٨. جرّبي الآن: كم يساوي ٦ × ٤؟",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+            "teaching_method_id": "WORKED_EXAMPLE",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "حلّ مسائل الضرب باستخدام معنى المجموعات المتساوية",
+              "unresolved_point": "تطبيق معنى الضرب لحساب نواتج مسائل مشابهة",
+              "active_references": [
+                "7 × 4",
+                "٦ × ٤"
+              ],
+              "established_facts": [],
+              "source_message_ids": [
+                "949cf6fb-3ca9-5b8f-bdfc-5dde0d06854d",
+                "afa0ec57-78d0-5f01-87f1-04ffc3f86cb6",
+                "ac633cf6-217e-564e-88b8-4255921b306e"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": {
+              "version": "candidate-event-v1",
+              "candidates": [
+                {
+                  "event_type": "incorrect_attempt",
+                  "concept_ref": "multiplication facts",
+                  "summary": "أجابت 35 عن مسألة 7 × 4.",
+                  "signal": "إجابة غير صحيحة دون توضيح طريقة التفكير.",
+                  "source_message_ids": [
+                    "949cf6fb-3ca9-5b8f-bdfc-5dde0d06854d"
+                  ],
+                  "school_or_extended": "school",
+                  "observed_student_outcome": "أجابت 35 عن 7 × 4.",
+                  "misconception_evidence": null
+                }
+              ]
+            },
+            "provisional_broad_subject": "MATH",
+            "segment_concept_ref": "multiplication facts",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 11240,
+        "estimated_cost_usd": 0.00265685
+      }
+    },
+    {
+      "case_id": "g04_did_not_help_change",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "method_change": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 8,
+            "total": 8,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 13212,
+          "input_tokens": 3,
+          "output_tokens": 1220,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 2020,
+          "estimated_cost_usd": 0.0009238,
+          "output": {
+            "text": "تمام، خلّينا نغيّر الطريقة ونرسمها كرحلة قصيرة: الشمس تُصدر الضوء في اتجاهات كثيرة، وجزء منه يسافر عبر الفضاء حتى يصل إلى الأرض. والفضاء شبه فارغ، لكن الضوء يستطيع السفر فيه من دون هواء—على عكس الصوت.\n\nتتبّعي الرحلة في الرسم: ما الجزء الذي يقع بين الشمس والأرض؟",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+            "teaching_method_id": "VISUAL_REPRESENTATION",
+            "prior_method_relation": "DID_NOT_HELP",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "فهم كيف ينتقل ضوء الشمس عبر الفضاء ليصل إلى الأرض",
+              "unresolved_point": "الطريقة السابقة لم تساعد؛ نجرّب تمثيل رحلة الضوء بصريًا",
+              "active_references": [
+                "الشمس",
+                "الفضاء",
+                "الأرض"
+              ],
+              "established_facts": [
+                "جزء من ضوء الشمس يتجه نحو الأرض",
+                "يمكن للضوء السفر عبر الفضاء من دون هواء"
+              ],
+              "source_message_ids": [
+                "42921952-4136-520a-b025-4ef08d0c255d",
+                "d274af66-9ff6-533c-8300-b79a4589690e",
+                "09590cf9-b83e-53b1-a264-0b2396ccaf98"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "SCIENCE",
+            "segment_concept_ref": "رحلة الضوء من الشمس إلى الأرض",
+            "workspace_intent": null,
+            "canvas_brief": {
+              "version": "canvas-brief-v1",
+              "subject_key": "SCIENCE",
+              "objective": "إظهار رحلة جزء من ضوء الشمس عبر الفضاء حتى وصوله إلى الأرض.",
+              "student_request": "طريقة بصرية أخرى لفهم رحلة الضوء من الشمس إلى الأرض.",
+              "requested_representation": "رسم توضيحي متسلسل بسيط من ثلاث مراحل: الشمس، الفضاء، الأرض.",
+              "facts": [
+                "الشمس تصدر الضوء في اتجاهات كثيرة.",
+                "جزء من الضوء يتجه نحو الأرض.",
+                "الضوء يعبر الفضاء، الذي لا يحتاج فيه إلى هواء كي ينتقل.",
+                "يصل الضوء إلى الأرض."
+              ],
+              "relations": [
+                {
+                  "id": "sun-emits-light",
+                  "source_id": "sun",
+                  "target_id": "light",
+                  "meaning": "الشمس تصدر الضوء في اتجاهات كثيرة."
+                },
+                {
+                  "id": "light-crosses-space",
+                  "source_id": "light",
+                  "target_id": "space",
+                  "meaning": "جزء من ضوء الشمس يعبر الفضاء باتجاه الأرض."
+                },
+                {
+                  "id": "light-reaches-earth",
+                  "source_id": "light",
+                  "target_id": "earth",
+                  "meaning": "يصل جزء من الضوء إلى الأرض."
+                }
+              ],
+              "quantities": [],
+              "desired_student_action": "تتبّع مسار الضوء وحدد المرحلة الواقعة بين الشمس والأرض.",
+              "must_not_imply": [
+                "لا يحتاج الضوء إلى هواء كي ينتقل عبر الفضاء.",
+                "لا يصل كل ضوء الشمس إلى الأرض؛ جزء منه فقط يتجه إليها."
+              ],
+              "source_references": [],
+              "locale": "ar",
+              "direction": "rtl"
+            },
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": "CREATE",
+            "workspace_visual_order": null
+          }
+        },
+        {
+          "run": 2,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "method_change": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "strategy_fidelity": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 9,
+            "total": 9,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 13191,
+          "input_tokens": 3,
+          "output_tokens": 1288,
+          "cached_input_tokens": 8120,
+          "cache_write_tokens": 0,
+          "estimated_cost_usd": 0.0007255,
+          "output": {
+            "text": "خلّينا نجرّبها كأنها رحلة على طريق طويل: الشمس تُصدر الضوء، والضوء يعبر الفضاء الفارغ حتى يصل إلى الأرض. تخيّلي سهماً يمتد من الشمس إلى الأرض؛ السهم يبيّن اتجاه الرحلة، وليس حبلاً يحمل الضوء. والضوء لا يحتاج إلى هواء كي يسافر.",
+            "suggested_actions": [],
+            "guided_check": {
+              "prompt": "هل يحتاج ضوء الشمس إلى هواء كي يعبر الفضاء إلى الأرض؟",
+              "choices": [
+                {
+                  "label": "نعم، يحتاج إلى هواء"
+                },
+                {
+                  "label": "لا، يستطيع العبور في الفضاء الفارغ"
+                }
+              ]
+            },
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_THEN_CHECK",
+            "teaching_method_id": "VISUAL_REPRESENTATION",
+            "prior_method_relation": "DID_NOT_HELP",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "فهم رحلة الضوء من الشمس إلى الأرض",
+              "unresolved_point": "توضيح كيف يصل الضوء عبر الفضاء الفارغ",
+              "active_references": [
+                "ضوء الشمس",
+                "الفضاء",
+                "الأرض"
+              ],
+              "established_facts": [
+                "ينطلق الضوء من الشمس ويعبر الفضاء حتى يصل إلى الأرض"
+              ],
+              "source_message_ids": [
+                "42921952-4136-520a-b025-4ef08d0c255d",
+                "d274af66-9ff6-533c-8300-b79a4589690e",
+                "09590cf9-b83e-53b1-a264-0b2396ccaf98"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "SCIENCE",
+            "segment_concept_ref": "رحلة الضوء من الشمس إلى الأرض",
+            "workspace_intent": null,
+            "canvas_brief": {
+              "version": "canvas-brief-v1",
+              "subject_key": "SCIENCE",
+              "objective": "إظهار رحلة ضوء الشمس عبر الفضاء حتى يصل إلى الأرض.",
+              "student_request": "أريني طريقة أخرى لفهم رحلة الضوء.",
+              "requested_representation": "رسم توضيحي بسيط بأسهم يبين انتقال الضوء من الشمس عبر الفضاء إلى الأرض.",
+              "facts": [
+                "الشمس مصدر الضوء في هذا الرسم.",
+                "يعبر الضوء الفضاء الفارغ.",
+                "يصل الضوء إلى الأرض."
+              ],
+              "relations": [
+                {
+                  "id": "sun_emits_light",
+                  "source_id": "sun",
+                  "target_id": "light",
+                  "meaning": "ينطلق الضوء من الشمس."
+                },
+                {
+                  "id": "light_crosses_space",
+                  "source_id": "light",
+                  "target_id": "space",
+                  "meaning": "يعبر الضوء الفضاء."
+                },
+                {
+                  "id": "light_reaches_earth",
+                  "source_id": "light",
+                  "target_id": "earth",
+                  "meaning": "يصل الضوء إلى الأرض."
+                }
+              ],
+              "quantities": [],
+              "desired_student_action": "تتبّع السهم من الشمس إلى الأرض.",
+              "must_not_imply": [
+                "أن الضوء يحتاج إلى هواء كي ينتقل عبر الفضاء.",
+                "أن السهم يمثل حبلاً أو جسماً مادياً."
+              ],
+              "source_references": [],
+              "locale": "ar",
+              "direction": "rtl"
+            },
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": "CREATE",
+            "workspace_visual_order": null
+          }
+        },
+        {
+          "run": 3,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "method_change": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "strategy_fidelity": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 9,
+            "total": 9,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 14627,
+          "input_tokens": 3,
+          "output_tokens": 1330,
+          "cached_input_tokens": 8120,
+          "cache_write_tokens": 0,
+          "estimated_cost_usd": 0.0007465,
+          "output": {
+            "text": "صحيح، الشرح السابق لم يوضح الرحلة بما يكفي. خلّينا نراها كمسار ضوئي: سهم ينطلق من الشمس، يعبر الفضاء، ثم يصل إلى الأرض. والفضاء بينهما شبه خالٍ من الهواء، لكن الضوء يستطيع السفر فيه.",
+            "suggested_actions": [],
+            "guided_check": {
+              "prompt": "هل يحتاج ضوء الشمس إلى الهواء كي يعبر الفضاء ويصل إلى الأرض؟",
+              "choices": [
+                {
+                  "label": "نعم، يحتاج إلى الهواء"
+                },
+                {
+                  "label": "لا، يستطيع العبور من دونه"
+                }
+              ]
+            },
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_THEN_CHECK",
+            "teaching_method_id": "VISUAL_REPRESENTATION",
+            "prior_method_relation": "DID_NOT_HELP",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "فهم رحلة ضوء الشمس حتى يصل إلى الأرض",
+              "unresolved_point": "كيف يعبر الضوء الفضاء بين الشمس والأرض",
+              "active_references": [
+                "الشمس",
+                "الفضاء",
+                "الأرض"
+              ],
+              "established_facts": [
+                "ينطلق ضوء الشمس ويعبر الفضاء حتى يصل إلى الأرض"
+              ],
+              "source_message_ids": [
+                "42921952-4136-520a-b025-4ef08d0c255d",
+                "d274af66-9ff6-533c-8300-b79a4589690e",
+                "09590cf9-b83e-53b1-a264-0b2396ccaf98"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "SCIENCE",
+            "segment_concept_ref": "رحلة ضوء الشمس إلى الأرض",
+            "workspace_intent": null,
+            "canvas_brief": {
+              "version": "canvas-brief-v1",
+              "subject_key": "SCIENCE",
+              "objective": "إظهار مسار ضوء الشمس من الشمس عبر الفضاء إلى الأرض",
+              "student_request": "أرني بطريقة بصرية أخرى كيف يصل ضوء الشمس إلى الأرض",
+              "requested_representation": "مخطط بسيط لمسار الضوء",
+              "facts": [
+                "ينطلق ضوء الشمس من الشمس",
+                "يعبر الضوء الفضاء بين الشمس والأرض",
+                "يصل ضوء الشمس إلى الأرض",
+                "يمكن للضوء أن يعبر الفضاء من دون هواء"
+              ],
+              "relations": [
+                {
+                  "id": "light_path_1",
+                  "source_id": "sun",
+                  "target_id": "space",
+                  "meaning": "ينطلق ضوء الشمس عابراً الفضاء"
+                },
+                {
+                  "id": "light_path_2",
+                  "source_id": "space",
+                  "target_id": "earth",
+                  "meaning": "يتابع الضوء مساره حتى يصل إلى الأرض"
+                }
+              ],
+              "quantities": [],
+              "desired_student_action": "تتبّع مسار الضوء من الشمس إلى الأرض",
+              "must_not_imply": [
+                "لا تُظهر أن الضوء يحتاج إلى الهواء كي ينتقل",
+                "لا تُظهر أن الشمس تلامس الأرض"
+              ],
+              "source_references": [],
+              "locale": "ar",
+              "direction": "rtl"
+            },
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": "CREATE",
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 13677,
+        "estimated_cost_usd": 0.0023958
+      }
+    },
+    {
+      "case_id": "g05_clarification_not_failure",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 7,
+            "total": 7,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 9985,
+          "input_tokens": 3,
+          "output_tokens": 918,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 2010,
+          "estimated_cost_usd": 0.00077155,
+          "output": {
+            "text": "الآن استبدلنا عشرةً واحدة من الـ٨ عشرات بـ١٠ آحاد، فصار عندنا ٧ عشرات و١٠ آحاد. اطرحي الآحاد: ١٠ − ٣ = ٧، واكتبي ٧ في خانة الآحاد. بقيت العشرات: كم يساوي ٧ − ٥؟",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "HOMEWORK",
+            "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+            "teaching_method_id": "DECOMPOSITION",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "طرح ٥٣ من ٨٠ مع إعادة التجميع",
+              "unresolved_point": "طرح العشرات بعد إعادة تجميع عشرة إلى ١٠ آحاد",
+              "active_references": [
+                "طرح ٥٣ من ٨٠"
+              ],
+              "established_facts": [
+                "بعد إعادة التجميع تصبح ٨ عشرات ٧ عشرات و١٠ آحاد",
+                "١٠ − ٣ = ٧ آحاد"
+              ],
+              "source_message_ids": [
+                "3d2179dd-215e-5940-aab1-2333aef53d44",
+                "98e51ddf-e479-5ad2-a3ad-ac75bf439839",
+                "25807bf8-d920-5fc7-aab0-d7dd09da6d69"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "MATH",
+            "segment_concept_ref": "طرح الأعداد مع إعادة التجميع",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        },
+        {
+          "run": 2,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "strategy_fidelity": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 8,
+            "total": 8,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 9931,
+          "input_tokens": 3,
+          "output_tokens": 965,
+          "cached_input_tokens": 8110,
+          "cache_write_tokens": 0,
+          "estimated_cost_usd": 0.0005639,
+          "output": {
+            "text": "نعيد تجميع عشرة من العشرات لتصبح 10 آحاد: هكذا يصبح 80 عبارة عن 7 عشرات و10 آحاد. الآن اطرحي 3 من 10 آحاد: كم آحادًا يتبقى؟",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_THEN_CHECK",
+            "teaching_method_id": "DECOMPOSITION",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "طرح 53 من 80 باستخدام إعادة التجميع",
+              "unresolved_point": "طرح 3 آحاد من 10 آحاد بعد إعادة التجميع",
+              "active_references": [
+                "80",
+                "53"
+              ],
+              "established_facts": [
+                "يمكن إعادة تجميع 80 إلى 7 عشرات و10 آحاد."
+              ],
+              "source_message_ids": [
+                "3d2179dd-215e-5940-aab1-2333aef53d44",
+                "98e51ddf-e479-5ad2-a3ad-ac75bf439839",
+                "25807bf8-d920-5fc7-aab0-d7dd09da6d69"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "MATH",
+            "segment_concept_ref": "subtraction with regrouping",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        },
+        {
+          "run": 3,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 7,
+            "total": 7,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 7125,
+          "input_tokens": 3,
+          "output_tokens": 635,
+          "cached_input_tokens": 8110,
+          "cache_write_tokens": 0,
+          "estimated_cost_usd": 0.0003989,
+          "output": {
+            "text": "خذي عشرة واحدة من ٨ عشرات وحوّليها إلى ١٠ آحاد. هكذا يصبح ٨٠: سبع عشرات و١٠ آحاد. الآن اطرحي الآحاد: ١٠ − ٣ = ٧. كم يبقى في خانة العشرات بعد طرح ٥ من ٧؟",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "HINT_FIRST",
+            "teaching_method_id": "DECOMPOSITION",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "طرح ٥٣ من ٨٠ بإعادة التجميع",
+              "unresolved_point": "إيجاد ناتج طرح العشرات بعد طرح الآحاد",
+              "active_references": [
+                "طرح ٥٣ من ٨٠"
+              ],
+              "established_facts": [
+                "يمكن تحويل عشرة واحدة إلى ١٠ آحاد",
+                "١٠ − ٣ = ٧ آحاد"
+              ],
+              "source_message_ids": [
+                "3d2179dd-215e-5940-aab1-2333aef53d44",
+                "98e51ddf-e479-5ad2-a3ad-ac75bf439839",
+                "25807bf8-d920-5fc7-aab0-d7dd09da6d69"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "MATH",
+            "segment_concept_ref": "طرح الأعداد مع إعادة التجميع",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 9014,
+        "estimated_cost_usd": 0.00173435
+      }
+    },
+    {
+      "case_id": "g13_canvas_ready_continue",
+      "variant": {
+        "recent_exchange_count": 1,
+        "reasoning_effort": null,
+        "prompt_ordering": "production_current",
+        "model": "gpt-6-luna"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "strategy_fidelity": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 8,
+            "total": 8,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 13108,
+          "input_tokens": 3,
+          "output_tokens": 1370,
+          "cached_input_tokens": 6100,
+          "cache_write_tokens": 2805,
+          "estimated_cost_usd": 0.001096925,
+          "output": {
+            "text": "بعد اليرقة تأتي الشرنقة. داخلها تتغير اليرقة، ثم تخرج فراشة بالغة. انظري إلى ترتيب المراحل في الرسم: ما المرحلة التي تأتي بعد الشرنقة؟",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_THEN_CHECK",
+            "teaching_method_id": "VISUAL_REPRESENTATION",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "ترتيب مراحل دورة حياة الفراشة",
+              "unresolved_point": "المرحلة التي تلي الشرنقة",
+              "active_references": [],
+              "established_facts": [
+                "اليرقة مرحلة بعد البيضة",
+                "الشرنقة تأتي بعد اليرقة"
+              ],
+              "source_message_ids": [
+                "8ad81614-11e6-569a-905d-583160411541",
+                "f668571a-346c-58f5-a7b3-4be685a1f990"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": {
+              "version": "candidate-event-v1",
+              "candidates": [
+                {
+                  "event_type": "guided_success",
+                  "concept_ref": "دورة حياة الفراشة",
+                  "summary": "اختارت اليرقة بوصفها المرحلة التالية للبيضة استجابةً للمطالبة بترتيب المراحل.",
+                  "signal": "أجابت عن خطوة الترتيب المطلوبة، ثم سألت عن المرحلة التالية.",
+                  "source_message_ids": [
+                    "f668571a-346c-58f5-a7b3-4be685a1f990"
+                  ],
+                  "school_or_extended": "school",
+                  "observed_student_outcome": "ذكرت أنها اختارت اليرقة، ثم سألت عن المرحلة التي تليها.",
+                  "misconception_evidence": null
+                }
+              ]
+            },
+            "provisional_broad_subject": "SCIENCE",
+            "segment_concept_ref": "دورة حياة الفراشة",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        },
+        {
+          "run": 2,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "strategy_fidelity": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 8,
+            "total": 8,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 19711,
+          "input_tokens": 3,
+          "output_tokens": 1849,
+          "cached_input_tokens": 8905,
+          "cache_write_tokens": 0,
+          "estimated_cost_usd": 0.00101385,
+          "output": {
+            "text": "بعد اليرقة تأتي الشرنقة. داخلها تتحول اليرقة، ثم تخرج فراشة بالغة. ما المرحلة التي تأتي بعد الشرنقة؟",
+            "suggested_actions": [],
+            "guided_check": {
+              "prompt": "ما المرحلة التي تأتي بعد الشرنقة؟",
+              "choices": [
+                {
+                  "label": "الفراشة البالغة"
+                },
+                {
+                  "label": "البيضة"
+                },
+                {
+                  "label": "اليرقة"
+                }
+              ]
+            },
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_THEN_CHECK",
+            "teaching_method_id": "VISUAL_REPRESENTATION",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "ترتيب مراحل دورة حياة الفراشة",
+              "unresolved_point": "المرحلة التي تلي الشرنقة",
+              "active_references": [],
+              "established_facts": [
+                "اليرقة مرحلة بعد البيضة"
+              ],
+              "source_message_ids": [
+                "8ad81614-11e6-569a-905d-583160411541",
+                "f668571a-346c-58f5-a7b3-4be685a1f990"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": {
+              "version": "candidate-event-v1",
+              "candidates": [
+                {
+                  "event_type": "guided_success",
+                  "concept_ref": "دورة حياة الفراشة",
+                  "summary": "اختارت اليرقة بوصفها المرحلة التالية في تسلسل دورة الحياة.",
+                  "signal": "اختيار صحيح للمرحلة التالية بعد البيضة، في سياق عرض مراحل الدورة.",
+                  "source_message_ids": [
+                    "f668571a-346c-58f5-a7b3-4be685a1f990"
+                  ],
+                  "school_or_extended": "school",
+                  "observed_student_outcome": "اختارت اليرقة بعد البيضة.",
+                  "misconception_evidence": null
+                }
+              ]
+            },
+            "provisional_broad_subject": "SCIENCE",
+            "segment_concept_ref": "دورة حياة الفراشة",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        },
+        {
+          "run": 3,
+          "rubric": {
+            "checks": {
+              "schema_shape_valid": true,
+              "teaching_response_screen": true,
+              "prior_method_relation": true,
+              "visual_choice": true,
+              "useful_next_action": true,
+              "strategy_fidelity": true,
+              "current_turn_understood": true,
+              "authority_boundary": true
+            },
+            "passed": 8,
+            "total": 8,
+            "all_passed": true,
+            "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+          },
+          "latency_ms": 15972,
+          "input_tokens": 3,
+          "output_tokens": 1484,
+          "cached_input_tokens": 8905,
+          "cache_write_tokens": 0,
+          "estimated_cost_usd": 0.00083135,
+          "output": {
+            "text": "بعد اليرقة تأتي الشرنقة، ثم تخرج منها الفراشة البالغة. انظري إلى الرسم: ما المرحلة التي تأتي بعد الشرنقة؟",
+            "suggested_actions": [],
+            "guided_check": null,
+            "teaching_mode": "LEARN",
+            "teaching_strategy": "EXPLAIN_THEN_CHECK",
+            "teaching_method_id": "VISUAL_REPRESENTATION",
+            "prior_method_relation": "CONTINUATION",
+            "segment_relation": "CONTINUE",
+            "structured_segment_state": {
+              "schema_version": "structured-segment-state-v1",
+              "active_goal": "ترتيب مراحل دورة حياة الفراشة",
+              "unresolved_point": "المرحلة التي تلي الشرنقة",
+              "active_references": [],
+              "established_facts": [
+                "اليرقة تأتي بعد البيضة",
+                "الشرنقة تأتي بعد اليرقة"
+              ],
+              "source_message_ids": [
+                "f668571a-346c-58f5-a7b3-4be685a1f990",
+                "8ad81614-11e6-569a-905d-583160411541"
+              ]
+            },
+            "parent_boundary": {
+              "schema_version": "parent-boundary-v1",
+              "category": null,
+              "applies": false,
+              "model_action": "ALLOW",
+              "redirect": null
+            },
+            "candidate_metadata": null,
+            "provisional_broad_subject": "SCIENCE",
+            "segment_concept_ref": "دورة حياة الفراشة",
+            "workspace_intent": null,
+            "canvas_brief": null,
+            "canvas_visual_context_selection": null,
+            "canvas_change_intent": null,
+            "workspace_visual_order": null
+          }
+        }
+      ],
+      "summary": {
+        "rubric_pass_rate": 1,
+        "mean_latency_ms": 16264,
+        "estimated_cost_usd": 0.002942125
+      }
+    }
+  ],
+  "paid_cost_usd": 0.009729125
+}

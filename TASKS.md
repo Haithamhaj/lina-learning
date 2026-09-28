@@ -79,9 +79,31 @@ The current phase is **real-use repair and recalibration**. Controlled natural u
 - full affected regression before deployment;
 - controlled Lina retest only after deployment.
 
+## 1B. TUTOR-GOLDEN-EVAL-01 — Synthetic baseline before prompt ordering change
+
+**Status:** GOLDEN SET ESTABLISHED; A1 AND A2 COMPLETE; KEEP CURRENT PRODUCTION STRUCTURE
+
+**Artifact:** `evals/tutor_golden/README.md`, 20 synthetic cases, `baseline_smoke_2026-09-28.json`, and `results/A1_REVIEW_2026-09-28.md` / `results/A2_REVIEW_2026-09-28.md` with raw and derived results.
+
+**Result:** The cases use the production Tutor context-selection seam, payload builder, capacity guardrail, strict response schema, and OpenAI adapter. A1 paired the frozen 20 cases three times per arm on GPT-6 Luna with only Current Turn block placement changed. Both arms passed all applicable deterministic checks in 49/60 runs. Manual review favored the current order for unfinished-learning next actions and fewer premature drawing references, while Current Turn Last used relevant Personal Memory more naturally and improved two prior-method metadata labels. A1 cost an estimated $0.07135452. No Tutor ordering, runtime configuration, JEV role, deployment, or production data changed.
+
+**A2 result:** Stable Prefix / Dynamic Suffix paired the same frozen 20 cases three times per arm. Production passed every deterministic check in 48/60 runs and A2 in 46/60, with useful next action 19/27 versus 15/27. A2's exact changing-turn input prefix grew from 381 to 9,421 characters, but the separate three-turn probe found identical cached tokens on changed turns under unchanged implicit caching. A2 used fewer output tokens and was modestly faster in this run, without a measured cache gain. Golden plus probe cost an estimated $0.074519995. Keep the current production structure; no Tutor or caching setting was changed.
+
+**Decision:** Keep the current production prompt order after A1 Current Turn Last and keep the current structure after A2 Stable Prefix / Dynamic Suffix. A2 measured no cross-turn cache benefit. The frozen Golden Set remains a local regression gate; cache controls, memory count, and reasoning effort need separate decisions.
+
+## 1C. TUTOR-CANVAS-LIFECYCLE-01 — Chat lifecycle communication
+
+**Status:** LOCAL SLICE ACCEPTED; AUTHENTICATED BROWSER FLOW ACCEPTED; GPT-6 POST-DEPLOY SMOKE PENDING
+
+**Result:** Daily Chat presents run-scoped preparation, authoritative ready, and terminal notices from existing Canvas status. Notice language follows the current Student/Tutor conversation with UI language fallback. Notices remain presentation-only, never Student/Tutor messages or learning data. Ready requires `COMPLETED + scene_ready=true`; milestones are deduplicated across polling and same-tab reload/reconnect. The accepted server-owned wording guard repairs premature new-visual claims before persistence/streaming while preserving truthful preparation, READY-Canvas references, and non-Canvas turns.
+
+**Browser acceptance:** Authenticated local Daily confirmed one preparing notice, PENDING/RUNNING progress with a usable Chat follow-up and no duplicate Canvas run, a rendered Scene with one authoritative ready notice, a concrete Tutor action using the READY visual, and no replay after same-tab reload. Durable Chat and AI execution checks confirmed notices were non-durable and non-evidentiary. Terminal failure copy was checked with deterministic fixtures, not a forced learner run. This browser acceptance used local GPT-5.6 Luna; the GPT-6 Luna/Sol production smoke remains the post-deploy gate.
+
 ## 2. TEACH-FLOW-01 — Teaching-flow integrity
 
-**Status:** READY AFTER LIVE EVIDENCE REVIEW
+**Status:** TEACHING CONTINUITY LOCALLY ACCEPTED; OTHER SUBSCOPES PENDING
+
+**Teaching Continuity local result:** The Primary Tutor instructions now ask for one reachable learner action when an active goal remains unfinished, with explicit wrong-answer, DID_NOT_HELP, clarification, and relevant READY Canvas handling plus natural-closure exceptions. The frozen four-case focused Golden screen improved from 4/12 in the saved production baseline to 12/12 in the final three-repeat run. A single full 20-case regression pass scored 18/20 on raw model output; both failures were premature new-Canvas references repaired by the accepted server guard before delivery. The authenticated local browser also showed a concrete next action using a READY Canvas. This is local acceptance; GPT-6 deployed behavior remains to be checked. See `evals/tutor_golden/results/TEACHING_CONTINUITY_REVIEW_2026-09-28.md`.
 
 **Tracker scope:**
 

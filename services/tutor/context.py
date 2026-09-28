@@ -184,6 +184,28 @@ class TutorContext:
         )
 
 
+def partition_exchange_continuity(
+    exchanges: tuple[ConversationExchangeContext, ...],
+    immediate_exchange: ConversationExchangeContext | None,
+    *,
+    recent_exchange_count: int,
+) -> tuple[tuple[ConversationExchangeContext, ...], tuple[ConversationExchangeContext, ...]]:
+    """Select recent and older complete Exchanges using the runtime's lineage rule."""
+
+    immediate_ids = set(immediate_exchange.message_ids) if immediate_exchange is not None else set()
+    remaining = tuple(
+        exchange for exchange in exchanges
+        if not set(exchange.message_ids).intersection(immediate_ids)
+    )
+    recent = tuple(remaining[-recent_exchange_count:])
+    recent_ids = {message_id for exchange in recent for message_id in exchange.message_ids}
+    older = tuple(
+        exchange for exchange in remaining
+        if not set(exchange.message_ids).intersection(immediate_ids | recent_ids)
+    )
+    return recent, older
+
+
 class TutorContextBuilder:
     """Assemble deterministic context; it does not invoke a Tutor model."""
 
@@ -242,16 +264,10 @@ class TutorContextBuilder:
             learning_session=learning_session,
             current_turn=current_turn,
         )
-        immediate_ids = set(immediate_exchange.message_ids) if immediate_exchange is not None else set()
-        remaining = tuple(
-            exchange for exchange in exchanges
-            if not set(exchange.message_ids).intersection(immediate_ids)
-        )
-        recent_exchanges = tuple(remaining[-self._budget.recent_exchange_count :])
-        recent_ids = {message_id for exchange in recent_exchanges for message_id in exchange.message_ids}
-        older = tuple(
-            exchange for exchange in remaining
-            if not set(exchange.message_ids).intersection(immediate_ids | recent_ids)
+        recent_exchanges, older = partition_exchange_continuity(
+            exchanges,
+            immediate_exchange,
+            recent_exchange_count=self._budget.recent_exchange_count,
         )
         latest_state = latest_valid_structured_segment_state(self._session, segment=segment)
         semantic_recall, semantic_recall_priority, shared_query = self._semantic_recall(

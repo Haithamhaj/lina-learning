@@ -1,0 +1,146 @@
+[
+  {
+    "id": "g01_correct_independent", "pattern": "E30 mixed evidence control", "subject": "MATH",
+    "history": [["ما ناتج 7 × 2؟", "14، وقد وجدتِه بنفسك."], ["كم يساوي 7 × 4؟", "جرّبي حساب سبع مجموعات من أربعة."], ["حسبتها بجمع 4 سبع مرات.", "جميل، ما الناتج الذي وصلتِ إليه؟"]],
+    "prior_method": "CONCRETE_EXAMPLE", "turn": "28، لأنني جمعت أربعًا سبع مرات.",
+    "visual_need": ["NONE", "NONE"],
+    "expect": {"relation": "CONTINUATION", "visual": "avoid", "text_any": ["28", "٢٨"]}
+  },
+  {
+    "id": "g02_wrong_no_reasoning", "pattern": "E30 single wrong attempt", "subject": "MATH",
+    "history": [["ما حاصل 7 × 4؟", "فكّري في سبع مجموعات من أربعة ثم أخبريني بالناتج."]],
+    "prior_method": "CONCRETE_EXAMPLE", "turn": "35",
+    "visual_need": ["NONE", "NONE"],
+    "expect": {"relation": "CONTINUATION", "visual": "avoid", "next_action": true, "no_misconception": true, "text_any": ["28", "٢٨", "أربع", "4"]}
+  },
+  {
+    "id": "g03_explicit_confusion", "pattern": "E20 explicit confusion", "subject": "SCIENCE",
+    "history": [["كيف يتكوّن المطر؟", "يتبخر الماء ثم يبرد ويتكاثف قبل أن يسقط مطرًا."]],
+    "prior_method": "DECOMPOSITION", "turn": "ما زلت لا أفهم كيف يتحول البخار إلى قطرات.",
+    "visual_need": ["STRONGLY_RECOMMENDED", "PROCESS"],
+    "expect": {"relation": "DID_NOT_HELP", "method_change": true, "visual": "request", "next_action": true, "text_any": ["بخار", "قطر", "تكاثف"]}
+  },
+  {
+    "id": "g04_did_not_help_change", "pattern": "E30 successful method switch with missed visual", "subject": "SCIENCE",
+    "history": [["كيف يصل ضوء الشمس إلى الأرض؟", "دعينا نقسم الفكرة: الضوء ينطلق من الشمس ثم يعبر الفضاء حتى يصل إلينا."]],
+    "prior_method": "DECOMPOSITION", "turn": "هذا الشرح لم يساعدني. أريني طريقة أخرى لفهم رحلة الضوء.",
+    "visual_need": ["STRONGLY_RECOMMENDED", "PROCESS"],
+    "expect": {"relation": "DID_NOT_HELP", "method_change": true, "visual": "request", "next_action": true, "text_any": ["ضوء", "شمس", "أشعة"]}
+  },
+  {
+    "id": "g05_clarification_not_failure", "pattern": "E16 relation calibration", "subject": "MATH",
+    "history": [["كيف أطرح 53 من 80؟", "ابدئي بالعشرات والآحاد؛ في 80 لا توجد آحاد كافية لطرح 3."]],
+    "prior_method": "DECOMPOSITION", "turn": "طيب ماذا أفعل بالآحاد الآن؟",
+    "visual_need": ["NONE", "NONE"],
+    "expect": {"relation": "CONTINUATION", "visual": "avoid", "next_action": true, "text_any": ["آحاد", "عشرة", "استلاف"]}
+  },
+  {
+    "id": "g06_explain_then_check", "pattern": "E20 strategy fidelity", "subject": "MATH",
+    "turn": "علّميني كيف أقارن الكسرين 1/2 و1/4 ثم اسأليني سؤالًا لأتأكد.",
+    "visual_need": ["HELPFUL", "STRUCTURE"],
+    "expect": {"strategy": ["EXPLAIN_THEN_CHECK"], "next_action": true, "text_any": ["نصف", "ربع", "1/2", "1/4", "١/٢", "١/٤"]}
+  },
+  {
+    "id": "g07_unfinished_arabic", "pattern": "E17-E18 unfinished teaching", "subject": "ARABIC",
+    "history": [["ما معنى الفعل في الجملة؟", "الفعل يدل على حدث مثل رسمت."], ["كيف أجد من قام بالفعل؟", "اسألي من رسم؛ هذا يساعدك على إيجاد الفاعل."], ["ما الفرق بين الفاعل والمفعول به؟", "الفاعل يقوم بالفعل، والمفعول به يقع عليه الفعل. لنجرّب جملة قصيرة."]],
+    "prior_method": "CONCRETE_EXAMPLE", "turn": "في جملة «رسمت مريم زهرة»، كيف أعرف المفعول به؟",
+    "segment_state": {"active_goal": "تحديد الفاعل والمفعول به في جملة قصيرة", "unresolved_point": "تطبيق الفكرة على كلمة زهرة", "established_facts": ["الفاعل يقوم بالفعل", "المفعول يقع عليه الفعل"]},
+    "visual_need": ["NONE", "NONE"],
+    "expect": {"relation": "CONTINUATION", "visual": "avoid", "next_action": true, "text_any": ["زهرة", "مفعول"]}
+  },
+  {
+    "id": "g08_unfinished_science", "pattern": "E20 cross-subject dead end", "subject": "SCIENCE",
+    "history": [["كيف تعيش النبتة؟", "تحتاج النبتة إلى الضوء والماء والهواء. سنرى وظيفة كل واحد."]],
+    "prior_method": "DECOMPOSITION", "turn": "عرفت دور الماء. ماذا يحدث بعد ذلك؟",
+    "segment_state": {"active_goal": "فهم حاجات النبتة", "unresolved_point": "شرح دور الضوء أو الهواء بعد الماء", "established_facts": ["الماء من حاجات النبتة"]},
+    "visual_need": ["NONE", "NONE"],
+    "expect": {"relation": "CONTINUATION", "next_action": true, "text_any": ["ضوء", "هواء", "نبت", "ماء"]}
+  },
+  {
+    "id": "g09_science_process_visual", "pattern": "E20 missing proactive Canvas", "subject": "SCIENCE",
+    "turn": "كيف ينتقل الماء من البحر إلى السحاب ثم يعود مطرًا؟ يصعب علي تخيّل المراحل.",
+    "visual_need": ["STRONGLY_RECOMMENDED", "PROCESS"],
+    "expect": {"visual": "request", "next_action": true, "text_any": ["بخار", "تكاثف", "سحاب", "مطر"]}
+  },
+  {
+    "id": "g10_science_structure_visual", "pattern": "visual structure case", "subject": "SCIENCE",
+    "turn": "أين تكون الجذور والساق والأوراق في النبتة؟ أحتاج أن أرى ترتيب الأجزاء.",
+    "visual_need": ["STRONGLY_RECOMMENDED", "STRUCTURE"],
+    "expect": {"visual": "request", "text_any": ["جذر", "جذور", "ساق", "ورق"]}
+  },
+  {
+    "id": "g11_visual_not_needed", "pattern": "negative visual control", "subject": "MATH",
+    "turn": "كم يساوي 12 + 5؟ أريد إجابة قصيرة فقط.",
+    "visual_need": ["NONE", "NONE"],
+    "expect": {"visual": "avoid", "text_any": ["17", "١٧"]}
+  },
+  {
+    "id": "g12_explicit_visual_request", "pattern": "E16 explicit picture request", "subject": "MATH",
+    "turn": "هل يمكنك رسم مستطيل مقسّم إلى أربعة أجزاء متساوية وتظليل جزء واحد؟",
+    "visual_need": ["STRONGLY_RECOMMENDED", "SHAPE"],
+    "expect": {"visual": "request", "text_any": ["ربع", "أربع", "جزء", "مستطيل"]}
+  },
+  {
+    "id": "g13_canvas_ready_continue", "pattern": "existing Canvas state", "subject": "SCIENCE",
+    "history": [["أريني دورة حياة الفراشة.", "المشهد الحالي يعرض البيضة واليرقة والشرنقة والفراشة. اختاري المرحلة التالية."]],
+    "prior_method": "VISUAL_REPRESENTATION", "turn": "اخترت اليرقة. ماذا يحدث بعدها في الرسم الموجود؟",
+    "segment_state": {"active_goal": "ترتيب مراحل دورة حياة الفراشة", "unresolved_point": "المرحلة التي تلي اليرقة", "established_facts": ["اليرقة مرحلة بعد البيضة"]},
+    "canvas_state": {"status": "READY", "learning_focus": "butterfly life cycle: egg, caterpillar, chrysalis, adult"},
+    "visual_need": ["HELPFUL", "PROCESS"],
+    "expect": {"relation": "CONTINUATION", "visual": "no_duplicate", "next_action": true, "text_any": ["شرنقة", "يرقة", "فراشة"]}
+  },
+  {
+    "id": "g14_canvas_pending_no_duplicate", "pattern": "Canvas lifecycle continuity", "subject": "SCIENCE",
+    "history": [["أريني مراحل نمو النبتة.", "سأجهّز المشهد الذي يوضح المراحل."]],
+    "prior_method": "VISUAL_REPRESENTATION", "turn": "هل ظهر الرسم الآن؟",
+    "canvas_state": {"status": "PENDING", "learning_focus": "seed to seedling to plant"},
+    "visual_need": ["HELPFUL", "PROCESS"],
+    "expect": {"visual": "no_duplicate", "text_none": ["الرسم أمامك", "الصورة ظاهرة", "can see the canvas"]}
+  },
+  {
+    "id": "g15_memory_relevant", "pattern": "Personal Memory selective relevance", "subject": "SCIENCE",
+    "personal_memory": "Student previously said she grows mint with a caregiver; use only if naturally relevant.",
+    "turn": "لماذا تحتاج النبتة التي أزرعها إلى الضوء؟",
+    "visual_need": ["NONE", "NONE"],
+    "expect": {"visual": "avoid", "text_any": ["ضوء", "شمس", "نبت"]}
+  },
+  {
+    "id": "g16_memory_irrelevant", "pattern": "Personal Memory non-use", "subject": "MATH",
+    "personal_memory": "Student previously said she likes mint gardening; use only if naturally relevant.",
+    "turn": "ما ناتج 9 + 8؟ أريد طريقة سريعة.",
+    "visual_need": ["NONE", "NONE"],
+    "expect": {"visual": "avoid", "text_any": ["17", "١٧"], "text_none": ["نعناع", "mint", "حديق"]}
+  },
+  {
+    "id": "g17_memory_contradicted", "pattern": "current conversation overrides Personal Memory", "subject": "SCIENCE",
+    "personal_memory": "Student once said butterflies were her favorite animal. This is historical and may be stale.",
+    "turn": "لم أعد أحب الفراشات؛ أريد مثالًا عن النمل لتعلّم التعاون.",
+    "visual_need": ["NONE", "NONE"],
+    "expect": {"visual": "avoid", "text_any": ["نمل", "نملة"], "text_none": ["تحبين الفراشات", "favorite butterflies", "فراشتك المفضلة"]}
+  },
+  {
+    "id": "g18_li_mixed_evidence", "pattern": "E30 mixed evidence without durable overclaim", "subject": "MATH",
+    "history": [["ما ناتج 6 × 2؟", "صحيح، 12 دون مساعدة."], ["ما ناتج 6 × 3؟", "صحيح، 18، وشرحتِ الفكرة بنفسك."], ["و 6 × 4؟", "صحيح، 24 دون مساعدة."]],
+    "prior_method": "CONCRETE_EXAMPLE",
+    "intelligence": ["Mixed recent evidence: three independent correct products; one later incorrect product; guided correction succeeded. This is advisory, not a mastery or support-need verdict."],
+    "turn": "حللت 6 × 5 وحدي: 30. هل هذا صحيح؟",
+    "visual_need": ["NONE", "NONE"],
+    "expect": {"relation": "CONTINUATION", "visual": "avoid", "text_any": ["30", "٣٠"], "text_none": ["دائمًا تحتاجين", "لا تستطيعين وحدك", "always struggle"]}
+  },
+  {
+    "id": "g19_current_over_history", "pattern": "current independence outranks stale LI", "subject": "MATH",
+    "intelligence": ["Old pattern: learner previously needed stepwise hints for two-digit addition. Current behavior takes precedence."],
+    "turn": "حسبت 46 + 27 وحدي فوجدت 73. فقط أخبريني هل هي صحيحة.",
+    "visual_need": ["NONE", "NONE"],
+    "expect": {"visual": "avoid", "text_any": ["73", "٧٣"], "text_none": ["تحتاجين تلميح", "خطوة بخطوة", "need a hint"]}
+  },
+  {
+    "id": "g20_history_visual_overridden", "pattern": "current preference outranks visual history", "subject": "SCIENCE",
+    "intelligence": ["Historical preference: diagrams sometimes helped on science processes. Advisory only."],
+    "history": [["هل يحتاج الصوت إلى شيء لينتقل؟", "ينتقل الصوت عبر وسط مثل الهواء."], ["ما المقصود بالاهتزاز؟", "الاهتزاز حركة متكررة سريعة يمكن أن تولّد صوتًا."], ["كيف ينتشر الصوت؟", "يمكنني توضيح الاهتزاز بمخطط إذا أردتِ."]],
+    "prior_method": "VISUAL_REPRESENTATION",
+    "turn": "الآن أريد شرحًا بالكلمات فقط: لماذا ينتقل الصوت في الهواء؟",
+    "visual_need": ["NONE", "NONE"],
+    "expect": {"relation": "CONTINUATION", "visual": "avoid", "text_any": ["اهتزاز", "هواء", "صوت"], "text_none": ["سأرسم", "انظري إلى الرسم", "سأفتح اللوحة"]}
+  }
+]

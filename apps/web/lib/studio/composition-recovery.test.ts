@@ -5,6 +5,7 @@ import {
   canvasElapsedSeconds,
   canvasPresentationState,
   canvasWaitingMotionClass,
+  isCompositionPreparing,
   isDailyComposerDisabled,
   shouldRefreshCompositionSnapshot,
   shouldReplaceCompositionView,
@@ -68,6 +69,13 @@ test("an active Scene remains visible while a newer run is preparing", () => {
 test("COMPLETED plus scene_ready requests the authoritative Snapshot", () => {
   assert.equal(shouldRefreshCompositionSnapshot({ ...newPending, run_status: "COMPLETED", scene_ready: true }), true);
   assert.equal(shouldRefreshCompositionSnapshot({ ...newPending, run_status: "COMPLETED", scene_ready: false }), false);
+});
+
+test("COMPLETED without scene_ready keeps the visual in preparation and polling", () => {
+  const awaitingScene = { ...newPending, run_status: "COMPLETED", scene_ready: false };
+  assert.equal(isCompositionPreparing(awaitingScene), true);
+  assert.equal(canvasPresentationState(awaitingScene, false).showWaiting, true);
+  assert.equal(isCompositionPreparing({ ...awaitingScene, scene_ready: true }), false);
 });
 
 test("terminal failure statuses stop waiting and expose a failure state on initial load", () => {

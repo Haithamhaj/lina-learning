@@ -1,0 +1,2227 @@
+{
+  "experiment": "A2 Stable Prefix / Dynamic Suffix",
+  "date": "2026-09-28",
+  "source_sha256": "035825accf25af645719545f1b1088f9ee3b42275db6573ed1cc356377fcaaab",
+  "probe_sha256": "5c9e70c9372501ff68bf053a2bd10d83ce4e31eddb05299b351047e28f38a11b",
+  "plan_sha256": "ad9ce985df3c1027316a0075f8bdb0d1c1b1b8c37d7a05f7e65225f88d4a954e",
+  "probe_plan_sha256": "eb88e4c8404339c14807fcaff2dd7f3fbee7f480c5a871778ca04d2b74d3b906",
+  "complete": true,
+  "design": {
+    "model": "gpt-6-luna",
+    "reasoning_effort_override": null,
+    "recent_exchange_count": 1,
+    "repeats_per_arm": 3,
+    "variant_ordering": "stable_prefix_dynamic_suffix",
+    "ordering": "alternated within each repetition; starting arm balanced across cases",
+    "cache_limit": "Repeated identical synthetic prompts may reuse provider cache. These measurements do not estimate production cross-turn cache improvement."
+  },
+  "case_count": 20,
+  "paired_repetitions": 60,
+  "first_call_order_counts": {
+    "production_current": 30,
+    "stable_prefix_dynamic_suffix": 30
+  },
+  "arms": {
+    "production_current": {
+      "runs": 60,
+      "all_checks_passed": 48,
+      "mean_rubric_fraction": 0.9725,
+      "checks": {
+        "authority_boundary": {
+          "pass": 58,
+          "applicable": 60
+        },
+        "current_over_history": {
+          "pass": 18,
+          "applicable": 18
+        },
+        "current_turn_understood": {
+          "pass": 57,
+          "applicable": 57
+        },
+        "method_change": {
+          "pass": 6,
+          "applicable": 6
+        },
+        "no_invented_reasoning": {
+          "pass": 3,
+          "applicable": 3
+        },
+        "prior_method_relation": {
+          "pass": 28,
+          "applicable": 30
+        },
+        "schema_shape_valid": {
+          "pass": 60,
+          "applicable": 60
+        },
+        "strategy_choice": {
+          "pass": 3,
+          "applicable": 3
+        },
+        "strategy_fidelity": {
+          "pass": 19,
+          "applicable": 19
+        },
+        "teaching_response_screen": {
+          "pass": 60,
+          "applicable": 60
+        },
+        "useful_next_action": {
+          "pass": 19,
+          "applicable": 27
+        },
+        "visual_choice": {
+          "pass": 54,
+          "applicable": 54
+        }
+      },
+      "latency_mean_ms": 9146,
+      "latency_median_ms": 8592,
+      "latency_p95_ms": 14391,
+      "normal_input_tokens": 180,
+      "cached_input_tokens": 434016,
+      "cache_write_tokens": 41658,
+      "output_tokens": 52440,
+      "estimated_cost_usd": 0.03578541,
+      "strategy_selections": {
+        "EXPLAIN_WITH_EXAMPLE": 32,
+        "EXPLAIN_THEN_CHECK": 19,
+        "None": 9
+      },
+      "guided_checks": 17,
+      "canvas_briefs": 16,
+      "total_input_tokens": 475854
+    },
+    "stable_prefix_dynamic_suffix": {
+      "runs": 60,
+      "all_checks_passed": 46,
+      "mean_rubric_fraction": 0.9671,
+      "checks": {
+        "authority_boundary": {
+          "pass": 60,
+          "applicable": 60
+        },
+        "current_over_history": {
+          "pass": 18,
+          "applicable": 18
+        },
+        "current_turn_understood": {
+          "pass": 57,
+          "applicable": 57
+        },
+        "method_change": {
+          "pass": 6,
+          "applicable": 6
+        },
+        "no_invented_reasoning": {
+          "pass": 3,
+          "applicable": 3
+        },
+        "prior_method_relation": {
+          "pass": 28,
+          "applicable": 30
+        },
+        "schema_shape_valid": {
+          "pass": 60,
+          "applicable": 60
+        },
+        "strategy_choice": {
+          "pass": 3,
+          "applicable": 3
+        },
+        "strategy_fidelity": {
+          "pass": 17,
+          "applicable": 17
+        },
+        "teaching_response_screen": {
+          "pass": 60,
+          "applicable": 60
+        },
+        "useful_next_action": {
+          "pass": 15,
+          "applicable": 27
+        },
+        "visual_choice": {
+          "pass": 54,
+          "applicable": 54
+        }
+      },
+      "latency_mean_ms": 8752,
+      "latency_median_ms": 8564,
+      "latency_p95_ms": 14325,
+      "normal_input_tokens": 180,
+      "cached_input_tokens": 434016,
+      "cache_write_tokens": 41658,
+      "output_tokens": 49624,
+      "estimated_cost_usd": 0.03437741,
+      "strategy_selections": {
+        "EXPLAIN_WITH_EXAMPLE": 33,
+        "EXPLAIN_THEN_CHECK": 17,
+        "None": 9,
+        "INDEPENDENT_CHECK": 1
+      },
+      "guided_checks": 16,
+      "canvas_briefs": 16,
+      "total_input_tokens": 475854
+    }
+  },
+  "cases": {
+    "g01_correct_independent": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 9593,
+        "latency_median_ms": 9826,
+        "latency_p95_ms": 10397,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21723,
+        "cache_write_tokens": 2094,
+        "output_tokens": 2738,
+        "estimated_cost_usd": 0.00184888,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8794,
+        "latency_median_ms": 8889,
+        "latency_p95_ms": 8971,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21723,
+        "cache_write_tokens": 2094,
+        "output_tokens": 2564,
+        "estimated_cost_usd": 0.00176188,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      }
+    },
+    "g02_wrong_no_reasoning": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 1,
+        "mean_rubric_fraction": 0.9167,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "no_invented_reasoning": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 1,
+            "applicable": 1
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 1,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 11191,
+        "latency_median_ms": 12938,
+        "latency_p95_ms": 13065,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21555,
+        "cache_write_tokens": 2010,
+        "output_tokens": 3444,
+        "estimated_cost_usd": 0.0021897,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 2,
+          "EXPLAIN_THEN_CHECK": 1
+        },
+        "guided_checks": 1,
+        "canvas_briefs": 0
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 0,
+        "mean_rubric_fraction": 0.875,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "no_invented_reasoning": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 0,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 9965,
+        "latency_median_ms": 10078,
+        "latency_p95_ms": 10715,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21555,
+        "cache_write_tokens": 2010,
+        "output_tokens": 2829,
+        "estimated_cost_usd": 0.0018822,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      }
+    },
+    "g03_explicit_confusion": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.963,
+        "checks": {
+          "authority_boundary": {
+            "pass": 2,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "method_change": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 14884,
+        "latency_median_ms": 15804,
+        "latency_p95_ms": 16018,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21575,
+        "cache_write_tokens": 2020,
+        "output_tokens": 4618,
+        "estimated_cost_usd": 0.00277815,
+        "strategy_selections": {
+          "EXPLAIN_THEN_CHECK": 3
+        },
+        "guided_checks": 2,
+        "canvas_briefs": 3
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "method_change": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 12296,
+        "latency_median_ms": 11756,
+        "latency_p95_ms": 14325,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21575,
+        "cache_write_tokens": 2020,
+        "output_tokens": 3673,
+        "estimated_cost_usd": 0.00230565,
+        "strategy_selections": {
+          "EXPLAIN_THEN_CHECK": 3
+        },
+        "guided_checks": 3,
+        "canvas_briefs": 3
+      }
+    },
+    "g04_did_not_help_change": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9583,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "method_change": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 2,
+            "applicable": 2
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 2,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 11741,
+        "latency_median_ms": 12514,
+        "latency_p95_ms": 13635,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21575,
+        "cache_write_tokens": 2020,
+        "output_tokens": 3487,
+        "estimated_cost_usd": 0.00221265,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 1,
+          "EXPLAIN_THEN_CHECK": 2
+        },
+        "guided_checks": 1,
+        "canvas_briefs": 3
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9583,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "method_change": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 2,
+            "applicable": 2
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 2,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 13367,
+        "latency_median_ms": 14433,
+        "latency_p95_ms": 15525,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21575,
+        "cache_write_tokens": 2020,
+        "output_tokens": 3807,
+        "estimated_cost_usd": 0.00237265,
+        "strategy_selections": {
+          "EXPLAIN_THEN_CHECK": 2,
+          "EXPLAIN_WITH_EXAMPLE": 1
+        },
+        "guided_checks": 2,
+        "canvas_briefs": 3
+      }
+    },
+    "g05_clarification_not_failure": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 1,
+        "mean_rubric_fraction": 0.9048,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 1,
+            "applicable": 1
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 1,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8531,
+        "latency_median_ms": 8008,
+        "latency_p95_ms": 10979,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21555,
+        "cache_write_tokens": 2010,
+        "output_tokens": 2541,
+        "estimated_cost_usd": 0.0017382,
+        "strategy_selections": {
+          "EXPLAIN_THEN_CHECK": 1,
+          "EXPLAIN_WITH_EXAMPLE": 2
+        },
+        "guided_checks": 1,
+        "canvas_briefs": 0
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 0,
+        "mean_rubric_fraction": 0.8571,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 0,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 6688,
+        "latency_median_ms": 7061,
+        "latency_p95_ms": 8380,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21555,
+        "cache_write_tokens": 2010,
+        "output_tokens": 1919,
+        "estimated_cost_usd": 0.0014272,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      }
+    },
+    "g06_explain_then_check": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_choice": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 10017,
+        "latency_median_ms": 8095,
+        "latency_p95_ms": 14391,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21417,
+        "cache_write_tokens": 1941,
+        "output_tokens": 3083,
+        "estimated_cost_usd": 0.001999195,
+        "strategy_selections": {
+          "EXPLAIN_THEN_CHECK": 3
+        },
+        "guided_checks": 3,
+        "canvas_briefs": 1
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_choice": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 10126,
+        "latency_median_ms": 9561,
+        "latency_p95_ms": 13869,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21417,
+        "cache_write_tokens": 1941,
+        "output_tokens": 3073,
+        "estimated_cost_usd": 0.001994195,
+        "strategy_selections": {
+          "EXPLAIN_THEN_CHECK": 3
+        },
+        "guided_checks": 3,
+        "canvas_briefs": 1
+      }
+    },
+    "g07_unfinished_arabic": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 1,
+            "applicable": 1
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8222,
+        "latency_median_ms": 8627,
+        "latency_p95_ms": 9168,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21987,
+        "cache_write_tokens": 2226,
+        "output_tokens": 2408,
+        "estimated_cost_usd": 0.00170302,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 2,
+          "EXPLAIN_THEN_CHECK": 1
+        },
+        "guided_checks": 1,
+        "canvas_briefs": 0
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 1,
+            "applicable": 1
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 7412,
+        "latency_median_ms": 7262,
+        "latency_p95_ms": 7832,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21987,
+        "cache_write_tokens": 2226,
+        "output_tokens": 2219,
+        "estimated_cost_usd": 0.00160852,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 2,
+          "EXPLAIN_THEN_CHECK": 1
+        },
+        "guided_checks": 1,
+        "canvas_briefs": 0
+      }
+    },
+    "g08_unfinished_science": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8418,
+        "latency_median_ms": 8024,
+        "latency_p95_ms": 9339,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21791,
+        "cache_write_tokens": 2128,
+        "output_tokens": 2502,
+        "estimated_cost_usd": 0.00173581,
+        "strategy_selections": {
+          "EXPLAIN_THEN_CHECK": 3
+        },
+        "guided_checks": 3,
+        "canvas_briefs": 0
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9444,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 2,
+            "applicable": 2
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 2,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 7476,
+        "latency_median_ms": 7711,
+        "latency_p95_ms": 8608,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21791,
+        "cache_write_tokens": 2128,
+        "output_tokens": 2179,
+        "estimated_cost_usd": 0.00157431,
+        "strategy_selections": {
+          "EXPLAIN_THEN_CHECK": 2,
+          "EXPLAIN_WITH_EXAMPLE": 1
+        },
+        "guided_checks": 1,
+        "canvas_briefs": 0
+      }
+    },
+    "g09_science_process_visual": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 12158,
+        "latency_median_ms": 12338,
+        "latency_p95_ms": 14431,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21417,
+        "cache_write_tokens": 1941,
+        "output_tokens": 3806,
+        "estimated_cost_usd": 0.002360695,
+        "strategy_selections": {
+          "EXPLAIN_THEN_CHECK": 3
+        },
+        "guided_checks": 3,
+        "canvas_briefs": 3
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9444,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 2,
+            "applicable": 2
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 2,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 12211,
+        "latency_median_ms": 11966,
+        "latency_p95_ms": 13469,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21417,
+        "cache_write_tokens": 1941,
+        "output_tokens": 3772,
+        "estimated_cost_usd": 0.002343695,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 1,
+          "EXPLAIN_THEN_CHECK": 2
+        },
+        "guided_checks": 2,
+        "canvas_briefs": 3
+      }
+    },
+    "g10_science_structure_visual": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9444,
+        "checks": {
+          "authority_boundary": {
+            "pass": 2,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 1,
+            "applicable": 1
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8911,
+        "latency_median_ms": 9026,
+        "latency_p95_ms": 9556,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21435,
+        "cache_write_tokens": 1950,
+        "output_tokens": 2638,
+        "estimated_cost_usd": 0.001778,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 2,
+          "EXPLAIN_THEN_CHECK": 1
+        },
+        "guided_checks": 1,
+        "canvas_briefs": 3
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 1,
+            "applicable": 1
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 10345,
+        "latency_median_ms": 10448,
+        "latency_p95_ms": 11051,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21435,
+        "cache_write_tokens": 1950,
+        "output_tokens": 3129,
+        "estimated_cost_usd": 0.0020235,
+        "strategy_selections": {
+          "EXPLAIN_THEN_CHECK": 1,
+          "EXPLAIN_WITH_EXAMPLE": 2
+        },
+        "guided_checks": 1,
+        "canvas_briefs": 3
+      }
+    },
+    "g11_visual_not_needed": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 4606,
+        "latency_median_ms": 4977,
+        "latency_p95_ms": 5527,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21397,
+        "cache_write_tokens": 1931,
+        "output_tokens": 922,
+        "estimated_cost_usd": 0.000917245,
+        "strategy_selections": {
+          "None": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 4033,
+        "latency_median_ms": 4039,
+        "latency_p95_ms": 4500,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21397,
+        "cache_write_tokens": 1931,
+        "output_tokens": 870,
+        "estimated_cost_usd": 0.000891245,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 1,
+          "None": 2
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      }
+    },
+    "g12_explicit_visual_request": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8090,
+        "latency_median_ms": 8086,
+        "latency_p95_ms": 8347,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21411,
+        "cache_write_tokens": 1938,
+        "output_tokens": 2246,
+        "estimated_cost_usd": 0.00158026,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 3
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 10307,
+        "latency_median_ms": 9764,
+        "latency_p95_ms": 12274,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21411,
+        "cache_write_tokens": 1938,
+        "output_tokens": 3002,
+        "estimated_cost_usd": 0.00195826,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 3
+      }
+    },
+    "g13_canvas_ready_continue": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 0,
+        "mean_rubric_fraction": 0.8571,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 0,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 11704,
+        "latency_median_ms": 10763,
+        "latency_p95_ms": 14274,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 23145,
+        "cache_write_tokens": 2805,
+        "output_tokens": 3533,
+        "estimated_cost_usd": 0.002349475,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 0,
+        "mean_rubric_fraction": 0.8571,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "useful_next_action": {
+            "pass": 0,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 9665,
+        "latency_median_ms": 9692,
+        "latency_p95_ms": 12785,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 23145,
+        "cache_write_tokens": 2805,
+        "output_tokens": 2742,
+        "estimated_cost_usd": 0.001953975,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      }
+    },
+    "g14_canvas_pending_no_duplicate": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 5343,
+        "latency_median_ms": 5049,
+        "latency_p95_ms": 6119,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 22753,
+        "cache_write_tokens": 2609,
+        "output_tokens": 1364,
+        "estimated_cost_usd": 0.001236555,
+        "strategy_selections": {
+          "None": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 4642,
+        "latency_median_ms": 4782,
+        "latency_p95_ms": 5783,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 22753,
+        "cache_write_tokens": 2609,
+        "output_tokens": 1042,
+        "estimated_cost_usd": 0.001075555,
+        "strategy_selections": {
+          "None": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      }
+    },
+    "g15_memory_relevant": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 6976,
+        "latency_median_ms": 6850,
+        "latency_p95_ms": 7348,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21449,
+        "cache_write_tokens": 1957,
+        "output_tokens": 1838,
+        "estimated_cost_usd": 0.001379015,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 2,
+            "applicable": 2
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 6822,
+        "latency_median_ms": 6716,
+        "latency_p95_ms": 7119,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21449,
+        "cache_write_tokens": 1957,
+        "output_tokens": 1874,
+        "estimated_cost_usd": 0.001397015,
+        "strategy_selections": {
+          "EXPLAIN_THEN_CHECK": 2,
+          "EXPLAIN_WITH_EXAMPLE": 1
+        },
+        "guided_checks": 2,
+        "canvas_briefs": 0
+      }
+    },
+    "g16_memory_irrelevant": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 5680,
+        "latency_median_ms": 6031,
+        "latency_p95_ms": 6117,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21463,
+        "cache_write_tokens": 1964,
+        "output_tokens": 1531,
+        "estimated_cost_usd": 0.00122653,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 5101,
+        "latency_median_ms": 5255,
+        "latency_p95_ms": 5293,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21463,
+        "cache_write_tokens": 1964,
+        "output_tokens": 1297,
+        "estimated_cost_usd": 0.00110953,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      }
+    },
+    "g17_memory_contradicted": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 1,
+            "applicable": 1
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 7302,
+        "latency_median_ms": 8233,
+        "latency_p95_ms": 8294,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21471,
+        "cache_write_tokens": 1968,
+        "output_tokens": 2026,
+        "estimated_cost_usd": 0.00147461,
+        "strategy_selections": {
+          "EXPLAIN_THEN_CHECK": 1,
+          "EXPLAIN_WITH_EXAMPLE": 2
+        },
+        "guided_checks": 1,
+        "canvas_briefs": 0
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "strategy_fidelity": {
+            "pass": 1,
+            "applicable": 1
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 7704,
+        "latency_median_ms": 7797,
+        "latency_p95_ms": 8366,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21471,
+        "cache_write_tokens": 1968,
+        "output_tokens": 2086,
+        "estimated_cost_usd": 0.00150461,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 2,
+          "EXPLAIN_THEN_CHECK": 1
+        },
+        "guided_checks": 1,
+        "canvas_briefs": 0
+      }
+    },
+    "g18_li_mixed_evidence": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9524,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 2,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 10764,
+        "latency_median_ms": 10210,
+        "latency_p95_ms": 12784,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21743,
+        "cache_write_tokens": 2104,
+        "output_tokens": 2804,
+        "estimated_cost_usd": 0.00188333,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 2,
+          "None": 1
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9524,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 2,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8774,
+        "latency_median_ms": 9319,
+        "latency_p95_ms": 9497,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21743,
+        "cache_write_tokens": 2104,
+        "output_tokens": 2364,
+        "estimated_cost_usd": 0.00166333,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 1,
+          "None": 1,
+          "INDEPENDENT_CHECK": 1
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      }
+    },
+    "g19_current_over_history": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 8015,
+        "latency_median_ms": 8339,
+        "latency_p95_ms": 9622,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21441,
+        "cache_write_tokens": 1953,
+        "output_tokens": 1891,
+        "estimated_cost_usd": 0.001404935,
+        "strategy_selections": {
+          "None": 2,
+          "EXPLAIN_WITH_EXAMPLE": 1
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 3,
+        "mean_rubric_fraction": 1.0,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 6598,
+        "latency_median_ms": 7019,
+        "latency_p95_ms": 7241,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21441,
+        "cache_write_tokens": 1953,
+        "output_tokens": 1708,
+        "estimated_cost_usd": 0.001313435,
+        "strategy_selections": {
+          "None": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      }
+    },
+    "g20_history_visual_overridden": {
+      "production_current": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9524,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 2,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 10784,
+        "latency_median_ms": 9710,
+        "latency_p95_ms": 13442,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21713,
+        "cache_write_tokens": 2089,
+        "output_tokens": 3020,
+        "estimated_cost_usd": 0.001989155,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      },
+      "stable_prefix_dynamic_suffix": {
+        "runs": 3,
+        "all_checks_passed": 2,
+        "mean_rubric_fraction": 0.9524,
+        "checks": {
+          "authority_boundary": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_over_history": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "current_turn_understood": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "prior_method_relation": {
+            "pass": 2,
+            "applicable": 3
+          },
+          "schema_shape_valid": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "teaching_response_screen": {
+            "pass": 3,
+            "applicable": 3
+          },
+          "visual_choice": {
+            "pass": 3,
+            "applicable": 3
+          }
+        },
+        "latency_mean_ms": 12715,
+        "latency_median_ms": 11616,
+        "latency_p95_ms": 15102,
+        "normal_input_tokens": 9,
+        "cached_input_tokens": 21713,
+        "cache_write_tokens": 2089,
+        "output_tokens": 3475,
+        "estimated_cost_usd": 0.002216655,
+        "strategy_selections": {
+          "EXPLAIN_WITH_EXAMPLE": 3
+        },
+        "guided_checks": 0,
+        "canvas_briefs": 0
+      }
+    }
+  },
+  "paired_latency": {
+    "variant_minus_baseline_mean_ms": -394,
+    "variant_minus_baseline_median_ms": -492,
+    "variant_faster_pairs": 34,
+    "baseline_faster_pairs": 26
+  },
+  "golden_estimated_cost_usd": 0.07016282,
+  "probe_estimated_cost_usd": 0.004357175,
+  "combined_estimated_cost_usd": 0.074519995,
+  "cache_probe": {
+    "turns": 3,
+    "exact_input_prefix_characters": {
+      "production_current": {
+        "all_turns": 381,
+        "consecutive": [
+          381,
+          381
+        ]
+      },
+      "stable_prefix_dynamic_suffix": {
+        "all_turns": 9421,
+        "consecutive": [
+          9421,
+          9713
+        ]
+      }
+    },
+    "runs": [
+      {
+        "case_id": "a2_cache_plant_turn_1",
+        "repetition": 1,
+        "slot": 1,
+        "prompt_ordering": "production_current",
+        "input_tokens": 3,
+        "cached_input_tokens": 0,
+        "cache_write_tokens": 7809,
+        "output_tokens": 631,
+        "latency_ms": 9650,
+        "estimated_cost_usd": 0.001291925
+      },
+      {
+        "case_id": "a2_cache_plant_turn_1",
+        "repetition": 1,
+        "slot": 2,
+        "prompt_ordering": "stable_prefix_dynamic_suffix",
+        "input_tokens": 3,
+        "cached_input_tokens": 5845,
+        "cache_write_tokens": 1964,
+        "output_tokens": 562,
+        "latency_ms": 7286,
+        "estimated_cost_usd": 0.00058525
+      },
+      {
+        "case_id": "a2_cache_plant_turn_2",
+        "repetition": 1,
+        "slot": 1,
+        "prompt_ordering": "stable_prefix_dynamic_suffix",
+        "input_tokens": 3,
+        "cached_input_tokens": 5845,
+        "cache_write_tokens": 2074,
+        "output_tokens": 621,
+        "latency_ms": 6890,
+        "estimated_cost_usd": 0.0006285
+      },
+      {
+        "case_id": "a2_cache_plant_turn_2",
+        "repetition": 1,
+        "slot": 2,
+        "prompt_ordering": "production_current",
+        "input_tokens": 3,
+        "cached_input_tokens": 5845,
+        "cache_write_tokens": 2074,
+        "output_tokens": 565,
+        "latency_ms": 6590,
+        "estimated_cost_usd": 0.0006005
+      },
+      {
+        "case_id": "a2_cache_plant_turn_3",
+        "repetition": 1,
+        "slot": 1,
+        "prompt_ordering": "production_current",
+        "input_tokens": 3,
+        "cached_input_tokens": 5845,
+        "cache_write_tokens": 2170,
+        "output_tokens": 664,
+        "latency_ms": 7248,
+        "estimated_cost_usd": 0.000662
+      },
+      {
+        "case_id": "a2_cache_plant_turn_3",
+        "repetition": 1,
+        "slot": 2,
+        "prompt_ordering": "stable_prefix_dynamic_suffix",
+        "input_tokens": 3,
+        "cached_input_tokens": 5845,
+        "cache_write_tokens": 2170,
+        "output_tokens": 518,
+        "latency_ms": 6605,
+        "estimated_cost_usd": 0.000589
+      }
+    ],
+    "turns_2_3": {
+      "production_current": {
+        "cached_input_tokens": 11690,
+        "cache_write_tokens": 4244
+      },
+      "stable_prefix_dynamic_suffix": {
+        "cached_input_tokens": 11690,
+        "cache_write_tokens": 4244
+      }
+    },
+    "interpretation": "The exact input prefix is longer for A2, but both arms report identical cached and cache-write tokens on changed turns 2 and 3. The first turn is order-confounded because baseline ran cold and A2 ran second. No explicit breakpoint or cache key was used."
+  },
+  "cache_limit": "Repeated identical Golden prompts warm full-request caches; their totals do not measure cross-turn reuse. The separate changing-turn probe does, but it is small and implicit cache breakpoints may prevent reuse of A2 sections within one changing input message."
+}

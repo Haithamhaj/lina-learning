@@ -1,0 +1,409 @@
+{
+  "mode": "paired_live",
+  "plan_sha256": "eb88e4c8404339c14807fcaff2dd7f3fbee7f480c5a871778ca04d2b74d3b906",
+  "design": {
+    "model": "gpt-6-luna",
+    "reasoning_effort_override": null,
+    "recent_exchange_count": 1,
+    "repeats_per_arm": 1,
+    "variant_ordering": "stable_prefix_dynamic_suffix",
+    "ordering": "alternated within each repetition; starting arm balanced across cases",
+    "cache_limit": "Repeated identical synthetic prompts may reuse provider cache. These measurements do not estimate production cross-turn cache improvement."
+  },
+  "case_ids": [
+    "a2_cache_plant_turn_1",
+    "a2_cache_plant_turn_2",
+    "a2_cache_plant_turn_3"
+  ],
+  "events": [
+    {
+      "case_id": "a2_cache_plant_turn_1",
+      "repetition": 1,
+      "slot": 1,
+      "prompt_ordering": "production_current",
+      "run": {
+        "run": 1,
+        "rubric": {
+          "checks": {
+            "schema_shape_valid": true,
+            "teaching_response_screen": true,
+            "visual_choice": true,
+            "current_turn_understood": true,
+            "authority_boundary": true
+          },
+          "passed": 5,
+          "total": 5,
+          "all_passed": true,
+          "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+        },
+        "latency_ms": 9650,
+        "input_tokens": 3,
+        "output_tokens": 631,
+        "cached_input_tokens": 0,
+        "cache_write_tokens": 7809,
+        "estimated_cost_usd": 0.001291925,
+        "output": {
+          "text": "تحتاج نبتة النعناع إلى الضوء لأن أوراقها تستخدم طاقته لصنع غذائها. تأخذ الماء من التربة وثاني أكسيد الكربون من الهواء، وبوجود الضوء تصنع سكراً يساعدها على النمو، وتُطلق الأكسجين أيضاً. لذلك، إذا لم تحصل على ضوء كافٍ، قد تضعف ولا تنمو جيداً.",
+          "suggested_actions": [],
+          "guided_check": null,
+          "teaching_mode": "LEARN",
+          "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+          "teaching_method_id": "CONCRETE_EXAMPLE",
+          "prior_method_relation": null,
+          "segment_relation": "NEW_SEGMENT",
+          "structured_segment_state": null,
+          "parent_boundary": {
+            "schema_version": "parent-boundary-v1",
+            "category": null,
+            "applies": false,
+            "model_action": "ALLOW",
+            "redirect": null
+          },
+          "candidate_metadata": null,
+          "provisional_broad_subject": "SCIENCE",
+          "segment_concept_ref": "احتياج النبات للضوء وصنع الغذاء",
+          "workspace_intent": null,
+          "canvas_brief": null,
+          "canvas_visual_context_selection": null,
+          "canvas_change_intent": null,
+          "workspace_visual_order": null
+        }
+      }
+    },
+    {
+      "case_id": "a2_cache_plant_turn_1",
+      "repetition": 1,
+      "slot": 2,
+      "prompt_ordering": "stable_prefix_dynamic_suffix",
+      "run": {
+        "run": 1,
+        "rubric": {
+          "checks": {
+            "schema_shape_valid": true,
+            "teaching_response_screen": true,
+            "visual_choice": true,
+            "current_turn_understood": true,
+            "authority_boundary": true
+          },
+          "passed": 5,
+          "total": 5,
+          "all_passed": true,
+          "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+        },
+        "latency_ms": 7286,
+        "input_tokens": 3,
+        "output_tokens": 562,
+        "cached_input_tokens": 5845,
+        "cache_write_tokens": 1964,
+        "estimated_cost_usd": 0.00058525,
+        "output": {
+          "text": "تحتاج نبتة النعناع إلى الضوء لأنه يزوّد أوراقها بالطاقة لصنع غذائها. تمتص الجذور الماء، وتأخذ الأوراق غازًا من الهواء اسمه ثاني أكسيد الكربون، ثم تستخدم طاقة الضوء لتصنع سكّرًا يساعدها على النمو. وتُطلق الأكسجين أيضًا. كأن أوراق النعناع مطابخ صغيرة تعمل بالضوء!",
+          "suggested_actions": [],
+          "guided_check": null,
+          "teaching_mode": "LEARN",
+          "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+          "teaching_method_id": "CONCRETE_EXAMPLE",
+          "prior_method_relation": null,
+          "segment_relation": "NEW_SEGMENT",
+          "structured_segment_state": {
+            "schema_version": "structured-segment-state-v1",
+            "active_goal": "فهم لماذا تحتاج نبتة النعناع إلى الضوء",
+            "unresolved_point": null,
+            "active_references": [
+              "نبتة النعناع التي تزرعها نور"
+            ],
+            "established_facts": [
+              "تستخدم النبتة طاقة الضوء لصنع غذائها في الأوراق."
+            ],
+            "source_message_ids": [
+              "d043dbec-8052-5663-99b5-33a5ab0f9937"
+            ]
+          },
+          "parent_boundary": {
+            "schema_version": "parent-boundary-v1",
+            "category": null,
+            "applies": false,
+            "model_action": "ALLOW",
+            "redirect": null
+          },
+          "candidate_metadata": null,
+          "provisional_broad_subject": "SCIENCE",
+          "segment_concept_ref": "كيف تصنع النباتات غذاءها بالضوء",
+          "workspace_intent": null,
+          "canvas_brief": null,
+          "canvas_visual_context_selection": null,
+          "canvas_change_intent": null,
+          "workspace_visual_order": null
+        }
+      }
+    },
+    {
+      "case_id": "a2_cache_plant_turn_2",
+      "repetition": 1,
+      "slot": 1,
+      "prompt_ordering": "stable_prefix_dynamic_suffix",
+      "run": {
+        "run": 1,
+        "rubric": {
+          "checks": {
+            "schema_shape_valid": true,
+            "teaching_response_screen": true,
+            "visual_choice": true,
+            "current_turn_understood": true,
+            "authority_boundary": true
+          },
+          "passed": 5,
+          "total": 5,
+          "all_passed": true,
+          "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+        },
+        "latency_ms": 6890,
+        "input_tokens": 3,
+        "output_tokens": 621,
+        "cached_input_tokens": 5845,
+        "cache_write_tokens": 2074,
+        "estimated_cost_usd": 0.0006285,
+        "output": {
+          "text": "إذا بقيت نبتة النعناع في الظل يومًا، فسيقلّ الضوء الذي يصل إلى أوراقها، لذلك تصنع غذاءً أقل خلال ذلك اليوم. وإذا كان في الظل بعض الضوء، فقد تستمر بصنع بعض الغذاء؛ فالظل لا يعني دائمًا انعدام الضوء. ويمكنها استخدام بعض الغذاء الذي صنعته وخزنته من قبل.",
+          "suggested_actions": [],
+          "guided_check": null,
+          "teaching_mode": "LEARN",
+          "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+          "teaching_method_id": "CONCRETE_EXAMPLE",
+          "prior_method_relation": "CONTINUATION",
+          "segment_relation": "CONTINUE",
+          "structured_segment_state": {
+            "schema_version": "structured-segment-state-v1",
+            "active_goal": "فهم تأثير الظل في صنع نبتة النعناع لغذائها",
+            "unresolved_point": "هل يقل صنع الغذاء في الظل أم يتوقف تمامًا؟",
+            "active_references": [
+              "نبتة النعناع",
+              "الضوء",
+              "صنع الغذاء"
+            ],
+            "established_facts": [
+              "تستخدم أوراق النعناع طاقة الضوء لصنع الغذاء من الماء والهواء.",
+              "قلة الضوء تقلل صنع الغذاء، لكنها لا تعني دائمًا انعدام الضوء."
+            ],
+            "source_message_ids": [
+              "ddf0c1fe-58f1-5608-b416-5515058da32e",
+              "0994802e-4eec-5cc0-978f-cbccbfb2e5bd",
+              "2e48046e-86d0-5c32-b089-e34ec3c853be"
+            ]
+          },
+          "parent_boundary": {
+            "schema_version": "parent-boundary-v1",
+            "category": null,
+            "applies": false,
+            "model_action": "ALLOW",
+            "redirect": null
+          },
+          "candidate_metadata": null,
+          "provisional_broad_subject": "SCIENCE",
+          "segment_concept_ref": "photosynthesis",
+          "workspace_intent": null,
+          "canvas_brief": null,
+          "canvas_visual_context_selection": null,
+          "canvas_change_intent": null,
+          "workspace_visual_order": null
+        }
+      }
+    },
+    {
+      "case_id": "a2_cache_plant_turn_2",
+      "repetition": 1,
+      "slot": 2,
+      "prompt_ordering": "production_current",
+      "run": {
+        "run": 1,
+        "rubric": {
+          "checks": {
+            "schema_shape_valid": true,
+            "teaching_response_screen": true,
+            "visual_choice": true,
+            "current_turn_understood": true,
+            "authority_boundary": true
+          },
+          "passed": 5,
+          "total": 5,
+          "all_passed": true,
+          "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+        },
+        "latency_ms": 6590,
+        "input_tokens": 3,
+        "output_tokens": 565,
+        "cached_input_tokens": 5845,
+        "cache_write_tokens": 2074,
+        "estimated_cost_usd": 0.0006005,
+        "output": {
+          "text": "إذا بقيت نبتة النعناع في الظل يومًا، فستحصل على ضوء أقل، لذلك تصنع غذاءً أقل خلال ذلك اليوم. وقد لا تتوقف تمامًا إذا وصلها بعض الضوء، ويوم واحد في الظل غالبًا لا يضرها؛ لكن النبتة تحتاج إلى ضوء كافٍ لتواصل صنع غذائها ونموها.",
+          "suggested_actions": [],
+          "guided_check": null,
+          "teaching_mode": "LEARN",
+          "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+          "teaching_method_id": "CONCRETE_EXAMPLE",
+          "prior_method_relation": "CONTINUATION",
+          "segment_relation": "CONTINUE",
+          "structured_segment_state": {
+            "schema_version": "structured-segment-state-v1",
+            "active_goal": "فهم دور الضوء في صنع النبات لغذائه",
+            "unresolved_point": "أثر بقائها في الظل يومًا واحدًا",
+            "active_references": [
+              "نبتة النعناع"
+            ],
+            "established_facts": [
+              "تستخدم أوراق النعناع طاقة الضوء لصنع الغذاء من الماء والهواء"
+            ],
+            "source_message_ids": [
+              "2e48046e-86d0-5c32-b089-e34ec3c853be",
+              "ddf0c1fe-58f1-5608-b416-5515058da32e"
+            ]
+          },
+          "parent_boundary": {
+            "schema_version": "parent-boundary-v1",
+            "category": null,
+            "applies": false,
+            "model_action": "ALLOW",
+            "redirect": null
+          },
+          "candidate_metadata": null,
+          "provisional_broad_subject": "SCIENCE",
+          "segment_concept_ref": "photosynthesis and light",
+          "workspace_intent": null,
+          "canvas_brief": null,
+          "canvas_visual_context_selection": null,
+          "canvas_change_intent": null,
+          "workspace_visual_order": null
+        }
+      }
+    },
+    {
+      "case_id": "a2_cache_plant_turn_3",
+      "repetition": 1,
+      "slot": 1,
+      "prompt_ordering": "production_current",
+      "run": {
+        "run": 1,
+        "rubric": {
+          "checks": {
+            "schema_shape_valid": true,
+            "teaching_response_screen": true,
+            "visual_choice": true,
+            "current_turn_understood": true,
+            "authority_boundary": true
+          },
+          "passed": 5,
+          "total": 5,
+          "all_passed": true,
+          "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+        },
+        "latency_ms": 7248,
+        "input_tokens": 3,
+        "output_tokens": 664,
+        "cached_input_tokens": 5845,
+        "cache_write_tokens": 2170,
+        "estimated_cost_usd": 0.000662,
+        "output": {
+          "text": "لا، الماء وحده لا يكفي. نبتة النعناع تحتاج إلى الماء من جذورها، وثاني أكسيد الكربون من الهواء، وطاقة الضوء. تستخدم أوراقها هذه الأشياء لصنع السكر، وهو غذاؤها، ويخرج الأكسجين أيضًا. إذن الماء مكوّن مهم، لكنه ليس غذاء النبتة وحده.",
+          "suggested_actions": [],
+          "guided_check": null,
+          "teaching_mode": "LEARN",
+          "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+          "teaching_method_id": "DECOMPOSITION",
+          "prior_method_relation": "CONTINUATION",
+          "segment_relation": "CONTINUE",
+          "structured_segment_state": {
+            "schema_version": "structured-segment-state-v1",
+            "active_goal": "فهم كيف تصنع نبتة النعناع غذاءها",
+            "unresolved_point": null,
+            "active_references": [
+              "البناء الضوئي في نبتة النعناع"
+            ],
+            "established_facts": [
+              "تستخدم أوراق النعناع طاقة الضوء لصنع الغذاء من الماء والهواء.",
+              "في الظل يقل الضوء المتاح، فيصعب على النبتة صنع الكمية نفسها من الغذاء."
+            ],
+            "source_message_ids": [
+              "835730d1-55b9-5c1f-92ab-2fefc4b282f8",
+              "a4f21957-d2c6-5015-a7a2-48d1989cd5e3",
+              "c9b7c9ae-f2ef-5f7d-becd-f0fc094f9ea6",
+              "ddf0c1fe-58f1-5608-b416-5515058da32e",
+              "0994802e-4eec-5cc0-978f-cbccbfb2e5bd"
+            ]
+          },
+          "parent_boundary": {
+            "schema_version": "parent-boundary-v1",
+            "category": null,
+            "applies": false,
+            "model_action": "ALLOW",
+            "redirect": null
+          },
+          "candidate_metadata": null,
+          "provisional_broad_subject": "SCIENCE",
+          "segment_concept_ref": "البناء الضوئي",
+          "workspace_intent": null,
+          "canvas_brief": null,
+          "canvas_visual_context_selection": null,
+          "canvas_change_intent": null,
+          "workspace_visual_order": null
+        }
+      }
+    },
+    {
+      "case_id": "a2_cache_plant_turn_3",
+      "repetition": 1,
+      "slot": 2,
+      "prompt_ordering": "stable_prefix_dynamic_suffix",
+      "run": {
+        "run": 1,
+        "rubric": {
+          "checks": {
+            "schema_shape_valid": true,
+            "teaching_response_screen": true,
+            "visual_choice": true,
+            "current_turn_understood": true,
+            "authority_boundary": true
+          },
+          "passed": 5,
+          "total": 5,
+          "all_passed": true,
+          "review_note": "Deterministic signals only; a human reviews pedagogical nuance, visual quality, and factual accuracy."
+        },
+        "latency_ms": 6605,
+        "input_tokens": 3,
+        "output_tokens": 518,
+        "cached_input_tokens": 5845,
+        "cache_write_tokens": 2170,
+        "estimated_cost_usd": 0.000589,
+        "output": {
+          "text": "لا، الماء وحده لا يكفي. تحتاج نبتة النعناع إلى الماء، وثاني أكسيد الكربون من الهواء، وضوء الشمس. تستخدم أوراقها هذه الأشياء لصنع السكر، وهو غذاؤها. مثل وصفة تحتاج أكثر من مكوّن واحد!",
+          "suggested_actions": [],
+          "guided_check": null,
+          "teaching_mode": "LEARN",
+          "teaching_strategy": "EXPLAIN_WITH_EXAMPLE",
+          "teaching_method_id": "CONCRETE_EXAMPLE",
+          "prior_method_relation": "CONTINUATION",
+          "segment_relation": "CONTINUE",
+          "structured_segment_state": null,
+          "parent_boundary": {
+            "schema_version": "parent-boundary-v1",
+            "category": null,
+            "applies": false,
+            "model_action": "ALLOW",
+            "redirect": null
+          },
+          "candidate_metadata": null,
+          "provisional_broad_subject": "SCIENCE",
+          "segment_concept_ref": "photosynthesis",
+          "workspace_intent": null,
+          "canvas_brief": null,
+          "canvas_visual_context_selection": null,
+          "canvas_change_intent": null,
+          "workspace_visual_order": null
+        }
+      }
+    }
+  ],
+  "complete": true,
+  "estimated_cost_usd": 0.004357175
+}

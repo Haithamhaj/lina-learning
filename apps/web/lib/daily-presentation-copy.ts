@@ -50,6 +50,14 @@ export type DailyPresentationCopy = {
     elapsed: (elapsedSeconds: number) => string;
     failed: string;
     statusUnavailable: string;
+    lifecycle: {
+      label: string;
+      preparing: string;
+      ready: string;
+      failed: string;
+      rejected: string;
+      cancelled: string;
+    };
   };
   voice: {
     record: string;
@@ -146,6 +154,14 @@ export function dailyPresentationCopy(direction: DailyDirection): DailyPresentat
         elapsed: (elapsedSeconds) => `جارٍ العمل منذ ${elapsedSeconds} ثانية`,
         failed: "لم يكتمل التمثيل البصري هذه المرة. يمكنكِ متابعة المحادثة أو طلب شرح مختلف.",
         statusUnavailable: "تعذر تحديث حالة الرسم الآن.",
+        lifecycle: {
+          label: "لينا · تحديث Canvas",
+          preparing: "أجهّز لكِ تمثيلًا بصريًا. يمكنكِ متابعة الحديث معي بينما يُحضَّر.",
+          ready: "أصبح التمثيل البصري جاهزًا في Canvas. لنستخدمه معًا.",
+          failed: "لم يكتمل التمثيل البصري هذه المرة. يمكننا متابعة الشرح هنا أو تجربة طريقة أخرى.",
+          rejected: "تعذّر عرض هذا التمثيل البصري. يمكننا متابعة التعلّم هنا بطريقة أخرى.",
+          cancelled: "توقّف تجهيز هذا التمثيل البصري. يمكننا متابعة الحديث هنا.",
+        },
       },
       voice: {
         record: "سجّلي رسالة صوتية",
@@ -241,6 +257,14 @@ export function dailyPresentationCopy(direction: DailyDirection): DailyPresentat
       elapsed: (elapsedSeconds) => `Working for ${elapsedSeconds} seconds`,
       failed: "The visual could not be completed this time. You can keep chatting or request a different explanation.",
       statusUnavailable: "The visual status could not be refreshed just now.",
+      lifecycle: {
+        label: "Lina · Canvas update",
+        preparing: "I’m preparing a visual for you. We can keep talking while it’s being made.",
+        ready: "The visual is ready in Canvas. Let’s use it together.",
+        failed: "The visual didn’t finish this time. We can keep learning here or try another way.",
+        rejected: "I couldn’t show this visual. We can keep learning here another way.",
+        cancelled: "Preparing this visual was stopped. We can keep talking here.",
+      },
     },
     voice: {
       record: "Record a message",
