@@ -24,8 +24,8 @@ The deployed App controller wakes the existing Worker Pool for genuine authentic
 
 Live Cloud Run configuration verified on 2026-09-30 after the lifecycle rollout:
 
-- App: `lina-app-00027-86m`, 100% traffic, OpenAI `gpt-6-luna` Primary Tutor.
-- Worker: `lina-worker-00022-66q`, 100% instance split at one instance during active use, OpenAI `gpt-6-sol` Canvas route; shared default model is `gpt-6-luna`.
+- App: lina-app-00028-lz9, 100% traffic, integrated source commit 70311ea, OpenAI gpt-6-luna Primary Tutor.
+- Worker: lina-worker-00023-j7j, Ready at zero when idle and one on demand, integrated source commit 70311ea, OpenAI gpt-6-sol Canvas route; shared default model is gpt-6-luna.
 - Both use direct TypeSafe JEV (`jev-1.13.0`). App Visual Need is `active` and Visual Personalization is `shadow`; Worker exact Canvas reuse and Segment Rubric are `shadow`.
 - Production database migration head was verified at `d9a4f1b6c203` after the additive lifecycle migration.
 - The current Tutor/Canvas batch started at `8954e633`; its accepted local changes have not yet been deployed.
