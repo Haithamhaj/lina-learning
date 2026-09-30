@@ -41,6 +41,11 @@ from services.model_gateway.gateway import StreamComplete, StreamDelta, StreamPa
 from services.model_gateway.openai_transcription_provider import TranscriptionProviderError
 from services.platform.config import get_settings
 from services.platform.storage import StorageError, create_object_storage
+from services.platform.worker_lifecycle import (
+    record_user_activity,
+    record_user_activity_immediately,
+    request_worker_wake,
+)
 from services.platform.safety import SafetyAction
 from services.tutor.candidate_events import (
     PersistedGuidedLearningCheck,
@@ -238,7 +243,12 @@ def start_or_resume_math_session(
     session: Session = Depends(get_session),
 ) -> StudentSessionResponse:
     student = _student_for_principal(session, principal)
-    return _response(session, open_or_resume_math_session(session, student_id=student.id))
+    learning_session = open_or_resume_math_session(session, student_id=student.id)
+    record_user_activity(session)
+    response = _response(session, learning_session)
+    session.commit()
+    request_worker_wake()
+    return response
 
 
 @router.post("/daily/session", response_model=DailySessionResponse)
@@ -272,7 +282,11 @@ def start_or_resume_daily_session(
             status_code=409,
             content={"code": "DAILY_SESSION_REPLACEMENT_NOT_ALLOWED", "detail": str(error)},
         )
-    return _daily_response(session, learning_session)
+    record_user_activity(session)
+    response = _daily_response(session, learning_session)
+    session.commit()
+    request_worker_wake()
+    return response
 
 
 @router.get("/math/session/{session_id}", response_model=StudentSessionResponse)
@@ -353,6 +367,8 @@ async def transcribe_daily_voice(
             detail="Audio exceeds the allowed size.",
         ) from None
 
+    record_user_activity_immediately(session)
+
     try:
         result = transcribe_student_audio(
             create_student_transcription_gateway(session),
@@ -397,9 +413,12 @@ def post_math_message(
     content = request.content.strip()
     if not content:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Message content is required.")
-    return StudentMessageResponse.from_model(
-        append_student_message(session, learning_session=learning_session, content=content)
-    )
+    message = append_student_message(session, learning_session=learning_session, content=content)
+    record_user_activity(session)
+    response = StudentMessageResponse.from_model(message)
+    session.commit()
+    request_worker_wake()
+    return response
 
 
 def _stream_student_tutor_turn(
@@ -520,12 +539,14 @@ def _stream_student_tutor_turn(
     # request-side work. Daily commits its raw Student admission before SSE
     # response headers; legacy Math retains its established lazy stream path.
     try:
+        record_user_activity(session)
         session.commit()
     except Exception:
         session.rollback()
         if compensating_storage_key is not None and storage is not None:
             storage.delete(compensating_storage_key)
         raise
+    request_worker_wake()
 
     def events() -> Iterator[str]:
         stream_session = Session(bind)
@@ -873,7 +894,9 @@ def stream_canvas_interaction_tutor_turn(
             runtime_id=runtime.id,
             interaction_id=interaction_id,
         )
+        record_user_activity(session)
         session.commit()
+        request_worker_wake()
     except StudioResourceNotFound:
         session.rollback()
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Studio interaction was not found.") from None

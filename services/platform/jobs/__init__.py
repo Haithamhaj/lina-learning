@@ -9,6 +9,7 @@ from .repository import (
     complete_job,
     enqueue_job,
     fail_job,
+    renew_job_lease,
 )
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "complete_job",
     "enqueue_job",
     "fail_job",
+    "renew_job_lease",
 ]

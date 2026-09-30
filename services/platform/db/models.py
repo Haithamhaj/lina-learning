@@ -44,6 +44,26 @@ class JobStatus(str, Enum):
     FAILED = "FAILED"
 
 
+class WorkerActivity(Base):
+    """One global clock for authenticated actions, separate from learning-session policy."""
+
+    __tablename__ = "worker_activity"
+
+    id: Mapped[int] = mapped_column(SmallInteger, primary_key=True)
+    last_user_activity_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class WorkerLifecycleState(Base):
+    """Gate job claims and serialize worker-pool scaling decisions."""
+
+    __tablename__ = "worker_lifecycle_state"
+
+    id: Mapped[int] = mapped_column(SmallInteger, primary_key=True)
+    stop_requested: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    operation_name: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    operation_target: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+
+
 class ModelTask(str, Enum):
     """Stable names for application-owned model requests."""
 

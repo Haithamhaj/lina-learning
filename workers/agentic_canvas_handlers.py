@@ -137,17 +137,37 @@ def register_agentic_canvas_handlers(
         try:
             # Phase A committed before the remote Agent call. No Runtime/Run
             # lock or transaction remains open while the provider is running.
-            composition = exact_reuse_scene if exact_reuse_scene is not None else asyncio.run(compose(
-                brief=execution.brief,
-                visual_learner_context=execution.visual_learner_context,
-                api_key=settings.model_api_key.get_secret_value(),
-                model=resolved_canvas_model,
-                base_url=settings.model_base_url,
-                sdk_trace_id=execution.sdk_trace_id,
-                reusable_visuals=execution.reusable_visuals,
-            ))
+            if exact_reuse_scene is not None:
+                composition = exact_reuse_scene
+            else:
+                remaining = (
+                    None if execution.deadline_at is None
+                    else (execution.deadline_at - datetime.now(UTC)).total_seconds()
+                )
+                if remaining is not None and remaining <= 0:
+                    raise TimeoutError("Canvas admission deadline elapsed before provider call")
+                # The admission deadline already governs whether a generated
+                # proposal can be accepted. Stop this attempt there instead of
+                # spending on turns whose result must be discarded.
+                async def compose_before_deadline():
+                    pending = compose(
+                        brief=execution.brief,
+                        visual_learner_context=execution.visual_learner_context,
+                        api_key=settings.model_api_key.get_secret_value(),
+                        model=resolved_canvas_model,
+                        base_url=settings.model_base_url,
+                        sdk_trace_id=execution.sdk_trace_id,
+                        reusable_visuals=execution.reusable_visuals,
+                    )
+                    if remaining is None:
+                        return await pending
+                    return await asyncio.wait_for(pending, timeout=remaining)
+                composition = asyncio.run(compose_before_deadline())
         except Exception as error:
             code, retryable = _classify_agent_failure(error)
+            if (isinstance(error, TimeoutError) and execution.deadline_at is not None
+                    and datetime.now(UTC) >= execution.deadline_at):
+                code, retryable = "DEADLINE_EXCEEDED", False
             metadata = {"code": code, "provider_attempt": execution.provider_attempt, "latency_ms": round((perf_counter()-started)*1000), "model": resolved_canvas_model}
             if isinstance(error, CustomVisualCandidateMissingError):
                 metadata["custom_visual_tool_failures"] = list(error.tool_failures)
@@ -384,7 +404,7 @@ def _adopt_hosted_images(
 
 
 class _AgenticExecutionEnvelope:
-    def __init__(self, *, run_id, student_id, session_id, message_id, parent_execution_id, brief, visual_learner_context, provider_attempt: int, provider_max_attempts: int, sdk_trace_id: str, reusable_visuals: dict[str, dict[str, object]], exact_reuse_actions: list[ExactReuseAction]) -> None:
+    def __init__(self, *, run_id, student_id, session_id, message_id, parent_execution_id, brief, visual_learner_context, provider_attempt: int, provider_max_attempts: int, sdk_trace_id: str, reusable_visuals: dict[str, dict[str, object]], exact_reuse_actions: list[ExactReuseAction], deadline_at: datetime | None) -> None:
         self.run_id = run_id
         self.student_id = student_id
         self.session_id = session_id
@@ -397,6 +417,7 @@ class _AgenticExecutionEnvelope:
         self.sdk_trace_id = sdk_trace_id
         self.reusable_visuals = reusable_visuals
         self.exact_reuse_actions = exact_reuse_actions
+        self.deadline_at = deadline_at
 
 
 def _reusable_visuals_for_agent(session: Session, *, student_id) -> dict[str, dict[str, object]]:
@@ -443,7 +464,9 @@ def _preflight(factory: sessionmaker[Session], job: Job) -> _AgenticExecutionEnv
     with factory.begin() as session:
         claimed = session.get(Job, job.id)
         unguarded_run = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.job_id == job.id)).scalar_one_or_none()
-        if claimed is None or claimed.job_type != AGENTIC_CANVAS_COMPOSE_JOB or claimed.max_attempts != 2:
+        if (claimed is None or claimed.job_type != AGENTIC_CANVAS_COMPOSE_JOB
+                or claimed.max_attempts != 2 or claimed.lease_token != job.lease_token
+                or claimed.claimed_by != job.claimed_by):
             raise ValueError("AGENTIC_CANVAS_JOB_INVALID")
         if unguarded_run is None or unguarded_run.capability_profile_version != AGENTIC_CANVAS_CAPABILITY_IDENTITY:
             return None
@@ -486,7 +509,7 @@ def _preflight(factory: sessionmaker[Session], job: Job) -> _AgenticExecutionEnv
                     else:
                         run.status, run.started_at = "RUNNING", run.started_at or datetime.now(UTC)
                         run.sdk_trace_id = run.sdk_trace_id or gen_trace_id()
-                        envelope = _AgenticExecutionEnvelope(run_id=run.id, student_id=run.student_id, session_id=run.learning_session_id, message_id=message.id, parent_execution_id=message.ai_execution_id, brief=brief, visual_learner_context=visual_learner_context, provider_attempt=claimed.attempt_count, provider_max_attempts=claimed.max_attempts, sdk_trace_id=run.sdk_trace_id, reusable_visuals=_reusable_visuals_for_agent(session, student_id=run.student_id), exact_reuse_actions=load_exact_reuse_actions(session, student_id=run.student_id))
+                        envelope = _AgenticExecutionEnvelope(run_id=run.id, student_id=run.student_id, session_id=run.learning_session_id, message_id=message.id, parent_execution_id=message.ai_execution_id, brief=brief, visual_learner_context=visual_learner_context, provider_attempt=claimed.attempt_count, provider_max_attempts=claimed.max_attempts, sdk_trace_id=run.sdk_trace_id, reusable_visuals=_reusable_visuals_for_agent(session, student_id=run.student_id), exact_reuse_actions=load_exact_reuse_actions(session, student_id=run.student_id), deadline_at=run.deadline_at)
     # Raising inside ``factory.begin()`` rolls back the terminal Run state.
     # Commit that authoritative state first, then fail the queue Job.
     if terminal_error is not None:

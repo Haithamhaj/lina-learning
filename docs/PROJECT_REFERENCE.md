@@ -362,6 +362,8 @@ Implemented today:
 - JEV bounded decisions;
 - GCP live pilot.
 
+The GCP pilot keeps its existing PostgreSQL job queue and Cloud Run Worker Pool. Authenticated Student and Studio actions request a wake when the pool is off; later actions refresh a shared 20-minute idle clock without another scaling call. An authenticated minute scheduler checks delayed work and idle session finalization even while the worker is at zero. The pool stops only after activity is idle and runnable or running work is drained. Startup can delay the first Canvas result; see docs/WORKER_LIFECYCLE_OPERATIONS.md for measured timings and limits.
+
 Current structured Studio product subjects include MATH, SCIENCE, ENGLISH, and ARABIC. General Tutor conversation is broader.
 
 ## 17. Current product phase

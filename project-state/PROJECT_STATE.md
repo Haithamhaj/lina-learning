@@ -20,12 +20,14 @@ The immediate product focus is:
 
 Lina is deployed as a live GCP pilot.
 
-Live Cloud Run configuration verified read-only on 2026-09-28:
+The deployed App controller wakes the existing Worker Pool for genuine authenticated activity and stops it after 20 minutes of global inactivity once runnable and running jobs drain. A one-minute authenticated Cloud Scheduler tick also wakes delayed work and closes idle sessions while the pool is at zero. The approved no-key OIDC caller, additive migration, and App/Worker revisions are live. On 2026-09-30, real activity drove a 1→0→1 transition, and an idle session later drove 1→0→1→0: delayed Learning Intelligence and Personal Facts jobs and session finalization all completed. The first activity wake took about 38 seconds from scaling request to Ready; queued delayed work took about 84 seconds to first claim. First Canvas latency from zero remains unmeasured. The shared compute identity already had Editor; no new app IAM role was added. See docs/WORKER_LIFECYCLE_OPERATIONS.md.
 
-- App: `lina-app-00024-6xs`, 100% traffic, OpenAI `gpt-6-luna` Primary Tutor.
-- Worker: `lina-worker-00019-fsc`, 100% instance split, OpenAI `gpt-6-sol` Canvas route; shared default model is `gpt-6-luna`.
+Live Cloud Run configuration verified on 2026-09-30 after the lifecycle rollout:
+
+- App: `lina-app-00027-86m`, 100% traffic, OpenAI `gpt-6-luna` Primary Tutor.
+- Worker: `lina-worker-00022-66q`, 100% instance split at one instance during active use, OpenAI `gpt-6-sol` Canvas route; shared default model is `gpt-6-luna`.
 - Both use direct TypeSafe JEV (`jev-1.13.0`). App Visual Need is `active` and Visual Personalization is `shadow`; Worker exact Canvas reuse and Segment Rubric are `shadow`.
-- The last documented database migration head is `c8e2f4a6b913`; it was not rechecked against production for this evaluation task.
+- Production database migration head was verified at `d9a4f1b6c203` after the additive lifecycle migration.
 - The current Tutor/Canvas batch started at `8954e633`; its accepted local changes have not yet been deployed.
 
 The implemented product includes:
@@ -102,10 +104,13 @@ Do not change without explicit Product Owner approval:
 - JEV decision quality needs enough real examples before expanding its role.
 - Golden rubric checks are deterministic screens and do not replace human review of educational quality.
 - Longitudinal learning benefit is not yet established from controlled real use.
+- First Canvas latency from a cold worker, long-job lease renewal under cloud failure, and restart overlap remain unmeasured. A missed Scheduler tick can delay delayed jobs and session finalization; measured normal activity wake was about 38 seconds to Ready and delayed-work queue to first claim was about 84 seconds.
 
 ## Next recommended action
 
 Verify and publish the accepted Tutor/Canvas batch without changing prompt order, model routing, JEV modes, memory count, or reasoning effort. After App and Worker deployment, run one authenticated GPT-6 Arabic Tutor → Canvas → READY continuation smoke with lifecycle-language, no-duplicate, and reload checks. Then resume controlled Lina testing and the separate source/voice, Core Profile/Memory, Learning Intelligence, and JEV acceptance work.
+
+For WORKER-LIFECYCLE-01, live idle stop, activity wake, delayed-job wake, job completion, and return to zero were verified on 2026-09-30. Continue monitoring Scheduler health and first cold Canvas response time; preserve the rollback anchors. The approved rollout added no new app scaling role.
 
 Generated educational-image capability, performance/buffering, personalization relevance beyond the observed cases, AUTH-01, and CALLS-01 remain separate unless explicitly promoted into this repair release.
 
@@ -120,6 +125,7 @@ Generated educational-image capability, performance/buffering, personalization r
 - ../docs/TUTOR_PEDAGOGY_REFERENCE.md
 - ../docs/TUTOR_CANVAS_REPAIR_TRACKER.md
 - ../docs/REAL_USE_REPAIR_01_IMPLEMENTATION_SPEC.md
+- ../docs/WORKER_LIFECYCLE_OPERATIONS.md
 - ../evals/tutor_golden/README.md
 - ../evals/tutor_golden/results/A1_REVIEW_2026-09-28.md
 - ../evals/tutor_golden/results/A2_REVIEW_2026-09-28.md

@@ -7,6 +7,7 @@ from apps.api.routes.demo import router as demo_router
 from apps.api.routes.parent import router as parent_router
 from apps.api.routes.student import router as student_router
 from apps.api.routes.studio import router as studio_router
+from apps.api.routes.worker_lifecycle import router as worker_lifecycle_router
 from services.platform.config import get_settings
 
 
@@ -32,6 +33,7 @@ app.include_router(demo_router)
 app.include_router(parent_router)
 app.include_router(student_router)
 app.include_router(studio_router)
+app.include_router(worker_lifecycle_router)
 
 
 @app.get("/health", tags=["platform"])

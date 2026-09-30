@@ -345,6 +345,8 @@ Cloud Run service contains Next.js standalone, FastAPI, and the production super
 
 A separate Cloud Run Worker Pool handles background jobs, Canvas composition, and browser-preview dependencies where needed.
 
+The App records authenticated Student/Studio activity and requests the existing Worker Pool to start when required. A shared 20-minute idle clock across users permits shutdown only after runnable and running jobs drain. A one-minute authenticated Cloud Scheduler tick runs through the App to recover delayed jobs, finish inactive sessions, and restart the pool while it is at zero. The worker retains the existing PostgreSQL queue and renews leases during long handlers. See `docs/WORKER_LIFECYCLE_OPERATIONS.md` for current rollout state, live limits, and rollback.
+
 ### Data and platform services
 
 - Cloud SQL / PostgreSQL;
