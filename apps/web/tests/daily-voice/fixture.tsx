@@ -9,6 +9,9 @@ let stoppedTracks = 0;
 let completeTranscription: (() => void) | null = null;
 let nextTranscriptionFailure: "http" | "no-speech" | "malformed" | "network" | null = null;
 let activeRecorder: ProofMediaRecorder | null = null;
+let silentMicNext = false;
+let silentMicContext: AudioContext | null = null;
+let silentMicOscillator: OscillatorNode | null = null;
 
 class ProofTrack {
   stop() {
@@ -41,7 +44,22 @@ class ProofMediaRecorder {
 
 Object.defineProperty(navigator, "mediaDevices", {
   configurable: true,
-  value: { getUserMedia: async () => ({ getTracks: () => [new ProofTrack()] }) },
+  value: { getUserMedia: async () => {
+    if (!silentMicNext) return { getTracks: () => [new ProofTrack()] };
+    silentMicNext = false;
+    const context = new AudioContext();
+    await context.resume();
+    const destination = context.createMediaStreamDestination();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    gain.gain.value = 0;
+    oscillator.connect(gain);
+    gain.connect(destination);
+    oscillator.start();
+    silentMicContext = context;
+    silentMicOscillator = oscillator;
+    return destination.stream;
+  } },
 });
 Object.assign(window, { MediaRecorder: ProofMediaRecorder });
 Object.assign(globalThis, {
@@ -93,6 +111,13 @@ Object.assign(window, {
   voiceProof: {
     completeTranscription: () => completeTranscription?.(),
     failNextTranscription: (failure: "http" | "no-speech" | "malformed" | "network") => { nextTranscriptionFailure = failure; },
+    silentMicNext: () => { silentMicNext = true; },
+    closeSilentMic: async () => {
+      silentMicOscillator?.stop();
+      silentMicOscillator = null;
+      await silentMicContext?.close();
+      silentMicContext = null;
+    },
     result: () => ({ transcriptionRequests, submittedMessages, stoppedTracks }),
   },
 });

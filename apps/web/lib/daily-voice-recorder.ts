@@ -1,7 +1,8 @@
 export type VoiceRecorderState = "IDLE" | "REQUESTING_PERMISSION" | "RECORDING" | "TRANSCRIBING";
 
-type TrackLike = { stop: () => void };
-type StreamLike = { getTracks: () => TrackLike[] };
+type TrackLike = { stop: () => void; readyState?: MediaStreamTrackState; enabled?: boolean; muted?: boolean };
+type StreamLike = { getTracks: () => TrackLike[]; getAudioTracks?: () => TrackLike[] };
+export type VoiceSignalMonitor = { hasNonSilentSignal: () => boolean | null; stop: () => void };
 type RecorderLike = {
   state: RecordingState;
   mimeType: string;
@@ -17,6 +18,7 @@ export type VoiceRecorderMessages = {
   recordingStopped: string;
   permissionDenied: string;
   openFailed: string;
+  microphoneUnavailable: string;
   noSpeechCaptured: string;
   noSpeechHeard: string;
   transcriptionFailed: string;
@@ -34,6 +36,7 @@ const defaultMessages: VoiceRecorderMessages = {
   recordingStopped: "Voice recording stopped unexpectedly. Please try again.",
   permissionDenied: "Microphone permission was denied. You can keep typing or allow microphone access and try again.",
   openFailed: "The microphone could not be opened. You can keep typing and try again.",
+  microphoneUnavailable: "The microphone is not sending audio. Check it and try again.",
   noSpeechCaptured: "No speech was captured. Please record again.",
   noSpeechHeard: "We could not hear any speech. Please record again.",
   transcriptionFailed: "The recording could not be transcribed. Please try again.",
@@ -49,6 +52,7 @@ const defaultAvailabilityCopy: VoiceAvailabilityCopy = {
 type VoiceRecorderDependencies = {
   requestStream: () => Promise<StreamLike>;
   createRecorder: (stream: StreamLike, mimeType: string) => RecorderLike;
+  createSignalMonitor?: (stream: StreamLike) => VoiceSignalMonitor | null;
   isTypeSupported?: (mimeType: string) => boolean;
   transcribe: (audio: Blob, signal: AbortSignal) => Promise<string>;
   now?: () => number;
@@ -100,6 +104,12 @@ function stopTracks(stream: StreamLike | null) {
   stream?.getTracks().forEach((track) => track.stop());
 }
 
+function hasUsableAudioTrack(stream: StreamLike): boolean {
+  const audioTracks = stream.getAudioTracks?.();
+  if (!audioTracks) return true; // Non-browser test streams may not expose track details.
+  return audioTracks.some((track) => track.readyState !== "ended" && track.enabled !== false && track.muted !== true);
+}
+
 export class DailyVoiceRecorder {
   private readonly dependencies: VoiceRecorderDependencies;
   private state: VoiceRecorderState = "IDLE";
@@ -113,6 +123,7 @@ export class DailyVoiceRecorder {
   private requestVersion = 0;
   private stopPromise: Promise<void> | null = null;
   private transcriptionAbort: AbortController | null = null;
+  private signalMonitor: VoiceSignalMonitor | null = null;
 
   private get messages(): VoiceRecorderMessages {
     return this.dependencies.messages ?? defaultMessages;
@@ -134,6 +145,12 @@ export class DailyVoiceRecorder {
         stopTracks(stream);
         return;
       }
+      if (!hasUsableAudioTrack(stream)) {
+        stopTracks(stream);
+        this.setState("IDLE");
+        this.dependencies.onError(this.messages.microphoneUnavailable);
+        return;
+      }
       const mimeType = preferredRecordingMimeType(
         this.dependencies.isTypeSupported ?? ((type) => MediaRecorder.isTypeSupported(type)),
       );
@@ -148,6 +165,11 @@ export class DailyVoiceRecorder {
       this.chunks = [];
       const recorder = this.dependencies.createRecorder(stream, mimeType);
       this.recorder = recorder;
+      try {
+        this.signalMonitor = this.dependencies.createSignalMonitor?.(stream) ?? null;
+      } catch {
+        this.signalMonitor = null; // Recorder and provider remain available if signal analysis is unsupported.
+      }
       recorder.ondataavailable = (event) => {
         if (!this.cancelled && event.data.size > 0) this.chunks.push(event.data);
       };
@@ -163,6 +185,7 @@ export class DailyVoiceRecorder {
     } catch (error) {
       if (this.disposed || requestVersion !== this.requestVersion) return;
       this.clearTimer();
+      this.clearSignalMonitor();
       stopTracks(this.stream);
       this.stream = null;
       this.recorder = null;
@@ -195,9 +218,14 @@ export class DailyVoiceRecorder {
           resolve();
           return;
         }
+        const trackUnavailable = this.stream ? !hasUsableAudioTrack(this.stream) : true;
+        const signalPresent = this.takeSignalAssessment();
         stopTracks(this.stream);
         this.stream = null;
-        void this.finishTranscription(recorder.mimeType).then(resolve, () => {
+        const captureError = trackUnavailable
+          ? this.messages.microphoneUnavailable
+          : signalPresent === false ? this.messages.noSpeechCaptured : null;
+        void this.finishTranscription(recorder.mimeType, captureError).then(resolve, () => {
           this.failRecording(this.messages.transcriptionFailed);
           resolve();
         });
@@ -225,6 +253,7 @@ export class DailyVoiceRecorder {
     this.cancelled = true;
     this.requestVersion += 1;
     this.clearTimer();
+    this.clearSignalMonitor();
     if (this.recorder) {
       this.recorder.onstop = null;
       this.recorder.onerror = null;
@@ -245,6 +274,7 @@ export class DailyVoiceRecorder {
     this.requestVersion += 1;
     this.transcriptionAbort?.abort();
     this.clearTimer();
+    this.clearSignalMonitor();
     if (this.recorder) {
       this.recorder.onstop = null;
       this.recorder.onerror = null;
@@ -258,11 +288,16 @@ export class DailyVoiceRecorder {
     this.recorder = null;
   }
 
-  private async finishTranscription(recorderMimeType: string): Promise<void> {
+  private async finishTranscription(recorderMimeType: string, captureError: string | null): Promise<void> {
     const chunks = this.chunks;
     this.chunks = [];
     this.recorder = null;
     if (this.cancelled || this.disposed) return;
+    if (captureError) {
+      this.setState("IDLE");
+      this.dependencies.onError(captureError);
+      return;
+    }
     const contentType = recorderMimeType.split(";", 1)[0] || "audio/webm";
     const audio = new Blob(chunks, { type: contentType });
     if (audio.size === 0) {
@@ -304,6 +339,7 @@ export class DailyVoiceRecorder {
   private failRecording(message: string): void {
     this.cancelled = true;
     this.clearTimer();
+    this.clearSignalMonitor();
     if (this.recorder) {
       this.recorder.onstop = null;
       this.recorder.onerror = null;
@@ -325,6 +361,20 @@ export class DailyVoiceRecorder {
     if (this.timer === null) return;
     (this.dependencies.clearInterval ?? window.clearInterval)(this.timer);
     this.timer = null;
+  }
+
+  private takeSignalAssessment(): boolean | null {
+    const monitor = this.signalMonitor;
+    let result: boolean | null = null;
+    try { result = monitor?.hasNonSilentSignal() ?? null; } catch { /* Use provider when analysis is unavailable. */ }
+    this.clearSignalMonitor();
+    return result;
+  }
+
+  private clearSignalMonitor(): void {
+    const monitor = this.signalMonitor;
+    this.signalMonitor = null;
+    try { monitor?.stop(); } catch { /* Audio cleanup must not block recorder recovery. */ }
   }
 
   private setState(state: VoiceRecorderState): void {

@@ -304,9 +304,9 @@ No 504, no ASGI detached-instance traceback, no duplicate admission.
 
 ## 9. VOICE-STT-01
 
-### 9.1 Verified reality
+### 9.1 Verified history and current production reality
 
-Browser recording is reaching the server. Five real requests reached:
+The earlier E30 browser recording reached the server. Five real requests reached:
 
 ```text
 POST /api/v1/student/daily/session/{id}/voice/transcribe
@@ -315,6 +315,8 @@ POST /api/v1/student/daily/session/{id}/voice/transcribe
 All five failed quickly with HTTP 502 and durable failed `speech_to_text` AI executions using `gpt-transcribe`.
 
 Therefore do not redesign the microphone UI as if recording never occurred.
+
+On 2026-09-28, three further authenticated Windows/Chrome attempts on release `416ed85` reached the same route with non-empty audio and failed as `TranscriptionNoSpeechError` after about 0.8–1.6 seconds. The current acceptance gap is physical microphone capture and clear no-speech recovery. E38 separately proves a Chrome-native recording of synthetic known speech succeeds through the real Lina STT Gateway/provider; it does not establish a successful Windows physical-microphone recording.
 
 ### 9.2 Current official provider contract
 
@@ -1617,4 +1619,3 @@ Do not let an old historical closure override current product decisions.
 ---
 
 **End of REAL-USE-REPAIR-01 Implementation Specification**
-

@@ -27,6 +27,15 @@ test("English Daily chrome retains English learner-facing labels", () => {
   assert.equal(copy.app.errors.connection, "Canvas connection was interrupted. Reconnecting automatically…");
 });
 
+test("voice no-speech copy gives a clear microphone retry in both languages", () => {
+  const arabic = dailyPresentationCopy("rtl").voice;
+  const english = dailyPresentationCopy("ltr").voice;
+  assert.match(arabic.noSpeechHeard, /الميكروفون.*حاولي/);
+  assert.match(arabic.microphoneUnavailable, /الميكروفون/);
+  assert.match(english.noSpeechHeard, /microphone.*try again/i);
+  assert.match(english.microphoneUnavailable, /microphone/i);
+});
+
 test("Arabic Canvas waiting copy advances through truthful elapsed stages", () => {
   const canvas = dailyPresentationCopy("rtl").canvas;
 

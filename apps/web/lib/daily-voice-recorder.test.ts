@@ -15,6 +15,9 @@ import {
 class FakeTrack {
   stopped = false;
   onStop: (() => void) | null = null;
+  readyState: MediaStreamTrackState = "live";
+  enabled = true;
+  muted = false;
 
   stop() {
     this.stopped = true;
@@ -26,6 +29,10 @@ class FakeStream {
   readonly track = new FakeTrack();
 
   getTracks() {
+    return [this.track];
+  }
+
+  getAudioTracks() {
     return [this.track];
   }
 }
@@ -67,7 +74,7 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-function recorderHarness(options: { permission?: Promise<FakeStream>; transcript?: Promise<string>; createFailure?: Error; supported?: boolean; messages?: VoiceRecorderMessages } = {}) {
+function recorderHarness(options: { permission?: Promise<FakeStream>; transcript?: Promise<string>; createFailure?: Error; supported?: boolean; messages?: VoiceRecorderMessages; signal?: boolean | null } = {}) {
   const stream = new FakeStream();
   const mediaRecorder = new FakeMediaRecorder();
   const states: VoiceRecorderState[] = [];
@@ -86,6 +93,7 @@ function recorderHarness(options: { permission?: Promise<FakeStream>; transcript
       return mediaRecorder;
     },
     isTypeSupported: (type) => options.supported !== false && type.startsWith("audio/webm"),
+    createSignalMonitor: () => ({ hasNonSilentSignal: () => options.signal ?? null, stop: () => {} }),
     transcribe: async (blob) => {
       transcriptionBlobs.push(blob);
       return options.transcript ?? Promise.resolve("One half equals 0.5.");
@@ -167,6 +175,48 @@ test("recording has no time-based stop and only Stop creates one transcription",
   assert.equal(harness.clearCount(), 1);
 });
 
+test("a live but silent microphone skips provider transcription and remains reusable", async () => {
+  const harness = recorderHarness({ signal: false });
+  await harness.voice.start();
+  await harness.voice.stop();
+
+  assert.equal(harness.transcriptionBlobs.length, 0);
+  assert.equal(harness.states.at(-1), "IDLE");
+  assert.match(harness.errors.at(-1) ?? "", /microphone|speech|sound/i);
+
+  await harness.voice.start();
+  assert.equal(harness.states.at(-1), "RECORDING");
+  harness.voice.cancel();
+});
+
+test("a missing, disabled, or muted audio track is rejected before recording", async () => {
+  for (const condition of ["missing", "disabled", "muted", "ended"] as const) {
+    const harness = recorderHarness();
+    if (condition === "missing") harness.stream.getAudioTracks = () => [];
+    if (condition === "disabled") harness.stream.track.enabled = false;
+    if (condition === "muted") harness.stream.track.muted = true;
+    if (condition === "ended") harness.stream.track.readyState = "ended";
+    await harness.voice.start();
+
+    assert.equal(harness.stream.track.stopped, true);
+    assert.equal(harness.mediaRecorder.state, "inactive");
+    assert.equal(harness.states.at(-1), "IDLE");
+    assert.match(harness.errors.at(-1) ?? "", /microphone/i);
+  }
+});
+
+test("the recorder can complete two stop/transcribe cycles without auto-sending", async () => {
+  const harness = recorderHarness({ signal: true });
+  await harness.voice.start();
+  await harness.voice.stop();
+  await harness.voice.start();
+  await harness.voice.stop();
+
+  assert.equal(harness.transcriptionBlobs.length, 2);
+  assert.equal(harness.transcripts.length, 2);
+  assert.equal(harness.states.at(-1), "IDLE");
+});
+
 test("Cancel discards audio, preserves the draft owner, and creates no transcription", async () => {
   const harness = recorderHarness();
   await harness.voice.start();
@@ -196,6 +246,7 @@ test("recorder failures use caller-owned localized copy", async () => {
       recordingStopped: "توقف التسجيل",
       permissionDenied: "رُفض إذن الميكروفون.",
       openFailed: "تعذر فتح الميكروفون.",
+      microphoneUnavailable: "الميكروفون لا يرسل صوتًا.",
       noSpeechCaptured: "لم يُلتقط صوت.",
       noSpeechHeard: "لم نسمع كلامًا.",
       transcriptionFailed: "تعذر تحويل التسجيل.",

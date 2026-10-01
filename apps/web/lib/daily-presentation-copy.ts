@@ -75,6 +75,7 @@ export type DailyPresentationCopy = {
     recordingStopped: string;
     permissionDenied: string;
     openFailed: string;
+    microphoneUnavailable: string;
     noSpeechCaptured: string;
     noSpeechHeard: string;
     transcriptionFailed: string;
@@ -179,8 +180,9 @@ export function dailyPresentationCopy(direction: DailyDirection): DailyPresentat
         recordingStopped: "توقف التسجيل بشكل غير متوقع. حاولي مرة أخرى.",
         permissionDenied: "رُفض إذن الميكروفون. يمكنكِ متابعة الكتابة أو السماح بالوصول ثم المحاولة.",
         openFailed: "تعذر فتح الميكروفون. يمكنكِ متابعة الكتابة والمحاولة لاحقًا.",
-        noSpeechCaptured: "لم يُلتقط صوت. سجّلي مرة أخرى.",
-        noSpeechHeard: "لم نسمع كلامًا واضحًا. سجّلي مرة أخرى.",
+        microphoneUnavailable: "الميكروفون لا يرسل صوتًا. تأكدي من تشغيله وحاولي مرة أخرى.",
+        noSpeechCaptured: "لم يُلتقط صوت واضح من الميكروفون. تأكدي منه وحاولي مرة أخرى.",
+        noSpeechHeard: "لم أسمع صوتًا واضحًا. تأكدي من الميكروفون وحاولي مرة ثانية.",
         transcriptionFailed: "تعذر تحويل التسجيل إلى نص. حاولي مرة أخرى.",
       },
       source: {
@@ -282,8 +284,9 @@ export function dailyPresentationCopy(direction: DailyDirection): DailyPresentat
       recordingStopped: "Voice recording stopped unexpectedly. Please try again.",
       permissionDenied: "Microphone permission was denied. You can keep typing or allow access and try again.",
       openFailed: "The microphone could not be opened. You can keep typing and try again.",
-      noSpeechCaptured: "No speech was captured. Please record again.",
-      noSpeechHeard: "We could not hear any speech. Please record again.",
+      microphoneUnavailable: "The microphone is not sending audio. Check it and try again.",
+      noSpeechCaptured: "The microphone did not capture clear sound. Check it and try again.",
+      noSpeechHeard: "I couldn't hear clear speech. Check your microphone and try again.",
       transcriptionFailed: "The recording could not be transcribed. Please try again.",
     },
     source: {

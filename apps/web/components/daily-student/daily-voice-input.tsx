@@ -12,6 +12,7 @@ import {
   voiceControlAvailability,
   type VoiceRecorderState,
 } from "@/lib/daily-voice-recorder";
+import { monitorMicrophoneSignal } from "@/lib/daily-voice-signal";
 
 export function DailyVoiceInput({
   apiBaseUrl,
@@ -56,6 +57,7 @@ export function DailyVoiceInput({
         mimeType,
         audioBitsPerSecond: 32_000,
       }),
+      createSignalMonitor: (stream) => monitorMicrophoneSignal(stream as MediaStream),
       transcribe: async (audio, signal) => (await transcribeDailyRecording({
         apiBaseUrl,
         learningSessionId,
@@ -83,6 +85,6 @@ export function DailyVoiceInput({
         <Button type="button" variant="secondary" className="min-h-12 px-3 focus-visible:ring-2 focus-visible:ring-[#7d70df]" aria-label={copy.cancel} onClick={() => recorderRef.current?.cancel()}>{copy.cancel}</Button>
       </> : <Button type="button" variant="secondary" className="min-h-12 min-w-12 px-3 focus-visible:ring-2 focus-visible:ring-[#7d70df]" aria-label={availability.canStart ? copy.record : availability.reason} title={availability.canStart ? copy.record : availability.reason} disabled={!availability.canStart || !learningSessionId} onClick={start}><span aria-hidden="true">{voiceState === "TRANSCRIBING" ? "…" : "🎙"}</span><span className="sr-only">{voiceState === "REQUESTING_PERMISSION" ? copy.requestingPermission : voiceState === "TRANSCRIBING" ? copy.transcribing : availability.reason}</span></Button>}
     </div>
-    <p className="order-4 text-xs text-slate-600 sm:col-span-3" role="status" aria-live="polite">{voiceState === "REQUESTING_PERMISSION" ? copy.requestingPermission : voiceState === "RECORDING" ? copy.recording(formatRecordingElapsed(recordingElapsed)) : voiceState === "TRANSCRIBING" ? copy.transcribing : voiceError || copy.idleHint}</p>
+    <p className={`order-4 sm:col-span-3 ${voiceError ? "rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-900" : "text-xs text-slate-600"}`} role={voiceError ? "alert" : "status"} aria-live="polite" dir="auto">{voiceState === "REQUESTING_PERMISSION" ? copy.requestingPermission : voiceState === "RECORDING" ? copy.recording(formatRecordingElapsed(recordingElapsed)) : voiceState === "TRANSCRIBING" ? copy.transcribing : voiceError || copy.idleHint}</p>
   </>;
 }
