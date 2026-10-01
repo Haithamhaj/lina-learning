@@ -40,6 +40,9 @@ from services.studio.subjects.registry import SubjectCapabilityError
 
 STUDIO_TUTOR_CONTEXT_SCHEMA_VERSION = "studio-tutor-context-v1"
 OBSERVATION_FAILURE_CODES = TUTOR_OBSERVATION_FAILURE_CODES
+# Target for one current custom visual, not its source, parameters, entities, and history.
+# Keep essential meaning intact if a valid manifest exceeds the target.
+CURRENT_VISUAL_CARD_BUDGET_BYTES = 4096
 
 
 @dataclass(frozen=True)
@@ -120,8 +123,9 @@ class StudioTutorWorkspaceContext:
 
     visual_scene: Mapping[str, object] | None = None
     canvas_composition: Mapping[str, object] | None = None
+    local_visual_state: Mapping[str, object] | None = None
 
-    def as_model_payload(self) -> dict[str, object]:
+    def as_model_payload(self, *, include_current_question: bool = True) -> dict[str, object]:
         projected = self.active_activity_key in (
             visual.ACTIVITY_KEY,
             process_production.ACTIVITY_KEY,
@@ -144,11 +148,68 @@ class StudioTutorWorkspaceContext:
             },
             "unseen_events": [_safe_event(event) for event in self.unseen_events],
         }
-        if self.visual_scene is not None:
+        current_visual = _compact_current_visual(self, include_question=include_current_question)
+        if current_visual is not None:
+            result["snapshot"]["current_visual"] = current_visual
+            # The capability catalogue below this Workspace section already
+            # carries the supported actions; repeating it here adds no truth.
+            result["snapshot"].pop("current_scene_capability", None)
+            if self.canvas_composition is not None and self.canvas_composition.get("scene_ready") is True and self.canvas_composition.get("active_scene_id") == str(self.current_scene_id):
+                result["canvas_composition"] = {key: self.canvas_composition[key] for key in ("run_id", "run_status", "source_message_id", "scene_ready") if key in self.canvas_composition}
+        elif self.visual_scene is not None:
             result["snapshot"]["visual_scene"] = dict(self.visual_scene)
         if self.canvas_composition is not None:
-            result["canvas_composition"] = dict(self.canvas_composition)
+            result.setdefault("canvas_composition", dict(self.canvas_composition))
+        if self.local_visual_state is not None and current_visual is None:
+            result["snapshot"]["local_visual_state"] = dict(self.local_visual_state)
         return result
+
+
+def _compact_current_visual(context: StudioTutorWorkspaceContext, *, include_question: bool) -> dict[str, object] | None:
+    """Project the existing visual_description once for a single local-answer visual."""
+    visual = context.visual_scene
+    if context.active_activity_key != agentic_canvas.ACTIVITY_KEY or not isinstance(visual, Mapping):
+        return None
+    blocks = visual.get("blocks")
+    if not isinstance(blocks, list) or len(blocks) != 1 or not isinstance(blocks[0], Mapping):
+        return None
+    block = blocks[0]
+    description = block.get("visual_description")
+    if block.get("type") != "CUSTOM_VISUAL" or not isinstance(description, Mapping):
+        return None
+    controls = description.get("controls")
+    questions = description.get("questions")
+    if not isinstance(controls, list) or not isinstance(questions, list) or len(questions) > 1:
+        return None
+    # Other durable WORK actions may need the full action/element projection.
+    if any(not isinstance(item, Mapping) or item.get("purpose") != "LOCAL" or not isinstance(item.get("id"), str) or not isinstance(item.get("effect"), str) for item in controls):
+        return None
+    values: Mapping[str, object] = {}
+    supplied = context.local_visual_state
+    if (isinstance(supplied, Mapping) and supplied.get("scene_id") == str(context.current_scene_id)
+        and supplied.get("scene_version") == context.current_scene_version
+        and supplied.get("block_id") == block.get("block_id") and isinstance(supplied.get("values"), Mapping)):
+        values = supplied["values"]
+    card: dict[str, object] = {
+        "what_is_shown": description.get("what_is_shown"),
+        "activity_type": description.get("activity_type"),
+        "key_idea": description.get("demonstrates"),
+        "interpretation_limit": description.get("interpretation_limits"),
+        "controls": [
+            {"id": item["id"], "effect": item["effect"],
+             **({"current_value": values[item["id"]]} if item["id"] in values else {})}
+            for item in controls
+        ],
+    }
+    if values:
+        card["current_values_authority"] = "browser_advisory"
+    if description.get("suggested_follow_up"):
+        card["suggested_follow_up"] = description["suggested_follow_up"]
+    if include_question and questions:
+        card["question"] = questions[0]
+    # The manifest bounds every field but may still exceed the target when it
+    # declares many controls. Preserve the single card and exact semantics.
+    return card
 
 
 def _safe_event(event):
@@ -195,6 +256,7 @@ def select_studio_tutor_context(
     student_id: UUID,
     learning_session_id: UUID,
     student_interaction_id: UUID | None = None,
+    local_visual_state: Mapping[str, object] | None = None,
 ) -> StudioTutorContextSelection | None:
     """Capture Snapshot and unseen Events under a brief Runtime lock, then release it."""
 
@@ -296,6 +358,7 @@ def select_studio_tutor_context(
                     current_scene_capability=scene_capability,
                     visual_scene=_selected_visual(selection_session, runtime, snapshot, scene_capability),
                     canvas_composition=_canvas_composition(selection_session, runtime),
+                    local_visual_state=_bound_local_visual_state(selection_session, runtime, snapshot, local_visual_state),
                 ),
                 previous_watermark=previous_watermark,
             )
@@ -329,6 +392,50 @@ def _canvas_composition(session: Session, runtime: StudioRuntime) -> Mapping[str
         "deadline_at": None if view.deadline_at is None else view.deadline_at.isoformat(),
         "failure_code": view.failure_code,
     }
+
+
+def _bound_local_visual_state(session, runtime, snapshot, supplied):
+    """Treat browser exploration as bounded advisory state for this exact Scene."""
+    if not isinstance(supplied, Mapping) or snapshot.current_scene_id is None:
+        return None
+    if supplied.get("scene_id") != str(snapshot.current_scene_id) or supplied.get("scene_version") != snapshot.current_scene_version:
+        return None
+    values = supplied.get("values")
+    block_id = supplied.get("block_id")
+    if not isinstance(block_id, str) or not isinstance(values, Mapping) or len(values) > 12:
+        return None
+    scene = session.execute(select(StudioScene).where(
+        StudioScene.id == snapshot.current_scene_id,
+        StudioScene.student_id == runtime.student_id,
+        StudioScene.studio_runtime_id == runtime.id,
+        StudioScene.learning_session_id == runtime.learning_session_id,
+    )).scalar_one_or_none()
+    if scene is None or scene.scene_version != snapshot.current_scene_version or scene.status not in {"ACCEPTED", "ACTIVE"}:
+        return None
+    try:
+        parsed = AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(scene.seed_payload)
+        block = next((item for item in parsed.blocks if item.block_id == block_id), None)
+        if not isinstance(block, CustomVisualBlockV1):
+            return None
+        if block.package is not None:
+            manifest = block.package.manifest
+        elif block.custom_visual_build_id is not None:
+            resolved = CustomVisualBuildResolver().resolve(session, build_id=UUID(block.custom_visual_build_id),
+                student_id=runtime.student_id, runtime_id=runtime.id)
+            if resolved.manifest_digest != block.manifest_digest:
+                return None
+            manifest = resolved.package.manifest
+        else:
+            return None
+        local_ids = {item.semantic_id for item in manifest.interactions if item.purpose == "LOCAL"}
+        allowed = local_ids & set(manifest.current_state_schema)
+        if not set(values) <= allowed or any(not isinstance(value, str) or len(value) > 120 for value in values.values()):
+            return None
+        return {"scene_id": str(scene.id), "scene_version": scene.scene_version,
+            "block_id": block_id, "values": dict(values),
+            "authority": "Browser-reported exploration only; not grading, authorization, or Learning Evidence."}
+    except (TypeError, ValueError, CustomVisualBuildResolutionError):
+        return None
 
 
 def _selected_visual(session, runtime, snapshot, capability):

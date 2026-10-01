@@ -21,7 +21,7 @@ import type {
   StudioOperation,
 } from "./contracts";
 
-const ACTIONS = ["FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP", "RESET_VIEW"] as const;
+const ACTIONS = ["FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP", "RESET_VIEW", "OPEN_ATTEMPT"] as const;
 const BLOCK_TYPES = ["MATH_BOARD", "SCENE_2D", "DIAGRAM", "TEXT_INTERACTION", "MATH_INPUT", "IMAGE", "CUSTOM_VISUAL"] as const;
 const COMMON_BLOCK_KEYS = ["block_id", "type", "meaning", "title", "accessibility", "allowed_actions", "elements"] as const;
 
@@ -76,7 +76,7 @@ function parseCommonBlock(value: Record<string, unknown>, subtypeKeys: readonly 
   if (!identifier(value.block_id) || !safeText(value.meaning, 1, 500)) return null;
   if (value.title !== null && !safeText(value.title, 1, 120)) return null;
   const accessibility = parseAccessibility(value.accessibility);
-  if (accessibility === null || !Array.isArray(value.allowed_actions) || value.allowed_actions.length > 10) return null;
+  if (accessibility === null || !Array.isArray(value.allowed_actions) || value.allowed_actions.length > 11) return null;
   if (!value.allowed_actions.every((action) => enumValue(action, ACTIONS)) || new Set(value.allowed_actions).size !== value.allowed_actions.length) return null;
   if (!Array.isArray(value.elements) || value.elements.length > 32) return null;
   const elements = value.elements.map(parseElement);
@@ -186,7 +186,7 @@ const SAFE_CUSTOM_SOURCE = /\b(fetch|XMLHttpRequest|WebSocket|EventSource|localS
 
 function parseManifest(value: unknown): CanvasSemanticManifest | null {
   const keys = ["version", "brief_digest", "objective", "representation_summary", "entities", "relations", "quantities", "presentation_steps", "interactions", "calculated_results", "visual_descriptions", "current_state_schema", "provenance"];
-  if (!isRecord(value) || !exactKeys(value, keys) || value.version !== "canvas-semantic-manifest-v1" || !/^[a-f0-9]{64}$/.test(String(value.brief_digest)) || !safeText(value.objective, 1, 500) || !safeText(value.representation_summary, 1, 600)) return null;
+  if (!isRecord(value) || keys.some(key => !Object.prototype.hasOwnProperty.call(value, key)) || Object.keys(value).some(key => ![...keys, "demonstrates", "interpretation_limits", "choice_questions"].includes(key)) || value.version !== "canvas-semantic-manifest-v1" || !/^[a-f0-9]{64}$/.test(String(value.brief_digest)) || !safeText(value.objective, 1, 500) || !safeText(value.representation_summary, 1, 600)) return null;
   const entities = parseArray(value.entities, 48, (item) => {
     if (!isRecord(item) || !exactKeys(item, ["semantic_id", "kind", "label", "educational_meaning", "visible_description"]) || !identifier(item.semantic_id) || !safeText(item.kind, 1, 64) || !safeText(item.label, 1, 160) || !safeText(item.educational_meaning, 1, 500) || !safeText(item.visible_description, 1, 320)) return null;
     return { semantic_id: item.semantic_id, kind: item.kind, label: item.label, educational_meaning: item.educational_meaning, visible_description: item.visible_description };
@@ -206,12 +206,24 @@ function parseManifest(value: unknown): CanvasSemanticManifest | null {
     return { semantic_id: item.semantic_id, label: item.label, order: Number(item.order) };
   });
   const interactions = parseArray(value.interactions, 32, (item) => {
-    if (!isRecord(item) || !exactKeys(item, ["semantic_id", "action", "meaning", "value_required"]) || !identifier(item.semantic_id) || !known.has(item.semantic_id) || !enumValue(item.action, ACTIONS) || !safeText(item.meaning, 1, 400) || typeof item.value_required !== "boolean") return null;
-    return { semantic_id: item.semantic_id, action: item.action, meaning: item.meaning, value_required: item.value_required };
+    if (!isRecord(item) || ![4, 5].includes(Object.keys(item).length) || ["semantic_id", "action", "meaning", "value_required"].some(key => !Object.prototype.hasOwnProperty.call(item, key)) || Object.keys(item).some(key => !["semantic_id", "action", "meaning", "value_required", "purpose"].includes(key)) || !identifier(item.semantic_id) || !known.has(item.semantic_id) || !enumValue(item.action, ACTIONS) || !safeText(item.meaning, 1, 400) || typeof item.value_required !== "boolean" || (item.purpose !== undefined && !["LOCAL", "WORK", "ANSWER"].includes(String(item.purpose)))) return null;
+    return { semantic_id: item.semantic_id, action: item.action, meaning: item.meaning, value_required: item.value_required, ...(item.purpose === undefined ? {} : { purpose: item.purpose as "LOCAL" | "WORK" | "ANSWER" }) };
   });
   const parsedQuantities = parseArray(value.quantities, 48, quantities); const results = parseArray(value.calculated_results, 32, quantities);
   if (relations === null || presentationSteps === null || interactions === null || parsedQuantities === null || results === null || !Array.isArray(value.visual_descriptions) || value.visual_descriptions.length > 24 || !value.visual_descriptions.every((item) => safeText(item, 1, 320)) || !isRecord(value.current_state_schema) || !isRecord(value.provenance) || !Object.values(value.current_state_schema).every((item) => safeText(item, 1, 120)) || !Object.values(value.provenance).every((item) => safeText(item, 1, 160))) return null;
-  return { version: value.version, brief_digest: value.brief_digest as string, objective: value.objective, representation_summary: value.representation_summary, entities, relations, quantities: parsedQuantities, presentation_steps: presentationSteps, interactions, calculated_results: results, visual_descriptions: value.visual_descriptions as string[], current_state_schema: value.current_state_schema as Record<string, string>, provenance: value.provenance as Record<string, string> };
+  if (value.demonstrates !== undefined && !safeText(value.demonstrates, 1, 500)) return null;
+  if (value.interpretation_limits !== undefined && !safeText(value.interpretation_limits, 1, 500)) return null;
+  const questions = value.choice_questions === undefined ? undefined : parseArray(value.choice_questions, 8, item => {
+    if (!isRecord(item) || !exactKeys(item, ["semantic_id", "prompt", "options"]) || !identifier(item.semantic_id) || !known.has(item.semantic_id) || !safeText(item.prompt, 1, 400)) return null;
+    const options = parseArray(item.options, 6, option => {
+      if (!isRecord(option) || !exactKeys(option, ["value", "label"]) || !safeText(option.value, 1, 80) || !safeText(option.label, 1, 160)) return null;
+      return { value: option.value, label: option.label };
+    });
+    if (!options || options.length < 2 || new Set(options.map(option => option.value)).size !== options.length) return null;
+    return { semantic_id: item.semantic_id, prompt: item.prompt, options };
+  });
+  if (questions === null || (questions && questions.some(question => !interactions.some(interaction => interaction.semantic_id === question.semantic_id && interaction.action === "SUBMIT" && interaction.purpose === "ANSWER")))) return null;
+  return { version: value.version, brief_digest: value.brief_digest as string, objective: value.objective, representation_summary: value.representation_summary, entities, relations, quantities: parsedQuantities, presentation_steps: presentationSteps, interactions, calculated_results: results, visual_descriptions: value.visual_descriptions as string[], current_state_schema: value.current_state_schema as Record<string, string>, provenance: value.provenance as Record<string, string>, ...(value.demonstrates === undefined ? {} : { demonstrates: value.demonstrates as string }), ...(value.interpretation_limits === undefined ? {} : { interpretation_limits: value.interpretation_limits as string }), ...(questions === undefined ? {} : { choice_questions: questions }) };
 }
 
 function parseCustomPackage(value: unknown): CustomVisualPackage | null {

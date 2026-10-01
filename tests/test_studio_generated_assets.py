@@ -145,9 +145,10 @@ def test_persisted_image_uses_owned_storage_and_never_records_temporary_handle_o
     assert "provider.invalid" not in repr(resolved)
 
 
-def test_worker_adopts_hosted_image_bytes_before_building_the_durable_scene(tmp_path: Path) -> None:
+@pytest.mark.parametrize("version,role", [("agentic-canvas-scene-v2", "PRIMARY"), ("agentic-canvas-scene-v3", "SUPPORT")])
+def test_worker_adopts_hosted_image_bytes_before_building_the_durable_scene(tmp_path: Path, version: str, role: str) -> None:
     from services.studio.agent.orchestrator import HostedGeneratedImage
-    from services.studio.agentic_canvas import AgenticCanvasSceneV1
+    from services.studio.agentic_canvas import AGENTIC_CANVAS_SCENE_ADAPTER
     from services.studio.canvas_brief import CanvasBriefV1
     from workers.agentic_canvas_handlers import _adopt_hosted_images
 
@@ -176,23 +177,34 @@ def test_worker_adopts_hosted_image_bytes_before_building_the_durable_scene(tmp_
         "locale": "en",
         "direction": "ltr",
     })
-    scene = AgenticCanvasSceneV1.model_validate({
-        "version": "agentic-canvas-scene-v1",
+    companion = ({
+        "block_id": "cycle", "type": "CUSTOM_VISUAL", "meaning": "Step through the water cycle.",
+        "title": "Water cycle control", "accessibility": {"text_equivalent": "Step through water-cycle stages."},
+        "allowed_actions": [], "elements": [], "artifact_instance_id": "water-cycle-instance",
+        "bridge_nonce": "nonce1234", "custom_visual_build_id": "11111111-1111-4111-8111-111111111111",
+        "manifest_digest": "a" * 64,
+    } if version == "agentic-canvas-scene-v3" else {
+        "block_id": "cycle", "type": "DIAGRAM", "meaning": "Water moves through a repeating cycle.",
+        "title": "Water cycle", "accessibility": {"text_equivalent": "A water-cycle diagram.", "aria_label": None},
+        "allowed_actions": ["FOCUS"], "elements": [], "topology": "CYCLE", "layout": "RADIAL",
+        "nodes": [], "edges": [],
+    })
+    scene = AGENTIC_CANVAS_SCENE_ADAPTER.validate_python({
+        "version": version,
         "objective": "Observe the water cycle.",
         "subject_key": "SCIENCE",
+        "presentation": {"layout": "FOCUS_SUPPORT", "palette": "NATURE", "motion": "NONE", "placements": [
+            {"block_id": "generated-image", "role": role, "order": 0, "span": "WIDE"},
+            {"block_id": "cycle", "role": "SUPPORT" if role == "PRIMARY" else "PRIMARY", "order": 1, "span": "NORMAL"},
+        ], "reveal_order": []},
         "blocks": [{
-            "block_id": "cycle",
-            "type": "DIAGRAM",
-            "meaning": "Water moves through a repeating cycle.",
-            "title": "Water cycle",
-            "accessibility": {"text_equivalent": "A water-cycle diagram.", "aria_label": None},
-            "allowed_actions": ["FOCUS"],
-            "elements": [],
-            "topology": "CYCLE",
-            "layout": "RADIAL",
-            "nodes": [],
-            "edges": [],
-        }],
+            "block_id": "generated-image", "type": "IMAGE",
+            "meaning": "An illustration of clouds and falling rain.",
+            "title": "Water in the sky",
+            "accessibility": {"text_equivalent": "Clouds above falling rain.", "aria_label": None},
+            "allowed_actions": ["FOCUS"], "elements": [],
+            "studio_generated_asset_id": "image-call-1",
+        }, companion],
     })
 
     adopted = _adopt_hosted_images(
@@ -207,12 +219,14 @@ def test_worker_adopts_hosted_image_bytes_before_building_the_durable_scene(tmp_
         ),),
     )
 
-    image_block = adopted.blocks[-1]
+    image_block = adopted.blocks[0]
     assert image_block.type == "IMAGE"
     assert image_block.studio_generated_asset_id
     assert "image-call-1" not in adopted.model_dump_json()
     assert "base64" not in adopted.model_dump_json()
     assert "provider" not in adopted.model_dump_json()
+    assert adopted.presentation.placements[0].role == role
+    assert image_block.accessibility.text_equivalent == "Clouds above falling rain."
 
 
 def test_database_failure_deletes_adopted_bytes(tmp_path: Path) -> None:

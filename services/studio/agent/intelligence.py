@@ -41,7 +41,7 @@ def selected_skill_names(brief: CanvasBriefV1, context: VisualLearnerContextV1) 
         chosen.append(_SPECIALISTS["custom"])
     if brief.subject_key.casefold() in {"arabic", "english"} or any(token in searchable for token in ("sentence", "word", "phrase", "order", "grammar")):
         chosen.append(_SPECIALISTS["language"])
-    if any(token in searchable for token in ("illustration", "organism", "animal", "plant", "habitat", "anatomy")):
+    if any(token in searchable for token in ("illustration", "organism", "animal", "plant", "habitat", "anatomy", "رسمة", "رسم", "صورة", "نبت", "جذور")):
         chosen.append(_SPECIALISTS["image"])
     if brief.direction == "rtl" or brief.locale.casefold().startswith("ar"):
         chosen.append(_SPECIALISTS["rtl"])

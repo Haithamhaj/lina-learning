@@ -51,10 +51,12 @@ async function preview(input) {
       await targetPage.setViewportSize({ width, height });
       await targetPage.setContent(`<html><body style="margin:0"><iframe style="width:100%;height:${height}px;border:0" sandbox="allow-scripts"></iframe></body></html>`);
       await targetPage.evaluate(doc => {
-        window.previewState = null; window.previewEvents = []; window.previewError = null;
+        window.previewState = null; window.previewEvents = []; window.previewLocalStates = []; window.previewError = null;
         window.onmessage = e => {
           if (e.source !== document.querySelector('iframe').contentWindow || e.data?.channel !== 'lina-full-power-canvas-v1' || e.data.nonce !== 'preview') return;
-          if (e.data.type === 'EVENT') {
+          if (e.data.type === 'LOCAL_STATE') {
+            if (window.previewLocalStates.length < 128) window.previewLocalStates.push(e.data);
+          } else if (e.data.type === 'EVENT') {
             if (window.previewEvents.length < 128) window.previewEvents.push(e.data);
             else window.previewState = 'EVENT_OVERFLOW';
           } else { window.previewState = e.data.type; if(e.data.type === 'ERROR')window.previewError=String(e.data.diagnostic||'Mount failed').slice(0,180); }
@@ -161,6 +163,7 @@ async function preview(input) {
       await capture(width, frame, 'initial', findings);
       const state = {};
       let changed = false, mutationText = null, mutationProjection = null;
+      const localCapturedIds = new Set();
       // Probe every advertised binding with real pointer/keyboard input. No geometry heuristics.
       const deferred = [], interactionFailures = new Map();
       let probes = 0;
@@ -182,6 +185,7 @@ async function preview(input) {
           const failureKey=binding.id+':'+action+':'+index;
           const declaration = (input.interactions || []).find(i => i.semantic_id === binding.id && i.action === action);
           if (!declaration) { findings.push(`Undeclared control: ${action}:${binding.id}`); continue; }
+          if (declaration.purpose === 'ANSWER') { findings.push(`Generated answer control is not application-owned: ${binding.id}`); continue; }
           const selector = `[data-semantic-id="${binding.id}"][data-canvas-action~="${action}"]`;
           let element = frame.locator(selector).nth(index);
           const check = { width, semantic_id: binding.id, action, status: 'FAILED' };
@@ -206,6 +210,8 @@ async function preview(input) {
               }
             }
             const before = await page.evaluate(() => window.previewEvents.length);
+            const beforeLocal = await page.evaluate(() => window.previewLocalStates.length);
+            const beforePixels = declaration.purpose === 'LOCAL' ? await frame.locator('body').screenshot() : null;
             const kind = await element.evaluate(e => ({ tag: e.tagName.toLowerCase(), type: e.type, value: e.value, max: e.max,
               gesture: e.getAttribute('data-canvas-gesture'), target: e.getAttribute('data-canvas-drop-target') }));
             if (kind.target) {
@@ -233,26 +239,34 @@ async function preview(input) {
             } else if (kind.tag === 'input' && !['checkbox', 'radio', 'button', 'submit'].includes(kind.type)) {
               await element.fill(kind.type === 'number' ? String(Number(kind.value || 0) + 1) : '1'); await element.press('Tab');
             } else if(width===320) await element.tap(); else await element.click();
-            await page.waitForFunction(({start,id,action}) => window.previewEvents.slice(start).some(e => e.semantic_id === id && e.semantic_action === action),
+            if (declaration.purpose !== 'LOCAL') await page.waitForFunction(({start,id,action}) => window.previewEvents.slice(start).some(e => e.semantic_id === id && e.semantic_action === action),
               {start:before,id:binding.id,action}, {timeout:600});
             await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
             const events = await page.evaluate(start => window.previewEvents.slice(start), before);
             const event = events.find(e => e.semantic_id === binding.id && e.semantic_action === action);
-            if (!event) throw Error('No matching semantic event');
+            const localState = await page.evaluate(({start,id}) => window.previewLocalStates.slice(start).find(e => e.semantic_id === id), {start:beforeLocal,id:binding.id});
+            const afterPixels = declaration.purpose === 'LOCAL' ? await frame.locator('body').screenshot() : null;
+            if (declaration.purpose !== 'LOCAL' && !event) throw Error('No matching semantic event');
+            if (declaration.purpose === 'LOCAL' && !event && !localState && beforePixels.equals(afterPixels)) throw Error('Local control caused no visible change');
+            if (declaration.purpose === 'LOCAL' && afterPixels && !beforePixels.equals(afterPixels)
+                && localCapturedIds.size < 2 && !localCapturedIds.has(binding.id)) {
+              await capture(width, frame, `after-local-${binding.id}`, []);
+              localCapturedIds.add(binding.id);
+            }
             // One gesture may emit multiple canonical updates (for example reset
             // clears a quantity and its draft). Replay all actual emitted values.
-            if(events.some(e=>e.to_value!=null)) {
+            if(declaration.purpose !== 'LOCAL' && events.some(e=>e.to_value!=null)) {
               for(const emitted of events)if(emitted.to_value!=null)state[emitted.semantic_id]=emitted.to_value;
               changed=true; mutationText=(await frame.locator('body').innerText()).replace(/\s+/g,' ').trim(); mutationProjection=await replayProjection(frame);
               await verifyMutationReplay(state,frame,action,binding.id);
             }
-            check.status = 'OBSERVED'; check.event = event; interactionFailures.delete(failureKey);
+            check.status = declaration.purpose === 'LOCAL' && !event ? 'OBSERVED_LOCAL' : 'OBSERVED'; if(event)check.event = event; interactionFailures.delete(failureKey);
           } catch (error) { interactionFailures.set(failureKey, `Interaction failed: ${action}:${binding.id} (${String(error.message).split('\n')[0].slice(0, 100)})`); }
           checks.push(check);
         }
       }
       if (interactionBudgetExceeded) { findings.push('Interaction verification time budget exhausted; unverified controls remain rejected.'); break; }
-      if(interactionFailures.size===0 && (input.interactions||[]).every(d=>checks.some(c=>c.width===width&&c.action===d.action&&c.semantic_id===d.semantic_id&&c.status==='OBSERVED')))break;
+      if(interactionFailures.size===0 && (input.interactions||[]).every(d=>d.purpose==='ANSWER'||checks.some(c=>c.width===width&&c.action===d.action&&c.semantic_id===d.semantic_id&&['OBSERVED','OBSERVED_LOCAL'].includes(c.status))))break;
       // Retry initially bounded/no-op controls after another real mutation. Reload
       // only actual emitted state so transient selections do not contaminate replay.
       // A repeated failed gesture cannot improve without a real intervening
@@ -266,22 +280,36 @@ async function preview(input) {
       // A submit/next control may become enabled only after earlier manipulations.
       for(const entry of deferred){
         if (performance.now() >= interactionDeadline) { findings.push('Conditional interaction verification time budget exhausted.'); break; }
-        if(checks.some(c=>c.width===width&&c.action===entry.action&&c.semantic_id===entry.binding.id&&c.status==='OBSERVED'))continue;
+        if(checks.some(c=>c.width===width&&c.action===entry.action&&c.semantic_id===entry.binding.id&&['OBSERVED','OBSERVED_LOCAL'].includes(c.status)))continue;
         const element=frame.locator(entry.selector).nth(entry.index);
         if(!await element.isVisible()||!await element.isEnabled())continue;
         const before=await page.evaluate(()=>window.previewEvents.length);
+        const beforeLocal=await page.evaluate(()=>window.previewLocalStates.length);
+        const declaration=(input.interactions||[]).find(i=>i.semantic_id===entry.binding.id&&i.action===entry.action);
+        if(declaration?.purpose==='ANSWER'){findings.push(`Generated answer control is not application-owned: ${entry.binding.id}`);continue;}
+        const beforePixels=declaration?.purpose==='LOCAL'?await frame.locator('body').screenshot():null;
         try{
           if(width===320)await element.tap();else await element.click();
-          await page.waitForFunction(({start,id,action})=>window.previewEvents.slice(start).some(e=>e.semantic_id===id&&e.semantic_action===action),{start:before,id:entry.binding.id,action:entry.action},{timeout:600});
-          const event=await page.evaluate(({start,id,action})=>window.previewEvents.slice(start).find(e=>e.semantic_id===id&&e.semantic_action===action),{start:before,id:entry.binding.id,action:entry.action});
-          checks.push({width,semantic_id:entry.binding.id,action:entry.action,status:'OBSERVED',event});
+          if(declaration?.purpose!=='LOCAL')await page.waitForFunction(({start,id,action})=>window.previewEvents.slice(start).some(e=>e.semantic_id===id&&e.semantic_action===action),{start:before,id:entry.binding.id,action:entry.action},{timeout:600});
           await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+          const event=await page.evaluate(({start,id,action})=>window.previewEvents.slice(start).find(e=>e.semantic_id===id&&e.semantic_action===action),{start:before,id:entry.binding.id,action:entry.action});
+          const localState=await page.evaluate(({start,id})=>window.previewLocalStates.slice(start).find(e=>e.semantic_id===id),{start:beforeLocal,id:entry.binding.id});
+          const afterPixels=declaration?.purpose==='LOCAL'?await frame.locator('body').screenshot():null;
+          if(declaration?.purpose!=='LOCAL'&&!event)throw Error('No matching semantic event');
+          if(declaration?.purpose==='LOCAL'&&!event&&!localState&&beforePixels.equals(afterPixels))throw Error('Local control caused no visible change');
+          if(declaration?.purpose==='LOCAL'&&afterPixels&&!beforePixels.equals(afterPixels)
+              && localCapturedIds.size<2&&!localCapturedIds.has(entry.binding.id)){
+            await capture(width,frame,`after-local-${entry.binding.id}`,[]);
+            localCapturedIds.add(entry.binding.id);
+          }
+          checks.push({width,semantic_id:entry.binding.id,action:entry.action,status:declaration?.purpose==='LOCAL'&&!event?'OBSERVED_LOCAL':'OBSERVED',...(event?{event}:{})});
           const emitted=await page.evaluate(start=>window.previewEvents.slice(start),before);
-          if(emitted.some(e=>e.to_value!=null)){for(const e of emitted)if(e.to_value!=null)state[e.semantic_id]=e.to_value;changed=true;mutationText=(await frame.locator('body').innerText()).replace(/\s+/g,' ').trim();mutationProjection=await replayProjection(frame);await verifyMutationReplay(state,frame,entry.action,entry.binding.id);}
+          if(declaration?.purpose!=='LOCAL'&&emitted.some(e=>e.to_value!=null)){for(const e of emitted)if(e.to_value!=null)state[e.semantic_id]=e.to_value;changed=true;mutationText=(await frame.locator('body').innerText()).replace(/\s+/g,' ').trim();mutationProjection=await replayProjection(frame);await verifyMutationReplay(state,frame,entry.action,entry.binding.id);}
         }catch{findings.push(`Conditional interaction failed: ${entry.action}:${entry.binding.id}`);}
       }
       for (const declaration of input.interactions || []) {
-        if (!checks.some(c => c.width === width && c.action === declaration.action && c.semantic_id === declaration.semantic_id && c.status === 'OBSERVED'))
+        if (declaration.purpose === 'ANSWER') continue; // Application-owned buttons are verified in Daily, not inside generated source.
+        if (!checks.some(c => c.width === width && c.action === declaration.action && c.semantic_id === declaration.semantic_id && ['OBSERVED','OBSERVED_LOCAL'].includes(c.status)))
           findings.push(`No operable semantic control: ${declaration.action}:${declaration.semantic_id}`);
       }
       const events = await page.evaluate(() => window.previewEvents);

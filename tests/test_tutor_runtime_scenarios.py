@@ -5,13 +5,14 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
+from services.intelligence.selection import RelevantIntelligence
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta, StreamParentBoundaryDecision
 from services.model_gateway.openai_provider import OpenAIResponsesProvider
-from services.platform.db.models import CandidateEvent, LearningMessage, ModelTask
+from services.platform.db.models import AIExecution, CandidateEvent, LearningMessage, ModelTask
 from services.platform.safety import ParentBoundaryResolution, SafetyAction, SafetyDecision
 from services.retrieval.service import RetrievedBlock
 from services.tutor.context import (
@@ -61,10 +62,14 @@ class _ContextBuilder:
         immediate_exchange: ConversationExchangeContext | None = None,
         *,
         subject: str | None = "MATH",
+        intelligence: tuple[RelevantIntelligence, ...] = (),
+        visual_personalization_catalog: tuple[dict[str, str], ...] = (),
     ) -> None:
         self.calls = 0
         self.immediate_exchange = immediate_exchange
         self.subject = subject
+        self.intelligence = intelligence
+        self.visual_personalization_catalog = visual_personalization_catalog
         self.live_subject_contexts: list[object] = []
 
     def build(
@@ -88,7 +93,7 @@ class _ContextBuilder:
         return TutorContext(
             question=question, subject=self.subject, grade_level=5, focus=None,
             session_messages=(SessionContextMessage(message_id, "student", question),),
-            retrieval=(block,), intelligence=(),
+            retrieval=(block,), intelligence=self.intelligence,
             debug=TutorContextDebug(
                 None,
                 (message_id,),
@@ -99,6 +104,7 @@ class _ContextBuilder:
                     self.immediate_exchange.message_ids if self.immediate_exchange is not None else ()
                 ),
             ),
+            visual_personalization_catalog=self.visual_personalization_catalog,
             immediate_exchange=self.immediate_exchange,
         )
 
@@ -147,6 +153,7 @@ class _Provider:
         workspace_visual_order: object | None = None,
         canvas_brief: object | None = None,
         canvas_change_intent: str | None = None,
+        teaching_surface: str | None = None,
     ) -> None:
         self.calls = 0
         self.payloads: list[dict[str, object]] = []
@@ -162,6 +169,7 @@ class _Provider:
         self.workspace_visual_order = workspace_visual_order
         self.canvas_brief = canvas_brief
         self.canvas_change_intent = canvas_change_intent
+        self.teaching_surface = teaching_surface
 
     def stream(self, route: ModelRoute, payload: dict[str, object]):
         del route
@@ -183,6 +191,7 @@ class _Provider:
             "workspace_visual_order": self.workspace_visual_order,
             "canvas_brief": self.canvas_brief,
             "canvas_change_intent": self.canvas_change_intent,
+            "teaching_surface": self.teaching_surface,
         }
         if self.suggested_actions is not None:
             output["suggested_actions"] = self.suggested_actions
@@ -208,6 +217,7 @@ def _runtime(
     workspace_visual_order: object | None = None,
     canvas_brief: object | None = None,
     canvas_change_intent: str | None = None,
+    teaching_surface: str | None = None,
     immediate_exchange: ConversationExchangeContext | None = None,
     source_decision: SafetyDecision | None = None,
     context_subject: str | None = "MATH",
@@ -229,6 +239,7 @@ def _runtime(
         workspace_visual_order=workspace_visual_order,
         canvas_brief=canvas_brief,
         canvas_change_intent=canvas_change_intent,
+        teaching_surface=teaching_surface,
     )
     gateway = ModelGateway(session, routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")}, providers={"fixture": provider})
     source_safety = None if source_decision is None else _SourceSafety(source_decision)
@@ -427,6 +438,389 @@ def test_valid_visual_order_is_hidden_admitted_metadata_with_no_execution_side_e
     assert {type(row).__name__ for row in non_message_rows} == {"AIExecution", "LearningSegment"}
     assert [row.task for row in non_message_rows if type(row).__name__ == "AIExecution"] == [ModelTask.TUTOR.value]
 
+
+
+
+
+
+
+
+def test_direct_manipulation_chat_mismatch_gets_one_same_tutor_surface_repair() -> None:
+    class SurfaceRepairProvider:
+        def __init__(self):
+            self.calls = 0
+        def stream(self, route, payload):
+            del route
+            self.calls += 1
+            assert self.calls == 1
+            output = {
+                "text": "Try arranging them.",
+                "suggested_actions": [],
+                "guided_check": None,
+                "teaching_mode": "LEARN",
+                "teaching_strategy": "HINT_FIRST",
+                "teaching_method_id": "DECOMPOSITION",
+                "prior_method_relation": None,
+                "segment_relation": None,
+                "structured_segment_state": None,
+                "parent_boundary": None,
+                "candidate_metadata": None,
+                "provisional_broad_subject": "LANGUAGE_ARTS",
+                "segment_concept_ref": "arabic sentence roles",
+                "learner_action_requirement": "CONVERSATIONAL",
+                "teaching_surface": "CHAT",
+                "workspace_intent": None,
+                "canvas_brief": None,
+                "canvas_visual_context_selection": None,
+                "canvas_change_intent": None,
+                "workspace_visual_order": None,
+            }
+            yield StreamDelta(output["text"])
+            yield StreamComplete(ModelResult(output=output, input_tokens=4, output_tokens=3))
+        def execute(self, route, payload):
+            del route
+            self.calls += 1
+            assert self.calls == 2
+            assert "SURFACE CONSISTENCY REPAIR" in payload["instructions"]
+            return ModelResult(output={
+                "text": "رتّبي الكلمات على اللوحة، وبعدها نحكي عن دور كل كلمة.",
+                "suggested_actions": [],
+                "guided_check": None,
+                "teaching_mode": "LEARN",
+                "teaching_strategy": "HINT_FIRST",
+                "teaching_method_id": "DECOMPOSITION",
+                "prior_method_relation": None,
+                "segment_relation": None,
+                "structured_segment_state": None,
+                "parent_boundary": None,
+                "candidate_metadata": None,
+                "provisional_broad_subject": "LANGUAGE_ARTS",
+                "segment_concept_ref": "arabic sentence roles",
+                "learner_action_requirement": "DIRECT_MANIPULATION",
+                "teaching_surface": "CANVAS",
+                "workspace_intent": None,
+                "canvas_brief": {
+                    "version": "canvas-brief-v1",
+                    "subject_key": "LANGUAGE_ARTS",
+                    "objective": "Understand verb, subject, and object roles by arranging the supplied words.",
+                    "relevant_conversation": None,
+                    "facts": ["كتبَ is the verb.", "الطالبُ is the subject.", "الدرسَ is the object."],
+                    "relations": [],
+                    "quantities": [],
+                    "learner_experience": ["SEQUENCE", "MANIPULATE", "CLASSIFY"],
+                    "locale": "ar",
+                    "direction": "rtl",
+                },
+                "canvas_change_intent": "CREATE",
+                "workspace_visual_order": None,
+            }, input_tokens=4, output_tokens=3)
+
+    provider = SurfaceRepairProvider()
+    session = _Session()
+    gateway = ModelGateway(
+        session,
+        routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")},
+        providers={"fixture": provider},
+    )
+    runtime = TutorRuntime(
+        session,
+        context_builder=_ContextBuilder(subject="LANGUAGE_ARTS"),
+        safety_policy=_Policy(_decision()),
+        gateway=gateway,
+        settings=SimpleNamespace(
+            tutor_context_capacity=1_000_000,
+            jev_visual_personalization_mode="off",
+            jev_visual_need_mode="off",
+        ),
+    )
+
+    events = list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="LANGUAGE_ARTS", last_activity_at=None),
+        question="بدي أجرب أرتب الكلمات.",
+    ))
+
+    assert provider.calls == 2
+    assert isinstance(events[-1], TutorTurn)
+    tutor_message = [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor"][-1]
+    assert tutor_message.payload["teaching_surface"] == "CANVAS"
+    assert tutor_message.payload["agentic_canvas"]["status"] == "ADMITTED"
+    assert tutor_message.payload["canvas_change_intent"] == "CREATE"
+
+
+
+def test_explicit_visual_observation_chat_mismatch_gets_one_same_tutor_surface_repair() -> None:
+    class SurfaceRepairProvider:
+        def __init__(self): self.calls = 0
+        def stream(self, route, payload):
+            del route; self.calls += 1
+            output = {
+                "text": "I can explain it in words.", "suggested_actions": [], "guided_check": None,
+                "teaching_mode": "LEARN", "teaching_strategy": "EXPLAIN_THEN_CHECK",
+                "teaching_method_id": "VISUAL_REPRESENTATION", "prior_method_relation": None,
+                "segment_relation": None, "structured_segment_state": None, "parent_boundary": None,
+                "candidate_metadata": None, "provisional_broad_subject": "SCIENCE",
+                "segment_concept_ref": "breathing mechanics", "learner_action_requirement": None,
+                "teaching_surface": "CHAT", "workspace_intent": None, "canvas_brief": None,
+                "canvas_visual_context_selection": None, "canvas_change_intent": None,
+                "workspace_visual_order": None,
+            }
+            yield StreamDelta(output["text"]); yield StreamComplete(ModelResult(output=output,input_tokens=4,output_tokens=3))
+        def execute(self, route, payload):
+            del route; self.calls += 1
+            assert "VISUAL_OBSERVATION" in payload["instructions"]
+            return ModelResult(output={
+                "text": "I’ll show the movement visually.", "suggested_actions": [], "guided_check": None,
+                "teaching_mode": "LEARN", "teaching_strategy": "EXPLAIN_THEN_CHECK",
+                "teaching_method_id": "VISUAL_REPRESENTATION", "prior_method_relation": None,
+                "segment_relation": None, "structured_segment_state": None, "parent_boundary": None,
+                "candidate_metadata": None, "provisional_broad_subject": "SCIENCE",
+                "segment_concept_ref": "breathing mechanics",
+                "learner_action_requirement": "VISUAL_OBSERVATION", "teaching_surface": "CANVAS",
+                "workspace_intent": None,
+                "canvas_brief": {
+                    "version":"canvas-brief-v1","subject_key":"SCIENCE",
+                    "objective":"Understand how diaphragm movement changes chest space and airflow.",
+                    "relevant_conversation":None,
+                    "facts":["The diaphragm moves down during inhalation and up during exhalation."],
+                    "relations":[],"quantities":[],
+                    "learner_experience":["OBSERVE","COMPARE"],
+                    "locale":"en","direction":"ltr"
+                },
+                "canvas_change_intent":"CREATE","workspace_visual_order":None,
+            },input_tokens=4,output_tokens=3)
+
+    provider=SurfaceRepairProvider(); session=_Session()
+    gateway=ModelGateway(session,routes={ModelTask.TUTOR:ModelRoute("fixture","fixture-tutor")},providers={"fixture":provider})
+    runtime=TutorRuntime(session,context_builder=_ContextBuilder(subject="SCIENCE"),safety_policy=_Policy(_decision()),gateway=gateway,settings=SimpleNamespace(tutor_context_capacity=1_000_000,jev_visual_personalization_mode="off",jev_visual_need_mode="off"))
+    events=list(runtime.stream_turn(learning_session=SimpleNamespace(id=uuid4(),student_id=uuid4(),subject="SCIENCE",last_activity_at=None),question="Show me so I can understand the movement."))
+    assert provider.calls == 2
+    assert isinstance(events[-1], TutorTurn)
+    tutor_message=[row for row in session.rows if isinstance(row,LearningMessage) and row.role=="tutor"][-1]
+    assert tutor_message.payload["teaching_surface"] == "CANVAS"
+    assert tutor_message.payload["agentic_canvas"]["status"] == "ADMITTED"
+
+def test_primary_tutor_surface_decision_is_persisted_for_auditable_routing() -> None:
+    runtime, _, provider, session = _runtime(
+        _decision(),
+        context_subject="MATH",
+        teaching_surface="CHAT",
+    )
+
+    list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        question="Explain perimeter in words.",
+    ))
+
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    assert provider.calls == 1
+    assert tutor_message.payload["teaching_surface"] == "CHAT"
+
+def test_active_jev_selects_only_optional_memory_support_for_canvas() -> None:
+    personal_fact = {
+        "fact_key": "favorite:space",
+        "category": "FAVORITE",
+        "display_statement": "Likes space.",
+    }
+    intelligence_item = RelevantIntelligence(
+        source_kind="current_state",
+        source_id=UUID("11111111-1111-4111-8111-111111111111"),
+        text="Currently distinguishes numerator from denominator with light support.",
+        concept_ref="equivalent_fractions",
+        priority=0,
+    )
+    context = _ContextBuilder(
+        subject="MATH",
+        intelligence=(intelligence_item,),
+        visual_personalization_catalog=(personal_fact,),
+    )
+    session = _Session()
+    tutor_provider = _Provider(
+        canvas_brief={
+            "version": "canvas-brief-v1",
+            "subject_key": "MATH",
+            "objective": "Help the learner understand why equivalent fractions name the same amount.",
+            "relevant_conversation": None,
+            "facts": ["Equivalent fractions can represent the same amount of the same whole."],
+            "relations": [],
+            "quantities": [],
+            "desired_student_action": "Explore the relationship and explain what stays the same.",
+            "source_references": [],
+            "locale": "en",
+            "direction": "ltr",
+        },
+        canvas_change_intent="CREATE",
+    )
+
+    class MemorySelectorProvider:
+        def execute(self, route, payload):
+            del route
+            assert [item["memory_layer"] for item in payload["state"]["candidates"]] == [
+                "PERSONAL_FACT", "LEARNING_INTELLIGENCE"
+            ]
+            return ModelResult(
+                output={"answers": {
+                    "support_0": {"noul": 0.91},
+                    "support_1": {"noul": 0.96},
+                }},
+                input_tokens=8,
+                output_tokens=0,
+            )
+
+    runtime = TutorRuntime(
+        session,
+        context_builder=context,
+        safety_policy=_Policy(_decision()),
+        gateway=ModelGateway(
+            session,
+            routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")},
+            providers={"fixture": tutor_provider},
+        ),
+        visual_decision_gateway=ModelGateway(
+            session,
+            routes={ModelTask.CANVAS_VISUAL_PERSONALIZATION: ModelRoute("fixture-memory", "jev")},
+            providers={"fixture-memory": MemorySelectorProvider()},
+        ),
+        settings=SimpleNamespace(
+            tutor_context_capacity=1_000_000,
+            jev_visual_personalization_mode="active",
+            jev_visual_personalization_min_probability=0.80,
+            jev_visual_personalization_policy_version="memory-support-v1",
+            jev_visual_need_mode="off",
+        ),
+    )
+    question = "Show me why equivalent fractions can still be the same amount."
+
+    events = list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        question=question,
+    ))
+
+    assert isinstance(events[-1], TutorTurn)
+    tutor_message = [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor"][-1]
+    visual_context = tutor_message.payload["agentic_canvas"]["visual_learner_context"]
+    assert visual_context["core_profile"] == {"age_years": None, "grade_level": None}
+    assert visual_context["selected_personal_facts"] == [{
+        "fact_key": "favorite:space",
+        "category": "FAVORITE",
+        "display_statement": "Likes space.",
+    }]
+    assert visual_context["selected_learning_intelligence"] == [{
+        "source_kind": "current_state",
+        "text": "Currently distinguishes numerator from denominator with light support.",
+        "concept_ref": "equivalent_fractions",
+    }]
+    assert tutor_message.payload["agentic_canvas"]["brief"]["student_request"] == question
+
+def test_new_canvas_handoff_binds_exact_student_request_and_drops_legacy_visual_prescription() -> None:
+    model_brief = {
+        "version": "canvas-brief-v1",
+        "subject_key": "MATH",
+        "objective": "Help the learner understand equivalent fractions by comparing the same amount.",
+        "relevant_conversation": "The learner wants to understand why the represented amount stays equal.",
+        "facts": ["Both fractions refer to the same-size whole and equal-size parts."],
+        "relations": [],
+        "quantities": [
+            {"id": "one-half", "value": "1/2", "unit": None},
+            {"id": "two-fourths", "value": "2/4", "unit": None},
+        ],
+        "desired_student_action": "Explore the relationship and explain what stays the same.",
+        "source_references": [],
+        "locale": "en",
+        "direction": "ltr",
+    }
+    runtime, _, provider, session = _runtime(
+        _decision(),
+        context_subject="MATH",
+        canvas_brief=model_brief,
+        canvas_change_intent="CREATE",
+    )
+    question = "Show me why 1/2 and 2/4 are equal and let me explore it visually."
+
+    list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        question=question,
+    ))
+
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    admitted = tutor_message.payload["agentic_canvas"]
+    assert provider.calls == 1
+    assert admitted["status"] == "ADMITTED"
+    assert admitted["brief"]["student_request"] == question
+    assert "requested_representation" not in admitted["brief"]
+    assert "must_not_imply" not in admitted["brief"]
+
+
+
+
+def test_invalid_canvas_contract_isolated_from_chat_and_false_visual_promise() -> None:
+    invalid_brief = {
+        "version": "canvas-brief-v1",
+        "subject_key": "SCIENCE",
+        "objective": "Use SVG to explain the relationship.",
+        "relevant_conversation": None,
+        "facts": ["The relationship can still be explained safely in Chat."],
+        "relations": [],
+        "quantities": [],
+        "desired_student_action": "Notice what changes.",
+        "source_references": ["raw-student-id"],
+        "locale": "en",
+        "direction": "ltr",
+    }
+    runtime, _, provider, session = _runtime(
+        _decision(),
+        context_subject="SCIENCE",
+        text="The relationship stays understandable. I’m preparing a visual for you now.",
+        canvas_brief=invalid_brief,
+        canvas_change_intent="CREATE",
+    )
+
+    events = list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="SCIENCE", last_activity_at=None),
+        question="Help me understand what changes.",
+    ))
+
+    turn = events[-1]
+    assert isinstance(turn, TutorTurn)
+    assert provider.calls == 1
+    assert "relationship stays understandable" in turn.text
+    assert "preparing a visual" not in turn.text.casefold()
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    assert tutor_message.payload["agentic_canvas"]["status"] == "REJECTED"
+    assert tutor_message.payload["canvas_change_intent"] is None
+    assert len([row for row in session.rows if isinstance(row, LearningMessage)]) == 2
+
+
+def test_model_source_reference_attempt_is_overridden_by_application_sources() -> None:
+    model_brief = {
+        "version": "canvas-brief-v1",
+        "subject_key": "MATH",
+        "objective": "Compare two quantities visually.",
+        "relevant_conversation": None,
+        "facts": ["The quantities can be compared."],
+        "relations": [],
+        "quantities": [],
+        "desired_student_action": "Compare them.",
+        "source_references": ["raw-student-message-id"],
+        "locale": "en",
+        "direction": "ltr",
+    }
+    runtime, _, provider, session = _runtime(
+        _decision(),
+        context_subject="MATH",
+        canvas_brief=model_brief,
+        canvas_change_intent="CREATE",
+    )
+
+    list(runtime.stream_turn(
+        learning_session=SimpleNamespace(id=uuid4(), student_id=uuid4(), subject="MATH", last_activity_at=None),
+        question="Can I compare them visually?",
+    ))
+
+    tutor_message = next(row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor")
+    admitted = tutor_message.payload["agentic_canvas"]
+    assert provider.calls == 1
+    assert admitted["status"] == "ADMITTED"
+    assert admitted["brief"]["source_references"] == ["book#page=12"]
 
 def test_new_canvas_visibility_repair_is_persisted_and_streamed_without_another_model_call() -> None:
     brief = {
@@ -2132,10 +2526,71 @@ def test_active_visual_need_signal_reaches_primary_tutor_and_audit() -> None:
     ))
 
     assert isinstance(events[-1], TutorTurn)
-    assert "STRONGLY_RECOMMENDED" in str(tutor_provider.payloads[0]["input"])
-    assert "PROCESS" in str(tutor_provider.payloads[0]["input"])
+    # This in-memory fixture has no active Studio runtime. Subject alone must
+    # not assert Canvas availability or make a paid pre-Tutor decision.
+    assert "UNEVALUATED" in str(tutor_provider.payloads[0]["input"])
     tutor_message = [row for row in session.rows if isinstance(row, LearningMessage) and row.role == "tutor"][-1]
-    assert tutor_message.payload["visual_need_decision"]["visual_need"] == "STRONGLY_RECOMMENDED"
+    assert tutor_message.payload["visual_need_decision"]["status"] == "BYPASS"
+    assert tutor_message.payload["visual_need_decision"]["source"] == "NOT_ELIGIBLE"
+    assert not [row for row in session.rows if isinstance(row, AIExecution) and row.task == ModelTask.VISUAL_NEED_DECISION]
+
+
+def test_active_visual_need_uses_immediate_exchange_when_subject_is_unknown(monkeypatch) -> None:
+    """An active Studio, not a known subject, authorizes this bounded decision."""
+    learning_session = SimpleNamespace(id=uuid4(), student_id=uuid4(), subject=None, last_activity_at=None)
+    immediate = ConversationExchangeContext(
+        session_id=learning_session.id, segment_id=None,
+        student_message_id=uuid4(), tutor_message_id=uuid4(),
+        student_content="Why do atoms move?", tutor_content="Atoms can vibrate around a position.",
+        student_created_at=datetime.now(UTC) - timedelta(seconds=3),
+        tutor_created_at=datetime.now(UTC) - timedelta(seconds=2),
+    )
+    session = _Session()
+    session.get_bind = lambda: None
+    monkeypatch.setattr(
+        "services.tutor.runtime.select_studio_tutor_context",
+        lambda **_: SimpleNamespace(context=None),
+    )
+    tutor_provider = _Provider(text="Let's look at the motion together.")
+    seen: list[dict[str, object]] = []
+
+    class VisualProvider:
+        def execute(self, route, payload):
+            del route
+            seen.append(payload)
+            return ModelResult(output={"answers": {
+                "visual_need": {"choice": "STRONGLY_RECOMMENDED", "probabilities": {
+                    "NONE": 0.01, "HELPFUL": 0.04, "STRONGLY_RECOMMENDED": 0.95,
+                }},
+                "visual_category": {"choice": "PROCESS", "probabilities": {
+                    "NONE": 0.01, "SHAPE": 0.01, "STRUCTURE": 0.02,
+                    "PROCESS": 0.95, "SCENE": 0.01,
+                }},
+            }}, input_tokens=8, output_tokens=0)
+
+    runtime = TutorRuntime(
+        session,
+        context_builder=_ContextBuilder(immediate, subject=None),
+        safety_policy=_Policy(_decision()),
+        gateway=ModelGateway(session, routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")}, providers={"fixture": tutor_provider}),
+        visual_need_gateway=ModelGateway(session, routes={ModelTask.VISUAL_NEED_DECISION: ModelRoute("fixture-visual", "jev")}, providers={"fixture-visual": VisualProvider()}),
+        settings=SimpleNamespace(
+            tutor_context_capacity=1_000_000, jev_visual_personalization_mode="off",
+            jev_visual_need_mode="active", jev_visual_need_min_probability=0.72,
+            jev_visual_need_policy_version="jev-visual-need-v1",
+        ),
+    )
+    events = list(runtime.stream_turn(learning_session=learning_session, question="How do you mean?"))
+
+    assert isinstance(events[-1], TutorTurn)
+    assert len(seen) == 1
+    state = seen[0]["state"]
+    assert state["subject"] is None
+    assert [item["message_id"] for item in state["current_exchange"]] == [
+        str(immediate.student_message_id), str(immediate.tutor_message_id),
+    ]
+    assert "Atoms can vibrate around a position." in str(state["current_exchange"])
+    assert "STRONGLY_RECOMMENDED" in str(tutor_provider.payloads[0]["input"])
 
 
 def test_explain_then_check_cannot_finish_as_explanation_only() -> None:

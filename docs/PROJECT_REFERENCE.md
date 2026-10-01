@@ -33,7 +33,7 @@ The system should be sophisticated where sophistication creates real value and s
 3. Current demonstrated behavior outranks stale historical assumptions.
 4. Personalize teaching and representation, not just content.
 5. One Primary Tutor owns the learner-facing teaching relationship.
-6. Canvas is a representation and interaction surface, not a second Tutor.
+6. Canvas Agent teaches through visual representation and interaction within the Primary Tutor's bounded goal; Canvas is not a second learner-facing Tutor.
 7. Personal Facts and Learning Intelligence are different authorities.
 8. Raw learner and source history remains authoritative and rebuildable.
 9. Parents receive insight, not surveillance.
@@ -98,6 +98,8 @@ There is one student-facing Tutor identity.
 
 The Primary Tutor owns the educational objective, explanation, reasoning, source grounding, teaching mode, teaching strategy, teaching method, pacing, amount of support, meaningful application or checks when useful, interpretation of Student responses, whether a representation surface would materially help, and continuation after meaningful Canvas interaction.
 
+For every instructional move it also makes one explicit teaching-surface decision: CHAT or CANVAS. Chat is appropriate only when the learner's requested next action can actually be completed in conversation. When the learner needs to directly arrange, move, construct, vary, manipulate, or test visible state and no suitable READY Canvas already serves that need, the Tutor selects Canvas and supplies a new bounded Canvas brief. This decision belongs to the Primary Tutor, not JEV.
+
 The Tutor does not have to follow a fixed explanation, question, quiz, reward sequence.
 
 A direct answer, concise explanation, worked example, guided attempt, visual, challenge, clarification, or stopping point may each be correct depending on the current need.
@@ -143,11 +145,16 @@ Rules:
 
 Lina uses OpenRouter Decisions / **JEV** for selected bounded decision tasks.
 
-### 8.1 Visual personalization selection
+### 8.1 Optional visual memory-support selection
 
-Given an already filtered safe Personal Fact catalogue and an admitted Canvas brief, JEV can judge which facts, if any, naturally improve the visual presentation.
+For an admitted Canvas brief, JEV may choose up to three optional supporting memory items from an already-authorized bounded candidate pool. The pool contains only:
 
-The answer space is bounded to the supplied candidate facts. It cannot invent Personal Facts.
+- safe Personal Facts / Personal Memory items already eligible for visual personalization;
+- Learning Intelligence entries already selected by the governed runtime Card for the current subject/question.
+
+The Canvas brief's educational target is fixed reference input for relevance only. JEV does not set or rewrite the learning goal, current Student request, current conversation, curriculum/FAQ grounding, Core Profile, teaching method, visual representation, or tool choice.
+
+Selected items retain their authority type when passed to Canvas: Personal Facts remain Personal Facts; Learning Intelligence remains scoped, evidence-grounded, revisable Learning Intelligence. JEV cannot invent memory, flatten those authorities, or turn optional memory support into academic truth.
 
 ### 8.2 Exact Canvas reuse selection
 
@@ -173,13 +180,18 @@ It does not own teaching, Canvas generation, Safety, learner identity, persisten
 
 Canvas exists because some ideas are easier to understand by seeing, manipulating, comparing, grouping, sequencing, plotting, or interacting.
 
+When the learner explicitly requests an action that requires directly manipulating
+visible state and Chat cannot provide that action, Canvas is normally the appropriate
+surface when an accurate supported capability is available. This is a general surface
+principle, not a subject-specific route or keyword rule.
+
 ### 9.1 Authority split
 
     Primary Tutor
       → educational meaning and Canvas brief
 
-    Canvas system
-      → visual composition
+    Canvas Agent
+      → visual teaching design, representation, tools, and composition
 
     Deterministic tools and code
       → exact values, validation, executable boundaries
@@ -195,6 +207,23 @@ Canvas exists because some ideas are easier to understand by seeing, manipulatin
 The implemented architecture supports typed visual renderers, diagrams and processes, math surfaces, interactive text and grouping activities, reusable visual artifacts, exact REUSE, parameterized reuse, structural ADAPT and versioning, CREATE when needed, custom React/SVG/Motion and approved visual capabilities, JSXGraph, Konva, MathLive, project-owned generated assets, and isolated custom visual packages.
 
 Typed renderers are a fast path, not a capability ceiling.
+For new Canvas work, the application binds the exact current learner request and
+the exact authorized source-reference identities into the admitted brief. The Primary
+Tutor supplies educational meaning only: learning objective, relevant conversation cue,
+selected grounded facts/relations/quantities, and a bounded learner-experience intent
+(OBSERVE, COMPARE, EXPLORE, MANIPULATE, CONSTRUCT, SEQUENCE, CLASSIFY, PRACTICE,
+ANSWER, or EXPLAIN). The Tutor cannot use that field to prescribe a visual form, object
+layout, renderer, tool, or implementation. The application maps it to representation-neutral
+Canvas semantics and binds the exact learner request. The Tutor never chooses, copies, or
+invents Canvas source-reference IDs. Optional support from memory
+layers is selected separately by bounded JEV and retains its Personal Fact or Learning
+Intelligence authority. It does not replace or rewrite those direct inputs. The Tutor
+does not prescribe the visual representation. Scientific and educational fidelity is
+expressed positively through the objective, facts and relationships. The Canvas Agent
+chooses how to teach that goal visually, including representation, interaction, and tools. Structured vector content, an interactive mini-visual,
+an original illustration, or a hybrid may lead when it best serves the brief.
+SVG can be part of an HTML visual; these are implementation choices, not
+subject-based routes. Exact facts and labels remain grounded when imagery leads.
 
 ### 9.3 Reuse rules
 
@@ -215,9 +244,24 @@ A Student action must represent what the Student actually did.
 
 The system must not select a hidden element on the learner's behalf, reveal the solution before the Student acts, lose an admitted Chat turn because a Canvas event arrived, create uncontrolled Tutor-interaction storms, or say a visual is visible merely because server composition succeeded.
 
+For a new visual-first custom Scene, the accepted canonical Manifest carries one concise description for the same Tutor: what is shown, what it demonstrates, control effects, interpretation limits, and an optional grounded follow-up opportunity. It is bound to the accepted build and Scene version. The Canvas Agent designs the visual teaching; the Primary Tutor keeps the learner-facing dialogue, educational interpretation, and assessment authority.
+
+Exploratory `LOCAL` controls act immediately in the sandbox. Their clicks do not create Studio operations, Tutor/JEV calls, or Learning Evidence. A bounded current-state value may accompany the learner's next Chat question only for the current owned Scene/version; browser state is advisory and cannot grade or authorize an action. `WORK` actions retain the existing durable Studio path when learner work needs preservation.
+
+Custom-visual authoring favors simple, verifiable browser primitives. Continuous value changes should prefer native value controls; discrete state progression should use a semantic step action rather than disguising a stepper as an arbitrary value control. Generated DOM/SVG helper APIs must keep argument roles unambiguous. Preview and repair prioritize mount, runtime, and interaction blockers before typography or cosmetic polish. A rejected source-edit request that changed no source and produced no preview does not consume the source-authoring attempt budget; the overall model-turn budget still prevents infinite retries.
+
+For a declared single-choice `ANSWER`, the application displays the exact question and options and submits the first deliberate choice through Studio. The accepted answer is fixed for that attempt across retry and reload. A new attempt must be explicitly opened. The same Tutor receives the exact question, displayed options, accepted answer, and relevant visual context from the stored build. Existing builds without these purpose declarations keep their prior behavior.
+
 ### 9.5 Failure behavior
 
 Canvas failure must not break Tutor availability.
+
+This applies at every Tutor→Canvas boundary, including ordinary Chat turns and
+Canvas-originated Tutor turns. Invalid or rejected Canvas brief/lifecycle metadata
+must fail the Canvas request locally, preserve the safe Tutor response, remove any
+false promise that a visual is being prepared or is visible, and persist the rejected
+Canvas audit for diagnosis. Safety, ownership, provenance, and access-control failures
+remain hard application boundaries.
 
 The system distinguishes pending, running, failed, ready, and learner-reported display failure. Recovery may include waiting, reload, retry, or replacement according to the actual server state and educational need.
 

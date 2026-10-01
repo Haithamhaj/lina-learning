@@ -169,7 +169,7 @@ class AgenticCanvasBlockV1(BaseModel):
     # The action vocabulary is deliberately finite.  Custom visuals use the
     # same Studio action vocabulary as typed blocks; there is no side channel
     # for generated code to mutate Studio state.
-    allowed_actions: list[Literal["FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP", "RESET_VIEW"]] = Field(default_factory=list, max_length=10)
+    allowed_actions: list[Literal["FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP", "RESET_VIEW", "OPEN_ATTEMPT"]] = Field(default_factory=list, max_length=11)
     elements: list[AgenticCanvasElementV1] = Field(..., max_length=32)
 
 
@@ -300,6 +300,8 @@ class CustomVisualBlockV1(AgenticCanvasBlockV1):
         if not element_ids <= manifest_ids:
             raise ValueError("Custom visual block elements must be declared by its Semantic Manifest")
         allowed = {item.action for item in manifest.interactions}
+        if manifest.choice_questions:
+            allowed.add("OPEN_ATTEMPT")
         if not set(self.allowed_actions) <= allowed:
             raise ValueError("Custom visual block actions must be declared by its Semantic Manifest")
         declared = {(item.semantic_id, item.action, item.value_required) for item in manifest.interactions}
@@ -405,6 +407,7 @@ class AgenticCanvasPlanV1(BaseModel):
     motion: Literal["NONE", "SUBTLE", "REVEAL"]
     placements: list["CanvasBlockPlacementV1"] = Field(min_length=1, max_length=12)
     reveal_order: list[str] = Field(default_factory=list, max_length=12)
+    generated_image: "GeneratedImagePlanV1 | None" = None
 
     @model_validator(mode="after")
     def unique_block_ids(self) -> "AgenticCanvasPlanV1":
@@ -424,10 +427,22 @@ class CanvasBlockPlacementV1(BaseModel):
     span: Literal["COMPACT", "NORMAL", "WIDE", "FULL"] = "NORMAL"
 
 
+class GeneratedImagePlanV1(BaseModel):
+    """Agent-authored meaning for one completed hosted image candidate."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    meaning: str = Field(min_length=1, max_length=500)
+    title: str = Field(min_length=1, max_length=120)
+    text_equivalent: str = Field(min_length=1, max_length=500)
+
+
+AgenticCanvasPlanV1.model_rebuild()
+
+
 class AgenticCanvasActionV1(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     version: Literal[AGENTIC_CANVAS_ACTION_VERSION]
-    action: Literal["FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP", "RESET_VIEW"]
+    action: Literal["FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP", "RESET_VIEW", "OPEN_ATTEMPT"]
     block_id: str = Field(min_length=1, max_length=64)
     element_id: str | None = Field(default=None, min_length=1, max_length=64)
     from_value: str | None = Field(default=None, max_length=240)
@@ -468,22 +483,49 @@ def build_agentic_tutor_projection(
             "meaning": block.meaning,
             "elements": [element.model_dump() for element in block.elements],
         }
+        if isinstance(block, ImageBlockV1):
+            result["text_equivalent"] = block.accessibility.text_equivalent
         if isinstance(block, CustomVisualBlockV1):
             manifest = custom_manifest(block)
             result["instance_parameters"] = dict(block.parameters)
-            result["state_authority"] = "Current instance parameters and saved student actions override original build example values."
-            result["semantic_manifest"] = {
-                "objective": manifest.objective,
-                "representation_summary": manifest.representation_summary,
-                "entities": [item.model_dump() for item in manifest.entities],
-                "relations": [item.model_dump() for item in manifest.relations],
-                "quantities": [item.model_dump() for item in manifest.quantities],
-                "presentation_steps": [item.model_dump() for item in manifest.presentation_steps],
-                "interactions": [item.model_dump() for item in manifest.interactions],
-                "calculated_results": [item.model_dump() for item in manifest.calculated_results],
-                "visual_descriptions": list(manifest.visual_descriptions),
-                "provenance": dict(manifest.provenance),
+            if manifest.demonstrates is None and manifest.interpretation_limits is None and manifest.choice_questions is None and all(item.purpose is None for item in manifest.interactions):
+                # Historical accepted builds retain their exact Tutor projection.
+                result["state_authority"] = "Current instance parameters and saved student actions override original build example values."
+                result["semantic_manifest"] = {
+                    "objective": manifest.objective,
+                    "representation_summary": manifest.representation_summary,
+                    "entities": [item.model_dump() for item in manifest.entities],
+                    "relations": [item.model_dump() for item in manifest.relations],
+                    "quantities": [item.model_dump() for item in manifest.quantities],
+                    "presentation_steps": [item.model_dump() for item in manifest.presentation_steps],
+                    "interactions": [item.model_dump() for item in manifest.interactions],
+                    "calculated_results": [item.model_dump() for item in manifest.calculated_results],
+                    "visual_descriptions": list(manifest.visual_descriptions),
+                    "provenance": dict(manifest.provenance),
+                }
+                return result
+            result["visual_description"] = {
+                "what_is_shown": manifest.representation_summary,
+                "activity_type": (
+                    "exploration and question" if any(item.purpose == "LOCAL" for item in manifest.interactions) and manifest.choice_questions
+                    else "exploration" if any(item.purpose == "LOCAL" for item in manifest.interactions)
+                    else "question" if manifest.choice_questions else "visual explanation"
+                ),
+                "demonstrates": manifest.demonstrates or manifest.objective,
+                "controls": [
+                    {"id": item.semantic_id, "purpose": item.purpose or "WORK", "effect": item.meaning}
+                    for item in manifest.interactions if item.purpose != "ANSWER"
+                ][:12],
+                "interpretation_limits": manifest.interpretation_limits,
+                **({"suggested_follow_up": manifest.suggested_follow_up} if manifest.suggested_follow_up else {}),
+                "questions": [
+                    {"question_id": question.semantic_id, "prompt": question.prompt,
+                     "options": [option.model_dump(mode="json") for option in question.options],
+                     "accepted_answer": next((element.current_value for element in block.elements if element.id == question.semantic_id), None)}
+                    for question in manifest.choice_questions or []
+                ],
             }
+            result["source_manifest_digest"] = block.manifest_digest
         if isinstance(block, TextInteractionBlockV1):
             result["solution_semantics"] = {
                 "item_group_assignments": [

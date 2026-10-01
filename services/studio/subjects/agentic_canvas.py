@@ -35,8 +35,8 @@ REDUCER_KEY = "agentic-canvas-reducer"
 REDUCER_VERSION = "agentic-canvas-reducer-v1"
 ACTION_VALIDATOR_KEY = "agentic-canvas-action-validator"
 ACTION_VALIDATOR_VERSION = "agentic-canvas-action-validator-v1"
-ACTIONS = ("FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP", "RESET_VIEW")
-TUTOR_TRIGGERING_ACTIONS = frozenset({"SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP"})
+ACTIONS = ("FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP", "RESET_VIEW", "OPEN_ATTEMPT")
+TUTOR_TRIGGERING_ACTIONS = frozenset({"SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "TOGGLE", "STEP"})
 
 
 ACCESSIBILITY = AccessibilityContract(
@@ -97,13 +97,30 @@ def validate_action(payload: Mapping[str, object]) -> ValidationResult:
     if isinstance(block, CustomVisualBlockV1):
         # Durable reference scenes retain the declared action surface; the
         # server resolver verifies the immutable Manifest before delivery.
-        if block.package is not None:
+        if block.package is not None and action.action != "OPEN_ATTEMPT":
             declared = next((item for item in block.package.manifest.interactions if item.semantic_id == action.element_id and item.action == action.action), None)
             if declared is None:
                 raise ValueError("Custom Canvas action is not declared by its Semantic Manifest.")
             if declared.value_required and action.to_value is None:
                 raise ValueError("Custom Canvas action requires a semantic value.")
-    if action.action in {"MOVE", "SET_VALUE", "CONNECT"}:
+            if declared.purpose == "LOCAL":
+                raise ValueError("Local Canvas controls cannot create Studio operations.")
+        if block.package is not None and action.action == "OPEN_ATTEMPT":
+            if not any(question.semantic_id == action.element_id for question in block.package.manifest.choice_questions or []):
+                raise ValueError("Unknown Canvas question attempt.")
+        if action.action in {"SUBMIT", "OPEN_ATTEMPT"} and action.element_id is not None:
+            question_ids = {question.semantic_id for question in block.package.manifest.choice_questions or []} if block.package else set()
+            if action.element_id in question_ids:
+                if action.action == "SUBMIT" and element.current_value is not None:
+                    raise ValueError("This question attempt already has an accepted answer.")
+                if action.action == "SUBMIT" and action.to_value not in {
+                    option.value for question in block.package.manifest.choice_questions or []
+                    if question.semantic_id == action.element_id for option in question.options
+                }:
+                    raise ValueError("Canvas answer must match a displayed option.")
+                if action.action == "OPEN_ATTEMPT" and element.current_value is None:
+                    raise ValueError("A new question attempt requires an accepted prior answer.")
+    if action.action in {"MOVE", "SET_VALUE", "CONNECT", "REORDER"}:
         if element is None or action.to_value is None:
             raise ValueError("Agentic Canvas mutation requires an element and semantic value.")
         if action.from_value != element.current_value:
@@ -113,6 +130,9 @@ def validate_action(payload: Mapping[str, object]) -> ValidationResult:
     elif action.action == "SUBMIT" and action.to_value is not None:
         if element is None or action.from_value != element.current_value:
             raise ValueError("Agentic Canvas submission no longer matches authoritative state.")
+    elif action.action == "OPEN_ATTEMPT":
+        if element is None or action.from_value != element.current_value or action.to_value is not None:
+            raise ValueError("New Canvas attempt does not match the accepted answer.")
     if action.action == "CONNECT" and not any(
         candidate.id == action.to_value for candidate_block in scene.blocks for candidate in candidate_block.elements
     ):
@@ -131,7 +151,7 @@ def reduce_agentic_canvas(snapshot: dict[str, object], event: object) -> dict[st
         raise ValueError("Agentic Canvas action is invalid.")
     action = AgenticCanvasActionV1.model_validate(event.payload)
     current = _current_scene(state).model_dump(mode="json")
-    if action.element_id is not None and action.to_value is not None:
+    if action.element_id is not None and (action.to_value is not None or action.action == "OPEN_ATTEMPT"):
         for block in current["blocks"]:
             if block["block_id"] != action.block_id:
                 continue

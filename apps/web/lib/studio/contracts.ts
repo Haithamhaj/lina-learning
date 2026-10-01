@@ -65,7 +65,7 @@ export type StudioOperation = {
   idempotency_key: string;
 };
 
-export type AgenticCanvasAction = "FOCUS" | "SELECT" | "MOVE" | "SET_VALUE" | "CONNECT" | "SUBMIT" | "REORDER" | "TOGGLE" | "STEP" | "RESET_VIEW";
+export type AgenticCanvasAction = "FOCUS" | "SELECT" | "MOVE" | "SET_VALUE" | "CONNECT" | "SUBMIT" | "REORDER" | "TOGGLE" | "STEP" | "RESET_VIEW" | "OPEN_ATTEMPT";
 
 export type AgenticCanvasElement = {
   id: string;
@@ -156,7 +156,10 @@ export type CanvasSemanticManifest = {
   relations: Array<{ source_id: string; relation: string; target_id: string; meaning: string }>;
   quantities: Array<{ semantic_id: string; value: string; unit: string | null; provenance: string }>;
   presentation_steps: Array<{ semantic_id: string; label: string; order: number }>;
-  interactions: Array<{ semantic_id: string; action: AgenticCanvasAction; meaning: string; value_required: boolean }>;
+  interactions: Array<{ semantic_id: string; action: AgenticCanvasAction; meaning: string; value_required: boolean; purpose?: "LOCAL" | "WORK" | "ANSWER" }>;
+  demonstrates?: string;
+  interpretation_limits?: string;
+  choice_questions?: Array<{ semantic_id: string; prompt: string; options: Array<{ value: string; label: string }> }>;
   calculated_results: Array<{ semantic_id: string; value: string; unit: string | null; provenance: string }>;
   visual_descriptions: string[];
   current_state_schema: Record<string, string>;

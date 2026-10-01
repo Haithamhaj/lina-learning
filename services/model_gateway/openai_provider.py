@@ -25,6 +25,14 @@ from services.student_sources.docx import extract_docx_text
 from services.model_gateway.pricing import estimate_openai_cost
 
 
+class OpenAIResponseFailure(ValueError):
+    """A bounded provider failure suitable for the AIExecution ledger."""
+
+    def __init__(self, code: str, message: str | None = None) -> None:
+        self.failure_code = code
+        super().__init__(message or code)
+
+
 class OpenAIResponsesProvider:
     """Execute text-generation requests through the OpenAI Responses API."""
 
@@ -91,9 +99,12 @@ class OpenAIResponsesProvider:
                 line = raw_line.decode().strip() if isinstance(raw_line, bytes) else str(raw_line).strip()
                 if not line.startswith("data: "):
                     continue
-                event = json.loads(line.removeprefix("data: "))
+                try:
+                    event = json.loads(line.removeprefix("data: "))
+                except json.JSONDecodeError:
+                    raise OpenAIResponseFailure("OPENAI_STREAM_EVENT_INVALID") from None
                 if not isinstance(event, dict):
-                    continue
+                    raise OpenAIResponseFailure("OPENAI_STREAM_EVENT_INVALID")
                 event_type = event.get("type")
                 if event_type == "response.output_text.delta":
                     delta = event.get("delta")
@@ -113,7 +124,7 @@ class OpenAIResponsesProvider:
                 if event_type == "response.completed":
                     response_data = event.get("response")
                     if not isinstance(response_data, dict):
-                        raise ValueError("OpenAI Responses API completed without a response.")
+                        raise OpenAIResponseFailure("OPENAI_STREAM_COMPLETION_INVALID")
                     raw_text = "".join(parts).strip() or _response_text(response_data)
                     output = _normalize_output(
                         raw_text,
@@ -123,14 +134,22 @@ class OpenAIResponsesProvider:
                     yield StreamComplete(_model_result(route, response_data, output))
                     return
                 if event_type == "response.failed":
-                    raise ValueError("OpenAI Responses API streaming request failed.")
+                    raise OpenAIResponseFailure("OPENAI_RESPONSE_FAILED")
                 if event_type == "response.incomplete":
                     response_data = event.get("response")
                     incomplete_details = response_data.get("incomplete_details") if isinstance(response_data, dict) else None
                     reason = incomplete_details.get("reason") if isinstance(incomplete_details, dict) else None
-                    detail = f": {reason}" if isinstance(reason, str) and reason else ""
-                    raise ValueError(f"OpenAI Responses API incomplete{detail}.")
-        raise ValueError("OpenAI Responses API stream ended without a completion event.")
+                    code = (
+                        "OPENAI_OUTPUT_TOKEN_LIMIT"
+                        if reason == "max_output_tokens"
+                        else "OPENAI_CONTENT_FILTER"
+                        if reason == "content_filter"
+                        else "OPENAI_RESPONSE_INCOMPLETE"
+                    )
+                    raise OpenAIResponseFailure(code, f"OpenAI Responses API incomplete: {reason}." if isinstance(reason, str) and reason in {"max_output_tokens", "content_filter"} else None)
+                if event_type == "error":
+                    raise OpenAIResponseFailure("OPENAI_STREAM_ERROR")
+        raise OpenAIResponseFailure("OPENAI_STREAM_EOF")
 
 
 def _request_body(route: ModelRoute, payload: dict[str, object]) -> dict[str, object]:
@@ -309,26 +328,26 @@ def _normalize_output(
                 "candidate_metadata": None,
                 "candidate_metadata_error": "structured_output_invalid_json",
             }
-        raise ValueError("OpenAI structured Tutor output is not valid JSON.") from None
+        raise OpenAIResponseFailure("OPENAI_STRUCTURED_JSON_INVALID", "OpenAI structured Tutor output is not valid JSON.") from None
     if not isinstance(parsed, dict):
-        raise ValueError("OpenAI structured output must be a JSON object.")
+        raise OpenAIResponseFailure("OPENAI_STRUCTURED_SCHEMA_INVALID", "OpenAI structured output must be a JSON object.")
     if tutor_schema_name is None:
         return parsed
     if not isinstance(parsed.get("text"), str) or not parsed["text"].strip():
-        raise ValueError("OpenAI structured Tutor output has no student-facing text.")
+        raise OpenAIResponseFailure("OPENAI_STRUCTURED_TEXT_MISSING", "OpenAI structured Tutor output has no student-facing text.")
     if tutor_schema_name in {"tutor_turn_v9", "tutor_turn_v10", "tutor_turn_v11", "tutor_turn_v12", "tutor_turn_v13"} and "workspace_intent" not in parsed:
-        raise ValueError(f"OpenAI structured {tutor_schema_name} output is missing required workspace_intent.")
+        raise OpenAIResponseFailure("OPENAI_STRUCTURED_FIELD_MISSING", f"OpenAI structured {tutor_schema_name} output is missing required workspace_intent.")
     if tutor_schema_name in {"tutor_turn_v10", "tutor_turn_v11", "tutor_turn_v12", "tutor_turn_v13"} and "workspace_visual_order" not in parsed:
-        raise ValueError(f"OpenAI structured {tutor_schema_name} output is missing required workspace_visual_order.")
+        raise OpenAIResponseFailure("OPENAI_STRUCTURED_FIELD_MISSING", f"OpenAI structured {tutor_schema_name} output is missing required workspace_visual_order.")
     if tutor_schema_name in {"tutor_turn_v11", "tutor_turn_v12"} and ("canvas_brief" not in parsed or "canvas_visual_context_selection" not in parsed):
-        raise ValueError(f"OpenAI structured {tutor_schema_name} output is missing required Canvas fields.")
+        raise OpenAIResponseFailure("OPENAI_STRUCTURED_FIELD_MISSING", f"OpenAI structured {tutor_schema_name} output is missing required Canvas fields.")
     if tutor_schema_name == "tutor_turn_v13":
         if "canvas_brief" not in parsed:
-            raise ValueError("OpenAI structured tutor_turn_v13 output is missing required canvas_brief.")
+            raise OpenAIResponseFailure("OPENAI_STRUCTURED_FIELD_MISSING", "OpenAI structured tutor_turn_v13 output is missing required canvas_brief.")
         if "canvas_visual_context_selection" in parsed:
-            raise ValueError("OpenAI structured tutor_turn_v13 output contains delegated visual selection.")
+            raise OpenAIResponseFailure("OPENAI_STRUCTURED_FIELD_INVALID", "OpenAI structured tutor_turn_v13 output contains delegated visual selection.")
     if tutor_schema_name in {"tutor_turn_v12", "tutor_turn_v13"} and "canvas_change_intent" not in parsed:
-        raise ValueError(f"OpenAI structured {tutor_schema_name} output is missing canvas_change_intent.")
+        raise OpenAIResponseFailure("OPENAI_STRUCTURED_FIELD_MISSING", f"OpenAI structured {tutor_schema_name} output is missing canvas_change_intent.")
     workspace_intent = {"workspace_intent": parsed["workspace_intent"]} if "workspace_intent" in parsed else {}
     workspace_visual_order = {"workspace_visual_order": parsed["workspace_visual_order"]} if "workspace_visual_order" in parsed else {}
     canvas_brief = {"canvas_brief": parsed["canvas_brief"]} if "canvas_brief" in parsed else {}
@@ -387,6 +406,8 @@ def _teaching_decision_output(parsed: dict[str, object]) -> dict[str, object]:
         "structured_segment_state",
         "parent_boundary",
         "provisional_broad_subject",
+        "learner_action_requirement",
+        "teaching_surface",
     )
     return {field: parsed[field] for field in fields if field in parsed}
 

@@ -42,12 +42,20 @@ class VisualNeedDecision:
         return self.visual_need in {"HELPFUL", "STRONGLY_RECOMMENDED"}
 
     def tutor_signal(self) -> dict[str, object]:
-        return {
-            "visual_need": self.visual_need,
+        signal: dict[str, object] = {
+            "status": self.status,
             "visual_category": self.visual_category,
             "source": self.source,
             "authority": "advisory_current_turn",
         }
+        signal["visual_need"] = (
+            self.visual_need
+            if self.status == "COMPLETED" or self.source in {
+                "STUDENT_NO_VISUAL", "EXPLICIT_VISUAL_REQUEST", "EQUIVALENT_VISUAL_IN_FLIGHT"
+            }
+            else "UNEVALUATED"
+        )
+        return signal
 
     def audit_payload(self) -> dict[str, object]:
         return {
@@ -68,6 +76,7 @@ def decide_visual_need(
     *,
     student_text: str,
     subject: str | None,
+    current_exchange: list[dict[str, str]] | None = None,
     prior_teaching_method: str | None,
     current_canvas_status: str | None,
     capability_available: bool,
@@ -83,14 +92,14 @@ def decide_visual_need(
     normalized = student_text.strip()
     if _NO_VISUAL.search(normalized):
         return _deterministic("NONE", "NONE", "STUDENT_NO_VISUAL")
+    if current_canvas_status in {"PENDING", "RUNNING"}:
+        return _deterministic("NONE", "NONE", "EQUIVALENT_VISUAL_IN_FLIGHT")
     if _EXPLICIT_VISUAL.search(normalized):
         return _deterministic(
             "STRONGLY_RECOMMENDED", "NONE", "EXPLICIT_VISUAL_REQUEST"
         )
     if not capability_available or not source_meaning_clear:
         return _deterministic("NONE", "NONE", "NOT_ELIGIBLE")
-    if current_canvas_status in {"PENDING", "RUNNING"}:
-        return _deterministic("NONE", "NONE", "EQUIVALENT_VISUAL_IN_FLIGHT")
     if gateway is None:
         return VisualNeedDecision(
             status="NOT_CONFIGURED",
@@ -147,6 +156,7 @@ def decide_visual_need(
                     "policy_version": policy_version,
                     "student_text": normalized,
                     "subject": subject,
+                    "current_exchange": current_exchange or [],
                     "prior_teaching_method": prior_teaching_method,
                     "current_canvas_status": current_canvas_status,
                     "capability_available": capability_available,

@@ -62,8 +62,8 @@ Do not restart completed architecture programs merely because their historical p
 
 The key invariant is:
 
-    Tutor teaches.
-    Canvas represents and composes.
+    Tutor leads teaching and owns the learner-facing relationship.
+    Canvas teaches visually within the Tutor's bounded goal.
     Tools establish exact truth.
     JEV makes bounded decisions only.
     Code validates and admits.
@@ -77,7 +77,7 @@ Owns educational objective, teaching strategy, explanation, source grounding, le
 
 ### Canvas
 
-Owns bounded visual composition only. It may use REUSE, ADAPT, or CREATE but does not become a second Tutor or learner-state authority.
+Owns bounded visual teaching design, representation, interaction, tool choice and composition. It may use REUSE, ADAPT, or CREATE within the Tutor's goal but does not become a second learner-facing Tutor or learner-state authority.
 
 ### JEV
 

@@ -150,3 +150,22 @@ def test_provider_failure_is_fail_closed() -> None:
     assert decision.status == "FAILED"
     assert decision.visual_need == "NONE"
     assert decision.failure_code == "TimeoutError"
+    assert decision.tutor_signal()["visual_need"] == "UNEVALUATED"
+
+
+def test_unknown_subject_keeps_visual_decision_with_current_exchange() -> None:
+    gateway = _Gateway({"answers": {
+        "visual_need": {"choice": "STRONGLY_RECOMMENDED", "probabilities": {"NONE": 0.02, "HELPFUL": 0.03, "STRONGLY_RECOMMENDED": 0.95}},
+        "visual_category": {"choice": "PROCESS", "probabilities": {"NONE": 0.01, "SHAPE": 0.01, "STRUCTURE": 0.02, "PROCESS": 0.95, "SCENE": 0.01}},
+    }})
+    exchange = [{"message_id": str(uuid4()), "role": "tutor", "content": "The atom moves back and forth."}]
+    decision = _decide(gateway, student_text="How do you mean?", subject=None, current_exchange=exchange)
+    assert decision.status == "COMPLETED"
+    assert decision.recommends_visual
+    assert gateway.calls[0][1]["state"]["current_exchange"] == exchange
+
+
+def test_explicit_visual_request_does_not_duplicate_inflight_canvas() -> None:
+    decision = _decide(_Gateway(error=AssertionError("must not call")), student_text="Draw it", current_canvas_status="RUNNING")
+    assert decision.source == "EQUIVALENT_VISUAL_IN_FLIGHT"
+    assert decision.visual_need == "NONE"

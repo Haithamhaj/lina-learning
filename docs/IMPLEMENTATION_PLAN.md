@@ -199,7 +199,7 @@ The browser renders state; it does not become state authority.
     Primary Tutor
     → CanvasBrief
     → filtered learner presentation context
-    → Canvas composition pipeline
+    → Canvas visual teaching and composition pipeline
     → REUSE / ADAPT / CREATE
     → typed or custom visual runtime
     → validation / preview / sandbox

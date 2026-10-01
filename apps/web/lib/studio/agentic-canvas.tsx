@@ -18,7 +18,7 @@ import {
   type SemanticPlacement,
 } from "./visual-toolbelt";
 import { diagramHeight, diagramNodeShape, diagramPositions, mathSurfaceKind, presentationLayout, spatialPrimitive } from "./agentic-canvas-geometry";
-import { clippedLinearExpression, textInteractionPresentation } from "./agentic-canvas-presentation";
+import { clippedLinearExpression, orderingPresentation, textInteractionPresentation } from "./agentic-canvas-presentation";
 
 type Props = {
   sceneId: string;
@@ -28,6 +28,9 @@ type Props = {
   onReload: () => void;
   loadGeneratedAsset?: (assetId: string) => Promise<Blob>;
   loadCustomVisualBuild?: (sceneId: string, buildId: string) => Promise<StudioCustomVisualBuild>;
+  operationPending?: boolean;
+  locale?: string;
+  onLocalVisualState?: (sceneId: string, sceneVersion: number, blockId: string, state: Record<string, string>) => void;
 };
 
 const actionClass = "rounded-xl border border-[#b7d0c9] bg-[#f0f7f4] px-3 py-2 text-sm font-semibold text-[#234d46] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700";
@@ -138,11 +141,13 @@ function DiagramSurface({ block }: { block: Extract<AgenticCanvasBlock, { type: 
 function SpatialSurface({ block }: { block: Extract<AgenticCanvasBlock, { type: "SCENE_2D" }> }) {
   const point = (position: { x: string; y: string }) => ({ x: rational(position.x) * 6.6 + 30, y: rational(position.y) * 3.4 + 20 });
   const positions = new Map(block.objects.map((object) => [object.id, point(object.position)]));
-  return <svg data-agentic-surface="scene-2d" viewBox="0 0 720 390" className="w-full rounded-xl bg-sky-50" role="img" aria-label={block.accessibility.aria_label ?? block.accessibility.text_equivalent}>
+  const objectById = new Map(block.objects.map((object) => [object.id, object]));
+  const edgeRadius = (kind: (typeof block.objects)[number]["object_kind"]) => kind === "POINT" ? 10 : kind === "CIRCLE" ? 30 : kind === "RECTANGLE" ? 40 : kind === "POLYGON" ? 37 : 0;
+  return <div className="max-w-full overflow-x-auto"><svg data-agentic-surface="scene-2d" viewBox="0 0 720 390" className="min-w-[640px] w-full rounded-xl bg-sky-50" role="img" aria-label={block.accessibility.aria_label ?? block.accessibility.text_equivalent}>
     <defs><marker id={`${block.block_id}-arrow`} markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#0284c7"/></marker></defs>
-    {block.relations.map((relation, index) => { const source = positions.get(relation.source_id); const target = positions.get(relation.target_id); return source && target ? <g key={`${relation.source_id}-${relation.target_id}-${index}`}><line x1={source.x} y1={source.y} x2={target.x} y2={target.y} stroke="#0284c7" strokeWidth="2" markerEnd={`url(#${block.block_id}-arrow)`}/>{relation.label ? <text x={(source.x + target.x) / 2} y={(source.y + target.y) / 2 - 8} textAnchor="middle" className="fill-sky-900 text-[12px]">{relation.label}</text> : null}</g> : null; })}
-    {block.objects.map((object) => { const position = positions.get(object.id)!; const primitive = spatialPrimitive(object.object_kind); const target = block.relations.find((relation) => relation.source_id === object.id); const targetPosition = target ? positions.get(target.target_id) : null; return <g key={object.id} data-object-kind={object.object_kind}>{primitive === "circle" ? <circle cx={position.x} cy={position.y} r={object.object_kind === "POINT" ? 8 : 28} fill="#bae6fd" stroke="#0369a1" strokeWidth="3"/> : primitive === "rectangle" ? <rect x={position.x - 38} y={position.y - 22} width="76" height="44" rx="10" fill="#e0f2fe" stroke="#0369a1" strokeWidth="3"/> : primitive === "polygon" ? <polygon points={`${position.x},${position.y - 31} ${position.x + 35},${position.y - 10} ${position.x + 24},${position.y + 29} ${position.x - 24},${position.y + 29} ${position.x - 35},${position.y - 10}`} fill="#e0f2fe" stroke="#0369a1" strokeWidth="3"/> : primitive === "arrow" ? <line x1={position.x - 30} y1={position.y} x2={targetPosition?.x ?? position.x + 40} y2={targetPosition?.y ?? position.y} stroke="#0369a1" strokeWidth="4" markerEnd={`url(#${block.block_id}-arrow)`}/> : null}{primitive !== "arrow" ? <text x={position.x} y={primitive === "label" ? position.y : object.object_kind === "POINT" ? position.y - 14 : position.y + 5} textAnchor="middle" className="fill-slate-900 text-[13px] font-semibold">{object.label}</text> : <text x={position.x} y={position.y - 12} textAnchor="middle" className="fill-slate-900 text-[13px] font-semibold">{object.label}</text>}</g>; })}
-  </svg>;
+    {block.relations.map((relation, index) => { const source = positions.get(relation.source_id); const target = positions.get(relation.target_id); if (!source || !target) return null; const distance = Math.hypot(target.x - source.x, target.y - source.y); const startRadius = edgeRadius(objectById.get(relation.source_id)!.object_kind); const endRadius = edgeRadius(objectById.get(relation.target_id)!.object_kind); const clear = distance > startRadius + endRadius + 8; const ux = distance ? (target.x - source.x) / distance : 0; const uy = distance ? (target.y - source.y) / distance : 0; return <g key={`${relation.source_id}-${relation.target_id}-${index}`} data-agentic-relation={`${relation.source_id}:${relation.target_id}`}><line x1={source.x + (clear ? ux * startRadius : 0)} y1={source.y + (clear ? uy * startRadius : 0)} x2={target.x - (clear ? ux * endRadius : 0)} y2={target.y - (clear ? uy * endRadius : 0)} stroke="#0284c7" strokeWidth="2" markerEnd={`url(#${block.block_id}-arrow)`}/>{relation.label ? <text x={(source.x + target.x) / 2} y={(source.y + target.y) / 2 - 50} textAnchor="middle" className="fill-sky-900" fontSize="16">{relation.label}</text> : null}</g>; })}
+    {block.objects.map((object) => { const position = positions.get(object.id)!; const primitive = spatialPrimitive(object.object_kind); const target = block.relations.find((relation) => relation.source_id === object.id); const targetPosition = target ? positions.get(target.target_id) : null; const labelY = primitive === "label" ? position.y : object.object_kind === "POINT" ? position.y - 18 : primitive === "arrow" ? position.y - 18 : primitive === "rectangle" ? position.y + 39 : position.y + 49; return <g key={object.id} data-object-kind={object.object_kind}>{primitive === "circle" ? <circle cx={position.x} cy={position.y} r={object.object_kind === "POINT" ? 8 : 28} fill="#bae6fd" stroke="#0369a1" strokeWidth="3"/> : primitive === "rectangle" ? <rect x={position.x - 38} y={position.y - 22} width="76" height="44" rx="10" fill="#e0f2fe" stroke="#0369a1" strokeWidth="3"/> : primitive === "polygon" ? <polygon points={`${position.x},${position.y - 31} ${position.x + 35},${position.y - 10} ${position.x + 24},${position.y + 29} ${position.x - 24},${position.y + 29} ${position.x - 35},${position.y - 10}`} fill="#e0f2fe" stroke="#0369a1" strokeWidth="3"/> : primitive === "arrow" ? <line x1={position.x - 30} y1={position.y} x2={targetPosition?.x ?? position.x + 40} y2={targetPosition?.y ?? position.y} stroke="#0369a1" strokeWidth="4" markerEnd={`url(#${block.block_id}-arrow)`}/> : null}<text x={position.x} y={labelY} textAnchor="middle" className="fill-slate-900 font-semibold" fontSize="18">{object.label}</text></g>; })}
+  </svg></div>;
 }
 
 function Scene2DBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "SCENE_2D" }> }) {
@@ -233,23 +238,54 @@ function DiagramBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperati
 }
 
 function TextInteractionBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation"> & { block: Extract<AgenticCanvasBlock, { type: "TEXT_INTERACTION" }> }) {
-  if (props.block.interaction_family === "ORDERING") return <BlockFrame block={props.block}>
-    <div role="status" data-text-interaction-fallback="ordering" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
-      Ordering is not available safely in Canvas yet. Continue with Tutor chat.
-    </div>
-  </BlockFrame>;
+  const textSample = [props.block.title, props.block.meaning, props.block.prompt, ...props.block.items.map((item) => item.text), ...props.block.groups.map((group) => group.label)].join(" ");
+  const arabic = /[\u0600-\u06ff]/.test(textSample);
+  const copy = arabic
+    ? { choices: "الخيارات", placeIn: "ضع في", moveUp: "حرّك لأعلى", moveDown: "حرّك لأسفل", submitOrder: "إرسال الترتيب", unassigned: "الخيارات غير المصنفة" }
+    : { choices: "Choices", placeIn: "Place in", moveUp: "Move up", moveDown: "Move down", submitOrder: "Submit order", unassigned: "Unassigned choices" };
+
+  if (props.block.interaction_family === "ORDERING") {
+    const presentation = orderingPresentation(props.block);
+    const elementState = new Map(props.block.elements.map((element) => [element.id, element.current_value]));
+    const reorderAction: AgenticCanvasAction | null = props.block.allowed_actions.includes("REORDER")
+      ? "REORDER"
+      : props.block.allowed_actions.includes("MOVE") ? "MOVE" : null;
+    const submit = props.block.allowed_actions.includes("SUBMIT");
+    return <BlockFrame block={props.block}>
+      <p className="mb-1 text-sm font-medium text-slate-700" dir={arabic ? "rtl" : "auto"}>{props.block.prompt}</p>
+      <p className="mb-3 text-xs text-slate-500" dir={arabic ? "rtl" : "ltr"}>{arabic ? "استخدم أزرار التحريك لترتيب الكلمات." : "Use the move buttons to arrange the items."}</p>
+      <ol className="space-y-2" dir={arabic ? "rtl" : "ltr"}>
+        {presentation.items.map((item, index) => <li key={item.id} data-order-item={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm shadow-sm">
+          <span className="font-semibold">{item.text}</span>
+          {reorderAction ? <span className="flex flex-wrap gap-1">
+            <button type="button" className={actionClass} disabled={index === 0} onClick={() => {
+              const toValue = presentation.move(item.id, "UP");
+              if (toValue !== null && reorderAction) nextOperation(props, props.block, reorderAction, { elementId: item.id, fromValue: elementState.get(item.id) ?? undefined, toValue });
+            }}>{copy.moveUp}</button>
+            <button type="button" className={actionClass} disabled={index === presentation.items.length - 1} onClick={() => {
+              const toValue = presentation.move(item.id, "DOWN");
+              if (toValue !== null && reorderAction) nextOperation(props, props.block, reorderAction, { elementId: item.id, fromValue: elementState.get(item.id) ?? undefined, toValue });
+            }}>{copy.moveDown}</button>
+          </span> : null}
+        </li>)}
+      </ol>
+      {submit ? <button type="button" className={actionClass + " mt-3"} onClick={() => nextOperation(props, props.block, "SUBMIT")}>{copy.submitOrder}</button> : null}
+    </BlockFrame>;
+  }
+
   const presentation = textInteractionPresentation(props.block);
   const movable = props.block.allowed_actions.includes("MOVE") && props.block.groups.length > 0;
+  const currentValue = (itemId: string) => props.block.elements.find((element) => element.id === itemId)?.current_value ?? undefined;
   const itemCard = (item: typeof props.block.items[number]) => <div key={item.id} className="mt-2 rounded-lg bg-white px-3 py-2 text-sm" dir="auto">
     <p>{item.text}</p>
-    {movable ? <div className="mt-2 flex flex-wrap gap-1">{props.block.groups.map((group) => <button key={group.id} type="button" className={actionClass} onClick={() => nextOperation(props, props.block, "MOVE", { elementId: item.id, toValue: group.id })}>Place in {group.label}</button>)}</div> : null}
+    {movable ? <div className="mt-2 flex flex-wrap gap-1">{props.block.groups.map((group) => <button key={group.id} type="button" className={actionClass} onClick={() => nextOperation(props, props.block, "MOVE", { elementId: item.id, fromValue: currentValue(item.id), toValue: group.id })}>{copy.placeIn} {group.label}</button>)}</div> : null}
   </div>;
   return <BlockFrame block={props.block}>
     <p className="mb-3 text-sm font-medium text-slate-700" dir="auto">{props.block.prompt}</p>
     {presentation.groups.length ? <div className="grid gap-3 sm:grid-cols-2">{presentation.groups.map((group) => <section key={group.id} data-text-group={group.id} className="rounded-xl border-2 border-dashed border-amber-300 bg-amber-50 p-3"><p className="text-xs font-bold uppercase text-amber-800" dir="auto">{group.label}</p>{group.items.map(itemCard)}</section>)}</div> : null}
-    {presentation.unassigned.length ? <section data-unassigned-choices="true" aria-label="Unassigned choices" className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-      <p className="mb-2 text-xs font-bold uppercase text-slate-600">Choices</p>
-      <div className="grid gap-2 sm:grid-cols-2">{presentation.unassigned.map((item) => <div key={item.id} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm" dir="auto">{item.text}{movable ? <div className="mt-2 flex flex-wrap gap-1">{props.block.groups.map((group) => <button key={group.id} type="button" className={actionClass} onClick={() => nextOperation(props, props.block, "MOVE", { elementId: item.id, toValue: group.id })}>Place in {group.label}</button>)}</div> : null}</div>)}</div>
+    {presentation.unassigned.length ? <section data-unassigned-choices="true" aria-label={copy.unassigned} className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3" dir={arabic ? "rtl" : "ltr"}>
+      <p className="mb-2 text-xs font-bold uppercase text-slate-600">{copy.choices}</p>
+      <div className="grid gap-2 sm:grid-cols-2">{presentation.unassigned.map((item) => <div key={item.id} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm" dir="auto">{item.text}{movable ? <div className="mt-2 flex flex-wrap gap-1">{props.block.groups.map((group) => <button key={group.id} type="button" className={actionClass} onClick={() => nextOperation(props, props.block, "MOVE", { elementId: item.id, fromValue: currentValue(item.id), toValue: group.id })}>{copy.placeIn} {group.label}</button>)}</div> : null}</div>)}</div>
     </section> : null}
     {movable ? null : <SemanticButtons {...props}/>}
   </BlockFrame>;
@@ -281,7 +317,7 @@ function GeneratedImage({ block, loadGeneratedAsset }: { block: Extract<AgenticC
 }
 
 
-function CustomVisualSandbox(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation" | "loadCustomVisualBuild"> & { block: Extract<AgenticCanvasBlock, { type: "CUSTOM_VISUAL" }> }) {
+function CustomVisualSandbox(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation" | "loadCustomVisualBuild" | "operationPending" | "onLocalVisualState" | "locale"> & { block: Extract<AgenticCanvasBlock, { type: "CUSTOM_VISUAL" }> }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const container = useRef<HTMLElement>(null);
   const [frameHeight, setFrameHeight] = useState(384);
@@ -298,6 +334,9 @@ function CustomVisualSandbox(props: Pick<Props, "sceneId" | "sceneVersion" | "on
   const eventCount = useRef(0);
   const eventWindow = useRef(0);
   const initialState = useRef(Object.fromEntries(props.block.elements.map(item => [item.id, item.current_value])));
+  const localState = useRef<Record<string, string>>({});
+  const answerInFlight = useRef(false);
+  const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [pkg, setPkg] = useState<StudioCustomVisualBuild | null>(null);
   useEffect(() => {
     let active = true;
@@ -321,11 +360,33 @@ function CustomVisualSandbox(props: Pick<Props, "sceneId" | "sceneVersion" | "on
       if (data.type === "READY") { setStatus("ready"); return; }
       if (data.type === "ERROR") { setStatus("failed"); return; }
       if (performance.now() - eventWindow.current > 1000) { eventCount.current = 0; eventWindow.current = performance.now(); }
-      if (data.type !== "EVENT" || eventCount.current >= 24 || typeof data.semantic_action !== "string" || typeof data.semantic_id !== "string") return;
+      if (typeof data.semantic_id !== "string") return;
+      if (data.type === "LOCAL_STATE") {
+        if (typeof data.to_value !== "string" || data.to_value.length > 120 || !Object.prototype.hasOwnProperty.call(pkg?.manifest.current_state_schema ?? {}, data.semantic_id) || !pkg?.manifest.interactions.some(item => item.semantic_id === data.semantic_id && item.purpose === "LOCAL")) return;
+        // Animation frames may report the same control values repeatedly. Only
+        // changes spend the message budget, so a later learner action is not
+        // hidden by an unchanged visual that keeps drawing.
+        if (localState.current[data.semantic_id] === data.to_value) return;
+        if (eventCount.current >= 24) return;
+        eventCount.current += 1;
+        localState.current = { ...localState.current, [data.semantic_id]: data.to_value };
+        props.onLocalVisualState?.(props.sceneId, props.sceneVersion, props.block.block_id, localState.current);
+        return;
+      }
+      if (data.type !== "EVENT" || typeof data.semantic_action !== "string") return;
+      if (eventCount.current >= 24) return;
       const action = data.semantic_action as AgenticCanvasAction;
       const declared = pkg?.manifest?.interactions?.find((item: any) => item.action === action && item.semantic_id === data.semantic_id);
       if (!declared || !props.block.elements.some((item) => item.id === data.semantic_id) || (declared.value_required && typeof data.to_value !== "string")) return;
       eventCount.current += 1;
+      if (declared.purpose === "LOCAL") {
+        if (typeof data.to_value === "string" && data.to_value.length <= 240 && Object.prototype.hasOwnProperty.call(pkg?.manifest.current_state_schema ?? {}, data.semantic_id)) {
+          localState.current = { ...localState.current, [data.semantic_id]: data.to_value };
+          props.onLocalVisualState?.(props.sceneId, props.sceneVersion, props.block.block_id, localState.current);
+        }
+        return;
+      }
+      if (declared.purpose === "ANSWER") return;
       const mutation = action !== "SELECT" && action !== "FOCUS";
       const current = props.block.elements.find(item => item.id === data.semantic_id)?.current_value;
       nextOperation(props, props.block, action, { elementId: data.semantic_id,
@@ -334,14 +395,44 @@ function CustomVisualSandbox(props: Pick<Props, "sceneId" | "sceneVersion" | "on
     };
     window.addEventListener("message", receive);
     return () => { window.clearTimeout(timeout); window.removeEventListener("message", receive); };
-  }, [props.block, props.sceneId, props.sceneVersion, pkg]);
+  }, [props.block, props.sceneId, props.sceneVersion, pkg, props.onLocalVisualState]);
+  const submitChoice = (questionId: string, value: string) => {
+    if (answerInFlight.current || props.operationPending) return;
+    answerInFlight.current = true;
+    setPendingQuestion(questionId);
+    const operation = createAgenticCanvasOperation({ sceneId: props.sceneId, sceneVersion: props.sceneVersion,
+      block: props.block, action: "SUBMIT", elementId: questionId, toValue: value, idempotencyKey: crypto.randomUUID() });
+    void props.onOperation(operation).finally(() => { answerInFlight.current = false; setPendingQuestion(null); });
+  };
+  const openAttempt = (questionId: string, accepted: string) => {
+    if (answerInFlight.current || props.operationPending) return;
+    answerInFlight.current = true;
+    setPendingQuestion(questionId);
+    const operation = createAgenticCanvasOperation({ sceneId: props.sceneId, sceneVersion: props.sceneVersion,
+      block: props.block, action: "OPEN_ATTEMPT", elementId: questionId, fromValue: accepted, idempotencyKey: crypto.randomUUID() });
+    void props.onOperation(operation).finally(() => { answerInFlight.current = false; setPendingQuestion(null); });
+  };
+  const arabic = props.locale?.toLowerCase().startsWith("ar") ?? false;
   return <section ref={container} className="overflow-hidden rounded-xl border border-slate-200 bg-white" data-custom-visual-sandbox={status}>
     {pkg ? <iframe ref={frame} title={props.block.title ?? "Interactive learning visual"} sandbox="allow-scripts" referrerPolicy="no-referrer" style={{ height: frameHeight, width: "100%", border: 0, display: "block" }} srcDoc={customSandboxDocument(pkg.source, props.block.parameters, props.block.bridge_nonce, initialState.current)}/> : null}
+    {pkg?.manifest.choice_questions?.map(question => {
+      const accepted = props.block.elements.find(item => item.id === question.semantic_id)?.current_value ?? null;
+      const pending = pendingQuestion === question.semantic_id || Boolean(props.operationPending);
+      return <div key={question.semantic_id} className="border-t border-slate-200 p-4" data-canvas-question={question.semantic_id}>
+        <p className="mb-3 text-base font-semibold text-slate-900" dir="auto">{question.prompt}</p>
+        <div className="flex flex-wrap gap-2">{question.options.map(option => <button key={option.value} type="button" className={actionClass}
+          aria-pressed={accepted === option.value} disabled={pending || accepted !== null}
+          onClick={() => submitChoice(question.semantic_id, option.value)}>{option.label}</button>)}</div>
+        {pendingQuestion === question.semantic_id && accepted === null ? <p role="status" className="mt-2 text-sm">{arabic ? "جارٍ حفظ الإجابة…" : "Submitting answer…"}</p> : null}
+        {accepted !== null ? <div className="mt-2 flex items-center gap-3"><p role="status" className="text-sm text-slate-700">{arabic ? "تم حفظ إجابتك لهذه المحاولة." : "Answer saved for this attempt."}</p>
+          <button type="button" className={actionClass} disabled={pending} onClick={() => openAttempt(question.semantic_id, accepted)}>{arabic ? "محاولة جديدة" : "New attempt"}</button></div> : null}
+      </div>;
+    })}
     {status === "failed" ? <p role="alert" className="p-3 text-sm text-rose-900">This visual could not run safely. Tutor chat is still available.</p> : null}
   </section>;
 }
 
-function DeclarativeBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation" | "loadGeneratedAsset" | "loadCustomVisualBuild"> & { block: AgenticCanvasBlock }) {
+function DeclarativeBlock(props: Pick<Props, "sceneId" | "sceneVersion" | "onOperation" | "loadGeneratedAsset" | "loadCustomVisualBuild" | "operationPending" | "onLocalVisualState" | "locale"> & { block: AgenticCanvasBlock }) {
   if (props.block.type === "SCENE_2D") return <Scene2DBlock {...props} block={props.block}/>;
   if (props.block.type === "MATH_BOARD") return <MathBoardBlock {...props} block={props.block}/>;
   if (props.block.type === "MATH_INPUT") return <MathInputBlock {...props} block={props.block}/>;
@@ -430,7 +521,8 @@ export function AgenticCanvasWorkspace(props: Props) {
       <h2 className="mt-1 font-display text-xl text-slate-900" dir="auto">{scene.objective}</h2></div>
       <button type="button" className={actionClass} onClick={props.onReload}>Reload Workspace</button>
     </header>}
-    {operationFailed ? <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-900">That Canvas action was not saved. Reload Workspace to verify the saved state. Tutor chat remains available.</p> : null}
+    {operationFailed ? <div role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-900">The Canvas response was interrupted. Reload to check the accepted state; Tutor chat remains available.
+      <button type="button" className={`${actionClass} ml-2`} onClick={props.onReload}>Reload Workspace</button></div> : null}
     <div data-agentic-layout={layout} data-agentic-motion={scene.presentation?.motion ?? "NONE"} className={container.container}>{orderedBlocks.map((block) => {
       const placement = placements.get(block.block_id) ?? { role: "SUPPORT" as const, span: "NORMAL" as const };
       const plan = presentationLayout(layout, placement.role, placement.span);

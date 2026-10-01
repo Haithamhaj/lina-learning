@@ -5,6 +5,7 @@ from uuid import uuid4
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute
 from services.platform.db.models import ModelTask
 from services.studio.canvas_brief import CanvasBriefV1
+from services.studio import visual_personalization_decision as visual_memory_decision
 from services.studio.visual_personalization_decision import select_visual_personalization_facts
 from services.tutor.runtime import build_tutor_model_payload
 
@@ -65,6 +66,74 @@ def _gateway(provider: _Provider) -> tuple[ModelGateway, _Session]:
         session,
     )
 
+
+
+
+def test_visual_memory_support_selection_is_bounded_to_optional_memory_candidates() -> None:
+    assert hasattr(visual_memory_decision, "select_visual_memory_support")
+    provider = _Provider(
+        {
+            "support_0": {"noul": 0.91},
+            "support_1": {"noul": 0.96},
+            "support_2": {"noul": 0.40},
+        }
+    )
+    gateway, session = _gateway(provider)
+    candidates = [
+        {
+            "support_key": "pf:favorite:space",
+            "memory_layer": "PERSONAL_FACT",
+            "kind": "FAVORITE",
+            "text": "Likes space.",
+            "concept_ref": None,
+        },
+        {
+            "support_key": "li:11111111-1111-4111-8111-111111111111",
+            "memory_layer": "LEARNING_INTELLIGENCE",
+            "kind": "current_state",
+            "text": "Currently distinguishes numerator from denominator with light support.",
+            "concept_ref": "equivalent_fractions",
+        },
+        {
+            "support_key": "pf:pet:cat",
+            "memory_layer": "PERSONAL_FACT",
+            "kind": "PET",
+            "text": "Has a cat.",
+            "concept_ref": None,
+        },
+    ]
+
+    decision = visual_memory_decision.select_visual_memory_support(
+        gateway,
+        brief=_brief(),
+        candidates=candidates,
+        min_probability=0.80,
+        policy_version="policy-v2",
+        student_id=uuid4(),
+        learning_session_id=uuid4(),
+        source_message_id=uuid4(),
+    )
+
+    assert decision.status == "COMPLETED"
+    assert decision.selected_keys == (
+        "li:11111111-1111-4111-8111-111111111111",
+        "pf:favorite:space",
+    )
+    assert len(session.rows) == 1
+    assert provider.payload is not None
+    state = provider.payload["state"]
+    assert state["candidates"] == candidates
+    assert set(state["selection_target"]) == {
+        "objective", "facts", "relations", "quantities", "desired_student_action"
+    }
+    serialized = str(state)
+    assert "Show it visually" not in serialized
+    assert "relevant_conversation" not in serialized
+    assert "requested_representation" not in serialized
+    assert "source_references" not in serialized
+    question = provider.payload["questions"]["support_0"]
+    assert "optional memory support" in question["instructions"]
+    assert "representation" not in question["true_when"].lower()
 
 def test_visual_fact_selection_is_thresholded_ranked_and_bounded() -> None:
     provider = _Provider(

@@ -180,6 +180,7 @@ export function DailyStudentApp() {
   const foregroundPendingRef = useRef(false);
   const sessionRecoveryRef = useRef(false);
   const preservedTranscriptRef = useRef<ChatMessage[]>([]);
+  const localVisualStateRef = useRef<{ scene_id: string; scene_version: number; block_id: string; values: Record<string, string> } | null>(null);
 
   const recordCanvasNotice = (view: StudioCompositionStatus) => {
     const sessionId = canvasNoticeSessionIdRef.current;
@@ -206,6 +207,9 @@ export function DailyStudentApp() {
   const applySnapshot = (next: StudioSnapshotFrame): boolean => {
     const required = Math.max(requiredSnapshotSequenceRef.current, appliedSnapshotSequenceRef.current);
     if (next.latest_event_sequence < required) return false;
+    if (localVisualStateRef.current && (localVisualStateRef.current.scene_id !== next.current_scene_id || localVisualStateRef.current.scene_version !== next.current_scene_version)) {
+      localVisualStateRef.current = null;
+    }
     appliedSnapshotSequenceRef.current = next.latest_event_sequence;
     setSnapshot(next);
     return true;
@@ -630,6 +634,7 @@ export function DailyStudentApp() {
             content: trimmed,
             suggested_action: options.suggestedAction ?? false,
             guided_check_id: options.guidedCheckId ?? null,
+            local_visual_state: localVisualStateRef.current,
           },
           studentContent: trimmed,
           restoreDraftOnPreAdmission: !options.suggestedAction && !options.guidedCheckId,
@@ -751,7 +756,7 @@ export function DailyStudentApp() {
               <Button className="order-3 min-h-12" type="submit" disabled={(!draft.trim() && !selectedSource) || composerDisabled}>{chatSending ? copy.thinking : copy.send}</Button>
             </form>
           </section>
-          {showCanvasPanel ? <aside aria-label={canvasCopy.workspaceLabel} className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a6b42]">{canvasCopy.workspaceLabel}</p><h2 ref={workspaceHeadingRef} tabIndex={-1} className="mt-1 font-display text-2xl outline-none">{canvasStatusNotice === "failed" ? canvasCopy.failureHeading : canvasStatusNotice === "unavailable" && canvasComposition === null ? canvasCopy.statusHeading : canvasPresentation.showUpdating ? canvasCopy.updatingHeading : workspaceVisible ? canvasCopy.currentSceneHeading : canvasCopy.preparingHeading}</h2></div>{interactionPending ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900" role="status">{canvasCopy.saving}</span> : null}</div>{canvasPresentation.showUpdating ? <div className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" role="status"><p>{canvasCopy.preparing(canvasElapsed)}</p><p className="mt-1 text-xs text-amber-800">{canvasCopy.elapsed(canvasElapsed)}</p></div> : null}{canvasStatusNotice === "failed" ? <p className="mb-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-900" role="alert">{canvasCopy.failed}</p> : null}{canvasStatusNotice === "unavailable" ? <p className="mb-4 rounded-2xl bg-slate-100 px-4 py-3 text-sm leading-6 text-slate-700" role="status">{canvasCopy.statusUnavailable}</p> : null}{canvasPresentation.showWaiting ? <CanvasWaitingState copy={canvasCopy} elapsedSeconds={canvasElapsed} /> : null}{workspaceVisible && snapshot ? <StudioRendererHost snapshot={snapshot} operationPending={interactionPending} onOperation={submitOperation} onReload={() => { void reloadSnapshot(); }} loadGeneratedAsset={loadGeneratedAsset} loadCustomVisualBuild={loadCustomVisualBuild} /> : null}</aside> : null}
+          {showCanvasPanel ? <aside aria-label={canvasCopy.workspaceLabel} className="rounded-[2rem] border border-white bg-white/95 p-4 shadow-[0_18px_50px_-34px_rgba(24,40,67,0.55)] sm:p-5"><div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a6b42]">{canvasCopy.workspaceLabel}</p><h2 ref={workspaceHeadingRef} tabIndex={-1} className="mt-1 font-display text-2xl outline-none">{canvasStatusNotice === "failed" ? canvasCopy.failureHeading : canvasStatusNotice === "unavailable" && canvasComposition === null ? canvasCopy.statusHeading : canvasPresentation.showUpdating ? canvasCopy.updatingHeading : workspaceVisible ? canvasCopy.currentSceneHeading : canvasCopy.preparingHeading}</h2></div>{interactionPending ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900" role="status">{canvasCopy.saving}</span> : null}</div>{canvasPresentation.showUpdating ? <div className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" role="status"><p>{canvasCopy.preparing(canvasElapsed)}</p><p className="mt-1 text-xs text-amber-800">{canvasCopy.elapsed(canvasElapsed)}</p></div> : null}{canvasStatusNotice === "failed" ? <p className="mb-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-900" role="alert">{canvasCopy.failed}</p> : null}{canvasStatusNotice === "unavailable" ? <p className="mb-4 rounded-2xl bg-slate-100 px-4 py-3 text-sm leading-6 text-slate-700" role="status">{canvasCopy.statusUnavailable}</p> : null}{canvasPresentation.showWaiting ? <CanvasWaitingState copy={canvasCopy} elapsedSeconds={canvasElapsed} /> : null}{workspaceVisible && snapshot ? <StudioRendererHost snapshot={snapshot} operationPending={interactionPending} onOperation={submitOperation} onReload={() => { void reloadSnapshot(); }} loadGeneratedAsset={loadGeneratedAsset} loadCustomVisualBuild={loadCustomVisualBuild} onLocalVisualState={(sceneId, sceneVersion, blockId, values) => { localVisualStateRef.current = { scene_id: sceneId, scene_version: sceneVersion, block_id: blockId, values }; }} /> : null}</aside> : null}
         </div>
         {error ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert"><span>{error}</span><Button type="button" variant="secondary" onClick={() => setLoadAttempt((value) => value + 1)}>{copy.reconnect}</Button></div> : null}
       </div>

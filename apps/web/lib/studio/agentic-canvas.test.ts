@@ -11,7 +11,7 @@ import {
 } from "./agentic-canvas-contract.ts";
 import type { AgenticCanvasAction } from "./contracts.ts";
 import { AgenticCanvasWorkspace } from "./agentic-canvas.tsx";
-import { clippedLinearExpression, textInteractionPresentation } from "./agentic-canvas-presentation.ts";
+import { clippedLinearExpression, orderingPresentation, textInteractionPresentation } from "./agentic-canvas-presentation.ts";
 import { activeSceneRendererState, resolveApprovedStudioRenderer } from "./renderer-host.ts";
 
 const commonBlock = {
@@ -349,33 +349,77 @@ test("Text interaction presentation uses only saved learner state, never solutio
   assert.deepEqual(state.unassigned.map((item) => item.id), ["solid"]);
 });
 
-test("Unsupported ordering fails closed without authored order or actionable controls", () => {
+test("Ordering starts from a safe unsolved order and exposes learner-controlled movement", () => {
   const parsed = parseAgenticCanvasScene(validScene);
   assert(parsed && parsed.blocks[3].type === "TEXT_INTERACTION");
   const block = {
     ...parsed.blocks[3], interaction_family: "ORDERING" as const,
+    prompt: "رتّب الكلمات لتكوين جملة صحيحة.",
     items: [
-      { id: "first", text: "First", group_id: null },
-      { id: "second", text: "Second", group_id: null },
-      { id: "third", text: "Third", group_id: null },
+      { id: "verb", text: "كتبَ", group_id: null },
+      { id: "subject", text: "الطالبُ", group_id: null },
+      { id: "object", text: "الدرسَ", group_id: null },
     ],
-    allowed_actions: ["REORDER", "SUBMIT"] as AgenticCanvasAction[],
+    relations: [
+      { source_id: "verb", relation: "BEFORE" as const, target_id: "subject" },
+      { source_id: "subject", relation: "BEFORE" as const, target_id: "object" },
+    ],
+    allowed_actions: ["MOVE", "SUBMIT"] as AgenticCanvasAction[],
     elements: [
-      { id: "first", label: "First", current_value: null },
-      { id: "second", label: "Second", current_value: null },
-      { id: "third", label: "Third", current_value: null },
+      { id: "verb", label: "كتبَ", current_value: null },
+      { id: "subject", label: "الطالبُ", current_value: null },
+      { id: "object", label: "الدرسَ", current_value: null },
     ],
   };
-  const presentation = textInteractionPresentation(block);
-  assert.deepEqual(presentation.groups, []);
-  assert.deepEqual(presentation.unassigned, []);
+  const presentation = orderingPresentation(block);
+  assert.notDeepEqual(presentation.items.map((item) => item.id), ["verb", "subject", "object"]);
+  assert.equal(new Set(presentation.items.map((item) => item.id)).size, 3);
+  const verbBefore = presentation.items.findIndex((item) => item.id === "verb");
+  const movedRank = presentation.move("verb", "UP");
+  assert.notEqual(movedRank, null);
+  const restored = orderingPresentation({
+    ...block,
+    elements: block.elements.map((element) => element.id === "verb" ? { ...element, current_value: movedRank } : element),
+  });
+  assert.ok(restored.items.findIndex((item) => item.id === "verb") < verbBefore);
 
   const scene: any = structuredClone(validScene);
   scene.blocks = [block];
   const html = renderToStaticMarkup(React.createElement(AgenticCanvasWorkspace, { sceneId: "scene", sceneVersion: 1, seed: scene, onOperation: async () => {}, onReload: () => {} }));
-  assert.match(html, /Ordering is not available safely in Canvas yet/);
-  assert.match(html, /Continue with Tutor chat/);
-  assert.doesNotMatch(html, /First|Second|Third|>Submit<|Current order/);
+  assert.doesNotMatch(html, /Ordering is not available safely in Canvas yet/);
+  assert.match(html, /استخدم أزرار التحريك لترتيب الكلمات/);
+  assert.match(html, /حرّك لأعلى|حرّك لأسفل/);
+  assert.match(html, /إرسال الترتيب/);
+  assert.doesNotMatch(html, /Move up|Move down|Submit order/);
+});
+
+test("Arabic matching uses Arabic learner-facing controls without mixed Place-in copy", () => {
+  const scene: any = structuredClone(validScene);
+  scene.blocks = [{
+    ...scene.blocks[3],
+    title: "ميّز وظيفة كل كلمة",
+    meaning: "مطابقة كل كلمة بوظيفتها النحوية.",
+    prompt: "صل كل كلمة بوظيفتها في الجملة.",
+    interaction_family: "MATCHING",
+    allowed_actions: ["MOVE"],
+    groups: [
+      { id: "role-verb", label: "الفعل" },
+      { id: "role-subject", label: "الفاعل" },
+    ],
+    items: [
+      { id: "verb", text: "كتبَ", group_id: "role-verb" },
+      { id: "subject", text: "الطالبُ", group_id: "role-subject" },
+    ],
+    elements: [
+      { id: "verb", label: "كتبَ", current_value: null },
+      { id: "subject", label: "الطالبُ", current_value: null },
+    ],
+  }];
+  const html = renderToStaticMarkup(React.createElement(AgenticCanvasWorkspace, { sceneId: "scene", sceneVersion: 1, seed: scene, onOperation: async () => {}, onReload: () => {} }));
+  assert.match(html, /الخيارات/);
+  assert.match(html, /ضع في الفعل/);
+  assert.match(html, /ضع في الفاعل/);
+  assert.doesNotMatch(html, /Place in|Choices/);
 });
 
 test("Grouping, matching and relation presentations all start without solved placement", () => {

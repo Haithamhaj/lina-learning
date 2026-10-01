@@ -352,3 +352,66 @@ def test_preview_is_verified_before_refinement_and_final_plan(monkeypatch):
     assert context.custom_preview_valid and context.reviewed_preview_count==context.custom_preview_count==2
     assert len(attempts)==5 and context.custom_attempt_count==2
     assert not o._pause_after_candidate_preview(RunContextWrapper(context),[]).is_final_output
+
+
+def test_native_full_width_range_controls_stay_inside_custom_visual_viewport() -> None:
+    source = """window.mount=(root)=>{const g=document.createElement('div');g.style='display:grid;grid-template-columns:1fr 1fr;gap:22px;width:100%';for(let i=0;i<2;i++){const c=document.createElement('div');const l=document.createElement('label');l.textContent=i?'Vibration size (loudness)':'Vibrations each second';const r=document.createElement('input');r.type='range';r.style.width='100%';c.append(l,r);g.append(c)}root.append(g)}"""
+    result = preview.preview_custom_visual(source=source, parameters={})
+    findings = [finding for view in result["views"] for finding in view.get("findings", [])]
+    assert not any("Control outside viewport" in finding for finding in findings)
+
+
+def test_local_visual_change_adds_post_action_screenshot_for_independent_review() -> None:
+    from services.studio.full_power_canvas import CanvasSemanticManifestV1
+    manifest = CanvasSemanticManifestV1.model_validate({
+        "version": "canvas-semantic-manifest-v1",
+        "brief_digest": "b" * 64,
+        "objective": "Compare two visible states.",
+        "representation_summary": "A selector switches the visible state.",
+        "entities": [{
+            "semantic_id": "phase", "kind": "state", "label": "Phase",
+            "educational_meaning": "The selected phase changes the visible state.",
+            "visible_description": "A selector and visible phase label.",
+        }],
+        "relations": [], "quantities": [], "presentation_steps": [],
+        "interactions": [{
+            "semantic_id": "phase", "action": "SET_VALUE",
+            "meaning": "Switch the visible phase.", "value_required": True, "purpose": "LOCAL",
+        }],
+        "calculated_results": [], "visual_descriptions": ["Visible phase label changes."],
+        "current_state_schema": {"phase": "Current visible phase."},
+        "provenance": {"brief_digest": "b" * 64, "runtime_kind": "custom-visual"},
+    })
+    source = """window.mount=(root,params,bridge)=>{const s=document.createElement('select');for(const v of ['inhale','exhale']){const o=document.createElement('option');o.value=v;o.textContent=v;s.append(o)}const out=document.createElement('p');const h=bridge.control(s,'phase','SET_VALUE');let phase=h.read('inhale');s.value=phase;const render=()=>out.textContent='Visible phase: '+phase;s.addEventListener('change',()=>{phase=s.value;h.emit(phase);render()});root.append(s,out);render()}"""
+    result = preview.preview_custom_visual(source=source, parameters={}, manifest=manifest)
+    phases = [(view["width"], view["phase"]) for view in result["views"]]
+    assert (960, "after-local-phase") in phases
+    assert (640, "after-local-phase") in phases
+
+
+def test_two_local_controls_capture_independent_post_action_states_with_bounded_images() -> None:
+    from services.studio.full_power_canvas import CanvasSemanticManifestV1
+    manifest = CanvasSemanticManifestV1.model_validate({
+        "version": "canvas-semantic-manifest-v1", "brief_digest": "c" * 64,
+        "objective": "Compare two independent visual controls.",
+        "representation_summary": "Two controls change separate visible values.",
+        "entities": [
+            {"semantic_id": "first", "kind": "control", "label": "First", "educational_meaning": "First visible value.", "visible_description": "First value."},
+            {"semantic_id": "second", "kind": "control", "label": "Second", "educational_meaning": "Second visible value.", "visible_description": "Second value."},
+        ],
+        "relations": [], "quantities": [], "presentation_steps": [],
+        "interactions": [
+            {"semantic_id": "first", "action": "SET_VALUE", "meaning": "Change first.", "value_required": True, "purpose": "LOCAL"},
+            {"semantic_id": "second", "action": "SET_VALUE", "meaning": "Change second.", "value_required": True, "purpose": "LOCAL"},
+        ],
+        "calculated_results": [], "visual_descriptions": ["Two independent visible values."],
+        "current_state_schema": {"first": "First value.", "second": "Second value."},
+        "provenance": {"brief_digest": "c" * 64, "runtime_kind": "custom-visual"},
+    })
+    source = """window.mount=(root,p,b)=>{for(const id of ['first','second']){let value=0;const input=document.createElement('input');input.type='range';input.min='0';input.max='10';input.value='0';const out=document.createElement('span');const h=b.control(input,id,'SET_VALUE');const render=()=>out.textContent=id+':'+value;input.addEventListener('input',()=>{value=Number(input.value);h.emit(String(value));render()});root.append(input,out);render()}}"""
+    result = preview.preview_custom_visual(source=source, parameters={}, manifest=manifest)
+    phases = [(view["width"], view["phase"]) for view in result["views"]]
+    for width in (960, 640):
+        assert (width, "after-local-first") in phases
+        assert (width, "after-local-second") in phases
+    assert len(result["views"]) == 6

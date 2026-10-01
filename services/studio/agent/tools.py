@@ -215,7 +215,7 @@ def create_2d_scene(
         AgenticCanvasElementV1(id=item.id, label=item.label, current_value=f"{item.position.x},{item.position.y}")
         for item in parsed_objects
     ]
-    return Scene2DBlockV1(
+    block = Scene2DBlockV1(
         **_common(
             block_id=block_id,
             block_type="SCENE_2D",
@@ -227,6 +227,71 @@ def create_2d_scene(
         objects=parsed_objects,
         relations=parsed_relations,
     )
+    _check_spatial_label_layout(parsed_objects, parsed_relations)
+    return block
+
+
+def _check_spatial_label_layout(
+    objects: list[SpatialObjectV1], relations: list[SpatialRelationV1]
+) -> None:
+    """Preflight the label boxes in the production 720x390 SVG coordinate frame.
+
+    This checks readable labels, not object intersection: connected objects,
+    containment and deliberate partial overlaps remain valid compositions.
+    """
+
+    contained_pairs = {
+        frozenset((relation.source_id, relation.target_id))
+        for relation in relations
+        if relation.relation in {"CONTAINS", "PART_OF"}
+    }
+    boxes: list[tuple[str, float, float, float, float]] = []
+    positions: dict[str, tuple[float, float, str]] = {}
+    for item in objects:
+        x = float(_exact_rational(item.position.x)) * 6.6 + 30
+        y = float(_exact_rational(item.position.y)) * 3.4 + 20
+        positions[item.id] = (x, y, item.object_kind)
+        text_y = y - 18 if item.object_kind in {"POINT", "ARROW"} else y if item.object_kind == "LABEL" else y + 39 if item.object_kind == "RECTANGLE" else y + 49
+        # SVG uses 18px text. This is a conservative width preflight; the
+        # browser still measures the actual font at the learner pane size.
+        half_width = min(sum(4.5 if "\u0600" <= char <= "\u06ff" else 5.8 for char in item.label), 300)
+        box = (item.id, x - half_width, text_y - 15, x + half_width, text_y + 4)
+        if box[1] < 8 or box[3] > 712 or box[2] < 6 or box[4] > 382:
+            raise ValueError(
+                "2D Scene label clips the 720x390 renderer; move or shorten the label within the 0..100 logical viewport."
+            )
+        for other in boxes:
+            if frozenset((item.id, other[0])) in contained_pairs:
+                continue
+            if box[1] < other[3] + 4 and box[3] > other[1] - 4 and box[2] < other[4] + 2 and box[4] > other[2] - 2:
+                raise ValueError(
+                    "2D Scene labels overlap in the 720x390 renderer. Coordinates use 0..100 logical units; separate or reposition the labeled objects, or choose a more suitable visual tool."
+                )
+        boxes.append(box)
+    for relation in relations:
+        if not relation.label or relation.source_id not in positions or relation.target_id not in positions:
+            continue
+        source = positions[relation.source_id]
+        target = positions[relation.target_id]
+        mid_x = (source[0] + target[0]) / 2
+        text_y = (source[1] + target[1]) / 2 - 50
+        half_width = min(sum(4.0 if "\u0600" <= char <= "\u06ff" else 5.3 for char in relation.label), 300)
+        relation_box = (mid_x - half_width, text_y - 14, mid_x + half_width, text_y + 4)
+        if relation_box[0] < 8 or relation_box[2] > 712 or relation_box[1] < 6 or relation_box[3] > 382:
+            raise ValueError("2D Scene relation label clips the renderer; move or shorten it within the 0..100 logical viewport.")
+        for item_x, item_y, kind in positions.values():
+            if kind == "POINT":
+                radius_x = radius_y = 10
+            elif kind == "CIRCLE":
+                radius_x = radius_y = 30
+            elif kind == "RECTANGLE":
+                radius_x, radius_y = 40, 24
+            elif kind == "POLYGON":
+                radius_x, radius_y = 37, 33
+            else:
+                continue
+            if relation_box[0] < item_x + radius_x and relation_box[2] > item_x - radius_x and relation_box[1] < item_y + radius_y and relation_box[3] > item_y - radius_y:
+                raise ValueError("2D Scene relation label covers an object; reposition the objects or use a clearer visual representation.")
 
 
 def create_diagram(
@@ -294,7 +359,11 @@ def create_text_interaction(
             label=label,
             value=prompt,
             elements=elements or None,
-            allowed_actions=["SELECT", "MOVE", "CONNECT", "SUBMIT"],
+            allowed_actions=(
+                ["SELECT", "REORDER", "SUBMIT"]
+                if interaction_family == "ORDERING"
+                else ["SELECT", "MOVE", "CONNECT", "SUBMIT"]
+            ),
         ),
         interaction_family=interaction_family,
         prompt=prompt,
@@ -362,7 +431,7 @@ def create_custom_visual(
         AgenticCanvasElementV1(id=semantic_id, label=entities_by_id[semantic_id].label, current_value=None)
         for semantic_id in ordered_ids
     ]
-    actions = sorted({item.action for item in package.manifest.interactions})
+    actions = sorted({item.action for item in package.manifest.interactions} | ({"OPEN_ATTEMPT"} if package.manifest.choice_questions else set()))
     interaction_contract = [
         CustomVisualInteractionContractV1(
             semantic_id=item.semantic_id, action=item.action, value_required=item.value_required,
@@ -414,7 +483,7 @@ def create_reused_custom_visual(
             meaning=meaning,
             label=label,
             elements=elements,
-            allowed_actions=sorted({item.action for item in canonical_manifest.interactions}),
+            allowed_actions=sorted({item.action for item in canonical_manifest.interactions} | ({"OPEN_ATTEMPT"} if canonical_manifest.choice_questions else set())),
         ),
         artifact_instance_id=artifact_instance_id,
         bridge_nonce=bridge_nonce,

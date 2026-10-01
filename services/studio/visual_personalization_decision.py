@@ -14,6 +14,7 @@ from services.studio.canvas_brief import (
 
 
 VISUAL_PERSONALIZATION_MAX_CANDIDATES = 12
+VISUAL_MEMORY_SUPPORT_MAX_CANDIDATES = 18
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,133 @@ class VisualPersonalizationDecision:
             "ai_execution_id": None if self.ai_execution_id is None else str(self.ai_execution_id),
             "failure_code": self.failure_code,
         }
+
+
+@dataclass(frozen=True)
+class VisualMemorySupportDecision:
+    status: str
+    policy_version: str
+    selected_keys: tuple[str, ...]
+    probabilities: dict[str, float]
+    ai_execution_id: UUID | None
+    failure_code: str | None = None
+
+    def audit_payload(self) -> dict[str, object]:
+        return {
+            "status": self.status,
+            "policy_version": self.policy_version,
+            "selected_support_keys": list(self.selected_keys),
+            "probabilities": self.probabilities,
+            "ai_execution_id": None if self.ai_execution_id is None else str(self.ai_execution_id),
+            "failure_code": self.failure_code,
+        }
+
+
+def select_visual_memory_support(
+    gateway: ModelGateway,
+    *,
+    brief: CanvasBriefV1,
+    candidates: list[dict[str, object]],
+    min_probability: float,
+    policy_version: str,
+    student_id: UUID,
+    learning_session_id: UUID,
+    source_message_id: UUID,
+) -> VisualMemorySupportDecision:
+    """Select up to three optional memory items; every other authority stays unchanged."""
+
+    bounded = candidates[:VISUAL_MEMORY_SUPPORT_MAX_CANDIDATES]
+    if not bounded:
+        return VisualMemorySupportDecision(
+            status="NOT_APPLICABLE",
+            policy_version=policy_version,
+            selected_keys=(),
+            probabilities={},
+            ai_execution_id=None,
+        )
+
+    questions = {
+        f"support_{index}": {
+            "type": "noul",
+            "instructions": (
+                f"For candidates[{index}] with support_key {str(candidate.get('support_key'))!r}, "
+                "would this already-authorized optional memory support materially help the visual "
+                "teacher serve the fixed educational target? Select only relevance; keep the target, "
+                "academic truth, learner request, teaching authority, representation choice, and safety unchanged."
+            ),
+            "true_when": (
+                "The memory item is directly useful optional support for understanding or tailoring "
+                "this exact visual learning task."
+            ),
+            "false_when": (
+                "The memory item is irrelevant, merely decorative, stale for this task, or would "
+                "change the educational target or authority."
+            ),
+        }
+        for index, candidate in enumerate(bounded)
+    }
+    selection_target = {
+        "objective": brief.objective,
+        "facts": list(brief.facts),
+        "relations": [item.model_dump(mode="json") for item in brief.relations],
+        "quantities": [item.model_dump(mode="json") for item in brief.quantities],
+        "desired_student_action": brief.desired_student_action,
+    }
+    try:
+        result = gateway.execute(
+            ModelTask.CANVAS_VISUAL_PERSONALIZATION,
+            {
+                "state": {
+                    "description": (
+                        "Select optional memory support only. The educational target and all other "
+                        "authorities are fixed reference input."
+                    ),
+                    "selection_target": selection_target,
+                    "candidates": bounded,
+                },
+                "questions": questions,
+            },
+            lineage=AIExecutionLineage(
+                operation="canvas_visual_memory_support",
+                student_id=student_id,
+                learning_session_id=learning_session_id,
+                source_message_id=source_message_id,
+            ),
+        )
+        answers = result.output.get("answers")
+        if not isinstance(answers, dict):
+            raise ValueError("missing answers")
+        scored: list[tuple[float, int, str]] = []
+        probabilities: dict[str, float] = {}
+        for index, candidate in enumerate(bounded):
+            key = candidate.get("support_key")
+            answer = answers.get(f"support_{index}")
+            probability = _noul_probability(answer)
+            if not isinstance(key, str) or probability is None:
+                raise ValueError("invalid Noul answer")
+            probabilities[key] = probability
+            if probability >= min_probability:
+                scored.append((probability, index, key))
+        selected = tuple(
+            key for _probability, _index, key
+            in sorted(scored, key=lambda item: (-item[0], item[1]))[:3]
+        )
+        return VisualMemorySupportDecision(
+            status="COMPLETED",
+            policy_version=policy_version,
+            selected_keys=selected,
+            probabilities=probabilities,
+            ai_execution_id=result.execution_id,
+        )
+    except Exception as error:
+        return VisualMemorySupportDecision(
+            status="FAILED",
+            policy_version=policy_version,
+            selected_keys=(),
+            probabilities={},
+            ai_execution_id=None,
+            failure_code=type(error).__name__,
+        )
 
 
 def select_visual_personalization_facts(

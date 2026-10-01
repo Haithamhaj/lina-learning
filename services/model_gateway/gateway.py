@@ -164,7 +164,7 @@ class ModelGateway:
         try:
             result = provider.execute(route, payload)
         except Exception as error:
-            self._record(task, route, started, lineage=lineage, success=False, failure_code=type(error).__name__)
+            self._record(task, route, started, lineage=lineage, success=False, failure_code=getattr(error, "failure_code", type(error).__name__))
             raise
 
         execution = self._record(
@@ -231,7 +231,7 @@ class ModelGateway:
             raise ValueError("Streaming provider ended without a final result.")
         except Exception as error:
             if not completed:
-                self._record(task, route, started, lineage=lineage, success=False, failure_code=type(error).__name__)
+                self._record(task, route, started, lineage=lineage, success=False, failure_code=getattr(error, "failure_code", type(error).__name__))
             raise
 
     def _record(

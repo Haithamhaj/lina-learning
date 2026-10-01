@@ -52,13 +52,57 @@ export function clippedLinearExpression(id: string, latex: string, bounds: PlotB
 
 type TextBlock = Extract<AgenticCanvasBlock, { type: "TEXT_INTERACTION" }>;
 
+function safeOrderingSeed(block: TextBlock): AgenticCanvasTextItem[] {
+  const ordered = [...block.items].sort((left, right) => left.id.localeCompare(right.id));
+  if (ordered.length < 2) return ordered;
+  const position = new Map(ordered.map((item, index) => [item.id, index]));
+  const accidentallySolved = block.relations
+    .filter((relation) => relation.relation === "BEFORE")
+    .every((relation) => {
+      const left = position.get(relation.source_id);
+      const right = position.get(relation.target_id);
+      return left !== undefined && right !== undefined && left < right;
+    });
+  return accidentallySolved ? [...ordered.slice(1), ordered[0]] : ordered;
+}
+
+export function orderingPresentation(block: TextBlock): {
+  items: AgenticCanvasTextItem[];
+  move: (itemId: string, direction: "UP" | "DOWN") => string | null;
+} {
+  const seed = safeOrderingSeed(block);
+  const seedRank = new Map(seed.map((item, index) => [item.id, index * 1024]));
+  const elementState = new Map(block.elements.map((element) => [element.id, element.current_value]));
+  const rank = new Map(seed.map((item) => {
+    const persisted = elementState.get(item.id);
+    const parsed = persisted === null || persisted === undefined ? Number.NaN : Number(persisted);
+    return [item.id, Number.isFinite(parsed) ? parsed : seedRank.get(item.id)!] as const;
+  }));
+  const items = [...seed].sort((left, right) => {
+    const delta = rank.get(left.id)! - rank.get(right.id)!;
+    return delta || seedRank.get(left.id)! - seedRank.get(right.id)!;
+  });
+  const move = (itemId: string, direction: "UP" | "DOWN"): string | null => {
+    const index = items.findIndex((item) => item.id === itemId);
+    if (index < 0) return null;
+    if (direction === "UP") {
+      if (index === 0) return null;
+      const previous = rank.get(items[index - 1].id)!;
+      const beforePrevious = index > 1 ? rank.get(items[index - 2].id)! : previous - 1024;
+      return String((beforePrevious + previous) / 2);
+    }
+    if (index === items.length - 1) return null;
+    const next = rank.get(items[index + 1].id)!;
+    const afterNext = index + 2 < items.length ? rank.get(items[index + 2].id)! : next + 1024;
+    return String((next + afterNext) / 2);
+  };
+  return { items, move };
+}
+
 export function textInteractionPresentation(block: TextBlock): {
   groups: Array<{ id: string; label: string; items: AgenticCanvasTextItem[] }>;
   unassigned: AgenticCanvasTextItem[];
 } {
-  // The v1 reducer has no durable list-position contract for generic ORDERING.
-  // Fail closed: do not expose the authored solution order as learner state.
-  if (block.interaction_family === "ORDERING") return { groups: [], unassigned: [] };
   const elementState = new Map(block.elements.map((element) => [element.id, element.current_value]));
   const groupIds = new Set(block.groups.map((group) => group.id));
   const groups = block.groups.map((group) => ({

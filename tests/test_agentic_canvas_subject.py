@@ -104,3 +104,15 @@ def test_registered_agentic_activity_rejects_unknown_or_disallowed_semantics() -
     mismatched = _event(scene_id, {**payload, "action": "FOCUS", "element_id": "point-a", "from_value": None, "to_value": None})
     with pytest.raises(ValueError, match="payload|contract"):
         reduce_snapshot(_snapshot(scene_id, _scene()), mismatched, subject_registry=registry)
+
+
+def test_agentic_ordering_reorder_is_record_only_until_submit() -> None:
+    from services.studio.subjects.agentic_canvas import make_profile
+
+    profile = make_profile()
+    activity = profile.activities[0]
+    actions = {action.action_key: action for action in activity.actions}
+    assert actions["REORDER"].interaction_policy.value == "RECORD_ONLY"
+    assert actions["REORDER"].interaction_kind is None
+    assert actions["SUBMIT"].interaction_policy.value == "TUTOR_TRIGGERING"
+    assert actions["SUBMIT"].interaction_kind == "AGENTIC_CANVAS_SUBMIT"

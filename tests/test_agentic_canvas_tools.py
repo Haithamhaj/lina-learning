@@ -131,7 +131,41 @@ def test_spatial_diagram_and_text_tools_store_meaningful_typed_structures() -> N
     assert diagram.edges[0].source_id == "evaporation"
     assert text.items[1].text == "Second supplied stage"
     assert all(element.current_value is None for element in text.elements)
+    assert text.allowed_actions == ["SELECT", "REORDER", "SUBMIT"]
     assert [element.id for element in spatial.elements] == ["cart", "force"]
+
+
+def test_spatial_layout_rejects_collapsed_labels_without_rescaling_small_coordinates() -> None:
+    import pytest
+
+    def obj(identifier: str, x: str, y: str = "50") -> dict[str, object]:
+        return {"id": identifier, "label": identifier[0], "object_kind": "CIRCLE", "position": {"x": x, "y": y}, "draggable": False}
+
+    with pytest.raises(ValueError, match="0..100 logical units"):
+        create_2d_scene(block_id="collapsed", meaning="Two states of one atom", label="Atom",
+                        objects=[obj("first", "0.38"), obj("second", "0.62")])
+    # A small coordinate is valid when its label remains distinct and visible.
+    scene = create_2d_scene(block_id="small-valid", meaning="Two separate positions", label="Positions",
+                            objects=[obj("first", "0.5"), obj("second", "50")])
+    assert scene.objects[0].position.x == "0.5"
+
+
+def test_spatial_relation_caption_must_clear_objects_and_viewport() -> None:
+    import pytest
+
+    objects = [
+        {"id": "left", "label": "الموضع الأول", "object_kind": "CIRCLE", "position": {"x": "35", "y": "50"}, "draggable": False},
+        {"id": "middle", "label": "الذرة", "object_kind": "CIRCLE", "position": {"x": "50", "y": "50"}, "draggable": False},
+        {"id": "right", "label": "الموضع الثاني", "object_kind": "CIRCLE", "position": {"x": "65", "y": "50"}, "draggable": False},
+    ]
+    valid = create_2d_scene(block_id="atom", meaning="Vibration", label="Atom", objects=objects,
+        relations=[{"source_id": "left", "target_id": "right", "relation": "MOVES_TOWARD", "label": "حركة ذهاب وإياب"}])
+    assert valid.relations[0].label == "حركة ذهاب وإياب"
+    with pytest.raises(ValueError, match="relation label clips"):
+        create_2d_scene(block_id="top", meaning="Relation", label="Top", objects=[
+            {"id": "one", "label": "One", "object_kind": "POINT", "position": {"x": "30", "y": "14"}, "draggable": False},
+            {"id": "two", "label": "Two", "object_kind": "POINT", "position": {"x": "70", "y": "14"}, "draggable": False},
+        ], relations=[{"source_id": "one", "target_id": "two", "relation": "NEAR", "label": "Near"}])
 
 
 def test_typed_structures_reject_dangling_relations_and_capture_math_input_constraints() -> None:

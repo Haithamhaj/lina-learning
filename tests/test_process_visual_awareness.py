@@ -414,3 +414,20 @@ def test_canvas_continuation_requires_requested_explanation_in_current_response(
 
     assert "Complete any explanation requested" in payload["input"]
     assert "do not announce an explanation and defer it" in payload["input"]
+
+
+def test_canvas_interaction_output_validation_leaves_invalid_canvas_intent_for_local_fallback() -> None:
+    from services.model_gateway.gateway import ModelResult
+    from services.studio.interactions import StudioInteractionTutorService
+
+    result = ModelResult(
+        output={
+            "workspace_intent": None,
+            "canvas_brief": None,
+            "canvas_change_intent": "NOT_A_REAL_INTENT",
+        },
+        input_tokens=1,
+        output_tokens=1,
+    )
+
+    StudioInteractionTutorService._validate_tutor_output(result)

@@ -47,7 +47,7 @@ from services.studio.subjects.contracts import (
 from services.studio.subjects.registry import SubjectCapabilityError, SubjectCapabilityRegistry
 from services.studio.workspace_intent import WorkspaceIntentContractError, parse_workspace_intent
 from services.studio.router import ActiveSceneCapability, WorkspaceAuthorityContext, WorkspaceDecisionStatus, WorkspaceExecutionDecision, route_workspace_intent
-from services.studio.canvas_brief import audit_canvas_brief
+from services.studio.canvas_brief import audit_canvas_brief, bind_tutor_canvas_brief
 from services.studio.agent.admission import capture_canvas_decision_base
 from services.tutor.candidate_events import TUTOR_OUTPUT_RESPONSE_SCHEMA, TUTOR_TURN_SCHEMA_VERSION
 from services.tutor.candidate_events import (
@@ -257,6 +257,41 @@ class StudioInteractionService:
             raise StudioInteractionStateError("A newer Canvas Student interaction superseded this Chat Tutor result.")
 
 
+def _canvas_interaction_request(context: StudioInteractionTutorContext) -> str:
+    """Return exact server-owned semantic learner action for a Canvas-originated turn."""
+
+    payload = context.as_model_payload()
+    current = payload.get("current_interaction")
+    if current is None and isinstance(payload.get("source"), dict):
+        current = payload["source"].get("current_interaction")
+    if current is None:
+        current = {
+            "interaction_kind": context.source.get("interaction_kind"),
+            "event": context.source.get("event"),
+        }
+    encoded = json.dumps(current, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return f"Canvas interaction: {encoded}"[:4000]
+
+
+def _bind_canvas_interaction_brief(
+    payload: object,
+    *,
+    context: StudioInteractionTutorContext,
+    workspace_context: object | None,
+) -> object:
+    capability = getattr(workspace_context, "current_scene_capability", None)
+    source_references = (
+        tuple(capability.source_references)
+        if capability is not None
+        else ()
+    )
+    return bind_tutor_canvas_brief(
+        payload,
+        student_request=_canvas_interaction_request(context),
+        authorized_source_references=source_references,
+    )
+
+
 class StudioInteractionTutorService:
     """Claim and execute one Canvas interaction without entering the Chat persistence path."""
 
@@ -426,24 +461,61 @@ class StudioInteractionTutorService:
                     else None
                 )
                 suggested_actions = [] if override_text is not None else normalize_suggested_actions(result.output.get("suggested_actions"))
-                canvas_audit = audit_canvas_brief(
+                bound_canvas_brief = _bind_canvas_interaction_brief(
                     result.output.get("canvas_brief") if override_text is None else None,
-                    allowed_source_references=set(),
+                    context=context,
+                    workspace_context=admission.workspace_context,
+                )
+                capability = getattr(admission.workspace_context, "current_scene_capability", None)
+                allowed_source_references = (
+                    set(capability.source_references) if capability is not None else set()
+                )
+                canvas_audit = audit_canvas_brief(
+                    bound_canvas_brief,
+                    allowed_source_references=allowed_source_references,
                     safety_allows=(
                         parent_boundary is None
                         or parent_boundary.get("action") != "REDIRECT_TO_PARENT"
                     ),
                 )
-                canvas_change_intent = self._canvas_change_intent(
+                raw_canvas_change_intent = (
                     result.output.get("canvas_change_intent") if override_text is None else None
                 )
-                if canvas_audit.get("status") == "ADMITTED" and canvas_change_intent is None:
-                    raise StudioInteractionTutorOutputError(
-                        "Tutor turn v12 cannot admit a Canvas brief without canvas_change_intent."
-                    )
-                if canvas_change_intent is not None and canvas_audit.get("status") != "ADMITTED":
-                    raise StudioInteractionTutorOutputError(
-                        "Tutor turn v12 canvas_change_intent requires an admitted Canvas brief."
+                invalid_canvas_change_intent = raw_canvas_change_intent not in {None, *_CANVAS_CHANGE_INTENTS}
+                requested_canvas_change_intent = (
+                    raw_canvas_change_intent if not invalid_canvas_change_intent else None
+                )
+                canvas_unavailable = False
+                if invalid_canvas_change_intent:
+                    canvas_audit = {
+                        "status": "REJECTED",
+                        "reason_code": "CANVAS_CHANGE_INTENT_INVALID",
+                        "brief": None,
+                        "brief_digest": None,
+                        "visual_learner_context": None,
+                    }
+                    canvas_change_intent = None
+                    canvas_unavailable = True
+                elif canvas_audit.get("status") == "ADMITTED" and requested_canvas_change_intent is None:
+                    canvas_audit = {
+                        "status": "REJECTED",
+                        "reason_code": "CANVAS_CHANGE_INTENT_REQUIRED",
+                        "brief": None,
+                        "brief_digest": None,
+                        "visual_learner_context": None,
+                    }
+                    canvas_change_intent = None
+                    canvas_unavailable = True
+                elif requested_canvas_change_intent is not None and canvas_audit.get("status") != "ADMITTED":
+                    canvas_change_intent = None
+                    canvas_unavailable = True
+                else:
+                    canvas_change_intent = requested_canvas_change_intent
+                if canvas_unavailable:
+                    from services.tutor.canvas_visibility import ensure_unavailable_canvas_is_not_promised
+                    text, _ = ensure_unavailable_canvas_is_not_promised(
+                        text,
+                        canvas_unavailable=True,
                     )
                 canvas_decision_base = (
                     capture_canvas_decision_base(admission.workspace_context)
@@ -463,6 +535,11 @@ class StudioInteractionTutorService:
                         "ai_execution_id": str(result.execution_id),
                         "suggested_actions": [action.model_dump() for action in suggested_actions],
                         "guided_check": None if guided_check is None else guided_check.model_dump(mode="json"),
+                        "teaching_surface": (
+                            result.output.get("teaching_surface")
+                            if result.output.get("teaching_surface") in {"CHAT", "CANVAS"}
+                            else None
+                        ),
                         "workspace": self._workspace_audit(
                             result.output.get("workspace_intent"), admission.workspace_context
                         ),
@@ -779,6 +856,7 @@ class StudioInteractionTutorService:
             learning_session_id=runtime.learning_session_id,
             source={
                 **_visual_interaction_source(scene, action_payload, submitted_projection["state_payload"]),
+                **_custom_choice_source(admission_session, scene, action_payload),
                 "turn_origin": "CANVAS_INTERACTION",
                 "interaction_kind": interaction.interaction_kind,
                 "live_subject": {
@@ -925,18 +1003,33 @@ class StudioInteractionTutorService:
         """Use the shared strict Tutor contract without fabricating a Chat question."""
 
         encoded_context = context.as_model_payload()
-        encoded_size = len(json.dumps(encoded_context, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8"))
-        if encoded_size > MAX_INTERACTION_TUTOR_CONTEXT_BYTES:
-            raise StudioInteractionSourceError("Studio interaction Tutor context exceeds its bounded capacity.")
         # Import here to avoid making the accepted Studio state boundary depend
         # on Tutor initialization merely because it persists interactions.
         from services.tutor.runtime import TUTOR_SHARED_INSTRUCTIONS
+        from services.studio.tutor_context import StudioTutorWorkspaceContext
+
+        current_interaction = encoded_context["source"].get("current_interaction")
+        choice_answer = isinstance(current_interaction, dict) and current_interaction.get("action") == "ANSWER_CHOICE"
 
         workspace_payload = (
-            workspace_context.as_model_payload()
-            if callable(getattr(workspace_context, "as_model_payload", None))
-            else None
+            workspace_context.as_model_payload(include_current_question=False)
+            if choice_answer and isinstance(workspace_context, StudioTutorWorkspaceContext)
+            else workspace_context.as_model_payload()
+            if callable(getattr(workspace_context, "as_model_payload", None)) else None
         )
+        if choice_answer and isinstance(workspace_payload, dict) and isinstance(workspace_payload.get("snapshot"), dict) and "current_visual" in workspace_payload["snapshot"]:
+            # The exact immutable question/options/answer stay in the source;
+            # the current visual card supplies the interpretation once.
+            encoded_context["workspace"]["state"] = {}
+            current_interaction.pop("visual_context", None)
+            source_event = encoded_context["source"].get("event", {})
+            source_event.pop("action_payload", None)
+            for event in workspace_payload.get("unseen_events", []):
+                if event.get("sequence") == source_event.get("sequence"):
+                    event["payload"] = {}
+        encoded_size = len(json.dumps(encoded_context, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8"))
+        if encoded_size > MAX_INTERACTION_TUTOR_CONTEXT_BYTES:
+            raise StudioInteractionSourceError("Studio interaction Tutor context exceeds its bounded capacity.")
         workspace_input = (
             "\n\nStudio Workspace Context (current authoritative Workspace state; unseen Events are meaningful "
             "Student actions since the last successful Tutor observation):\n"
@@ -984,8 +1077,6 @@ class StudioInteractionTutorService:
             raise StudioInteractionTutorOutputError("Tutor turn v12 output is missing required workspace_intent.")
         if "canvas_brief" not in result.output or "canvas_change_intent" not in result.output:
             raise StudioInteractionTutorOutputError("Tutor turn v12 output is missing required Canvas lifecycle fields.")
-        if result.output["canvas_change_intent"] not in {None, *_CANVAS_CHANGE_INTENTS}:
-            raise StudioInteractionTutorOutputError("Tutor turn v12 output has an invalid canvas_change_intent.")
         try:
             parse_workspace_intent(result.output["workspace_intent"])
         except WorkspaceIntentContractError as error:
@@ -1095,6 +1186,45 @@ class StudioInteractionTutorService:
             "intent": intent.model_dump(mode="json"),
             "decision": decision.as_audit_payload(),
         }
+
+
+def _custom_choice_source(session, scene, action):
+    """Freeze the exact displayed question and option labels for this answer turn."""
+    if scene.activity_key != "agentic_canvas" or action.get("action") != "SUBMIT":
+        return {}
+    from services.studio.agentic_canvas import AGENTIC_CANVAS_SCENE_ADAPTER, CustomVisualBlockV1
+    from services.studio.custom_visual_builds import CustomVisualBuildResolver
+
+    parsed = AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(scene.seed_payload)
+    block = next((item for item in parsed.blocks if item.block_id == action.get("block_id")), None)
+    if not isinstance(block, CustomVisualBlockV1):
+        return {}
+    if block.package is not None:
+        manifest = block.package.manifest
+    elif block.custom_visual_build_id is not None:
+        manifest = CustomVisualBuildResolver().resolve(
+            session, build_id=UUID(block.custom_visual_build_id),
+            student_id=scene.student_id, runtime_id=scene.studio_runtime_id,
+        ).package.manifest
+    else:
+        return {}
+    question = next((item for item in manifest.choice_questions or [] if item.semantic_id == action.get("element_id")), None)
+    if question is None:
+        return {}
+    option = next((item for item in question.options if item.value == action.get("to_value")), None)
+    if option is None:
+        raise StudioInteractionSourceError("Accepted Canvas answer is not a displayed option.")
+    return {"current_interaction": {
+        "action": "ANSWER_CHOICE", "question_id": question.semantic_id,
+        "question": question.prompt,
+        "displayed_options": [item.model_dump(mode="json") for item in question.options],
+        "learner_answer": option.model_dump(mode="json"),
+        "visual_context": {
+            "what_is_shown": manifest.representation_summary,
+            "demonstrates": manifest.demonstrates or manifest.objective,
+            "interpretation_limits": manifest.interpretation_limits,
+        },
+    }}
 
 
 def _visual_interaction_source(scene, action, source_state):

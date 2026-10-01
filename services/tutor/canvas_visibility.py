@@ -107,3 +107,39 @@ def ensure_new_canvas_is_not_claimed_visible(text: str, *, new_composition_reque
         kept.append(part)
     repaired = " ".join(kept).strip()
     return repaired or preparation, True
+
+
+def ensure_unavailable_canvas_is_not_promised(
+    text: str,
+    *,
+    canvas_unavailable: bool,
+) -> tuple[str, bool]:
+    """Remove claims/promises about a Canvas request that cannot be admitted."""
+
+    if not canvas_unavailable:
+        return text, False
+    parts = [part.strip() for part in _PARTS.split(text) if part.strip()]
+    unsafe: list[bool] = []
+    for part in parts:
+        normalized = _normalized(part)
+        if _STUDENT_SOURCE.search(normalized):
+            unsafe.append(False)
+            continue
+        if _DEICTIC.search(normalized):
+            unsafe.append(True)
+            continue
+        unqualified = _PHYSICAL_FORM.sub("", normalized)
+        unsafe.append(bool(_UNQUALIFIED_NEW_VISUAL.search(unqualified)))
+    if not any(unsafe):
+        return text, False
+
+    kept = [part for part, remove in zip(parts, unsafe) if not remove]
+    repaired = " ".join(kept).strip()
+    if repaired:
+        return repaired, True
+    arabic = any("؀" <= char <= "ۿ" for char in text)
+    return (
+        "خلّينا نكملها هنا خطوة خطوة." if arabic
+        else "Let’s work through it here step by step.",
+        True,
+    )

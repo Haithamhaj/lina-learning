@@ -55,6 +55,19 @@ def test_single_canvas_agent_uses_only_the_bounded_tool_registry() -> None:
     assert code_tool.tool_config == {"type": "code_interpreter", "container": {"type": "auto"}}
 
 
+def test_canvas_agent_can_withhold_image_generation_without_changing_composition_authority() -> None:
+    from services.studio.agent.orchestrator import build_canvas_agent
+
+    agent = build_canvas_agent(
+        api_key="test-only-key", model="gpt-5.6-luna",
+        image_generation_allowed=False,
+    )
+    names = {tool.name for tool in agent.tools}
+    assert "image_generation" not in names
+    assert {"create_custom_visual", "create_2d_scene", "create_diagram", "code_interpreter"} <= names
+    assert agent.handoffs == []
+
+
 def test_agentic_canvas_deadline_allows_one_bounded_custom_visual_composition() -> None:
     from datetime import timedelta
 
@@ -113,9 +126,9 @@ def test_canvas_agent_instructions_make_hosted_tool_selection_semantic_and_bound
     from services.studio.agent.orchestrator import CANVAS_AGENT_INSTRUCTIONS
 
     instructions = " ".join(CANVAS_AGENT_INSTRUCTIONS.casefold().split())
-    assert "original illustrative image" in instructions
-    assert "typed geometric or diagram primitives" in instructions
-    assert "do not replace that requested illustration with typed primitives" in instructions
+    assert "explicitly requested original illustration" in instructions
+    assert "pictorial need that primitives cannot adequately serve" in instructions
+    assert "do not replace a requested picture with typed primitives" in instructions
     assert "long bounded recurrence" in instructions
     assert "aggregate a bounded data series" in instructions
     assert "must use code interpreter" in instructions
@@ -334,7 +347,7 @@ def test_composition_trace_keeps_only_bounded_metadata_for_code_interpreter(
     import json
     from types import SimpleNamespace
 
-    from services.studio.agent.orchestrator import compose_canvas_scene_with_trace
+    from services.studio.agent.orchestrator import CanvasVisualReviewV1, compose_canvas_scene_with_trace
     from services.studio.agent.tools import create_math_input
     from services.studio.canvas_brief import CanvasBriefV1, VisualLearnerContextV1
 
@@ -647,6 +660,69 @@ def test_create_plan_omission_gets_one_toolless_coherence_repair(monkeypatch, fa
     assert composition.plan_block_ids == ("coupled-slopes", "typed-answer")
 
 
+
+
+def test_rejected_refine_arguments_do_not_consume_authoring_attempt_budget() -> None:
+    from agents import RunContextWrapper
+    from services.studio.agent.orchestrator import (
+        CanvasAgentRunContext,
+        CustomVisualSourceEditError,
+        _refine_custom_visual_error,
+    )
+    from services.studio.agent.registry import CanvasBlockRegistry
+
+    context = RunContextWrapper(CanvasAgentRunContext(registry=CanvasBlockRegistry()))
+    context.context.custom_attempt_count = 1
+    context.context.custom_refinement_attempts = 0
+    context.context.custom_preview_valid = True
+
+    payload = _refine_custom_visual_error(
+        context,
+        CustomVisualSourceEditError("Each source edit must match exactly one current source location."),
+    )
+
+    assert context.context.custom_attempt_count == 1
+    assert context.context.custom_refinement_attempts == 0
+    assert context.context.custom_preview_valid is False
+    assert context.context.tool_failures[-1]["tool"] == "refine_custom_visual"
+    assert "match exactly one" in payload
+
+
+def test_custom_visual_runtime_guidance_prefers_unambiguous_dom_helpers_and_operable_local_controls() -> None:
+    from pathlib import Path
+
+    text = Path("runtime/canvas-agent/skills/custom-visual-runtime.md").read_text()
+    assert "never overload one positional argument as either parent or text" in text
+    assert "Use an options object" in text
+    assert "button that advances discrete states" in text
+    assert "STEP" in text
+    assert "SET_VALUE" in text
+    assert "Fix mount/runtime/interaction blockers before typography" in text
+
+
+
+def test_canvas_authoring_contract_preserves_brief_causal_authority_and_actual_svg_text_size() -> None:
+    from pathlib import Path
+    from services.studio.agent.orchestrator import CANVAS_AGENT_INSTRUCTIONS
+
+    instructions = CANVAS_AGENT_INSTRUCTIONS.casefold()
+    assert "do not strengthen" in instructions
+    assert "causal mechanism" in instructions
+    assert "must already be supported by the brief" in instructions
+
+    skill = Path("runtime/canvas-agent/skills/custom-visual-runtime.md").read_text().casefold()
+    assert "fixed css height" in skill
+    assert "viewbox" in skill
+    assert "actual screen" in skill
+    assert "height:auto" in skill or "height: auto" in skill
+
+
+def test_independent_reviewer_rejects_ungrounded_causal_strengthening_by_contract() -> None:
+    from pathlib import Path
+    text = Path("services/studio/agent/orchestrator.py").read_text()
+    assert "Do not strengthen a supplied relationship into a stronger causal mechanism" in text
+    assert "pushes, pulls, forces, causes" in text
+
 def test_empty_registry_and_review_phase_do_not_expose_unusable_or_hosted_tools():
     import asyncio
     from agents import RunContextWrapper
@@ -664,6 +740,67 @@ def test_empty_registry_and_review_phase_do_not_expose_unusable_or_hosted_tools(
     assert names == {'create_custom_visual', 'refine_custom_visual'}
     context.context.custom_attempt_count = 4
     assert asyncio.run(agent.get_all_tools(context)) == []
+
+
+@pytest.mark.parametrize("accepted", [True, False])
+def test_completed_hosted_image_is_agent_placed_primary_and_independently_checked(monkeypatch, accepted):
+    import asyncio
+    import base64
+    from io import BytesIO
+    from types import SimpleNamespace
+    from PIL import Image
+    from services.studio.agent.orchestrator import CanvasVisualReviewV1, compose_canvas_scene_with_trace
+    from services.studio.canvas_brief import CanvasBriefV1, VisualLearnerContextV1
+
+    output = BytesIO()
+    Image.new("RGB", (8, 8), "green").save(output, "PNG")
+    calls = []
+
+    def result_for(final_output, new_items=()):
+        return SimpleNamespace(final_output=final_output, new_items=list(new_items),
+            context_wrapper=SimpleNamespace(usage=SimpleNamespace(requests=1, input_tokens=10, output_tokens=5,
+                total_tokens=15, input_tokens_details=SimpleNamespace(cached_tokens=0))))
+
+    async def fake_run(agent, input, **kwargs):
+        calls.append((agent, input, kwargs))
+        if len(calls) == 1:
+            return result_for({"version": "agentic-canvas-plan-v1", "objective": "See a young plant.",
+                "subject_key": "SCIENCE", "layout": "FOCUS", "palette": "NATURE", "motion": "NONE",
+                "placements": [{"block_id": "generated-image", "role": "PRIMARY", "order": 0, "span": "FULL"}],
+                "reveal_order": [], "generated_image": {"meaning": "A plant has roots below soil and leaves above.",
+                    "title": "Young plant", "text_equivalent": "Two green leaves above soil and roots below it."}},
+                [SimpleNamespace(raw_item={"type": "image_generation_call", "id": "image-call-1", "status": "completed",
+                    "result": base64.b64encode(output.getvalue()).decode()})])
+        assert agent.name == "Lina Canvas verification"
+        assert agent.model.model == "gpt-6-luna"
+        assert agent.model_settings.reasoning.effort == "medium"
+        assert any(part["type"] == "input_image" for part in input[0]["content"])
+        return result_for(CanvasVisualReviewV1.model_validate({"block_id": "generated-image", "educational_correctness": accepted,
+            "semantic_integrity": True, "representation_adequacy": True, "interaction_and_feedback": True,
+            "responsive_legibility": True, "state_replay": True, "visual_hierarchy_and_text_economy": True,
+            "evidence": "Roots and leaves are visible in the correct regions." if accepted else "An extra leaf is visible.", "unresolved_defects": [] if accepted else ["Extra leaf violates the brief."]}))
+
+    monkeypatch.setattr("services.studio.agent.orchestrator.Runner.run", fake_run)
+    brief = CanvasBriefV1.model_validate({"version": "canvas-brief-v1", "subject_key": "SCIENCE",
+        "objective": "See a young plant.", "student_request": "Show a young plant.", "requested_representation": "Picture of a plant",
+        "facts": ["Roots are below soil.", "Leaves are above soil."], "relations": [], "quantities": [],
+        "desired_student_action": None, "must_not_imply": [], "source_references": [], "locale": "en", "direction": "ltr"})
+    learner = VisualLearnerContextV1.model_validate({"version": "visual-learner-context-v1",
+        "core_profile": {"age_years": 10, "grade_level": "5"}, "selected_personal_facts": []})
+    if not accepted:
+        with pytest.raises(ValueError, match="GENERATED_IMAGE_REVIEW_REJECTED"):
+            asyncio.run(compose_canvas_scene_with_trace(brief=brief, visual_learner_context=learner,
+                api_key="test-only-key", model="gpt-6-luna", reasoning_effort="medium"))
+        assert len(calls) == 2
+        return
+    composition = asyncio.run(compose_canvas_scene_with_trace(brief=brief, visual_learner_context=learner,
+        api_key="test-only-key", model="gpt-6-luna", reasoning_effort="medium"))
+    assert composition.scene.version == "agentic-canvas-scene-v2"
+    assert composition.scene.presentation.placements[0].role == "PRIMARY"
+    assert composition.scene.blocks[0].type == "IMAGE"
+    assert composition.scene.blocks[0].accessibility.text_equivalent == "Two green leaves above soil and roots below it."
+    assert len(composition.generated_images) == 1
+    assert len(calls) == 2
 
 
 def test_same_agent_quality_review_requires_every_quality_dimension_and_no_defect():

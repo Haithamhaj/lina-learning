@@ -824,6 +824,11 @@ class StudioStateService:
             raise StudioStateError("Reference custom visual Manifest is unavailable.") from error
         if resolved.manifest_digest != block.manifest_digest:
             raise StudioStateError("Reference custom visual Manifest digest is invalid.")
+        question = next((item for item in resolved.package.manifest.choice_questions or [] if item.semantic_id == action.element_id), None)
+        if action.action == "OPEN_ATTEMPT":
+            if question is None:
+                raise StudioStateError("New attempt requires a declared Canvas question.")
+            return
         if block.semantic_interactions:
             projected = {
                 (item.semantic_id, item.action, item.value_required)
@@ -847,6 +852,14 @@ class StudioStateService:
             raise StudioStateError("Custom Canvas action is not declared by its canonical Semantic Manifest.")
         if declared.value_required and action.to_value is None:
             raise StudioStateError("Custom Canvas action requires a semantic value.")
+        if declared.purpose == "LOCAL":
+            raise StudioStateError("Local Canvas controls cannot create Studio operations.")
+        if question is not None and action.action == "SUBMIT":
+            element = next((item for item in block.elements if item.id == question.semantic_id), None)
+            if element is None or element.current_value is not None or action.from_value is not None:
+                raise StudioStateError("This Canvas question attempt already has an accepted answer.")
+            if action.to_value not in {item.value for item in question.options}:
+                raise StudioStateError("Canvas answer must match one displayed option.")
 
     @staticmethod
     def _reducer_event(event: StudioEvent, scene: StudioScene | None):

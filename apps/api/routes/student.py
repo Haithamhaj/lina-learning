@@ -103,10 +103,24 @@ def create_student_transcription_gateway(session: Session):
     return create_speech_to_text_gateway(session)
 
 
+class LocalVisualStateRequest(BaseModel):
+    scene_id: UUID
+    scene_version: int = Field(ge=0)
+    block_id: str = Field(min_length=1, max_length=64, pattern=r"^[a-z][a-z0-9_-]*$")
+    values: dict[str, str] = Field(default_factory=dict, max_length=12)
+
+    @model_validator(mode="after")
+    def bounded_values(self):
+        if any(len(key) > 64 or len(value) > 120 for key, value in self.values.items()):
+            raise ValueError("Local visual state exceeds its bounded control contract.")
+        return self
+
+
 class StudentMessageRequest(BaseModel):
     content: str = Field(min_length=1, max_length=4000)
     suggested_action: bool = False
     guided_check_id: UUID | None = None
+    local_visual_state: LocalVisualStateRequest | None = None
 
 
 class StudentSourceAssetResponse(BaseModel):
@@ -590,6 +604,7 @@ def _stream_student_tutor_turn(
                 admitted_student_message_id=admitted_student_message_id,
                 source_input=source_input,
                 source_asset_id=source_asset_id,
+                local_visual_state=(request.local_visual_state.model_dump(mode="json") if request.local_visual_state is not None and validated_source is None else None),
             )
             for event in turn_stream:
                 if isinstance(event, TutorTextDelta):

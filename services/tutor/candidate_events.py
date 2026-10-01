@@ -413,6 +413,31 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
                 "does not need a new topic identity."
             ),
         },
+        "learner_action_requirement": {
+            "type": ["string", "null"],
+            "enum": ["CONVERSATIONAL", "VISUAL_OBSERVATION", "DIRECT_MANIPULATION", "NONE", None],
+            "description": (
+                "What affordance the learner's requested next action actually requires. "
+                "DIRECT_MANIPULATION means the learner explicitly wants to arrange, move, construct, vary, "
+                "connect, sort, or otherwise manipulate visible state; DIRECT_MANIPULATION requires CANVAS "
+                "when a supported Canvas capability is available. VISUAL_OBSERVATION means seeing a visual "
+                "materially serves the move without direct manipulation. CONVERSATIONAL means the requested "
+                "action is fully achievable in Chat. NONE/null is only for non-instructional turns."
+            ),
+        },
+        "teaching_surface": {
+            "type": ["string", "null"],
+            "enum": ["CHAT", "CANVAS", None],
+            "description": (
+                "Primary Tutor surface choice for the current teaching move. "
+                "Use CANVAS when the learner should use a current/new visual surface. "
+                "When the learner explicitly asks to manipulate, arrange, move, construct, vary, or test visible state "
+                "and Chat cannot perform that action, CANVAS is required when a supported capability is available; "
+                "this takes priority over a shorter text explanation. "
+                "Use CHAT only when the requested learner action is fully achievable in conversation; "
+                "use null only when no teaching move is being made."
+            ),
+        },
         "workspace_intent": workspace_intent_output_schema(),
         "canvas_brief": canvas_brief_output_schema(),
         "canvas_visual_context_selection": visual_context_selection_output_schema(),
@@ -427,7 +452,7 @@ TUTOR_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
         },
         "workspace_visual_order": visual_order_output_schema(),
     },
-    "required": ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject", "segment_concept_ref", "workspace_intent", "canvas_brief", "canvas_visual_context_selection", "canvas_change_intent", "workspace_visual_order"],
+    "required": ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject", "segment_concept_ref", "learner_action_requirement", "teaching_surface", "workspace_intent", "canvas_brief", "canvas_visual_context_selection", "canvas_change_intent", "workspace_visual_order"],
 }
 
 

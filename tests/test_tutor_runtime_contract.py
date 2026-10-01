@@ -24,11 +24,100 @@ from services.tutor.teaching_methods import (
 )
 
 
+
+
+def test_primary_tutor_guidance_treats_direct_manipulation_as_a_general_canvas_need() -> None:
+    instructions = TUTOR_SHARED_INSTRUCTIONS.casefold()
+    assert "directly manipulate visible state" in instructions
+    assert "ordering, grouping, moving, changing values, constructing, or testing a relationship" in instructions
+    assert "canvas should normally be part of the teaching move" in instructions
+    assert "chat alone cannot provide that requested action" in instructions
+
+
+
+def test_tutor_contract_requires_explicit_teaching_surface() -> None:
+    surface = TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_surface"]
+    assert surface == {
+        "type": ["string", "null"],
+        "enum": ["CHAT", "CANVAS", None],
+        "description": (
+            "Primary Tutor surface choice for the current teaching move. "
+            "Use CANVAS when the learner should use a current/new visual surface. "
+            "When the learner explicitly asks to manipulate, arrange, move, construct, vary, or test visible state "
+            "and Chat cannot perform that action, CANVAS is required when a supported capability is available; "
+            "this takes priority over a shorter text explanation. "
+            "Use CHAT only when the requested learner action is fully achievable in conversation; "
+            "use null only when no teaching move is being made."
+        ),
+    }
+    assert "teaching_surface" in TUTOR_OUTPUT_JSON_SCHEMA["required"]
+    instructions = TUTOR_SHARED_INSTRUCTIONS
+    assert "first classify learner_action_requirement, then choose teaching_surface" in instructions
+    assert "A CHAT turn must not ask the Student to perform a manipulation that Chat cannot provide" in instructions
+    assert "directly manipulate" in instructions
+    assert "canvas_brief must be non-null" in instructions
+
+
+
+
+
+
+
+def test_explicit_direct_manipulation_guard_is_narrow_and_bilingual() -> None:
+    from services.tutor.runtime import _explicit_direct_manipulation_requested
+
+    assert _explicit_direct_manipulation_requested("بدي أجرب أرتبهم وأشوف إذا صح.")
+    assert _explicit_direct_manipulation_requested("خليني أحرك النقطة وأشوف شو بصير.")
+    assert _explicit_direct_manipulation_requested("Let me move the point and see what changes.")
+    assert _explicit_direct_manipulation_requested("Can I arrange these words myself?")
+
+    assert not _explicit_direct_manipulation_requested("بدي أفهم شو اللي بيتغيّر.")
+    assert not _explicit_direct_manipulation_requested("اشرحلي كيف يتغير الصوت.")
+    assert not _explicit_direct_manipulation_requested("I want to understand what is changing.")
+    assert not _explicit_direct_manipulation_requested("Can you show me why the pitch changes?")
+
+
+
+def test_explicit_visual_observation_guard_is_narrow_and_bilingual() -> None:
+    from services.tutor.runtime import _explicit_visual_observation_requested
+
+    assert _explicit_visual_observation_requested(
+        "Can you help me see or experience what changes?"
+    )
+    assert _explicit_visual_observation_requested(
+        "Show me so I can understand the movement."
+    )
+    assert _explicit_visual_observation_requested(
+        "بدي أشوف كيف الحركة بتتغير قدامي."
+    )
+    assert _explicit_visual_observation_requested(
+        "وريني بصرياً شو بصير لما تتغير القيمة."
+    )
+
+    assert not _explicit_visual_observation_requested(
+        "Show me how to solve 2x + 3 = 7."
+    )
+    assert not _explicit_visual_observation_requested(
+        "Tell me what changes when pitch increases."
+    )
+
+def test_tutor_contract_requires_learner_action_requirement() -> None:
+    field = TUTOR_OUTPUT_JSON_SCHEMA["properties"]["learner_action_requirement"]
+    assert field["enum"] == ["CONVERSATIONAL", "VISUAL_OBSERVATION", "DIRECT_MANIPULATION", "NONE", None]
+    assert "learner_action_requirement" in TUTOR_OUTPUT_JSON_SCHEMA["required"]
+    assert "DIRECT_MANIPULATION requires CANVAS" in field["description"]
+
+def test_direct_manipulation_surface_rule_has_priority_over_chat_brevity() -> None:
+    surface = TUTOR_OUTPUT_JSON_SCHEMA["properties"]["teaching_surface"]["description"]
+    assert "explicitly asks to manipulate, arrange, move, construct, vary, or test visible state" in surface
+    assert "takes priority over a shorter text explanation" in surface
+    assert "takes priority over brevity" in TUTOR_SHARED_INSTRUCTIONS
+
 def test_tutor_turn_v12_requires_nullable_visual_order_without_rewriting_other_metadata() -> None:
     """SAFE-02 keeps one strict output contract for visible text and hidden decisions."""
 
     assert TUTOR_OUTPUT_RESPONSE_SCHEMA["name"] == "tutor_turn_v12"
-    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject", "segment_concept_ref", "workspace_intent", "canvas_brief", "canvas_visual_context_selection", "canvas_change_intent", "workspace_visual_order"]
+    assert TUTOR_OUTPUT_JSON_SCHEMA["required"] == ["text", "suggested_actions", "guided_check", "teaching_mode", "teaching_strategy", "teaching_method_id", "prior_method_relation", "segment_relation", "structured_segment_state", "parent_boundary", "candidate_metadata", "provisional_broad_subject", "segment_concept_ref", "learner_action_requirement", "teaching_surface", "workspace_intent", "canvas_brief", "canvas_visual_context_selection", "canvas_change_intent", "workspace_visual_order"]
     assert TUTOR_OUTPUT_JSON_SCHEMA["properties"]["provisional_broad_subject"] == {
         "type": ["string", "null"],
         "enum": [

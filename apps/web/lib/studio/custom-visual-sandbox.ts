@@ -10,7 +10,7 @@ export function customSandboxDocument(source: string, parameters: Record<string,
   const params = JSON.stringify(parameters).replace(/</g, "\\u003c");
   const initialState = JSON.stringify(state).replace(/</g, "\\u003c");
   const safeSource = source.replace(/<\/script/gi, "<\\/script");
-  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><style>html,body,#root{height:100%;margin:0;box-sizing:border-box}body{overflow:auto}</style></head><body><main id="root"></main><script>
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><style>html,body,#root{height:100%;margin:0;box-sizing:border-box}*,*::before,*::after{box-sizing:border-box}input,select,textarea,button{max-width:100%;margin-left:0;margin-right:0}body{overflow:auto}</style></head><body><main id="root"></main><script>
 const activationBindings=new WeakMap();
 const bridge={
   state:${initialState}, lastSelection:null, lastFocus:null, targetCounter:0, lastEvent:null,
@@ -19,6 +19,12 @@ const bridge={
     if(typeof fallback==='string')return value;
     try {const parsed=JSON.parse(value);if(Array.isArray(fallback))return Array.isArray(parsed)?parsed:fallback;if(typeof parsed===typeof fallback)return parsed;}catch{}
     return fallback;
+  },
+  local:(id,value)=>{
+    const serialized=typeof value==='string'?value:JSON.stringify(value);
+    if(typeof id!=='string'||typeof serialized!=='string'||serialized.length>120)return;
+    bridge.state[id]=serialized;
+    parent.postMessage({channel:'${CUSTOM_CHANNEL}',type:'LOCAL_STATE',nonce:'${nonce}',semantic_id:id,to_value:serialized},'*');
   },
   emit:(actionOrEvent,semanticId,detail={})=>{
     const event=typeof actionOrEvent==='object'&&actionOrEvent!==null

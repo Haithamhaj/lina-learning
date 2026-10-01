@@ -19,7 +19,7 @@ from hashlib import sha256
 from typing import Any, Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -105,11 +105,40 @@ class CanvasSemanticInteractionV1(BaseModel):
     action: Literal["FOCUS", "SELECT", "MOVE", "SET_VALUE", "CONNECT", "SUBMIT", "REORDER", "TOGGLE", "STEP", "RESET_VIEW"]
     meaning: str = Field(min_length=1, max_length=400)
     value_required: bool = Field(default=False, description="False for SELECT and FOCUS, which cannot mutate values; true when a mutation requires a value.")
+    purpose: Literal["LOCAL", "WORK", "ANSWER"] | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_interaction(self, handler):
+        data = handler(self)
+        if self.purpose is None:
+            data.pop("purpose", None)
+        return data
 
     @model_validator(mode="after")
     def action_value_contract(self):
         if self.action in {"SELECT", "FOCUS"} and self.value_required:
             raise ValueError("SELECT and FOCUS cannot require semantic values; set value_required false.")
+        if self.purpose == "ANSWER" and self.action != "SUBMIT":
+            raise ValueError("Answer controls must use SUBMIT.")
+        return self
+
+
+class CanvasChoiceOptionV1(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    value: str = Field(min_length=1, max_length=80)
+    label: str = Field(min_length=1, max_length=160)
+
+
+class CanvasChoiceQuestionV1(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    semantic_id: str = Field(min_length=1, max_length=64, pattern=_SEMANTIC_ID)
+    prompt: str = Field(min_length=1, max_length=400)
+    options: list[CanvasChoiceOptionV1] = Field(min_length=2, max_length=6)
+
+    @model_validator(mode="after")
+    def unique_options(self):
+        if len({item.value for item in self.options}) != len(self.options):
+            raise ValueError("Choice option values must be unique.")
         return self
 
 
@@ -128,8 +157,20 @@ class CanvasSemanticManifestV1(BaseModel):
     interactions: list[CanvasSemanticInteractionV1] = Field(default_factory=list, max_length=32)
     calculated_results: list[CanvasSemanticQuantityV1] = Field(default_factory=list, max_length=32)
     visual_descriptions: list[str] = Field(default_factory=list, max_length=24)
+    demonstrates: str | None = Field(default=None, max_length=500)
+    interpretation_limits: str | None = Field(default=None, max_length=500)
+    suggested_follow_up: str | None = Field(default=None, min_length=1, max_length=240)
+    choice_questions: list[CanvasChoiceQuestionV1] | None = Field(default=None, max_length=8)
     current_state_schema: dict[str, str] = Field(default_factory=dict, max_length=24)
     provenance: dict[str, str] = Field(default_factory=dict, max_length=12)
+
+    @model_serializer(mode="wrap")
+    def serialize_manifest(self, handler):
+        data = handler(self)
+        for key in ("demonstrates", "interpretation_limits", "suggested_follow_up", "choice_questions"):
+            if getattr(self, key) is None:
+                data.pop(key, None)
+        return data
 
     @model_validator(mode="after")
     def valid_semantic_references(self) -> "CanvasSemanticManifestV1":
@@ -143,6 +184,19 @@ class CanvasSemanticManifestV1(BaseModel):
             raise ValueError("Semantic Manifest quantities and interactions must reference declared entities")
         if len({step.order for step in self.presentation_steps}) != len(self.presentation_steps):
             raise ValueError("Semantic Manifest presentation step order must be unique")
+        if self.choice_questions:
+            question_ids = [question.semantic_id for question in self.choice_questions]
+            if len(question_ids) != len(set(question_ids)) or not set(question_ids) <= known:
+                raise ValueError("Choice questions require unique declared semantic entities.")
+            answers = {(item.semantic_id, item.action, item.purpose) for item in self.interactions}
+            if any((question_id, "SUBMIT", "ANSWER") not in answers for question_id in question_ids):
+                raise ValueError("Choice questions require ANSWER-purpose SUBMIT interactions.")
+        question_ids = {question.semantic_id for question in self.choice_questions or []}
+        if any(item.purpose == "ANSWER" and item.semantic_id not in question_ids for item in self.interactions):
+            raise ValueError("ANSWER-purpose interactions require an application-owned choice question.")
+        local_values = {item.semantic_id for item in self.interactions if item.purpose == "LOCAL" and item.value_required}
+        if not local_values <= set(self.current_state_schema):
+            raise ValueError("Value-bearing LOCAL controls require bounded current-state fields.")
         return self
 
 
@@ -160,12 +214,19 @@ class CanvasSemanticManifestDraftV1(BaseModel):
     interactions: list[CanvasSemanticInteractionV1] = Field(default_factory=list, max_length=32)
     calculated_results: list[CanvasSemanticQuantityV1] = Field(default_factory=list, max_length=32)
     visual_descriptions: list[str] = Field(default_factory=list, max_length=24)
+    demonstrates: str | None = Field(default=None, max_length=500)
+    interpretation_limits: str | None = Field(default=None, max_length=500)
+    suggested_follow_up: str | None = Field(default=None, min_length=1, max_length=240)
+    choice_questions: list[CanvasChoiceQuestionV1] | None = Field(default=None, max_length=8)
     current_state_schema: dict[str, str] = Field(default_factory=dict, max_length=24)
     provenance: dict[str, str] = Field(default_factory=dict, max_length=12)
 
     def bind_brief_digest(self, brief_digest: str) -> CanvasSemanticManifestV1:
         """Produce the immutable final contract from trusted run-local provenance."""
         payload = self.model_dump(mode="json")
+        for key in ("demonstrates", "interpretation_limits", "suggested_follow_up", "choice_questions"):
+            if payload[key] is None:
+                payload.pop(key)
         provenance = dict(payload.get("provenance", {}))
         provenance["brief_digest"] = brief_digest
         payload.update(brief_digest=brief_digest, provenance=provenance)
@@ -300,6 +361,8 @@ class CanvasSemanticBridge:
         declared = next((item for item in self.manifest.interactions if item.semantic_id == event.semantic_id and item.action == event.semantic_action), None)
         if declared is None:
             raise SemanticBridgeError("Sandbox event action is not declared by the Semantic Manifest")
+        if declared.purpose == "ANSWER":
+            raise SemanticBridgeError("Answer submission is owned by the application controls")
         if declared.value_required and event.to_value is None:
             raise SemanticBridgeError("Sandbox event requires a semantic value")
         known = {entity.semantic_id for entity in self.manifest.entities}

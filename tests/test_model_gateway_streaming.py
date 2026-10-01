@@ -11,7 +11,7 @@ from services.model_gateway.gateway import (
     StreamComplete,
     StreamDelta,
 )
-from services.model_gateway.openai_provider import _normalize_output
+from services.model_gateway.openai_provider import OpenAIResponseFailure, _normalize_output
 from services.platform.db.models import ModelTask
 from services.tutor.candidate_events import (
     TUTOR_OUTPUT_RESPONSE_SCHEMA,
@@ -52,6 +52,22 @@ def test_streaming_gateway_forwards_provider_deltas_and_records_one_execution() 
     assert events[-1].result.output == {"text": "Try one step."}
     assert len(session.rows) == 1
     assert session.rows[0].task == ModelTask.TUTOR.value
+
+
+def test_gateway_records_bounded_provider_failure_code_and_lineage() -> None:
+    class Provider:
+        def stream(self, route, payload):
+            del route, payload
+            yield StreamDelta("provisional")
+            raise OpenAIResponseFailure("OPENAI_STRUCTURED_JSON_INVALID")
+
+    session = _RecordingSession()
+    gateway = ModelGateway(session, routes={ModelTask.TUTOR: ModelRoute("fixture", "fixture-tutor")}, providers={"fixture": Provider()})
+    with pytest.raises(OpenAIResponseFailure):
+        list(gateway.stream(ModelTask.TUTOR, {"instructions": "Teach", "input": "Help"}))
+    assert len(session.rows) == 1
+    assert session.rows[0].success is False
+    assert session.rows[0].failure_code == "OPENAI_STRUCTURED_JSON_INVALID"
 
 
 def test_structured_tutor_normalization_preserves_all_luna_semantic_decisions() -> None:

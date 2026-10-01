@@ -62,10 +62,16 @@ def test_canvas_brief_v1_is_strictly_educational_and_independent_of_workspace_in
     )
 
     assert brief.quantities[0].value == "0.6"
+    assert brief.relevant_conversation is None  # Historical briefs remain readable.
+    focused = CanvasBriefV1.model_validate({**brief.model_dump(),
+        "relevant_conversation": "The learner asked why the two marked values are not equal."})
+    assert focused.relevant_conversation.startswith("The learner asked")
     with pytest.raises(ValueError):
         CanvasBriefV1.model_validate({**brief.model_dump(), "tool_name": "create_math_board"})
     with pytest.raises(ValueError):
         CanvasBriefV1.model_validate({**brief.model_dump(), "requested_representation": "JSXGraph number line"})
+    with pytest.raises(ValueError):
+        CanvasBriefV1.model_validate({**brief.model_dump(), "relevant_conversation": "Use an SVG renderer"})
 
 
 def test_canvas_brief_output_schema_inlines_nested_definitions_for_responses_api() -> None:
@@ -74,7 +80,88 @@ def test_canvas_brief_output_schema_inlines_nested_definitions_for_responses_api
     schema = canvas_brief_output_schema()
     assert "$defs" not in schema
     assert "source_id" in schema["anyOf"][0]["properties"]["relations"]["items"]["properties"]
+    assert "relevant_conversation" in schema["anyOf"][0]["required"]
 
+
+def test_canvas_brief_model_output_delegates_representation_and_uses_server_student_request() -> None:
+    from services.studio.canvas_brief import canvas_brief_output_schema
+
+    model_schema = canvas_brief_output_schema()["anyOf"][0]
+    for field in ("student_request", "requested_representation", "must_not_imply", "source_references", "desired_student_action"):
+        assert field not in model_schema["properties"]
+        assert field not in model_schema["required"]
+    assert "objective" in model_schema["required"]
+    assert "relevant_conversation" in model_schema["required"]
+
+
+
+
+def test_canvas_brief_binder_owns_student_request_and_authorized_source_references() -> None:
+    from services.studio.canvas_brief import bind_tutor_canvas_brief
+
+    model_brief = {
+        "version": "canvas-brief-v1",
+        "subject_key": "SCIENCE",
+        "objective": "Explain a causal relationship.",
+        "relevant_conversation": None,
+        "facts": ["A causes B."],
+        "relations": [],
+        "quantities": [],
+        "desired_student_action": "Explore the relationship.",
+        "source_references": ["student-message-id-that-must-never-win"],
+        "locale": "en",
+        "direction": "ltr",
+    }
+    bound = bind_tutor_canvas_brief(
+        model_brief,
+        student_request="Show me what changes.",
+        authorized_source_references=("book#page=12", "book#page=13"),
+    )
+
+    assert bound["student_request"] == "Show me what changes."
+    assert bound["source_references"] == ["book#page=12", "book#page=13"]
+    assert "requested_representation" not in bound
+    assert "must_not_imply" not in bound
+
+
+
+def test_canvas_brief_model_output_uses_bounded_learner_experience() -> None:
+    from services.studio.canvas_brief import bind_tutor_canvas_brief, canvas_brief_output_schema
+
+    schema = canvas_brief_output_schema()["anyOf"][0]
+    assert "learner_experience" in schema["properties"]
+    assert "learner_experience" in schema["required"]
+    experience = schema["properties"]["learner_experience"]
+    assert experience["type"] == "array"
+    assert experience["minItems"] == 1
+    assert experience["maxItems"] == 3
+    assert set(experience["items"]["enum"]) == {
+        "OBSERVE", "COMPARE", "EXPLORE", "MANIPULATE", "CONSTRUCT",
+        "SEQUENCE", "CLASSIFY", "PRACTICE", "ANSWER", "EXPLAIN",
+    }
+
+    bound = bind_tutor_canvas_brief(
+        {
+            "version": "canvas-brief-v1",
+            "subject_key": "SCIENCE",
+            "objective": "Understand how one quantity changes with another.",
+            "relevant_conversation": None,
+            "facts": ["The quantities are related."],
+            "relations": [],
+            "quantities": [],
+            "learner_experience": ["COMPARE", "EXPLORE"],
+            "locale": "en",
+            "direction": "ltr",
+        },
+        student_request="Help me understand what changes.",
+        authorized_source_references=(),
+    )
+
+    assert bound["desired_student_action"] == (
+        "Compare the relevant states, quantities, or outcomes. "
+        "Explore how the relevant relationship changes."
+    )
+    assert "learner_experience" not in bound
 
 def test_canvas_brief_schema_requires_nullable_quantity_unit_for_strict_responses() -> None:
     from services.studio.canvas_brief import canvas_brief_output_schema
@@ -110,6 +197,46 @@ def test_canvas_brief_admission_is_safety_gated_and_source_bounded() -> None:
     assert audit_canvas_brief(brief, allowed_source_references={"other"}, safety_allows=True)["status"] == "REJECTED"
     assert audit_canvas_brief(brief, allowed_source_references={"source-1"}, safety_allows=False)["status"] == "NOT_REQUESTED"
 
+
+
+
+def test_visual_memory_context_preserves_memory_layer_authority() -> None:
+    from services.studio import canvas_brief as canvas_brief_module
+
+    assert hasattr(canvas_brief_module, "resolve_visual_memory_context")
+    context = canvas_brief_module.resolve_visual_memory_context(
+        selected_keys=[
+            "pf:favorite:space",
+            "li:11111111-1111-4111-8111-111111111111",
+        ],
+        memory_catalog={
+            "pf:favorite:space": {
+                "support_key": "pf:favorite:space",
+                "memory_layer": "PERSONAL_FACT",
+                "kind": "FAVORITE",
+                "text": "Likes space.",
+                "concept_ref": None,
+                "fact_key": "favorite:space",
+            },
+            "li:11111111-1111-4111-8111-111111111111": {
+                "support_key": "li:11111111-1111-4111-8111-111111111111",
+                "memory_layer": "LEARNING_INTELLIGENCE",
+                "kind": "current_state",
+                "text": "Currently distinguishes numerator from denominator with light support.",
+                "concept_ref": "equivalent_fractions",
+            },
+        },
+        core_profile={"age_years": 10, "grade_level": "5"},
+    )
+
+    assert context.core_profile.age_years == 10
+    assert [fact.fact_key for fact in context.selected_personal_facts] == ["favorite:space"]
+    assert len(context.selected_learning_intelligence) == 1
+    item = context.selected_learning_intelligence[0]
+    assert item.source_kind == "current_state"
+    assert item.concept_ref == "equivalent_fractions"
+    assert "numerator" in item.text
+    assert len(context.selected_personal_facts) + len(context.selected_learning_intelligence) == 2
 
 def test_canvas_visual_context_resolves_only_selected_safe_catalogue_facts() -> None:
     from services.studio.canvas_brief import resolve_visual_learner_context

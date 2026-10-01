@@ -4,8 +4,41 @@ from __future__ import annotations
 
 import pytest
 
-from services.tutor.canvas_visibility import ensure_new_canvas_is_not_claimed_visible
+from services.tutor.canvas_visibility import (
+    ensure_new_canvas_is_not_claimed_visible,
+    ensure_unavailable_canvas_is_not_promised,
+)
 
+
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "The idea still works. I’m preparing a visual so you can explore it.",
+        "The idea still works. Look at the diagram and compare the two parts.",
+        "الفكرة ما زالت واضحة. أجهّز لكِ رسماً لتجربي عليه.",
+        "الفكرة ما زالت واضحة. انظري إلى الرسم وقارني الجزأين.",
+    ],
+)
+def test_unavailable_canvas_removes_visual_claim_but_keeps_chat_teaching(text: str) -> None:
+    repaired, changed = ensure_unavailable_canvas_is_not_promised(text, canvas_unavailable=True)
+    assert changed
+    assert "idea still works" in repaired.casefold() or "الفكرة ما زالت واضحة" in repaired
+    assert "preparing" not in repaired.casefold()
+    assert "diagram" not in repaired.casefold()
+    assert "visual" not in repaired.casefold()
+    assert "أجهّز" not in repaired
+    assert "الرسم" not in repaired
+
+
+def test_unavailable_canvas_with_only_a_visual_promise_falls_back_to_chat() -> None:
+    repaired, changed = ensure_unavailable_canvas_is_not_promised(
+        "I’m preparing a visual for you now.",
+        canvas_unavailable=True,
+    )
+    assert changed
+    assert repaired == "Let’s work through it here step by step."
 
 @pytest.mark.parametrize(
     "text",

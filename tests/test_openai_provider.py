@@ -12,7 +12,7 @@ import pytest
 
 from services.model_gateway.factory import create_tutor_gateway
 from services.model_gateway.gateway import ModelResult, ModelRoute, StaticModelProvider, StreamComplete, StreamDelta, StreamParentBoundaryDecision
-from services.model_gateway.openai_provider import OpenAIResponsesProvider, _request_body
+from services.model_gateway.openai_provider import OpenAIResponseFailure, OpenAIResponsesProvider, _request_body
 from services.platform.config import Settings, reset_settings_cache
 from services.platform.db.models import ModelTask
 from services.studio.canvas_specialist import CanvasSpecialistProcessProposal
@@ -511,6 +511,26 @@ def test_openai_responses_provider_reports_the_reason_for_an_incomplete_stream()
                 {"instructions": "Teach calmly.", "input": "Help with fractions."},
             )
         )
+
+
+@pytest.mark.parametrize("lines,code", [
+    ([b'data: {"type":"error","error":{"message":"private learner text"}}\n\n'], "OPENAI_STREAM_ERROR"),
+    ([b'data: {"type":"response.failed","response":{"error":{"message":"private learner text"}}}\n\n'], "OPENAI_RESPONSE_FAILED"),
+    ([b'data: {"type":"response.completed"}\n\n'], "OPENAI_STREAM_COMPLETION_INVALID"),
+    ([b'data: {bad-json}\n\n'], "OPENAI_STREAM_EVENT_INVALID"),
+    ([], "OPENAI_STREAM_EOF"),
+])
+def test_openai_stream_failure_categories_are_bounded(lines: list[bytes], code: str) -> None:
+    class FakeResponse:
+        def __enter__(self): return self
+        def __exit__(self, *args): return None
+        def __iter__(self): return iter(lines)
+
+    provider = OpenAIResponsesProvider(api_key="test-key", request_sender=lambda request, *, timeout: FakeResponse())
+    with pytest.raises(OpenAIResponseFailure) as caught:
+        list(provider.stream(ModelRoute(provider="openai", model="fixture"), {"instructions": "Teach", "input": "Help"}))
+    assert caught.value.failure_code == code
+    assert "private learner text" not in str(caught.value)
 
 
 def test_openai_responses_provider_streams_student_text_from_a_structured_tutor_result() -> None:

@@ -145,6 +145,11 @@ def register_agentic_canvas_handlers(
                 base_url=settings.model_base_url,
                 sdk_trace_id=execution.sdk_trace_id,
                 reusable_visuals=execution.reusable_visuals,
+                # The approved visible-image allowance cannot yet be enforced:
+                # no learner-local timezone or visibility acknowledgement is
+                # persisted. Keep production generation closed until both are
+                # owned by the application; local disposable proof stays open.
+                image_generation_allowed=settings.app_env != "production",
             ))
         except Exception as error:
             code, retryable = _classify_agent_failure(error)
@@ -344,12 +349,15 @@ def _adopt_hosted_images(
 ) -> AgenticCanvasScene:
     """Adopt ephemeral SDK bytes and expose only owned asset IDs to the Scene."""
 
-    if len(generated_images) != 1 or len(scene.blocks) >= 12:
-        raise GeneratedAssetValidationError("Generated image output cannot fit the bounded Canvas scene.")
-    block_id = "generated-image"
-    if any(block.block_id == block_id for block in scene.blocks):
-        raise GeneratedAssetValidationError("Generated image block identity conflicts with the composed scene.")
+    if len(generated_images) != 1:
+        raise GeneratedAssetValidationError("Generated image output must be selected exactly once.")
     output = generated_images[0]
+    image_blocks = [block for block in scene.blocks if block.type == "IMAGE"]
+    if len(image_blocks) != 1 or image_blocks[0].block_id != "generated-image" or image_blocks[0].studio_generated_asset_id != output.temporary_handle:
+        raise GeneratedAssetValidationError("Generated image was not selected and placed by the Canvas Agent.")
+    # Validate the Agent's v2/v3 placement before any owned-storage mutation.
+    if not any(placement.block_id == "generated-image" for placement in scene.presentation.placements):
+        raise GeneratedAssetValidationError("Generated image placement is missing.")
     resolution = adopt_generated_image(
         session,
         storage=storage,
@@ -359,26 +367,10 @@ def _adopt_hosted_images(
         content_type=output.content_type,
     )
     draft = scene.model_dump(mode="json")
-    draft["blocks"].append({
-        "block_id": block_id,
-        "type": "IMAGE",
-        "meaning": brief.requested_representation,
-        "title": "Generated visual",
-        "accessibility": {
-            "text_equivalent": brief.requested_representation,
-            "aria_label": None,
-        },
-        "allowed_actions": ["FOCUS"],
-        "elements": [],
-        "temporary_image_handle": output.temporary_handle,
-    })
-    if draft.get("version") == "agentic-canvas-scene-v2":
-        presentation = draft.get("presentation")
-        if not isinstance(presentation, dict) or not isinstance(presentation.get("placements"), list):
-            raise GeneratedAssetValidationError("Agentic Canvas presentation is missing for generated image composition.")
-        presentation["placements"].append({
-            "block_id": block_id, "role": "SUPPORT", "order": len(presentation["placements"]), "span": "WIDE",
-        })
+    for block in draft["blocks"]:
+        if block["block_id"] == "generated-image":
+            block.pop("studio_generated_asset_id")
+            block["temporary_image_handle"] = output.temporary_handle
     resolved = resolve_generated_image_handles(draft, resolutions=[resolution])
     return AGENTIC_CANVAS_SCENE_ADAPTER.validate_python(resolved)
 

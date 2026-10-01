@@ -69,6 +69,7 @@ def factory() -> sessionmaker[Session]:
 
 
 class _Settings:
+    app_env = "test"
     model_api_key = SecretStr("test-agentic-key")
     model_name = "test-agentic-model"
     canvas_model_name = None
@@ -78,6 +79,45 @@ class _Settings:
 class _TerraSettings(_Settings):
     model_name = "gpt-5.6-luna"
     canvas_model_name = "gpt-5.6-terra"
+
+
+class _ProductionSettings(_Settings):
+    app_env = "production"
+
+
+def test_production_worker_withholds_image_generation_until_visible_quota_is_owned(
+    factory: sessionmaker[Session],
+) -> None:
+    with factory.begin() as session:
+        student, learning, message = _admitted_message(session)
+        runtime = session.scalar(
+            select(m.StudioRuntime).where(m.StudioRuntime.learning_session_id == learning.id)
+        )
+        assert runtime is not None
+        session.add(m.StudioSnapshot(
+            studio_runtime_id=runtime.id, student_id=student.id,
+            snapshot_schema_version="studio-snapshot-v1",
+            latest_event_sequence=0, state_payload={},
+        ))
+        run = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id,
+            source_message_id=message.id,
+        )
+        assert run is not None
+        run_id = run.id
+
+    async def compose(**kwargs):
+        assert kwargs["image_generation_allowed"] is False
+        return _scene()
+
+    assert run_once(
+        factory, _registry(factory, compose, settings_factory=_ProductionSettings),
+        worker_id="agentic-production-image-gate",
+    ) == m.JobStatus.COMPLETED
+    with factory() as session:
+        completed = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert completed is not None and completed.status == "COMPLETED"
+        assert completed.scene_id is not None
 
 
 class _JevExactReuseSettings(_TerraSettings):

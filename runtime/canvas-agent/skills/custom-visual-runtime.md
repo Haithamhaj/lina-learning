@@ -1,4 +1,24 @@
 # Custom visual authoring contract
+For new visual-first compositions, describe what is shown, what the visual demonstrates,
+each control's effect, and interpretation limits in the canonical Manifest. Keep that
+description tied to the accepted source version. Classify each interaction by purpose:
+`LOCAL` for play/pause, speed, labels, highlights and similar exploration;
+`WORK` for learner-created work needing durable Studio state; `ANSWER` for a
+single-choice question. A local control changes the sandbox immediately and makes
+no Studio/Tutor/JEV call. Give each value-bearing `LOCAL` interaction a matching
+`state_fields` entry (the canonical Manifest's `current_state_schema`). Report
+only useful current values with `bridge.local(id,value)`; do not send click history.
+A purely local control may change the visual without a report. The preview checks
+the actual visual effect.
+
+For `ANSWER`, provide `choice_questions` with the exact prompt and displayed
+options plus an `ANSWER`-purpose `SUBMIT` interaction for the question ID.
+Preserve every option specified in the Tutor brief exactly; do not substitute
+new distractors or silently omit a requested choice.
+The application renders and locks those options, persists the first deliberate
+choice, and sends the exact answer context to the Primary Tutor. Do not render
+competing answer buttons, submit from generated source, score the learner, or
+implement retry/persistence logic in the sandbox.
 Current product acceptance is desktop: design the complete experience for a 640px
 Workspace pane and use extra space at 960px. Mobile is deferred. Use native HTML
 text/control sizes or responsive SVG coordinates; never scale text below readable
@@ -13,6 +33,10 @@ After one CREATE, an unused replacement slot can fund a third source correction;
 after two CREATE attempts only two corrections remain. Repair all concrete findings together; each before must occur exactly once
 in the current source. Preserve unaffected code and all canonical semantics.
 Define window.mount(root, params, bridge) using ordinary DOM and native SVG.
+For DOM/SVG helper functions, keep argument roles unambiguous. Use an options object
+such as {parent, text} when a helper supports optional text/parent values, or require
+the parent argument to always be a real Node and pass text separately; never overload one positional argument as either parent or text. Prefer direct DOM calls when a helper
+would save only a few lines.
 No network, imports, storage, navigation, parent access or application writes.
 Instance facts and labels come from params; do not hardcode the current example.
 Use numeric parameter values for numeric facts and booleans for flags; strings are for labels/IDs.
@@ -21,14 +45,20 @@ JSON.parse before indexing, mapping or iterating it. Do not treat a JSON string
 as an array. Bind controls to real elements after creation; rebind recreated DOM.
 
 Use bridge.control(element, semantic_id, action) for each actual interactive
-element, with IDs/actions from your Manifest. It binds the diagnostic DOM
-attributes and returns a handle:
+element, with IDs/actions from your Manifest. Prefer native input range/select
+controls or another direct value control for continuous/value-bearing SET_VALUE.
+A button that advances discrete states should normally declare STEP, call
+handle.activate, update the state, and visibly render that new state on every
+activation. Do not use a button-shaped SET_VALUE stepper when STEP expresses
+the learner action more truthfully. It binds the diagnostic DOM attributes and
+returns a handle:
 - handle.read(initialValue) RETURNS the restored value using the fallback's type.
   Assign its result to your render state BEFORE computing geometry or labels.
   Reading after drawing does not update already-created shapes. Calling read
   and discarding its return does not restore any local variable or DOM control.
-- handle.emit(newValue) serializes a mutation, updates sandbox-local state
-  immediately, and sends its canonical event. Then render the updated state.
+- handle.emit(newValue) updates sandbox-local state immediately. For `WORK` it
+  sends the canonical Studio mutation; `LOCAL` stays in the browser and may
+  report a declared current value to Chat. Then render the updated state.
 - handle.activate(callback) binds click and Enter/Space activation for non-native
   controls, and uses native keyboard behavior on native controls. Name the element
   accessibly. The callback owns emit/render, e.g. h.activate(()=>{h.emit();render()}).
@@ -47,7 +77,7 @@ attributes and returns a handle:
   immediate choice feedback. Selection is identity-only, not a persisted value;
   do not restore a choice through read or invent a value-bearing choice state.
 
-Bootstrap restored state with bridge.read(semanticId, initialValue) BEFORE drawing.
+For saved `WORK` actions, bootstrap restored state with bridge.read(semanticId, initialValue) BEFORE drawing.
 Use the same named semanticId constant when later binding the actual control.
 handle.read is also valid when the control exists before drawing dependent content.
 A single state field has one semantic ID shared by all controls that change it;
@@ -60,7 +90,8 @@ Choice feedback shows selection, never claims correctness or mastery.
 
 The low-level bridge.read/emit API remains available for advanced bindings and
 historical packages. It uses exact matching semantic IDs and string values.
-Every declared interaction needs an operable binding. Use targets at least 24px
+Every declared `WORK` or `LOCAL` interaction needs an operable binding. `ANSWER`
+controls are rendered by the application. Use targets at least 24px
 in both dimensions at the smaller desktop width, preferably larger for children, and native
 controls or named, focusable elements with keyboard handlers. Use handle.drag for direct manipulation; it binds the gesture and drop-target
 metadata automatically. Native HTML drag/drop alone does not work on touch.
@@ -74,11 +105,15 @@ space responsively; do not merely scale a desktop composition down.
 
 Keep local changes immediate, emit meaningful mutations on release/change, and
 render from the same state on mount and updates. Derive coupled geometry and
-labels together. Convert SVG pointer coordinates via getScreenCTM().inverse().
+labels together. Preserve relation authority exactly: do not turn a supplied
+association/change/sequence into a new causal mechanism in labels, Manifest
+relations, or suggested follow-up unless that causal claim is explicit in the brief.
+Convert SVG pointer coordinates via getScreenCTM().inverse().
 Avoid replacing a captured pointer target during dragging. Handle zero, bounds,
 signed quantities and degenerate states explicitly; preserve exact relationships.
-Review initial, post-action and replay screenshots plus event diagnostics. Refine
-concrete defects within the remaining authoring budget; do not alter canonical meaning or retry
+Review initial, post-action and replay screenshots plus event diagnostics.
+Fix mount/runtime/interaction blockers before typography or cosmetic polish.
+Refine concrete defects within the remaining authoring budget; do not alter canonical meaning or retry
 indefinitely. If refinement is exhausted, return the required plan referencing the current
 candidate with a failed visual_review and its unresolved issues. This is a failure
 report, not acceptance: the application rejects that candidate. Never omit the
@@ -89,7 +124,10 @@ widths. Treat 12px as an absolute acceptance floor, not a design target. When SV
 viewBox or responsive scaling is used, calculate the resulting screen size and preserve
 enough margin so labels do not approach the 12px rejection threshold. Prefer larger
 readable labels for child-facing educational content. SVG viewBox scaling scales fonts
-and hit targets too: declared font-size is not final screen size.
+and hit targets too: declared font-size is not final screen size. Do not give a text-heavy
+SVG a fixed CSS height that forces the viewBox to scale labels below the actual screen
+minimum; prefer height:auto (or height: auto) with a compatible max-height/aspect ratio,
+or redesign the viewBox so both supported pane widths preserve the real text size.
 Compute the screen scale from BOTH available width and height before sizing labels
 and targets; changing plot proportions during repair requires recalculating them.
 When equal geometric units carry meaning, use one pixels-per-unit scale for both
@@ -101,7 +139,7 @@ Low-level bridge.emit has signature bridge.emit(action, semantic_id, {to_value: 
 bridge.emit(semantic_id, value) is invalid. Prefer the bound handle.emit(value).
 Mutation values must fit the canonical 240-character event value bound; use compact IDs.
 
-Preview checks restoration after EACH value-bearing action, not only after the final
+Preview checks restoration after EACH saved value-bearing `WORK` action, not only after the final
 reset. Every saved field must use the same semantic ID for read and emit. A handle
 belongs to one concrete DOM element: if render replaces that element, create and
 bind a new handle for its replacement, including after resize. Do not cache handles

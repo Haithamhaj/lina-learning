@@ -47,7 +47,10 @@ export type StudioCustomVisualBuild = {
       action: string;
       semantic_id: string;
       value_required: boolean;
+      purpose?: "LOCAL" | "WORK" | "ANSWER";
     }>;
+    choice_questions?: Array<{ semantic_id: string; prompt: string; options: Array<{ value: string; label: string }> }>;
+    current_state_schema?: Record<string, string>;
   };
 };
 
