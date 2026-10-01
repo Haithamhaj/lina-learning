@@ -1,12 +1,14 @@
 """Durable lifecycle tests for the additive Tutor-led Agentic Canvas path."""
 from __future__ import annotations
 
+import asyncio
 from copy import deepcopy
 import json
 import os
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from pathlib import Path
+from time import perf_counter
 from uuid import uuid4
 
 import pytest
@@ -18,6 +20,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from services.model_gateway.gateway import ModelGateway, ModelResult, ModelRoute, StreamComplete, StreamDelta
 from services.platform.db import models as m
 from services.platform.db.connection import normalize_database_url
+from services.platform.jobs import claim_next_job
 from services.platform.safety import SafetyAction, SafetyDecision
 from services.platform.storage import LocalObjectStorage
 from services.studio.custom_visual_builds import (
@@ -28,6 +31,7 @@ from services.studio.custom_visual_builds import (
 from services.studio.full_power_canvas import CustomVisualPackageV1
 from services.studio.agent.admission import (
     AGENTIC_CANVAS_CAPABILITY_IDENTITY,
+    AGENTIC_CANVAS_COMPOSE_JOB,
     admit_agentic_canvas_brief,
 )
 from services.studio.agentic_canvas import AgenticCanvasSceneV2
@@ -1487,6 +1491,68 @@ def test_deadline_is_terminal_without_calling_agent(factory: sessionmaker[Sessio
         assert calls == 0
         assert run is not None and run.status == "FAILED" and run.failure_metadata == {"code": "DEADLINE_EXCEEDED"}
         assert job is not None and job.status == "FAILED"
+
+
+def test_agent_call_stops_at_existing_admission_deadline(factory: sessionmaker[Session]) -> None:
+    with factory.begin() as session:
+        student, learning, message = _admitted_message(session)
+        run = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id,
+            source_message_id=message.id,
+        )
+        assert run is not None and run.job_id is not None
+        run.deadline_at = datetime.now(UTC) + timedelta(seconds=1)
+        run_id = run.id
+
+    async def slow_compose(**kwargs):
+        await asyncio.sleep(3)
+        return _scene()
+
+    started = perf_counter()
+    status = run_once(factory, _registry(factory, slow_compose), worker_id="agentic-time-bound")
+    assert status == m.JobStatus.FAILED
+    assert perf_counter() - started < 3
+    with factory() as session:
+        run = session.get(m.StudioCanvasSpecialistRun, run_id)
+        assert run is not None and run.status == "FAILED"
+        assert run.failure_metadata["code"] == "DEADLINE_EXCEEDED"
+
+
+def test_stale_canvas_lease_cannot_begin_another_provider_call(factory: sessionmaker[Session]) -> None:
+    with factory.begin() as session:
+        student, learning, message = _admitted_message(session)
+        run = admit_agentic_canvas_brief(
+            session, student_id=student.id, learning_session_id=learning.id,
+            source_message_id=message.id,
+        )
+        assert run is not None and run.job_id is not None
+    clock = datetime.now(UTC)
+    with factory.begin() as session:
+        old_claim = claim_next_job(
+            session, worker_id="first", now=clock,
+            job_types=(AGENTIC_CANVAS_COMPOSE_JOB,),
+        )
+        assert old_claim is not None
+        session.expunge(old_claim)
+    with factory.begin() as session:
+        replacement = claim_next_job(
+            session, worker_id="second", now=clock + timedelta(minutes=6),
+            job_types=(AGENTIC_CANVAS_COMPOSE_JOB,),
+        )
+        assert replacement is not None and replacement.lease_token != old_claim.lease_token
+
+    called = False
+
+    async def compose(**kwargs):
+        nonlocal called
+        called = True
+        return _scene()
+
+    handler = _registry(factory, compose).get(AGENTIC_CANVAS_COMPOSE_JOB)
+    assert handler is not None
+    with pytest.raises(ValueError, match="AGENTIC_CANVAS_JOB_INVALID"):
+        handler(old_claim)
+    assert not called
 
 
 def test_worker_immediately_settles_completed_agentic_scene_through_existing_studio_state(

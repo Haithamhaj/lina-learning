@@ -193,6 +193,15 @@ class Settings(BaseSettings):
     session_inactivity_seconds: int = Field(default=20 * 60, gt=0)
     session_grace_seconds: int = Field(default=5 * 60, ge=0)
 
+    # The app owns scaling; the worker never needs Cloud Run Admin permissions.
+    worker_lifecycle_enabled: bool = False
+    worker_lifecycle_idle_seconds: int = Field(default=20 * 60, gt=0)
+    worker_pool_project_id: str | None = None
+    worker_pool_region: str | None = None
+    worker_pool_name: str | None = None
+    worker_lifecycle_scheduler_audience: str | None = None
+    worker_lifecycle_scheduler_email: str | None = None
+
     @model_validator(mode="after")
     def validate_service_requirements(self) -> "Settings":
         """Fail clearly when an enabled deployment mode is incomplete."""
@@ -225,6 +234,17 @@ class Settings(BaseSettings):
 
         if self.model_provider != "mock" and self.model_api_key is None:
             missing.append("MODEL_API_KEY")
+
+        if self.worker_lifecycle_enabled:
+            for name, value in (
+                ("WORKER_POOL_PROJECT_ID", self.worker_pool_project_id),
+                ("WORKER_POOL_REGION", self.worker_pool_region),
+                ("WORKER_POOL_NAME", self.worker_pool_name),
+                ("WORKER_LIFECYCLE_SCHEDULER_AUDIENCE", self.worker_lifecycle_scheduler_audience),
+                ("WORKER_LIFECYCLE_SCHEDULER_EMAIL", self.worker_lifecycle_scheduler_email),
+            ):
+                if not value:
+                    missing.append(name)
 
         jev_enabled = (
             self.jev_visual_personalization_mode != "off"

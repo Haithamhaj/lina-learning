@@ -36,6 +36,8 @@ def test_foundation_models_match_expected_tables() -> None:
         "parent_student_relationships",
         "grade_periods",
         "jobs",
+        "worker_activity",
+        "worker_lifecycle_state",
         "ai_executions",
         "student_topic_boundaries",
         "safety_audits",

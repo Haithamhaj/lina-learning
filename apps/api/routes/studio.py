@@ -18,6 +18,7 @@ from services.platform.auth import AuthenticatedPrincipal, UserRole, require_rol
 from services.platform.db.models import StudioScene
 from services.platform.db.session import get_session
 from services.platform.storage import ObjectStorage, StorageError, create_object_storage
+from services.platform.worker_lifecycle import record_user_activity, request_worker_wake
 from services.platform.student_identity import (
     resolve_student_for_authenticated_identity,
 )
@@ -244,7 +245,11 @@ def submit_studio_operation(
             student_interaction_status=None if result.interaction is None else result.interaction.status,
         )
         # Do not claim acceptance before Event/Snapshot/interaction commit.
+        if not result.replayed:
+            record_user_activity(session)
         session.commit()
+        if not result.replayed:
+            request_worker_wake()
         return response
     except StudioResourceNotFound as error:
         session.rollback()

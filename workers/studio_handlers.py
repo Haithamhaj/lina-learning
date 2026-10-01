@@ -122,7 +122,10 @@ def _preflight(factory: sessionmaker[Session], job: Job, payload: dict[str, obje
     with factory.begin() as session:
         claimed = session.get(Job, job.id)
         run = session.execute(select(StudioCanvasSpecialistRun).where(StudioCanvasSpecialistRun.job_id == job.id).with_for_update()).scalar_one_or_none()
-        if claimed is None or claimed.job_type != CANVAS_SPECIALIST_COMPOSE_JOB or claimed.max_attempts != 2: raise ValueError("SPECIALIST_JOB_INVALID")
+        if (claimed is None or claimed.job_type != CANVAS_SPECIALIST_COMPOSE_JOB
+                or claimed.max_attempts != 2 or claimed.lease_token != job.lease_token
+                or claimed.claimed_by != job.claimed_by):
+            raise ValueError("SPECIALIST_JOB_INVALID")
         if run is None or run.status in {"COMPLETED", "FAILED", "CANCELLED", "SUPERSEDED", "REJECTED"}: return None
         if run.deadline_at and run.deadline_at <= datetime.now(UTC):
             run.status, run.failure_metadata, run.completed_at = "FAILED", {"code": "DEADLINE_EXCEEDED"}, datetime.now(UTC); return None

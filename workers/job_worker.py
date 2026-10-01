@@ -8,6 +8,7 @@ import socket
 import time
 from collections.abc import Callable, Collection, Mapping
 from datetime import UTC, datetime
+from threading import Event, Thread
 from typing import TypeAlias
 from uuid import UUID, uuid4
 
@@ -16,7 +17,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from services.model_gateway.factory import create_personal_facts_gateway, create_segment_evidence_gateway
 from services.platform.db.connection import get_engine
 from services.platform.db.models import Job, JobStatus
-from services.platform.jobs import NonRetryableJobError, claim_next_job, complete_job, fail_job
+from services.platform.jobs import JobStateError, NonRetryableJobError, claim_next_job, complete_job, fail_job, renew_job_lease
+from services.platform.worker_lifecycle import worker_claim_allowed
 from services.platform.storage import create_object_storage
 from services.tutor.session_lifecycle import (
     SessionLifecyclePolicy,
@@ -30,6 +32,30 @@ from workers.agentic_canvas_handlers import register_agentic_canvas_handlers
 
 JobHandler: TypeAlias = Callable[[Job], Mapping[str, object] | None]
 _logger = logging.getLogger(__name__)
+LEASE_RENEWAL_INTERVAL_SECONDS = 30
+
+
+def _renew_while_running(
+    session_factory: sessionmaker[Session],
+    job: Job,
+    worker_id: str,
+    stop: Event,
+) -> None:
+    """Keep a long handler owned without holding a transaction during execution."""
+
+    while not stop.wait(LEASE_RENEWAL_INTERVAL_SECONDS):
+        try:
+            with session_factory.begin() as session:
+                renew_job_lease(
+                    session, job.id, worker_id=worker_id, lease_token=job.lease_token,
+                )
+        except JobStateError:
+            _logger.error("Lost lease for job %s; its result must not be settled", job.id)
+            return
+        except Exception:
+            # A transient DB failure is retried at the next heartbeat. The
+            # ownership token still fences settlement if another worker claims.
+            _logger.exception("Lease renewal failed for job %s", job.id)
 
 
 class JobHandlerRegistry:
@@ -85,6 +111,8 @@ def run_once(
     if not job_types:
         return None
     with session_factory.begin() as session:
+        if not worker_claim_allowed(session):
+            return None
         reconcile_canvas_specialist_runs(session, now=claim_time)
         job = claim_next_job(
             session,
@@ -98,11 +126,21 @@ def run_once(
         session.expunge(job)
 
     handler = registry.get(job.job_type)
+    heartbeat_stop = Event()
+    heartbeat = Thread(
+        target=_renew_while_running,
+        args=(session_factory, job, worker_id, heartbeat_stop),
+        name=f"job-lease-{job.id}",
+        daemon=True,
+    )
+    heartbeat.start()
     try:
         if handler is None:
             raise LookupError(f"No handler is registered for job type {job.job_type!r}.")
         result = handler(job)
     except Exception as error:
+        heartbeat_stop.set()
+        heartbeat.join(timeout=5)
         with session_factory.begin() as session:
             failed = fail_job(
                 session,
@@ -114,6 +152,8 @@ def run_once(
                 retryable=not isinstance(error, NonRetryableJobError),
             )
         return JobStatus(failed.status)
+    heartbeat_stop.set()
+    heartbeat.join(timeout=5)
 
     with session_factory.begin() as session:
         completed = complete_job(

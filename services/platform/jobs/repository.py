@@ -144,6 +144,25 @@ def claim_next_job(
         return job
 
 
+def renew_job_lease(
+    session: Session,
+    job_id: UUID,
+    *,
+    worker_id: str,
+    lease_token: UUID | None,
+    now: datetime | None = None,
+    lease_duration: timedelta = DEFAULT_LEASE_DURATION,
+) -> Job:
+    """Extend only the current owner's lease while a handler is still running."""
+
+    if lease_duration <= timedelta(0):
+        raise ValueError("lease_duration must be positive.")
+    job = _owned_running_job(session, job_id, worker_id, lease_token)
+    job.lease_expires_at = (now or _utc_now()) + lease_duration
+    session.flush()
+    return job
+
+
 def complete_job(
     session: Session,
     job_id: UUID,

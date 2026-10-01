@@ -211,7 +211,7 @@ The current repository and live pilot include:
 - JEV bounded-decision routes through OpenRouter;
 - PostgreSQL and pgvector;
 - object storage;
-- separate background Worker;
+- separate background Worker with activity-based wake and 20-minute idle shutdown;
 - GCP live pilot deployment.
 
 Current structured Studio subject support includes MATH, SCIENCE, ENGLISH, and ARABIC. General Tutor conversation is not limited to those subjects.
@@ -238,7 +238,7 @@ Implementation evidence is not the same thing as learning-effectiveness evidence
             ↓
     PostgreSQL + pgvector / Object Storage / Worker
             ↓
-    Model Gateway → OpenAI / OpenRouter Decisions
+    Model Gateway → OpenAI / TypeSafe Decisions
 
 ## Read the project
 

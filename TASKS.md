@@ -10,6 +10,16 @@ The core Tutor, learner-context, Learning Intelligence, Student-source, Studio a
 
 The current phase is **real-use repair and recalibration**. Controlled natural use is temporarily paused after the first real Lina sessions exposed blocking/important repair items; resume only after the agreed repair batch is locally accepted and deployed.
 
+## 0. WORKER-LIFECYCLE-01 — Intermittent multi-user worker availability
+
+**Status:** LIVE ACCEPTED; MONITOR
+
+The deployed app-side controller records authenticated actions and requests worker startup before the response ends, using a database fast path on subsequent turns. A scheduled minute tick recovers delayed jobs, retries, session closure, and idle shutdown. One global 20-minute window runs from the last genuine activity across users. The worker claim gate protects stop decisions; running jobs renew their leases. Live 2026-09-30 acceptance verified natural idle stop, a real Student-turn wake, a second stop, scheduler-driven session closure and delayed-job wake, completed Learning Intelligence/Personal Facts/finalization jobs, and return to zero. See docs/WORKER_LIFECYCLE_OPERATIONS.md for exact times and rollback.
+
+Local verification on 2026-09-30: affected PostgreSQL regression 220 passed; full Python suite 1650 passed, 12 skipped; web typecheck and production build passed in an isolated copy. Live activity wake reached Ready in about 38 seconds; delayed work reached first claim about 84 seconds after queueing. First Canvas latency from zero was not measured.
+
+**Residual checks:** Keep the rollback anchors and monitor Scheduler health, first cold Canvas latency, lease renewal and restart overlap, concurrent use, and failed Admin API recovery. The owner approved Scheduler setup; no new app IAM role was added. The shared app identity already has Editor and worker-pool scaling permissions. The live stop/wake/finalization core behavior is accepted; do not represent the remaining stress cases as tested.
+
 ## 1. LIVE-VALIDATION-01 — Controlled natural use
 
 **Status:** PAUSED AFTER E30 REAL-USE FINDINGS
